@@ -59,8 +59,24 @@ internal static class Program
             Environment.Exit(1);
         }
 
-        Console.WriteLine("\nPress any key to exit...");
-        Console.ReadKey();
+        // Only wait for input if running in a truly interactive console
+        try
+        {
+            if (Environment.UserInteractive && !Console.IsInputRedirected && !Console.IsOutputRedirected)
+            {
+                Console.WriteLine("\nPress any key to exit...");
+                Console.ReadKey();
+            }
+            else
+            {
+                Console.WriteLine("\nApplication completed successfully.");
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Console operations may not be available in some environments
+            Console.WriteLine("\nApplication completed successfully.");
+        }
     }
 
     private static async Task RunEnhancedPipelineAsync()
