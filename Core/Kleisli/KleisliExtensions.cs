@@ -1,4 +1,5 @@
 using LangChainPipeline.Core.Steps;
+using LangChainPipeline.Core.Monads;
 
 namespace LangChainPipeline.Core.Kleisli;
 
@@ -293,6 +294,143 @@ public static class KleisliExtensions
         this Kleisli<TIn, TMid> f,
         Func<Kleisli<TIn, TMid>, Kleisli<TIn, TOut>> composeFunc)
         => composeFunc(f);
+
+    #endregion
+
+    #region Pipe Operators - First Class Monadic Piping
+
+    /// <summary>
+    /// Extension method providing pipe-like syntax for applying a value to a Kleisli arrow.
+    /// Usage: value.PipeTo(arrow) - equivalent to value | arrow
+    /// This is the fundamental monadic application operation.
+    /// </summary>
+    /// <typeparam name="TIn">The input type.</typeparam>
+    /// <typeparam name="TOut">The output type.</typeparam>
+    /// <param name="input">The input value to pipe.</param>
+    /// <param name="arrow">The Kleisli arrow to apply.</param>
+    /// <returns>A Task representing the result of applying the arrow to the input.</returns>
+    public static Task<TOut> PipeTo<TIn, TOut>(this TIn input, Step<TIn, TOut> arrow)
+        => arrow(input);
+
+    /// <summary>
+    /// Extension method for piping a value into a KleisliResult arrow.
+    /// Usage: value.PipeTo(resultArrow)
+    /// </summary>
+    /// <typeparam name="TIn">The input type.</typeparam>
+    /// <typeparam name="TOut">The output type.</typeparam>
+    /// <typeparam name="TError">The error type.</typeparam>
+    /// <param name="input">The input value to pipe.</param>
+    /// <param name="arrow">The KleisliResult arrow to apply.</param>
+    /// <returns>A Task containing the Result of applying the arrow.</returns>
+    public static Task<Result<TOut, TError>> PipeTo<TIn, TOut, TError>(this TIn input, KleisliResult<TIn, TOut, TError> arrow)
+        => arrow(input);
+
+    /// <summary>
+    /// Extension method for piping a value into a KleisliOption arrow.
+    /// Usage: value.PipeTo(optionArrow)
+    /// </summary>
+    /// <typeparam name="TIn">The input type.</typeparam>
+    /// <typeparam name="TOut">The output type.</typeparam>
+    /// <param name="input">The input value to pipe.</param>
+    /// <param name="arrow">The KleisliOption arrow to apply.</param>
+    /// <returns>A Task containing the Option result of applying the arrow.</returns>
+    public static Task<Option<TOut>> PipeTo<TIn, TOut>(this TIn input, KleisliOption<TIn, TOut> arrow)
+        => arrow(input);
+
+    /// <summary>
+    /// Extension method for piping a value into a pure function.
+    /// Usage: value.PipeTo(func)
+    /// Lifts the function into the Task monad and applies it.
+    /// </summary>
+    /// <typeparam name="TIn">The input type.</typeparam>
+    /// <typeparam name="TOut">The output type.</typeparam>
+    /// <param name="input">The input value to pipe.</param>
+    /// <param name="func">The pure function to apply.</param>
+    /// <returns>A Task containing the result of the function application.</returns>
+    public static Task<TOut> PipeTo<TIn, TOut>(this TIn input, Func<TIn, TOut> func)
+        => Task.FromResult(func(input));
+
+    /// <summary>
+    /// Extension method for piping a value into an async function.
+    /// Usage: value.PipeTo(asyncFunc)
+    /// </summary>
+    /// <typeparam name="TIn">The input type.</typeparam>
+    /// <typeparam name="TOut">The output type.</typeparam>
+    /// <param name="input">The input value to pipe.</param>
+    /// <param name="func">The async function to apply.</param>
+    /// <returns>A Task containing the result of the async function application.</returns>
+    public static Task<TOut> PipeTo<TIn, TOut>(this TIn input, Func<TIn, Task<TOut>> func)
+        => func(input);
+
+    #endregion
+
+    #region Static Pipe Operators - Using Static Class for Operator-like Syntax
+
+    /// <summary>
+    /// Static class providing pipe operators for monadic operations.
+    /// Enables fluent pipe syntax without conflicting with built-in operators.
+    /// </summary>
+    public static class Pipe
+    {
+        /// <summary>
+        /// Pipes a value into a Kleisli arrow (Step).
+        /// Usage: Pipe.Apply(value, arrow) or value |> arrow (F# style)
+        /// </summary>
+        /// <typeparam name="TIn">The input type.</typeparam>
+        /// <typeparam name="TOut">The output type.</typeparam>
+        /// <param name="input">The input value.</param>
+        /// <param name="arrow">The Kleisli arrow.</param>
+        /// <returns>A Task representing the result.</returns>
+        public static Task<TOut> Apply<TIn, TOut>(TIn input, Step<TIn, TOut> arrow)
+            => arrow(input);
+
+        /// <summary>
+        /// Pipes a value into a KleisliResult arrow.
+        /// </summary>
+        public static Task<Result<TOut, TError>> Apply<TIn, TOut, TError>(TIn input, KleisliResult<TIn, TOut, TError> arrow)
+            => arrow(input);
+
+        /// <summary>
+        /// Pipes a value into a KleisliOption arrow.
+        /// </summary>
+        public static Task<Option<TOut>> Apply<TIn, TOut>(TIn input, KleisliOption<TIn, TOut> arrow)
+            => arrow(input);
+
+        /// <summary>
+        /// Pipes a value into a pure function.
+        /// </summary>
+        public static Task<TOut> Apply<TIn, TOut>(TIn input, Func<TIn, TOut> func)
+            => Task.FromResult(func(input));
+
+        /// <summary>
+        /// Pipes a value into an async function.
+        /// </summary>
+        public static Task<TOut> Apply<TIn, TOut>(TIn input, Func<TIn, Task<TOut>> func)
+            => func(input);
+
+        /// <summary>
+        /// Composes two Step arrows.
+        /// Usage: Pipe.Compose(arrow1, arrow2)
+        /// </summary>
+        public static Step<TIn, TOut> Compose<TIn, TMid, TOut>(Step<TIn, TMid> first, Step<TMid, TOut> second)
+            => first.Then(second);
+
+        /// <summary>
+        /// Composes two KleisliResult arrows.
+        /// </summary>
+        public static KleisliResult<TIn, TOut, TError> Compose<TIn, TMid, TOut, TError>(
+            KleisliResult<TIn, TMid, TError> first, 
+            KleisliResult<TMid, TOut, TError> second)
+            => first.Then(second);
+
+        /// <summary>
+        /// Composes two KleisliOption arrows.
+        /// </summary>
+        public static KleisliOption<TIn, TOut> Compose<TIn, TMid, TOut>(
+            KleisliOption<TIn, TMid> first, 
+            KleisliOption<TMid, TOut> second)
+            => first.Then(second);
+    }
 
     #endregion
 }

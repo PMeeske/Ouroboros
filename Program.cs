@@ -30,6 +30,10 @@ internal static class Program
             Console.WriteLine("=== MONADIC OPERATIONS DEMONSTRATION ===\n");
             await MonadicExamples.RunAllDemonstrations();
             
+            // NEW: Demonstrate first-class monadic pipe operators
+            Console.WriteLine("\n=== FIRST-CLASS MONADIC PIPE OPERATORS ===\n");
+            await MonadicPipeExamples.RunAllAsync();
+            
             // Demonstrate KleisliCompose higher-order functions
             Console.WriteLine("\n=== KLEISLI COMPOSE HIGHER-ORDER FUNCTIONS ===\n");
             await DemonstrateKleisliCompose();
