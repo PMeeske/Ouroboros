@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <PackageReference Include="LangChain" Version="0.17.0" />
+    <PackageReference Include="LangChain.Abstractions" Version="*" />
     <PackageReference Include="System.Reactive" Version="6.0.2" />
   </ItemGroup>
 
