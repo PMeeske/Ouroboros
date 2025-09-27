@@ -23,11 +23,11 @@ public class MemoryContextTests
             throw new Exception("Input property not set correctly");
             
         // Test property management
-        memoryContext.SetProperty("key1", "value1");
-        memoryContext.SetProperty("key2", 42);
+        var contextWithKey1 = memoryContext.SetProperty("key1", "value1");
+        var contextWithKey2 = contextWithKey1.SetProperty("key2", 42);
         
-        var value1 = memoryContext.GetProperty<string>("key1");
-        var value2 = memoryContext.GetProperty<int>("key2");
+        var value1 = contextWithKey2.GetProperty<string>("key1");
+        var value2 = contextWithKey2.GetProperty<int>("key2");
         
         if (value1 != "value1")
             throw new Exception("String property not retrieved correctly");
@@ -36,6 +36,37 @@ public class MemoryContextTests
             throw new Exception("Integer property not retrieved correctly");
             
         Console.WriteLine("✓ MemoryContext basics test passed");
+    }
+
+    /// <summary>
+    /// Tests that MemoryContext SetProperty maintains immutability.
+    /// </summary>
+    public static void TestMemoryContextImmutability()
+    {
+        Console.WriteLine("Testing MemoryContext immutability...");
+        
+        var input = "test input";
+        var memory = new ConversationMemory(maxTurns: 3);
+        var originalContext = new MemoryContext<string>(input, memory);
+        
+        // Add a property to the original context
+        var newContext = originalContext.SetProperty("key1", "value1");
+        
+        // Original context should not have the property
+        var originalValue = originalContext.GetProperty<string>("key1");
+        if (originalValue != null)
+            throw new Exception("Original context was mutated - immutability broken!");
+            
+        // New context should have the property
+        var newValue = newContext.GetProperty<string>("key1");
+        if (newValue != "value1")
+            throw new Exception("New context does not have the expected property");
+            
+        // Contexts should be different instances
+        if (ReferenceEquals(originalContext, newContext))
+            throw new Exception("SetProperty returned the same instance - immutability broken!");
+            
+        Console.WriteLine("✓ MemoryContext immutability test passed");
     }
 
     /// <summary>
@@ -96,6 +127,7 @@ public class MemoryContextTests
         Console.WriteLine("=== Running MemoryContext Tests ===");
         
         TestMemoryContextBasics();
+        TestMemoryContextImmutability();
         TestConversationTurnManagement();
         TestConversationHistoryFormatting();
         
