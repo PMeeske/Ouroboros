@@ -9,6 +9,8 @@ global using LangChainPipeline.Core.Monads;
 global using LangChainPipeline.Core.Steps;
 global using LangChainPipeline.Core.Kleisli;
 global using LangChainPipeline.Core.Interop;
+global using LangChainPipeline.Core.Memory;
+global using LangChainPipeline.Core.Conversation;
 
 // Domain models and state management
 global using LangChainPipeline.Domain;

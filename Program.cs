@@ -10,6 +10,8 @@ using LangChain.Providers;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Tools;
 using LangChainPipeline.Core;
+using LangChainPipeline.Examples;
+using LangChainPipeline.Tests;
 
 namespace ConsoleApp1;
 
@@ -41,6 +43,16 @@ internal static class Program
             // Test hybrid sync/async step system
             Console.WriteLine("\n=== HYBRID SYNC/ASYNC STEP DEMONSTRATIONS ===\n");
             await HybridStepExamples.RunAllHybridDemonstrations();
+
+            Console.WriteLine("\n" + new string('=', 70) + "\n");
+
+            // Test the new conversational features
+            Console.WriteLine("=== CONVERSATIONAL FEATURES TESTING ===");
+            MemoryContextTests.RunAllTests();
+
+            // Demonstrate conversational pipeline
+            Console.WriteLine("=== CONVERSATIONAL PIPELINE DEMONSTRATION ===");
+            await ConversationalPipelineExample.RunConversationalExample();
 
             Console.WriteLine("\n" + new string('=', 70) + "\n");
 
