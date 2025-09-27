@@ -23,6 +23,6 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
         string query, 
         int amount = 4)
     {
-        return await GetSimilarDocuments(embed, query, amount);
+        return await base.GetSimilarDocuments(embed, query, amount);
     }
 }
