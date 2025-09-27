@@ -10,8 +10,10 @@ using LangChain.Providers;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Tools;
 using LangChainPipeline.Core;
+using LangChainPipeline.Core.Configuration;
 using LangChainPipeline.Examples;
 using LangChainPipeline.Tests;
+using Microsoft.Extensions.Configuration;
 
 namespace ConsoleApp1;
 
@@ -25,8 +27,17 @@ internal static class Program
     {
         try
         {
+            // Load configuration first
+            var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production";
+            var configuration = ConfigurationExtensions.BuildConfiguration(environment);
+            var pipelineConfig = configuration.GetPipelineConfiguration();
+            
             Console.WriteLine("=== Enhanced LangChain Pipeline System ===");
-            Console.WriteLine("Now with proper monadic operations!\n");
+            Console.WriteLine($"Environment: {environment}");
+            Console.WriteLine($"Chat Model: {pipelineConfig.Models.ChatModel}");
+            Console.WriteLine($"Embedding Model: {pipelineConfig.Models.EmbeddingModel}");
+            Console.WriteLine($"Similarity K: {pipelineConfig.Reasoning.SimilarityK}");
+            Console.WriteLine("Now with proper monadic operations and configuration management!\n");
 
             // First, demonstrate the enhanced monadic operations
             Console.WriteLine("=== MONADIC OPERATIONS DEMONSTRATION ===\n");
