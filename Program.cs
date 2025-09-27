@@ -29,7 +29,7 @@ internal static class Program
         {
             // Load configuration first
             var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production";
-            var configuration = LangChainPipeline.Core.Configuration.ConfigurationExtensions.BuildConfiguration(environment);
+            var configuration = ConfigurationExtensions.BuildConfiguration(environment);
             var pipelineConfig = configuration.GetPipelineConfiguration();
             
             Console.WriteLine("=== Enhanced LangChain Pipeline System ===");
