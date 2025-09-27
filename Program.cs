@@ -78,6 +78,9 @@ internal static class Program
             Console.WriteLine("\n" + new string('=', 70) + "\n");
 
             // Then run the original pipeline with enhancements
+            Console.WriteLine("=== PROPER LANGCHAIN CHAIN INTEGRATION ===");
+            await ProperLangChainIntegrationExamples.RunAllExamples();
+            
             Console.WriteLine("=== LANGCHAIN PIPELINE WITH MONADIC ENHANCEMENTS ===");
             Console.WriteLine("Initializing components...\n");
 
