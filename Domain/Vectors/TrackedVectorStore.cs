@@ -51,11 +51,11 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
     }
 
     /// <inheritdoc />
-    public Task ClearAsync(CancellationToken cancellationToken = default)
+    public override Task ClearAsync(CancellationToken cancellationToken = default)
     {
         _all.Clear();
-        // For now just clear our tracking - the base class might not have ClearAsync
-        return Task.CompletedTask;
+        // Clear the base class storage as well to maintain consistency
+        return base.ClearAsync(cancellationToken);
     }
 
     /// <summary>
