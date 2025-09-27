@@ -39,8 +39,7 @@ public sealed class BranchSnapshot
             Embedding = v.Embedding ?? Array.Empty<float>()
         }));
 
-        PipelineBranch branch = new PipelineBranch(Name, store, DataSource.FromPath(Environment.CurrentDirectory));
-        branch.EventsInternal.AddRange(Events);
+        PipelineBranch branch = PipelineBranch.WithEvents(Name, store, DataSource.FromPath(Environment.CurrentDirectory), Events);
         return branch;
     }
 }

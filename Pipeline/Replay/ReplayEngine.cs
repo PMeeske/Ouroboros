@@ -57,7 +57,7 @@ public sealed class ReplayEngine(ToolAwareChatModel llm, OllamaEmbeddingModel em
                 _ => new Draft(newText)
             };
 
-            replayed.EventsInternal.Add(new ReasoningStep(Guid.NewGuid(), ev.StepKind, newState, DateTime.UtcNow, prompt, newTools));
+            replayed = replayed.WithReasoning(newState, prompt, newTools);
         }
 
         return replayed;

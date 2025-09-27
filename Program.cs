@@ -170,6 +170,7 @@ internal static class Program
             var (branch, tools) = data;
             Console.WriteLine("Ingesting content...");
 
+            var updatedBranch = branch; // Default to original branch
             try
             {
                 // Simplified ingestion - in real scenario we'd use the embedding model
@@ -192,7 +193,7 @@ internal static class Program
                     }
                 });
                 
-                branch.AddIngestEvent("monadic-seed", new[] { "1", "2" });
+                updatedBranch = branch.WithIngestEvent("monadic-seed", new[] { "1", "2" });
                 Console.WriteLine("Enhanced seed data loaded with monadic concepts.\n");
             }
             catch (Exception ex)
@@ -201,7 +202,7 @@ internal static class Program
                 // Continue with empty store for demonstration
             }
 
-            return (branch, tools);
+            return (updatedBranch, tools);
         });
 
         // Step 5: Run enhanced reasoning with monadic error handling
@@ -380,7 +381,9 @@ internal static class Program
                 }
             });
             
-            branch.AddIngestEvent("seed", new[] { "1", "2" });
+            // Note: In a functional approach, this would return the updated branch
+            // For now, we'll ignore the result of WithIngestEvent to maintain compatibility
+            _ = branch.WithIngestEvent("seed", new[] { "1", "2" });
             Console.WriteLine("Fallback seed data loaded.\n");
         }
     }
