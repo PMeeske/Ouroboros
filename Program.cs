@@ -77,6 +77,10 @@ internal static class Program
 
             Console.WriteLine("\n" + new string('=', 70) + "\n");
 
+            // Test immutable methods functionality  
+            Console.WriteLine("=== IMMUTABLE METHODS VERIFICATION ===");
+            TestImmutableMethods();
+
             // Then run the original pipeline with enhancements
             Console.WriteLine("=== LANGCHAIN PIPELINE WITH MONADIC ENHANCEMENTS ===");
             Console.WriteLine("Initializing components...\n");
@@ -549,6 +553,61 @@ internal static class Program
         Console.WriteLine($"Multi-step chain '8': {result6}");
 
         Console.WriteLine("\n--- KleisliCompose successfully demonstrates higher-order composition patterns ---");
+    }
+
+    /// <summary>
+    /// Tests the immutable methods to ensure they follow functional programming principles.
+    /// </summary>
+    private static void TestImmutableMethods()
+    {
+        Console.WriteLine("Testing PipelineBranch immutable methods...");
+        
+        var branch = new PipelineBranch("test", new TrackedVectorStore(), DataSource.FromPath("."));
+        var draft = new Draft("Test draft text");
+        
+        // Test WithReasoning immutability
+        var newBranch = branch.WithReasoning(draft, "test prompt", null);
+        
+        if (ReferenceEquals(branch, newBranch))
+            throw new Exception("WithReasoning returned same instance - immutability broken!");
+            
+        if (branch.Events.Count != 0)
+            throw new Exception("Original branch was mutated!");
+            
+        if (newBranch.Events.Count != 1)
+            throw new Exception("New branch doesn't have expected event!");
+            
+        // Test WithIngestEvent immutability
+        var newBranch2 = branch.WithIngestEvent("test", new[] { "id1", "id2" });
+        
+        if (ReferenceEquals(branch, newBranch2))
+            throw new Exception("WithIngestEvent returned same instance - immutability broken!");
+            
+        if (branch.Events.Count != 0)
+            throw new Exception("Original branch was mutated by WithIngestEvent!");
+
+        Console.WriteLine("✓ PipelineBranch immutable methods test passed");
+        
+        // Test ToolRegistry immutability
+        Console.WriteLine("Testing ToolRegistry immutable methods...");
+        
+        var registry = new ToolRegistry();
+        var mathTool = new MathTool();
+        
+        // Test WithTool immutability  
+        var newRegistry = registry.WithTool(mathTool);
+        
+        if (ReferenceEquals(registry, newRegistry))
+            throw new Exception("WithTool returned same instance - immutability broken!");
+            
+        if (registry.All.Count() != 0)
+            throw new Exception("Original registry was mutated!");
+            
+        if (newRegistry.All.Count() != 1)
+            throw new Exception("New registry doesn't have expected tool!");
+            
+        Console.WriteLine("✓ ToolRegistry immutable methods test passed");
+        Console.WriteLine("✓ All immutable methods tests passed!\n");
     }
 }
 
