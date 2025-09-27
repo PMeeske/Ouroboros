@@ -88,13 +88,7 @@ public class ConversationChainBuilder<T>
         string humanPrefix = "Human", 
         string aiPrefix = "AI")
     {
-        var loadStep = new Step<MemoryContext<object>, MemoryContext<object>>(context =>
-        {
-            var history = context.Memory.GetFormattedHistory(humanPrefix, aiPrefix);
-            return Task.FromResult(context.SetProperty(outputKey, history));
-        });
-        
-        _steps.Add(loadStep);
+        _steps.Add(MemoryArrows.LoadMemory<object>(outputKey, humanPrefix, aiPrefix));
         return this;
     }
     
@@ -103,24 +97,7 @@ public class ConversationChainBuilder<T>
     /// </summary>
     public ConversationChainBuilder<T> Template(string template)
     {
-        var templateStep = new Step<MemoryContext<object>, MemoryContext<object>>(context =>
-        {
-            var processedTemplate = template;
-            
-            // Replace template variables with values from properties
-            foreach (var prop in context.Properties)
-            {
-                var placeholder = $"{{{prop.Key}}}";
-                if (processedTemplate.Contains(placeholder))
-                {
-                    processedTemplate = processedTemplate.Replace(placeholder, prop.Value?.ToString() ?? string.Empty);
-                }
-            }
-            
-            return Task.FromResult(context.WithData<object>(processedTemplate));
-        });
-        
-        _steps.Add(templateStep);
+        _steps.Add(MemoryArrows.Template<object>(template));
         return this;
     }
     
@@ -129,19 +106,7 @@ public class ConversationChainBuilder<T>
     /// </summary>
     public ConversationChainBuilder<T> LLM(string mockPrefix = "AI Response:")
     {
-        var llmStep = new Step<MemoryContext<object>, MemoryContext<object>>(context =>
-        {
-            var prompt = context.Data?.ToString() ?? string.Empty;
-            var response = $"{mockPrefix} Processing prompt with {prompt.Length} characters - {DateTime.Now:HH:mm:ss}";
-            
-            var result = context
-                .WithData<object>(response)
-                .SetProperty("text", response);
-                
-            return Task.FromResult(result);
-        });
-        
-        _steps.Add(llmStep);
+        _steps.Add(MemoryArrows.MockLLM<object>(mockPrefix));
         return this;
     }
     
@@ -152,20 +117,7 @@ public class ConversationChainBuilder<T>
         string inputKey = "input", 
         string responseKey = "text")
     {
-        var updateStep = new Step<MemoryContext<object>, MemoryContext<object>>(context =>
-        {
-            var input = context.GetProperty<string>(inputKey) ?? string.Empty;
-            var response = context.GetProperty<string>(responseKey) ?? string.Empty;
-            
-            if (!string.IsNullOrWhiteSpace(input) && !string.IsNullOrWhiteSpace(response))
-            {
-                context.Memory.AddTurn(input, response);
-            }
-            
-            return Task.FromResult(context);
-        });
-        
-        _steps.Add(updateStep);
+        _steps.Add(MemoryArrows.UpdateMemory<object>(inputKey, responseKey));
         return this;
     }
     
@@ -174,10 +126,7 @@ public class ConversationChainBuilder<T>
     /// </summary>
     public ConversationChainBuilder<T> Set(object value, string key)
     {
-        var setStep = new Step<MemoryContext<object>, MemoryContext<object>>(context =>
-            Task.FromResult(context.SetProperty(key, value)));
-        
-        _steps.Add(setStep);
+        _steps.Add(MemoryArrows.Set<object>(value, key));
         return this;
     }
     
@@ -186,7 +135,8 @@ public class ConversationChainBuilder<T>
     /// </summary>
     public async Task<MemoryContext<object>> RunAsync()
     {
-        var context = _initialContext.WithData<object>(_initialContext.Data!);
+        var initialData = _initialContext.Data ?? (object)string.Empty;
+        var context = _initialContext.WithData<object>(initialData);
         
         foreach (var step in _steps)
         {

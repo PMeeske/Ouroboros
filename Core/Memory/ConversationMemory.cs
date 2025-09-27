@@ -90,8 +90,11 @@ public record MemoryContext<T>(
     /// </summary>
     public MemoryContext<T> SetProperty(string key, object value)
     {
-        Properties[key] = value;
-        return this;
+        var newProperties = new Dictionary<string, object>(Properties)
+        {
+            [key] = value
+        };
+        return new MemoryContext<T>(Data, Memory, newProperties);
     }
     
     /// <summary>
@@ -168,6 +171,29 @@ public static class MemoryArrows
     }
     
     /// <summary>
+    /// Create a template processing arrow for conversation prompts (generic version)
+    /// </summary>
+    public static Step<MemoryContext<object>, MemoryContext<object>> Template<T>(string template)
+    {
+        return context =>
+        {
+            var processedTemplate = template;
+            
+            // Replace template variables with values from properties
+            foreach (var prop in context.Properties)
+            {
+                var placeholder = $"{{{prop.Key}}}";
+                if (processedTemplate.Contains(placeholder))
+                {
+                    processedTemplate = processedTemplate.Replace(placeholder, prop.Value?.ToString() ?? string.Empty);
+                }
+            }
+            
+            return Task.FromResult(context.WithData<object>(processedTemplate));
+        };
+    }
+    
+    /// <summary>
     /// Set a value in the memory context
     /// </summary>
     public static Step<MemoryContext<T>, MemoryContext<T>> Set<T>(object value, string key)
@@ -187,6 +213,24 @@ public static class MemoryArrows
             
             var result = context
                 .WithData(response)
+                .SetProperty("text", response);
+                
+            return Task.FromResult(result);
+        };
+    }
+    
+    /// <summary>
+    /// Create a mock LLM step for demonstration purposes (generic version)
+    /// </summary>
+    public static Step<MemoryContext<object>, MemoryContext<object>> MockLLM<T>(string mockPrefix = "AI Response:")
+    {
+        return context =>
+        {
+            var prompt = context.Data?.ToString() ?? string.Empty;
+            var response = $"{mockPrefix} Processing prompt with {prompt.Length} characters - {DateTime.Now:HH:mm:ss}";
+            
+            var result = context
+                .WithData<object>(response)
                 .SetProperty("text", response);
                 
             return Task.FromResult(result);
