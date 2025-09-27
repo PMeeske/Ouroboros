@@ -63,6 +63,10 @@ internal static class Program
             Console.WriteLine("=== LANGCHAIN CONVERSATIONAL FEATURES TESTING ===");
             await LangChainConversationTests.RunAllTests();
 
+            // Test TrackedVectorStore fixes
+            Console.WriteLine("=== TRACKEDVECTORSTORE FIX TESTING ===");
+            await TrackedVectorStoreTests.RunAllTests();
+
             // Demonstrate conversational pipeline examples
             Console.WriteLine("=== CONVERSATIONAL PIPELINE DEMONSTRATION ===");
             await ConversationalPipelineExample.RunConversationalExample();
