@@ -42,6 +42,10 @@ internal static class Program
             Console.WriteLine("\n=== HYBRID SYNC/ASYNC STEP DEMONSTRATIONS ===\n");
             await HybridStepExamples.RunAllHybridDemonstrations();
 
+            // Demonstrate the new conversational Kleisli system
+            Console.WriteLine("\n=== CONVERSATIONAL KLEISLI WITH MEMORY INTEGRATION ===\n");
+            await ConversationalKleisliExamples.RunAllDemonstrations();
+
             Console.WriteLine("\n" + new string('=', 70) + "\n");
 
             // Then run the original pipeline with enhancements
