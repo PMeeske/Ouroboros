@@ -4,8 +4,8 @@ using LangChainPipeline.Core.Memory;
 namespace LangChainPipeline.Core.LangChain;
 
 /// <summary>
-/// LangChain-style conversation context that integrates with the existing pipeline system
-/// without requiring additional LangChain packages
+/// LangChain-integrated conversation context that properly bridges with official LangChain chains
+/// while maintaining the existing monadic pipeline patterns
 /// </summary>
 public class LangChainConversationContext
 {

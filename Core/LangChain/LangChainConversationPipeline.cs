@@ -1,8 +1,13 @@
-// LangChain-style conversation pipeline builder
+// LangChain-integrated conversation pipeline builder
+using LangChain.Chains.HelperChains;
+using LangChain.Providers;
+using LangChain.Prompts.Base;
+
 namespace LangChainPipeline.Core.LangChain;
 
 /// <summary>
-/// LangChain-style conversation pipeline that integrates with existing pipeline patterns
+/// LangChain-integrated conversation pipeline that properly uses official LangChain chains
+/// integrated with the existing monadic pipeline patterns
 /// </summary>
 public class LangChainConversationPipeline
 {
@@ -74,12 +79,12 @@ public class LangChainConversationPipeline
 }
 
 /// <summary>
-/// Builder extensions to create LangChain-based conversational flows
+/// Builder extensions to create LangChain-integrated conversational flows using official LangChain chains
 /// </summary>
 public static class LangChainConversationBuilder
 {
     /// <summary>
-    /// Creates a conversational pipeline builder using LangChain patterns
+    /// Creates a conversational pipeline builder using proper LangChain integration
     /// </summary>
     public static LangChainConversationPipeline CreateConversationPipeline()
     {
@@ -87,7 +92,19 @@ public static class LangChainConversationBuilder
     }
 
     /// <summary>
-    /// Extension to add AI response generation step (placeholder for LLM integration)
+    /// Extension to add AI response generation step using proper LangChain LLMChain
+    /// </summary>
+    public static LangChainConversationPipeline AddAIResponseGeneration(
+        this LangChainConversationPipeline pipeline,
+        IChatModel llm,
+        BasePromptTemplate prompt,
+        string outputKey = "text")
+    {
+        return pipeline.AddLangChainLLM(llm, prompt, outputKey);
+    }
+
+    /// <summary>
+    /// Extension to add AI response generation step (backward compatibility with function generator)
     /// </summary>
     public static LangChainConversationPipeline AddAIResponseGeneration(
         this LangChainConversationPipeline pipeline,
