@@ -2,8 +2,10 @@ using LangChain.Databases;
 using LangChain.Databases.InMemory;
 using LangChain.DocumentLoaders;
 using LangChain.Extensions;
+using LangChain.Providers;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Core;
+using LangChainPipeline.Domain.Vectors;
 
 namespace LangChainPipeline.Pipeline.Branches;
 
@@ -19,7 +21,7 @@ public static class BranchOps
     /// <param name="topK">Number of top results to consider for tie-breaking.</param>
     /// <returns>A step that merges two branches.</returns>
     public static Step<(PipelineBranch A, PipelineBranch B, string Query), PipelineBranch> MergeByRelevance(
-        OllamaEmbeddingModel embed, int topK = 1)
+        IEmbeddingModel embed, int topK = 1)
         => async input =>
         {
             (PipelineBranch a, PipelineBranch b, string query) = input;

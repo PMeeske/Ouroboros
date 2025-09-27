@@ -9,8 +9,8 @@ namespace LangChainPipeline.Pipeline.Ingestion;
 public static class InMemoryIngestion
 {
     public static async Task<List<Vector>> LoadToMemory<TLoader>(
-        TrackedVectorStore store,
-        OllamaEmbeddingModel embedding,
+        IVectorStore store,
+        IEmbeddingModel embedding,
         DataSource source,
         ITextSplitter splitter,
         CancellationToken ct = default)

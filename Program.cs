@@ -330,7 +330,7 @@ internal static class Program
     /// <summary>
     /// Creates and configures the tool registry with default tools.
     /// </summary>
-    private static ToolRegistry CreateToolRegistry(TrackedVectorStore vectorStore, OllamaEmbeddingModel embeddingModel)
+    private static ToolRegistry CreateToolRegistry(IVectorStore vectorStore, IEmbeddingModel embeddingModel)
     {
         Console.WriteLine("Setting up tools...");
         

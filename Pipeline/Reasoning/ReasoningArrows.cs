@@ -1,5 +1,6 @@
 using LangChain.DocumentLoaders;
 using LangChain.Extensions;
+using LangChain.Providers;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Core;
 using LangChainPipeline.Tools;
@@ -18,7 +19,7 @@ public static class ReasoningArrows
     /// Creates a draft arrow that generates an initial response.
     /// </summary>
     public static Step<PipelineBranch, PipelineBranch> DraftArrow(
-        ToolAwareChatModel llm, ToolRegistry tools, OllamaEmbeddingModel embed, string topic, string query, int k = 8)
+        ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
         => async branch =>
         {
             IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
@@ -40,7 +41,7 @@ public static class ReasoningArrows
     /// Creates a critique arrow that analyzes and critiques the draft.
     /// </summary>
     public static Step<PipelineBranch, PipelineBranch> CritiqueArrow(
-        ToolAwareChatModel llm, ToolRegistry tools, OllamaEmbeddingModel embed, string topic, string query, int k = 8)
+        ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
         => async branch =>
         {
             Draft? draft = branch.Events.OfType<ReasoningStep>().Select(e => e.State).OfType<Draft>().LastOrDefault();
@@ -66,7 +67,7 @@ public static class ReasoningArrows
     /// Creates an improvement arrow that generates a final improved version.
     /// </summary>
     public static Step<PipelineBranch, PipelineBranch> ImproveArrow(
-        ToolAwareChatModel llm, ToolRegistry tools, OllamaEmbeddingModel embed, string topic, string query, int k = 8)
+        ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
         => async branch =>
         {
             Draft? draft = branch.Events.OfType<ReasoningStep>().Select(e => e.State).OfType<Draft>().LastOrDefault();
