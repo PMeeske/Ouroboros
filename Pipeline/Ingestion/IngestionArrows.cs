@@ -1,5 +1,6 @@
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
+using LangChain.Providers;
 using LangChain.Providers.Ollama;
 using LangChain.Splitters.Text;
 using LangChainPipeline.Core;
@@ -20,7 +21,7 @@ public static class IngestionArrows
     /// <param name="tag">Optional tag for the ingestion event.</param>
     /// <returns>A step that ingests documents into the branch.</returns>
     public static Step<PipelineBranch, PipelineBranch> IngestArrow<TLoader>(
-        OllamaEmbeddingModel embed,
+        IEmbeddingModel embed,
         ITextSplitter? splitter = null,
         string tag = "")
         where TLoader : IDocumentLoader, new()

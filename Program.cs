@@ -66,6 +66,12 @@ internal static class Program
 
             Console.WriteLine("\n" + new string('=', 70) + "\n");
 
+            // Test the vector store abstraction and infinite recursion fix
+            Console.WriteLine("=== VECTOR STORE ABSTRACTION TESTING ===");
+            VectorStoreAbstractionTests.TestVectorStoreAbstraction();
+            VectorStoreAbstractionTests.TestInfiniteRecursionPrevention();
+            Console.WriteLine();
+
             // Test the new conversational features
             Console.WriteLine("=== CONVERSATIONAL FEATURES TESTING ===");
             MemoryContextTests.RunAllTests();
@@ -341,7 +347,7 @@ internal static class Program
     /// <summary>
     /// Creates and configures the tool registry with default tools.
     /// </summary>
-    private static ToolRegistry CreateToolRegistry(TrackedVectorStore vectorStore, OllamaEmbeddingModel embeddingModel)
+    private static ToolRegistry CreateToolRegistry(IVectorStore vectorStore, IEmbeddingModel embeddingModel)
     {
         Console.WriteLine("Setting up tools...");
         
