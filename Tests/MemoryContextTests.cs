@@ -1,4 +1,5 @@
 using LangChainPipeline.Core.Memory;
+using Xunit;
 
 namespace LangChainPipeline.Tests;
 
@@ -10,18 +11,16 @@ public class MemoryContextTests
     /// <summary>
     /// Tests basic memory context creation and property management.
     /// </summary>
-    public static void TestMemoryContextBasics()
+    [Fact]
+    public void TestMemoryContextBasics()
     {
-        Console.WriteLine("Testing MemoryContext basics...");
-        
         var input = "test input";
         var memory = new ConversationMemory(maxTurns: 3);
         var memoryContext = new MemoryContext<string>(input, memory);
         
         // Test input property
-        if (memoryContext.Data != input)
-            throw new Exception("Input property not set correctly");
-            
+        Assert.Equal(input, memoryContext.Data);
+        
         // Test property management
         memoryContext.SetProperty("key1", "value1");
         memoryContext.SetProperty("key2", 42);
@@ -29,22 +28,16 @@ public class MemoryContextTests
         var value1 = memoryContext.GetProperty<string>("key1");
         var value2 = memoryContext.GetProperty<int>("key2");
         
-        if (value1 != "value1")
-            throw new Exception("String property not retrieved correctly");
-            
-        if (value2 != 42)
-            throw new Exception("Integer property not retrieved correctly");
-            
-        Console.WriteLine("✓ MemoryContext basics test passed");
+        Assert.Equal("value1", value1);
+        Assert.Equal(42, value2);
     }
 
     /// <summary>
     /// Tests conversation turn management with max turns limit.
     /// </summary>
-    public static void TestConversationTurnManagement()
+    [Fact]
+    public void TestConversationTurnManagement()
     {
-        Console.WriteLine("Testing conversation turn management...");
-        
         var memory = new ConversationMemory(maxTurns: 2);
         
         // Add turns beyond the limit
@@ -55,50 +48,25 @@ public class MemoryContextTests
         var turns = memory.GetTurns();
         
         // Should only keep the last 2 turns
-        if (turns.Count != 2)
-            throw new Exception($"Expected 2 turns, got {turns.Count}");
-            
+        Assert.Equal(2, turns.Count);
+        
         var turnList = turns.ToList();
-        if (turnList[0].HumanInput != "How are you?")
-            throw new Exception("First turn not correct after limit reached");
-            
-        if (turnList[1].HumanInput != "What's your name?")
-            throw new Exception("Second turn not correct after limit reached");
-            
-        Console.WriteLine("✓ Conversation turn management test passed");
+        Assert.Equal("How are you?", turnList[0].HumanInput);
+        Assert.Equal("What's your name?", turnList[1].HumanInput);
     }
 
     /// <summary>
     /// Tests conversation history formatting.
     /// </summary>
-    public static void TestConversationHistoryFormatting()
+    [Fact]
+    public void TestConversationHistoryFormatting()
     {
-        Console.WriteLine("Testing conversation history formatting...");
-        
         var memory = new ConversationMemory();
         memory.AddTurn("User question", "AI response");
         
         var history = memory.GetFormattedHistory();
-        if (string.IsNullOrEmpty(history))
-            throw new Exception("Conversation history not generated");
-            
-        if (!history.Contains("User question") || !history.Contains("AI response"))
-            throw new Exception("Conversation history missing content");
-            
-        Console.WriteLine("✓ Conversation history formatting test passed");
-    }
-
-    /// <summary>
-    /// Runs all memory context tests.
-    /// </summary>
-    public static void RunAllTests()
-    {
-        Console.WriteLine("=== Running MemoryContext Tests ===");
-        
-        TestMemoryContextBasics();
-        TestConversationTurnManagement();
-        TestConversationHistoryFormatting();
-        
-        Console.WriteLine("✓ All MemoryContext tests passed!\n");
+        Assert.False(string.IsNullOrEmpty(history));
+        Assert.Contains("User question", history);
+        Assert.Contains("AI response", history);
     }
 }

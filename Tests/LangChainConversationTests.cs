@@ -1,4 +1,5 @@
 using LangChainPipeline.Core.LangChain;
+using Xunit;
 
 namespace LangChainPipeline.Tests;
 
@@ -10,10 +11,9 @@ public class LangChainConversationTests
     /// <summary>
     /// Tests basic LangChain conversation context creation and property management.
     /// </summary>
-    public static void TestLangChainConversationContextBasics()
+    [Fact]
+    public void TestLangChainConversationContextBasics()
     {
-        Console.WriteLine("Testing LangChain ConversationContext basics...");
-        
         var context = new LangChainConversationContext(maxTurns: 3);
         
         // Test property management
@@ -23,22 +23,16 @@ public class LangChainConversationTests
         var value1 = context.GetProperty<string>("key1");
         var value2 = context.GetProperty<int>("key2");
         
-        if (value1 != "value1")
-            throw new Exception("String property not retrieved correctly");
-            
-        if (value2 != 42)
-            throw new Exception("Integer property not retrieved correctly");
-            
-        Console.WriteLine("✓ LangChain ConversationContext basics test passed");
+        Assert.Equal("value1", value1);
+        Assert.Equal(42, value2);
     }
 
     /// <summary>
     /// Tests conversation turn management with max turns limit using LangChain approach.
     /// </summary>
-    public static void TestLangChainConversationTurnManagement()
+    [Fact]
+    public void TestLangChainConversationTurnManagement()
     {
-        Console.WriteLine("Testing LangChain conversation turn management...");
-        
         var context = new LangChainConversationContext(maxTurns: 2);
         
         // Add turns beyond the limit
@@ -52,46 +46,33 @@ public class LangChainConversationTests
         var lines = history.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         var turnCount = lines.Count(line => line.StartsWith("Human:"));
         
-        if (turnCount != 2)
-            throw new Exception($"Expected 2 turns, got {turnCount}");
-            
-        if (!history.Contains("How are you?"))
-            throw new Exception("First turn not correct after limit reached");
-            
-        if (!history.Contains("What's your name?"))
-            throw new Exception("Second turn not correct after limit reached");
-            
-        Console.WriteLine("✓ LangChain conversation turn management test passed");
+        Assert.Equal(2, turnCount);
+        Assert.Contains("How are you?", history);
+        Assert.Contains("What's your name?", history);
     }
 
     /// <summary>
     /// Tests the WithLangChainMemory extension method.
     /// </summary>
-    public static void TestWithLangChainMemoryExtension()
+    [Fact]
+    public void TestWithLangChainMemoryExtension()
     {
-        Console.WriteLine("Testing WithLangChainMemory extension...");
-        
         var input = "test string";
         var context = input.WithLangChainMemory(5);
         
         var retrievedInput = context.GetProperty<string>("input");
-        if (retrievedInput != input)
-            throw new Exception("WithLangChainMemory extension did not wrap input correctly");
-            
+        Assert.Equal(input, retrievedInput);
+        
         var history = context.GetConversationHistory();
-        if (!string.IsNullOrEmpty(history))
-            throw new Exception("New conversation context should have no history");
-            
-        Console.WriteLine("✓ WithLangChainMemory extension test passed");
+        Assert.True(string.IsNullOrEmpty(history));
     }
 
     /// <summary>
     /// Tests LangChain conversation pipeline functionality.
     /// </summary>
-    public static async Task TestLangChainConversationPipeline()
+    [Fact]
+    public async Task TestLangChainConversationPipeline()
     {
-        Console.WriteLine("Testing LangChain conversation pipeline...");
-        
         var context = "test input".WithLangChainMemory();
         context.AddTurn("Previous question", "Previous answer");
         
@@ -103,32 +84,12 @@ public class LangChainConversationTests
         var result = await pipeline.RunAsync(context);
         
         var historyProp = result.GetProperty<string>("conversation_history");
-        if (string.IsNullOrEmpty(historyProp))
-            throw new Exception("Conversation history not added to properties");
-            
+        Assert.False(string.IsNullOrEmpty(historyProp));
+        
         var testProp = result.GetProperty<string>("test_prop");
-        if (testProp != "test_value")
-            throw new Exception("Test property not set correctly");
-            
+        Assert.Equal("test_value", testProp);
+        
         var aiResponse = result.GetProperty<string>("text");
-        if (string.IsNullOrEmpty(aiResponse))
-            throw new Exception("AI response not generated");
-            
-        Console.WriteLine("✓ LangChain conversation pipeline test passed");
-    }
-
-    /// <summary>
-    /// Runs all LangChain conversation tests.
-    /// </summary>
-    public static async Task RunAllTests()
-    {
-        Console.WriteLine("=== Running LangChain Conversation Tests ===");
-        
-        TestLangChainConversationContextBasics();
-        TestLangChainConversationTurnManagement();
-        TestWithLangChainMemoryExtension();
-        await TestLangChainConversationPipeline();
-        
-        Console.WriteLine("✓ All LangChain Conversation tests passed!\n");
+        Assert.False(string.IsNullOrEmpty(aiResponse));
     }
 }

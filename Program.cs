@@ -57,11 +57,11 @@ internal static class Program
 
             // Test the new conversational features
             Console.WriteLine("=== CONVERSATIONAL FEATURES TESTING ===");
-            MemoryContextTests.RunAllTests();
+            Console.WriteLine("Note: Tests have been migrated to xUnit. Run 'dotnet test' to execute them.");
             
             // Test LangChain-based conversational features
             Console.WriteLine("=== LANGCHAIN CONVERSATIONAL FEATURES TESTING ===");
-            await LangChainConversationTests.RunAllTests();
+            Console.WriteLine("Note: Tests have been migrated to xUnit. Run 'dotnet test' to execute them.");
 
             // Demonstrate conversational pipeline examples
             Console.WriteLine("=== CONVERSATIONAL PIPELINE DEMONSTRATION ===");
