@@ -55,6 +55,12 @@ internal static class Program
 
             Console.WriteLine("\n" + new string('=', 70) + "\n");
 
+            // Test the vector store abstraction and infinite recursion fix
+            Console.WriteLine("=== VECTOR STORE ABSTRACTION TESTING ===");
+            VectorStoreAbstractionTests.TestVectorStoreAbstraction();
+            VectorStoreAbstractionTests.TestInfiniteRecursionPrevention();
+            Console.WriteLine();
+
             // Test the new conversational features
             Console.WriteLine("=== CONVERSATIONAL FEATURES TESTING ===");
             MemoryContextTests.RunAllTests();
