@@ -10,6 +10,8 @@ using LangChain.Providers;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Tools;
 using LangChainPipeline.Core;
+using LangChainPipeline.Examples;
+using LangChainPipeline.Tests;
 
 namespace ConsoleApp1;
 
@@ -45,6 +47,33 @@ internal static class Program
             // Test hybrid sync/async step system
             Console.WriteLine("\n=== HYBRID SYNC/ASYNC STEP DEMONSTRATIONS ===\n");
             await HybridStepExamples.RunAllHybridDemonstrations();
+
+            // Demonstrate the new conversational Kleisli system
+            Console.WriteLine("\n=== CONVERSATIONAL KLEISLI WITH MEMORY INTEGRATION ===\n");
+            await ConversationalKleisliExamples.RunAllDemonstrations();
+            
+            // Demonstrate the direct LangChain example integration
+            Console.WriteLine("\n=== DIRECT LANGCHAIN EXAMPLE INTEGRATION ===\n");
+            await LangChainStyleExample.DemonstrateLangChainEquivalence();
+            await LangChainStyleExample.RunLangChainStyleConversation();
+
+            Console.WriteLine("\n" + new string('=', 70) + "\n");
+
+            // Test the new conversational features
+            Console.WriteLine("=== CONVERSATIONAL FEATURES TESTING ===");
+            Console.WriteLine("Note: Tests have been migrated to xUnit. Run 'dotnet test' to execute them.");
+            
+            // Test LangChain-based conversational features
+            Console.WriteLine("=== LANGCHAIN CONVERSATIONAL FEATURES TESTING ===");
+            Console.WriteLine("Note: Tests have been migrated to xUnit. Run 'dotnet test' to execute them.");
+
+            // Demonstrate conversational pipeline examples
+            Console.WriteLine("=== CONVERSATIONAL PIPELINE DEMONSTRATION ===");
+            await ConversationalPipelineExample.RunConversationalExample();
+
+            // Demonstrate LangChain-based conversational pipeline
+            Console.WriteLine("=== LANGCHAIN CONVERSATIONAL PIPELINE DEMONSTRATION ===");
+            await LangChainConversationExample.RunLangChainConversationalExample();
 
             Console.WriteLine("\n" + new string('=', 70) + "\n");
 
