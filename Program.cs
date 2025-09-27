@@ -156,10 +156,9 @@ internal static class Program
         var setupTools = Arrow.Lift<PipelineBranch, (PipelineBranch branch, ToolRegistry tools)>(branch =>
         {
             Console.WriteLine("Setting up tools...");
-            var tools = new ToolRegistry();
-            tools.Register(new MathTool());
-            // Note: RetrievalTool would need the embedding model, but we're simplifying for demonstration
-            tools.Register("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
+            var tools = new ToolRegistry()
+                .WithTool(new MathTool())
+                .WithFunction("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
             
             return (branch, tools);
         });
@@ -170,6 +169,7 @@ internal static class Program
             var (branch, tools) = data;
             Console.WriteLine("Ingesting content...");
 
+            var updatedBranch = branch; // Default to original branch
             try
             {
                 // Simplified ingestion - in real scenario we'd use the embedding model
@@ -192,7 +192,7 @@ internal static class Program
                     }
                 });
                 
-                branch.AddIngestEvent("monadic-seed", new[] { "1", "2" });
+                updatedBranch = branch.WithIngestEvent("monadic-seed", new[] { "1", "2" });
                 Console.WriteLine("Enhanced seed data loaded with monadic concepts.\n");
             }
             catch (Exception ex)
@@ -201,7 +201,7 @@ internal static class Program
                 // Continue with empty store for demonstration
             }
 
-            return (branch, tools);
+            return (updatedBranch, tools);
         });
 
         // Step 5: Run enhanced reasoning with monadic error handling
@@ -338,12 +338,10 @@ internal static class Program
     {
         Console.WriteLine("Setting up tools...");
         
-        var tools = new ToolRegistry();
-        tools.Register(new MathTool());
-        tools.Register(new RetrievalTool(vectorStore, embeddingModel));
-        tools.Register("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
-
-        return tools;
+        return new ToolRegistry()
+            .WithTool(new MathTool())
+            .WithTool(new RetrievalTool(vectorStore, embeddingModel))
+            .WithFunction("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
     }
 
     /// <summary>
@@ -380,7 +378,9 @@ internal static class Program
                 }
             });
             
-            branch.AddIngestEvent("seed", new[] { "1", "2" });
+            // Note: In a functional approach, this would return the updated branch
+            // For now, we'll ignore the result of WithIngestEvent to maintain compatibility
+            _ = branch.WithIngestEvent("seed", new[] { "1", "2" });
             Console.WriteLine("Fallback seed data loaded.\n");
         }
     }
