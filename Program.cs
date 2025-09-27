@@ -55,14 +55,6 @@ internal static class Program
 
             Console.WriteLine("\n" + new string('=', 70) + "\n");
 
-            // Test the new conversational features
-            Console.WriteLine("=== CONVERSATIONAL FEATURES TESTING ===");
-            MemoryContextTests.RunAllTests();
-            
-            // Test LangChain-based conversational features
-            Console.WriteLine("=== LANGCHAIN CONVERSATIONAL FEATURES TESTING ===");
-            await LangChainConversationTests.RunAllTests();
-
             // Demonstrate conversational pipeline examples
             Console.WriteLine("=== CONVERSATIONAL PIPELINE DEMONSTRATION ===");
             await ConversationalPipelineExample.RunConversationalExample();
