@@ -14,6 +14,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
     <WarningsNotAsErrors>CS1591</WarningsNotAsErrors> <!-- Missing XML documentation -->
+    <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -31,6 +32,21 @@
   <ItemGroup>
     <PackageReference Include="LangChain" Version="0.17.0" />
     <PackageReference Include="System.Reactive" Version="6.0.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.4.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
