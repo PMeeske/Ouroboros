@@ -156,10 +156,9 @@ internal static class Program
         var setupTools = Arrow.Lift<PipelineBranch, (PipelineBranch branch, ToolRegistry tools)>(branch =>
         {
             Console.WriteLine("Setting up tools...");
-            var tools = new ToolRegistry();
-            tools.Register(new MathTool());
-            // Note: RetrievalTool would need the embedding model, but we're simplifying for demonstration
-            tools.Register("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
+            var tools = new ToolRegistry()
+                .WithTool(new MathTool())
+                .WithFunction("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
             
             return (branch, tools);
         });
@@ -339,12 +338,10 @@ internal static class Program
     {
         Console.WriteLine("Setting up tools...");
         
-        var tools = new ToolRegistry();
-        tools.Register(new MathTool());
-        tools.Register(new RetrievalTool(vectorStore, embeddingModel));
-        tools.Register("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
-
-        return tools;
+        return new ToolRegistry()
+            .WithTool(new MathTool())
+            .WithTool(new RetrievalTool(vectorStore, embeddingModel))
+            .WithFunction("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
     }
 
     /// <summary>
