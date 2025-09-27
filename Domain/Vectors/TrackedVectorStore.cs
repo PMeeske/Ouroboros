@@ -39,7 +39,7 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
     }
 
     /// <inheritdoc />
-    public new Task<bool> IsEmptyAsync(CancellationToken cancellationToken = default)
+    public override Task<bool> IsEmptyAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(_all.Count == 0);
     }
