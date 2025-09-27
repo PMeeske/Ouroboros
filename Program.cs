@@ -10,6 +10,8 @@ using LangChain.Providers;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Tools;
 using LangChainPipeline.Core;
+using LangChainPipeline.Examples;
+using LangChainPipeline.Tests;
 
 namespace ConsoleApp1;
 
@@ -50,6 +52,24 @@ internal static class Program
             Console.WriteLine("\n=== DIRECT LANGCHAIN EXAMPLE INTEGRATION ===\n");
             await LangChainStyleExample.DemonstrateLangChainEquivalence();
             await LangChainStyleExample.RunLangChainStyleConversation();
+
+            Console.WriteLine("\n" + new string('=', 70) + "\n");
+
+            // Test the new conversational features
+            Console.WriteLine("=== CONVERSATIONAL FEATURES TESTING ===");
+            MemoryContextTests.RunAllTests();
+            
+            // Test LangChain-based conversational features
+            Console.WriteLine("=== LANGCHAIN CONVERSATIONAL FEATURES TESTING ===");
+            await LangChainConversationTests.RunAllTests();
+
+            // Demonstrate conversational pipeline examples
+            Console.WriteLine("=== CONVERSATIONAL PIPELINE DEMONSTRATION ===");
+            await ConversationalPipelineExample.RunConversationalExample();
+
+            // Demonstrate LangChain-based conversational pipeline
+            Console.WriteLine("=== LANGCHAIN CONVERSATIONAL PIPELINE DEMONSTRATION ===");
+            await LangChainConversationExample.RunLangChainConversationalExample();
 
             Console.WriteLine("\n" + new string('=', 70) + "\n");
 
