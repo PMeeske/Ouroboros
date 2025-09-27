@@ -1,11 +1,13 @@
-// LangChain-based conversation pipeline to replace custom ConversationBuilder
+// LangChain-based conversation pipeline using HelperChains namespace as specified by PMeeske
 using LangChain.Schema;
 using LangChain.Chains;
+using LangChain.Chains.HelperChains;
 
 namespace LangChainPipeline.Core.LangChain;
 
 /// <summary>
-/// LangChain-based conversation pipeline that uses LangChain's chain and schema concepts
+/// LangChain-based conversation pipeline that uses LangChain's chain, schema, and helper chain concepts
+/// Uses LangChain.Chains.HelperChains namespace as specified by PMeeske for proper monadic composition
 /// instead of custom ConversationBuilder
 /// </summary>
 public class LangChainConversationPipeline

@@ -1,11 +1,13 @@
-// Let's create a LangChain-integrated version that replaces custom classes
+// LangChain-integrated version using proper namespace as specified by PMeeske
 using LangChain.Schema;
 using LangChain.Chains;
+using LangChain.Chains.HelperChains;
 
 namespace LangChainPipeline.Core.LangChain;
 
 /// <summary>
-/// LangChain-based conversation context that integrates with LangChain's schema and chains
+/// LangChain-based conversation context that integrates with LangChain's schema, chains, and helper chains
+/// Uses LangChain.Chains.HelperChains namespace as specified by PMeeske for proper monadic composition
 /// Instead of custom MemoryContext, use LangChain's built-in context management
 /// </summary>
 public class LangChainConversationContext
