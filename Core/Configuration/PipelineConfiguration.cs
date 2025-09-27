@@ -18,7 +18,18 @@ public class PipelineConfiguration
 /// </summary>
 public class ModelsConfiguration
 {
+    /// <summary>
+    /// Default chat model name.
+    /// "deepseek-coder:33b" is an open-source LLM for code and chat tasks.
+    /// Prerequisite: Ollama must be installed and the model must be pulled locally (e.g., `ollama pull deepseek-coder:33b`).
+    /// </summary>
     public string ChatModel { get; set; } = "deepseek-coder:33b";
+
+    /// <summary>
+    /// Default embedding model name.
+    /// "nomic-embed-text" is an open-source text embedding model.
+    /// Prerequisite: Ollama must be installed and the model must be pulled locally (e.g., `ollama pull nomic-embed-text`).
+    /// </summary>
     public string EmbeddingModel { get; set; } = "nomic-embed-text";
 }
 
