@@ -32,8 +32,7 @@ public static class ReasoningArrows
             });
 
             (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
-            branch.AddReasoning(new Draft(text), prompt, toolCalls);
-            return branch;
+            return branch.WithReasoning(new Draft(text), prompt, toolCalls);
         };
 
     /// <summary>
@@ -58,8 +57,7 @@ public static class ReasoningArrows
             });
 
             (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
-            branch.AddReasoning(new Critique(text), prompt, toolCalls);
-            return branch;
+            return branch.WithReasoning(new Critique(text), prompt, toolCalls);
         };
 
     /// <summary>
@@ -86,7 +84,6 @@ public static class ReasoningArrows
             });
 
             (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
-            branch.AddReasoning(new FinalSpec(text), prompt, toolCalls);
-            return branch;
+            return branch.WithReasoning(new FinalSpec(text), prompt, toolCalls);
         };
 }

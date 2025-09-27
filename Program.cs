@@ -156,10 +156,10 @@ internal static class Program
         var setupTools = Arrow.Lift<PipelineBranch, (PipelineBranch branch, ToolRegistry tools)>(branch =>
         {
             Console.WriteLine("Setting up tools...");
-            var tools = new ToolRegistry();
-            tools.Register(new MathTool());
-            // Note: RetrievalTool would need the embedding model, but we're simplifying for demonstration
-            tools.Register("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
+            var tools = new ToolRegistry()
+                .WithTool(new MathTool())
+                // Note: RetrievalTool would need the embedding model, but we're simplifying for demonstration
+                .WithTool("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
             
             return (branch, tools);
         });
@@ -192,8 +192,9 @@ internal static class Program
                     }
                 });
                 
-                branch.AddIngestEvent("monadic-seed", new[] { "1", "2" });
+                var updatedBranch = branch.WithIngestEvent("monadic-seed", new[] { "1", "2" });
                 Console.WriteLine("Enhanced seed data loaded with monadic concepts.\n");
+                return (updatedBranch, tools);
             }
             catch (Exception ex)
             {
@@ -304,7 +305,7 @@ internal static class Program
         var toolAwareLlm = new ToolAwareChatModel(chatModel, toolRegistry);
 
         // 4. Ingest content
-        await IngestContentAsync(branch, embeddingModel);
+        branch = await IngestContentAsync(branch, embeddingModel);
 
         // 5. Run reasoning pipeline
         await RunReasoningPipelineAsync(branch, toolAwareLlm, toolRegistry, embeddingModel);
@@ -338,10 +339,10 @@ internal static class Program
     {
         Console.WriteLine("Setting up tools...");
         
-        var tools = new ToolRegistry();
-        tools.Register(new MathTool());
-        tools.Register(new RetrievalTool(vectorStore, embeddingModel));
-        tools.Register("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
+        var tools = new ToolRegistry()
+            .WithTool(new MathTool())
+            .WithTool(new RetrievalTool(vectorStore, embeddingModel))
+            .WithTool("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
 
         return tools;
     }
@@ -349,15 +350,16 @@ internal static class Program
     /// <summary>
     /// Ingests content into the vector store.
     /// </summary>
-    private static async Task IngestContentAsync(PipelineBranch branch, OllamaEmbeddingModel embeddingModel)
+    private static async Task<PipelineBranch> IngestContentAsync(PipelineBranch branch, OllamaEmbeddingModel embeddingModel)
     {
         Console.WriteLine("Ingesting content...");
 
         try
         {
             var ingestArrow = IngestionArrows.IngestArrow<FileLoader>(embeddingModel, tag: "fs");
-            await ingestArrow.Invoke(branch);
+            var updatedBranch = await ingestArrow.Invoke(branch);
             Console.WriteLine("Content ingestion completed.\n");
+            return updatedBranch;
         }
         catch
         {
@@ -380,8 +382,9 @@ internal static class Program
                 }
             });
             
-            branch.AddIngestEvent("seed", new[] { "1", "2" });
+            var updatedBranch = branch.WithIngestEvent("seed", new[] { "1", "2" });
             Console.WriteLine("Fallback seed data loaded.\n");
+            return updatedBranch;
         }
     }
 

@@ -30,7 +30,6 @@ public static class IngestionArrows
 
             List<Vector> batch = await InMemoryIngestion.LoadToMemory<TLoader>(branch.Store, embed, branch.Source, splitter);
 
-            branch.AddIngestEvent(string.IsNullOrEmpty(tag) ? typeof(TLoader).Name : tag, batch.Select(v => v.Id));
-            return branch;
+            return branch.WithIngestEvent(string.IsNullOrEmpty(tag) ? typeof(TLoader).Name : tag, batch.Select(v => v.Id));
         };
 }
