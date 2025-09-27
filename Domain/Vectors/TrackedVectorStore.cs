@@ -44,9 +44,8 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
         int amount, 
         CancellationToken cancellationToken)
     {
-        // Use the extension method on the base class with the correct signature
-        // This avoids infinite recursion by calling the extension method, not itself
-        return await this.GetSimilarDocuments(embed, query, amount);
+        // Call the extension method directly to avoid infinite recursion
+        return await VectorStoreExtensions.GetSimilarDocuments(this, embed, query, amount, cancellationToken);
     }
     
     public IEnumerable<Vector> GetAll() => _all;
