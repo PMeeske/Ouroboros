@@ -53,14 +53,14 @@ static async Task ParseAndRunAsync(string[] args)
 static async Task RunPipelineDslAsync(string dsl, string modelName, string embedName, string sourcePath, int k, bool trace, ChatRuntimeSettings? settings = null)
 {
     // Setup minimal environment for reasoning/ingest arrows
-    // Remote model support (OpenAI-compatible) via environment variables only inside this function
-    var (endpoint, apiKey) = ChatConfig.Resolve();
+    // Remote model support (OpenAI-compatible and Ollama Cloud) via environment variables only inside this function
+    var (endpoint, apiKey, endpointType) = ChatConfig.Resolve();
 
     var provider = new OllamaProvider();
     IChatCompletionModel chatModel;
     if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
     {
-        chatModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings);
+        chatModel = CreateRemoteChatModel(endpoint, apiKey, modelName, settings, endpointType);
     }
     else
     {
@@ -121,7 +121,10 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
     {
         // Initialize models
         var provider = new OllamaProvider();
-        var (endpoint, apiKey) = ChatConfig.Resolve();
+        var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(
+            askOpts?.Endpoint, 
+            askOpts?.ApiKey, 
+            askOpts?.EndpointType);
         IChatCompletionModel chatModel;
         if (askOpts is not null && askOpts.Router.Equals("auto", StringComparison.OrdinalIgnoreCase))
         {
@@ -144,7 +147,7 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
         {
             try
             {
-                chatModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings);
+                chatModel = CreateRemoteChatModel(endpoint, apiKey, modelName, settings, endpointType);
             }
             catch (Exception ex) when (askOpts is not null && !askOpts.StrictModel && ex.Message.Contains("Invalid model", StringComparison.OrdinalIgnoreCase))
             {
@@ -253,6 +256,18 @@ static Task RunListTokensAsync()
     return Task.CompletedTask;
 }
 
+// Helper method to create the appropriate remote chat model based on endpoint type
+static IChatCompletionModel CreateRemoteChatModel(string endpoint, string apiKey, string modelName, ChatRuntimeSettings? settings, ChatEndpointType endpointType)
+{
+    return endpointType switch
+    {
+        ChatEndpointType.OllamaCloud => new OllamaCloudChatModel(endpoint, apiKey, modelName, settings),
+        ChatEndpointType.OpenAiCompatible => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings),
+        ChatEndpointType.Auto => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings), // Default to OpenAI-compatible for auto
+        _ => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings)
+    };
+}
+
 static Task RunExplainAsync(ExplainOptions o)
 {
     Console.WriteLine(PipelineDsl.Explain(o.Dsl));
@@ -270,20 +285,20 @@ static async Task RunAskAsync(AskOptions o)
     if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase)) Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
     if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
     var settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
-    ValidateSecrets();
-    LogBackendSelection(o.Model, settings);
+    ValidateSecrets(o);
+    LogBackendSelection(o.Model, settings, o);
     var sw = Stopwatch.StartNew();
     if (o.Agent)
     {
         // Build minimal environment (always RAG off for initial agent version; agent can internally call tools)
         var provider = new OllamaProvider();
-        var (endpoint, apiKey) = ChatConfig.Resolve();
+        var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(o.Endpoint, o.ApiKey, o.EndpointType);
         IChatCompletionModel chatModel;
         if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
         {
             try
             {
-                chatModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey, o.Model, settings);
+                chatModel = CreateRemoteChatModel(endpoint, apiKey, o.Model, settings, endpointType);
             }
             catch (Exception ex) when (!o.StrictModel && ex.Message.Contains("Invalid model", StringComparison.OrdinalIgnoreCase))
             {
@@ -383,19 +398,21 @@ static async Task RunAskAsync(AskOptions o)
 // CommandLineParser
 // ------------------
 
-static void ValidateSecrets()
+static void ValidateSecrets(AskOptions? askOpts = null)
 {
-    var (endpoint, apiKey) = ChatConfig.Resolve();
+    var (endpoint, apiKey, _) = ChatConfig.ResolveWithOverrides(askOpts?.Endpoint, askOpts?.ApiKey, askOpts?.EndpointType);
     if (!string.IsNullOrWhiteSpace(endpoint) ^ !string.IsNullOrWhiteSpace(apiKey))
     {
         Console.WriteLine("[WARN] Only one of CHAT_ENDPOINT / CHAT_API_KEY is set; remote backend will be ignored.");
     }
 }
 
-static void LogBackendSelection(string model, ChatRuntimeSettings settings)
+static void LogBackendSelection(string model, ChatRuntimeSettings settings, AskOptions? askOpts = null)
 {
-    var (endpoint, apiKey) = ChatConfig.Resolve();
-    string backend = (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey)) ? "remote-openai-compatible" : "ollama-local";
+    var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(askOpts?.Endpoint, askOpts?.ApiKey, askOpts?.EndpointType);
+    string backend = (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey)) 
+        ? $"remote-{endpointType.ToString().ToLowerInvariant()}" 
+        : "ollama-local";
     string maskedKey = string.IsNullOrWhiteSpace(apiKey) ? "(none)" : apiKey.Length <= 8 ? "********" : apiKey[..4] + "..." + apiKey[^4..];
     Console.WriteLine($"[INIT] Backend={backend} Model={model} Temp={settings.Temperature} MaxTok={settings.MaxTokens} Key={maskedKey} Endpoint={(endpoint ?? "(none)")}");
 }

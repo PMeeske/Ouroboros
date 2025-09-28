@@ -23,12 +23,18 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IChatCompletionModel>(sp =>
         {
-            var (endpoint, apiKey) = ChatConfig.Resolve();
+            var (endpoint, apiKey, endpointType) = ChatConfig.Resolve();
             if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
             {
                 try
                 {
-                    return new HttpOpenAiCompatibleChatModel(endpoint!, apiKey!, model!);
+                    return endpointType switch
+                    {
+                        ChatEndpointType.OllamaCloud => new OllamaCloudChatModel(endpoint!, apiKey!, model!),
+                        ChatEndpointType.OpenAiCompatible => new HttpOpenAiCompatibleChatModel(endpoint!, apiKey!, model!),
+                        ChatEndpointType.Auto => new HttpOpenAiCompatibleChatModel(endpoint!, apiKey!, model!),
+                        _ => new HttpOpenAiCompatibleChatModel(endpoint!, apiKey!, model!)
+                    };
                 }
                 catch
                 {
