@@ -388,3 +388,73 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
         return false;
     }
 }
+
+/// <summary>
+/// Embedding adapter specifically for Ollama Cloud API endpoints.
+/// Uses Ollama's native /api/embeddings endpoint and JSON format.
+/// </summary>
+public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
+{
+    private readonly HttpClient _client;
+    private readonly string _model;
+    private readonly DeterministicEmbeddingModel _fallback = new();
+
+    public OllamaCloudEmbeddingModel(string endpoint, string apiKey, string model)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
+
+        _client = new HttpClient
+        {
+            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute)
+        };
+        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        _model = model;
+    }
+
+    public async Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
+    {
+        try
+        {
+            // Use Ollama's native /api/embeddings endpoint and JSON format
+            using var payload = JsonContent.Create(new
+            {
+                model = _model,
+                prompt = input
+            });
+
+            using var response = await _client.PostAsync("/api/embeddings", payload, ct).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            
+            var json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
+            if (json is not null && json.TryGetValue("embedding", out var embeddingValue))
+            {
+                if (embeddingValue is System.Text.Json.JsonElement jsonElement && jsonElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    var floats = new List<float>();
+                    foreach (var element in jsonElement.EnumerateArray())
+                    {
+                        if (element.TryGetSingle(out var value))
+                        {
+                            floats.Add(value);
+                        }
+                    }
+                    if (floats.Count > 0)
+                    {
+                        return floats.ToArray();
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Remote Ollama Cloud not reachable → fall back to deterministic embedding
+        }
+        return await _fallback.CreateEmbeddingsAsync(input, ct).ConfigureAwait(false);
+    }
+
+    public void Dispose()
+    {
+        _client?.Dispose();
+    }
+}

@@ -151,6 +151,92 @@ Run all examples:
 dotnet run
 ```
 
+## 🌐 Remote Endpoint Configuration
+
+MonadicPipeline supports multiple remote AI endpoints including **Ollama Cloud**, **OpenAI**, and other OpenAI-compatible services.
+
+### Quick Setup
+
+#### Using Ollama Cloud
+```bash
+# Set environment variables (recommended)
+export CHAT_ENDPOINT="https://api.ollama.com"
+export CHAT_API_KEY="your-ollama-cloud-api-key"
+
+# Or use CLI flags
+dotnet run -- ask -q "What is functional programming?" --endpoint "https://api.ollama.com" --api-key "your-key"
+```
+
+#### Using OpenAI or Compatible Services
+```bash
+# OpenAI
+export CHAT_ENDPOINT="https://api.openai.com"
+export CHAT_API_KEY="your-openai-api-key"
+
+# Other OpenAI-compatible services
+export CHAT_ENDPOINT="https://your-custom-endpoint.com"
+export CHAT_API_KEY="your-api-key"
+export CHAT_ENDPOINT_TYPE="openai"  # Force OpenAI-compatible format
+```
+
+### Configuration Methods
+
+#### 1. Environment Variables (Recommended)
+```bash
+export CHAT_ENDPOINT="https://api.ollama.com"           # Required: API endpoint URL
+export CHAT_API_KEY="your-api-key"                      # Required: Your API key
+export CHAT_ENDPOINT_TYPE="ollama-cloud"                # Optional: Force endpoint type
+```
+
+#### 2. CLI Arguments
+```bash
+dotnet run -- ask \
+  -q "Your question here" \
+  --endpoint "https://api.ollama.com" \
+  --api-key "your-api-key" \
+  --endpoint-type "ollama-cloud"
+```
+
+### Endpoint Types
+
+| Type | Description | Auto-Detection |
+|------|-------------|----------------|
+| `auto` | Automatically detect endpoint type from URL (default) | ✅ |
+| `ollama-cloud` | Ollama Cloud native format (`/api/generate`) | URLs containing `api.ollama.com` or `ollama.cloud` |
+| `openai` | OpenAI-compatible format (`/v1/responses`) | All other URLs |
+
+### Usage Examples
+
+#### Basic Chat with Ollama Cloud
+```bash
+# Using environment variables
+export CHAT_ENDPOINT="https://api.ollama.com"
+export CHAT_API_KEY="your-ollama-cloud-key"
+dotnet run -- ask -q "Explain monads in functional programming"
+
+# Using CLI flags
+dotnet run -- ask -q "Hello world" \
+  --endpoint "https://api.ollama.com" \
+  --api-key "your-key" \
+  --model "llama3.2"
+```
+
+#### RAG with Remote Models
+```bash
+# Enable RAG with Ollama Cloud
+dotnet run -- ask -q "What does the code do?" --rag \
+  --endpoint "https://api.ollama.com" \
+  --api-key "your-key"
+```
+
+#### Agent Mode with Tools
+```bash
+# Use agent with Ollama Cloud backend
+dotnet run -- ask -q "Analyze this repository structure" --agent \
+  --endpoint "https://api.ollama.com" \
+  --api-key "your-key"
+```
+
 ## 📚 Documentation
 
 - **[Architecture Summary](ARCHITECTURE_SUMMARY.md)**: High-level architectural overview

@@ -69,7 +69,7 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
             chat.Settings = OllamaPresets.DeepSeekCoder33B;
         chatModel = new OllamaChatAdapter(chat); // adapter added below
     }
-    IEmbeddingModel embed = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embedName));
+    IEmbeddingModel embed = CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);
 
     var tools = new ToolRegistry();
     var llm = new ToolAwareChatModel(chatModel, tools);
@@ -169,7 +169,7 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
                 chat.Settings = OllamaPresets.DeepSeekCoder33B;
             chatModel = new OllamaChatAdapter(chat);
         }
-        IEmbeddingModel embed = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embedName));
+        IEmbeddingModel embed = CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);
 
         // Tool-aware LLM and in-memory vector store
         var tools = new ToolRegistry();
@@ -268,6 +268,20 @@ static IChatCompletionModel CreateRemoteChatModel(string endpoint, string apiKey
     };
 }
 
+// Helper method to create the appropriate remote embedding model based on endpoint type
+static IEmbeddingModel CreateEmbeddingModel(string? endpoint, string? apiKey, ChatEndpointType endpointType, string embedName, OllamaProvider provider)
+{
+    if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
+    {
+        return endpointType switch
+        {
+            ChatEndpointType.OllamaCloud => new OllamaCloudEmbeddingModel(endpoint, apiKey, embedName),
+            _ => new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embedName)) // Fall back to local for OpenAI-compatible (no standard embedding endpoint)
+        };
+    }
+    return new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embedName));
+}
+
 static Task RunExplainAsync(ExplainOptions o)
 {
     Console.WriteLine(PipelineDsl.Explain(o.Dsl));
@@ -324,7 +338,7 @@ static async Task RunAskAsync(AskOptions o)
         if (o.Rag)
         {
             var provider2 = new OllamaProvider();
-            embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider2, o.Embed));
+            embedModel = CreateEmbeddingModel(endpoint, apiKey, endpointType, o.Embed, provider2);
             ragStore = new TrackedVectorStore();
             var seedDocs = new[]
             {
