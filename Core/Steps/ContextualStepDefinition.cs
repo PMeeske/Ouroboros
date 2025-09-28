@@ -11,18 +11,18 @@ namespace LangChainPipeline.Core.Steps;
 /// </summary>
 public struct ContextualStepDefinition<TIn, TOut, TContext>
 {
-    private ContextualStep<TIn, TOut, TContext> compiled;
+    private ContextualStep<TIn, TOut, TContext> _compiled;
 
     /// <summary>
     /// Constructor: from "context → pure step"
     /// </summary>
     public ContextualStepDefinition(Step<TContext, Step<TIn, TOut>> pure)
     {
-        this.compiled = async (input, context) =>
+        this._compiled = async (input, context) =>
         {
             var innerStep = await pure(context);  // Step<TIn,TOut>
             var result = await innerStep(input);  // apply inner step
-            return (result, new List<string>());
+            return (result, []);
         };
     }
 
@@ -31,7 +31,7 @@ public struct ContextualStepDefinition<TIn, TOut, TContext>
     /// </summary>
     public ContextualStepDefinition(ContextualStep<TIn, TOut, TContext> step)
     {
-        this.compiled = step;
+        this._compiled = step;
     }
 
     /// <summary>
@@ -39,7 +39,7 @@ public struct ContextualStepDefinition<TIn, TOut, TContext>
     /// </summary>
     public ContextualStepDefinition(Func<TIn, TOut> func, string? log = null)
     {
-        this.compiled = ContextualStep.LiftPure<TIn, TOut, TContext>(func, log);
+        this._compiled = ContextualStep.LiftPure<TIn, TOut, TContext>(func, log);
     }
 
     /// <summary>
@@ -47,33 +47,31 @@ public struct ContextualStepDefinition<TIn, TOut, TContext>
     /// </summary>
     public ContextualStepDefinition(Step<TIn, TOut> pure, string? log = null)
     {
-        this.compiled = ContextualStep.FromPure<TIn, TOut, TContext>(pure, log);
+        this._compiled = ContextualStep.FromPure<TIn, TOut, TContext>(pure, log);
     }
 
     /// <summary>
     /// Static Lift helpers
     /// </summary>
     public static ContextualStepDefinition<TIn, TOut, TContext> LiftPure(Func<TIn, TOut> func, string? log = null)
-        => new ContextualStepDefinition<TIn, TOut, TContext>(func, log);
+        => new(func, log);
 
-    public static ContextualStepDefinition<TIn, TOut, TContext> FromPure(Step<TIn, TOut> step, string? log = null)
-        => new ContextualStepDefinition<TIn, TOut, TContext>(step, log);
+    public static ContextualStepDefinition<TIn, TOut, TContext> FromPure(Step<TIn, TOut> step, string? log = null) => new(step, log);
 
-    public static ContextualStepDefinition<TIn, TOut, TContext> FromContext(Step<TContext, Step<TIn, TOut>> ctxStep)
-        => new ContextualStepDefinition<TIn, TOut, TContext>(ctxStep);
+    public static ContextualStepDefinition<TIn, TOut, TContext> FromContext(Step<TContext, Step<TIn, TOut>> ctxStep) => new(ctxStep);
 
     /// <summary>
     /// Implicit conversion to compiled step
     /// </summary>
     public static implicit operator ContextualStep<TIn, TOut, TContext>(ContextualStepDefinition<TIn, TOut, TContext> d)
-        => d.compiled;
+        => d._compiled;
 
     /// <summary>
     /// Pipe method: append contextual step
     /// </summary>
     public ContextualStepDefinition<TIn, TNext, TContext> Pipe<TNext>(ContextualStep<TOut, TNext, TContext> next)
     {
-        var newCompiled = compiled.Then(next);
+        var newCompiled = _compiled.Then(next);
         return new ContextualStepDefinition<TIn, TNext, TContext>(newCompiled);
     }
 
@@ -99,7 +97,7 @@ public struct ContextualStepDefinition<TIn, TOut, TContext>
     /// Execute pipeline
     /// </summary>
     public async Task<(TOut result, List<string> logs)> InvokeAsync(TIn input, TContext context)
-        => await compiled(input, context);
+        => await _compiled(input, context);
 
     /// <summary>
     /// Execute pipeline (synchronous convenience method)
@@ -111,20 +109,20 @@ public struct ContextualStepDefinition<TIn, TOut, TContext>
     /// Forget context: collapse into pure Step
     /// </summary>
     public Step<TIn, (TOut result, List<string> logs)> Forget(TContext context)
-        => compiled.Forget(context);
+        => _compiled.Forget(context);
 
     /// <summary>
     /// Forget context and logs: collapse to pure result Step
     /// </summary>
     public Step<TIn, TOut> ForgetAll(TContext context)
-        => compiled.ForgetAll(context);
+        => _compiled.ForgetAll(context);
 
     /// <summary>
     /// Add logging to the current step
     /// </summary>
     public ContextualStepDefinition<TIn, TOut, TContext> WithLog(string logMessage)
     {
-        var newCompiled = compiled.WithLog(logMessage);
+        var newCompiled = _compiled.WithLog(logMessage);
         return new ContextualStepDefinition<TIn, TOut, TContext>(newCompiled);
     }
 
@@ -133,7 +131,7 @@ public struct ContextualStepDefinition<TIn, TOut, TContext>
     /// </summary>
     public ContextualStepDefinition<TIn, TOut, TContext> WithConditionalLog(Func<TOut, string?> logFunction)
     {
-        var newCompiled = compiled.WithConditionalLog(logFunction);
+        var newCompiled = _compiled.WithConditionalLog(logFunction);
         return new ContextualStepDefinition<TIn, TOut, TContext>(newCompiled);
     }
 
@@ -142,7 +140,7 @@ public struct ContextualStepDefinition<TIn, TOut, TContext>
     /// </summary>
     public ContextualStepDefinition<TIn, Result<TOut, Exception>, TContext> TryStep()
     {
-        var newCompiled = compiled.TryStep();
+        var newCompiled = _compiled.TryStep();
         return new ContextualStepDefinition<TIn, Result<TOut, Exception>, TContext>(newCompiled);
     }
 
@@ -151,7 +149,7 @@ public struct ContextualStepDefinition<TIn, TOut, TContext>
     /// </summary>
     public ContextualStepDefinition<TIn, Option<TOut>, TContext> TryOption(Func<TOut, bool> predicate)
     {
-        var newCompiled = compiled.TryOption(predicate);
+        var newCompiled = _compiled.TryOption(predicate);
         return new ContextualStepDefinition<TIn, Option<TOut>, TContext>(newCompiled);
     }
 }

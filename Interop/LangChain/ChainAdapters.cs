@@ -1,6 +1,6 @@
 using LangChain.Chains.StackableChains.Context; // StackableChainValues
 using LangChain.Abstractions.Schema;            // IChainValues
-using LangChain.Chains.StackableChains;         // BaseStackableChain (namespace assumption)
+// BaseStackableChain (namespace assumption)
 using LangChain.Chains.HelperChains;            // StackChain (optional)
 
 namespace LangChainPipeline.Interop.LangChain;
@@ -13,7 +13,7 @@ using LangChainPipeline.Core.Steps;
 /// </summary>
 public static class ChainAdapters
 {
-    private static readonly Dictionary<string, Action<CliPipelineState, StackableChainValues>> _export = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, Action<CliPipelineState, StackableChainValues>> Export = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Prompt"]  = (s, v) => v.Value["Prompt"] = s.Prompt,
         ["Query"]   = (s, v) => v.Value["Query"] = s.Query,
@@ -22,7 +22,7 @@ public static class ChainAdapters
         ["Output"]  = (s, v) => v.Value["Output"] = s.Output
     };
 
-    private static readonly Dictionary<string, Action<StackableChainValues, CliPipelineState>> _import = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, Action<StackableChainValues, CliPipelineState>> Import = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Prompt"]  = (v, s) => s.Prompt  = v.Value.TryGetValue("Prompt", out var o) ? o?.ToString() ?? string.Empty : s.Prompt,
         ["Query"]   = (v, s) => s.Query   = v.Value.TryGetValue("Query", out var o) ? o?.ToString() ?? string.Empty : s.Query,
@@ -52,7 +52,7 @@ public static class ChainAdapters
             var values = new StackableChainValues();
             // export selected keys
             foreach (var k in inKeys)
-                if (_export.TryGetValue(k, out var exporter)) exporter(state, values);
+                if (Export.TryGetValue(k, out var exporter)) exporter(state, values);
             if (trace) Console.WriteLine($"[chain] export keys={string.Join(',', inKeys)} -> values={values.Value.Count}");
 
             // execute chain
@@ -60,7 +60,7 @@ public static class ChainAdapters
 
             // import back
             foreach (var k in outKeys)
-                if (_import.TryGetValue(k, out var importer)) importer(values, state);
+                if (Import.TryGetValue(k, out var importer)) importer(values, state);
             if (trace) Console.WriteLine($"[chain] import keys={string.Join(',', outKeys)}");
             return state;
         };

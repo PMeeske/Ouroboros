@@ -1,16 +1,74 @@
+using System.Text;
 using System.Text.RegularExpressions;
-using LangChain.DocumentLoaders;
-using LangChainPipeline.Core;
-using LangChainPipeline.Core.Steps;
-using LangChainPipeline.Tools;
 
 namespace LangChainPipeline.CLI;
 
 public static class PipelineDsl
 {
-    public static string[] Tokenize(string dsl) => dsl.Split('|', StringSplitOptions.RemoveEmptyEntries)
-        .Select(t => t.Trim())
-        .ToArray();
+    public static string[] Tokenize(string dsl)
+    {
+        if (string.IsNullOrWhiteSpace(dsl))
+        {
+            return Array.Empty<string>();
+        }
+
+        var tokens = new List<string>();
+        var current = new StringBuilder();
+        bool inSingleQuote = false;
+        bool inDoubleQuote = false;
+        int parenDepth = 0;
+
+        for (int i = 0; i < dsl.Length; i++)
+        {
+            char c = dsl[i];
+
+            if (c == '\'' && !inDoubleQuote)
+            {
+                inSingleQuote = !inSingleQuote;
+                current.Append(c);
+                continue;
+            }
+
+            if (c == '"' && !inSingleQuote)
+            {
+                inDoubleQuote = !inDoubleQuote;
+                current.Append(c);
+                continue;
+            }
+
+            if (!inSingleQuote && !inDoubleQuote)
+            {
+                if (c == '(')
+                {
+                    parenDepth++;
+                }
+                else if (c == ')' && parenDepth > 0)
+                {
+                    parenDepth--;
+                }
+                else if (c == '|' && parenDepth == 0)
+                {
+                    var token = current.ToString().Trim();
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        tokens.Add(token);
+                    }
+                    current.Clear();
+                    continue;
+                }
+            }
+
+            current.Append(c);
+        }
+
+        var last = current.ToString().Trim();
+        if (!string.IsNullOrEmpty(last))
+        {
+            tokens.Add(last);
+        }
+
+        return tokens.ToArray();
+    }
 
     public static Step<CliPipelineState, CliPipelineState> Build(string dsl)
     {

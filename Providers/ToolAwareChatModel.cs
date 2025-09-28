@@ -1,5 +1,3 @@
-using LangChainPipeline.Tools;
-
 namespace LangChainPipeline.Providers;
 
 /// <summary>
@@ -17,7 +15,7 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
     public async Task<(string Text, List<ToolExecution> Tools)> GenerateWithToolsAsync(string prompt, CancellationToken ct = default)
     {
     string result = await llm.GenerateTextAsync(prompt, ct);
-    List<ToolExecution> toolCalls = new List<ToolExecution>();
+    List<ToolExecution> toolCalls = [];
         
         foreach (string rawLine in result.Split('\n'))
         {

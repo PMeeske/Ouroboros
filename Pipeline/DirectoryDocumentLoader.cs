@@ -24,9 +24,9 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
     public DirectoryDocumentLoader(DirectoryIngestionOptions options)
     {
         _recursive = options.Recursive;
-        _fileGlobs = (options.Patterns is { Length: > 0 }) ? options.Patterns : new[] { "*" };
-        _allowedExtensions = options.Extensions?.Length > 0 ? new HashSet<string>(options.Extensions.Select(e => e.StartsWith('.') ? e.ToLowerInvariant() : "." + e.ToLowerInvariant())) : null;
-        _excludeDirs = options.ExcludeDirectories?.Length > 0 ? new HashSet<string>(options.ExcludeDirectories.Select(d => d.ToLowerInvariant())) : null;
+        _fileGlobs = (options.Patterns is { Length: > 0 }) ? options.Patterns : ["*"];
+        _allowedExtensions = options.Extensions?.Length > 0 ? [..options.Extensions.Select(e => e.StartsWith('.') ? e.ToLowerInvariant() : "." + e.ToLowerInvariant())] : null;
+        _excludeDirs = options.ExcludeDirectories?.Length > 0 ? [..options.ExcludeDirectories.Select(d => d.ToLowerInvariant())] : null;
         _maxFileBytes = options.MaxFileBytes > 0 ? options.MaxFileBytes : null;
         _useCache = !options.DisableCache;
         _cache = _useCache ? new DirectoryIngestionCache(options.CacheFilePath) : null;
@@ -53,7 +53,7 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
         var debug = Environment.GetEnvironmentVariable("MONADIC_DEBUG") == "1";
         var start = DateTime.UtcNow;
         var dirEnumOption = _recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var stats = optionsStats ?? new DirectoryIngestionStats();
+        var stats = _optionsStats ?? new DirectoryIngestionStats();
         foreach (var pattern in _fileGlobs)
         {
             foreach (var file in Directory.EnumerateFiles(path, pattern, dirEnumOption))
@@ -136,8 +136,8 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
     }
 
     // internal hook to pass stats object without altering interface signature
-    private DirectoryIngestionStats? optionsStats;
-    public void AttachStats(DirectoryIngestionStats stats) => optionsStats = stats;
+    private DirectoryIngestionStats? _optionsStats;
+    public void AttachStats(DirectoryIngestionStats stats) => _optionsStats = stats;
 }
 
 public sealed class DirectoryIngestionOptions

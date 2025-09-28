@@ -1,6 +1,3 @@
-using LangChainPipeline.Core.Memory;
-using LangChainPipeline.Core.Conversation;
-
 namespace LangChainPipeline.Examples;
 
 /// <summary>
@@ -32,11 +29,12 @@ public static class ConversationalPipelineExample
     private static async Task RunConversationLoop(ConversationMemory memory)
     {
         // Simulate user inputs
-        string[] userInputs = {
+        string[] userInputs =
+        [
             "What is the best way to handle async operations in C#?",
             "Can you give me an example of using Task.Run?",
             "What about cancellation tokens?"
-        };
+        ];
 
         foreach (string input in userInputs)
         {
@@ -59,7 +57,7 @@ public static class ConversationalPipelineExample
                 {
                     // Simulate AI processing (replace with actual LLM call)
                     var userInput = context.GetProperty<string>("input") ?? "No input";
-                    var aiResponse = await SimulateAIResponse(userInput, context);
+                    var aiResponse = await SimulateAiResponse(userInput, context);
                     
                     context.SetProperty("text", aiResponse);
                     return context;
@@ -91,7 +89,7 @@ public static class ConversationalPipelineExample
     /// <summary>
     /// Simulates an AI response generation (placeholder for actual LLM integration).
     /// </summary>
-    private static async Task<string> SimulateAIResponse(string userInput, MemoryContext<string> context)
+    private static async Task<string> SimulateAiResponse(string userInput, MemoryContext<string> context)
     {
         // Simulate async processing
         await Task.Delay(100);

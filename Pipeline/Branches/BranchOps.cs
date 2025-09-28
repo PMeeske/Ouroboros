@@ -1,9 +1,5 @@
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
-using LangChain.Extensions;
-using LangChainPipeline.Domain.Vectors;
-using LangChainPipeline.Core;
-using LangChainPipeline.Providers;
 
 namespace LangChainPipeline.Pipeline.Branches;
 
@@ -32,7 +28,7 @@ public static class BranchOps
             List<Vector> vectorsB = b.Store.GetAll().ToList();
             IEnumerable<IGrouping<string, Vector>> conflicts = vectorsA.Concat(vectorsB).GroupBy(v => v.Id);
 
-            List<Vector> resolved = new List<Vector>();
+            List<Vector> resolved = [];
             foreach (IGrouping<string, Vector> group in conflicts)
             {
                 if (group.Count() == 1)

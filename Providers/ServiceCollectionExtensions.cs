@@ -1,6 +1,5 @@
 using LangChain.Providers.Ollama;
 using Microsoft.Extensions.DependencyInjection;
-using LangChainPipeline.Tools;
 
 namespace LangChainPipeline.Providers;
 

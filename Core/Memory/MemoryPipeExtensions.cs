@@ -3,10 +3,6 @@
 // Extension methods to integrate memory functionality with existing pipes
 // ============================================================================
 
-using LangChainPipeline.Core.Steps;
-using LangChainPipeline.Core.Memory;
-using LangChainPipeline.Core.Interop;
-
 namespace LangChainPipeline.Core.Memory;
 
 /// <summary>
@@ -73,7 +69,7 @@ public static class MemoryPipeExtensions
 public class ConversationChainBuilder<T>
 {
     private readonly MemoryContext<T> _initialContext;
-    private readonly List<Step<MemoryContext<object>, MemoryContext<object>>> _steps = new();
+    private readonly List<Step<MemoryContext<object>, MemoryContext<object>>> _steps = [];
     
     public ConversationChainBuilder(MemoryContext<T> initialContext)
     {
@@ -104,9 +100,9 @@ public class ConversationChainBuilder<T>
     /// <summary>
     /// Add a mock LLM step (similar to LangChain's LLM)
     /// </summary>
-    public ConversationChainBuilder<T> LLM(string mockPrefix = "AI Response:")
+    public ConversationChainBuilder<T> Llm(string mockPrefix = "AI Response:")
     {
-        _steps.Add(MemoryArrows.MockLLM<object>(mockPrefix));
+        _steps.Add(MemoryArrows.MockLlm<object>(mockPrefix));
         return this;
     }
     

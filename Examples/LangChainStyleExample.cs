@@ -4,8 +4,6 @@
 // but uses our Kleisli pipeline system instead of LangChain's Chain syntax
 // ============================================================================
 
-using LangChainPipeline.Core.Memory;
-
 namespace LangChainPipeline.Examples;
 
 /// <summary>
@@ -47,7 +45,7 @@ AI: ";
             .StartConversation(memory)
             .LoadMemory(outputKey: "history")
             .Template(template)
-            .LLM("Friendly AI:")
+            .Llm("Friendly AI:")
             .UpdateMemory(inputKey: "input", responseKey: "text");
 
         Console.WriteLine();
@@ -220,7 +218,7 @@ AI: ";
             .Set(testInput, "input")
             .LoadMemory(outputKey: "history")
             .Template(template)
-            .LLM("Kleisli AI:")
+            .Llm("Kleisli AI:")
             .UpdateMemory(inputKey: "input", responseKey: "text");
 
         var result = await chain.RunAsync<string>("text");

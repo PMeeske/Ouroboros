@@ -1,5 +1,3 @@
-using LangChainPipeline.Providers;
-
 namespace LangChainPipeline.CLI;
 
 public sealed class CliPipelineState
@@ -17,7 +15,7 @@ public sealed class CliPipelineState
     public bool Trace { get; set; } = false;
 
     // Extended chain state (for new DSL style retrieval + template + llm steps)
-    public List<string> Retrieved { get; } = new();
+    public List<string> Retrieved { get; } = [];
     public string Context { get; set; } = string.Empty;
     public string Output { get; set; } = string.Empty;
 }

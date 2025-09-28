@@ -10,7 +10,7 @@ namespace LangChainPipeline.Domain.Vectors;
 /// </summary>
 public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
 {
-    private readonly List<Vector> _all = new();
+    private readonly List<Vector> _all = [];
 
     /// <summary>
     /// Adds vectors to the store asynchronously.

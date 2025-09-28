@@ -1,10 +1,4 @@
 using LangChain.Chains.HelperChains;
-using LangChain.Chains.LLM;
-using LangChain.Prompts;
-using LangChain.Providers;
-using LangChainPipeline.Core.LangChain;
-using LangChainPipeline.Core.Kleisli;
-using LangChainPipeline.Core.Monads;
 
 namespace LangChainPipeline.Examples;
 
@@ -22,7 +16,7 @@ public static class ProperLangChainIntegrationExamples
         Console.WriteLine("=== PROPER LANGCHAIN INTEGRATION EXAMPLES ===\n");
         
         await DemonstrateStackableChainIntegration();
-        await DemonstrateLLMChainIntegration();
+        await DemonstrateLlmChainIntegration();
         await DemonstrateMonadicLangChainPipeline();
         await DemonstrateConversationalLangChain();
         
@@ -68,7 +62,7 @@ public static class ProperLangChainIntegrationExamples
     /// <summary>
     /// Demonstrates LangChain LLMChain integration (without actual LLM execution)
     /// </summary>
-    public static Task DemonstrateLLMChainIntegration()
+    public static Task DemonstrateLlmChainIntegration()
     {
         Console.WriteLine("=== LLM Chain Integration Example ===");
         

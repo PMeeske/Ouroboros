@@ -1,5 +1,3 @@
-using LangChainPipeline.Core.LangChain;
-
 namespace LangChainPipeline.Examples;
 
 /// <summary>
@@ -36,11 +34,12 @@ public static class LangChainConversationExample
     private static async Task RunLangChainConversationLoop(LangChainConversationContext conversationContext)
     {
         // Simulate user inputs
-        string[] userInputs = {
+        string[] userInputs =
+        [
             "What is the best way to handle async operations in C#?",
             "Can you give me an example of using Task.Run?",
             "What about cancellation tokens?"
-        };
+        ];
 
         foreach (string input in userInputs)
         {
@@ -54,11 +53,11 @@ public static class LangChainConversationExample
             // Create LangChain-based conversational pipeline
             var pipeline = LangChainConversationBuilder.CreateConversationPipeline()
                 .WithConversationHistory()
-                .AddAIResponseGeneration(async userInput => 
+                .AddAiResponseGeneration(async userInput => 
                 {
                     // Simulate AI processing (replace with actual LLM call)
                     await Task.Delay(100);
-                    return await SimulateAIResponse(userInput, inputContext);
+                    return await SimulateAiResponse(userInput, inputContext);
                 });
 
             // Execute the LangChain-based conversational pipeline
@@ -86,7 +85,7 @@ public static class LangChainConversationExample
     /// <summary>
     /// Simulates an AI response generation using LangChain context.
     /// </summary>
-    private static async Task<string> SimulateAIResponse(string userInput, LangChainConversationContext context)
+    private static async Task<string> SimulateAiResponse(string userInput, LangChainConversationContext context)
     {
         // Simulate async processing
         await Task.Delay(100);

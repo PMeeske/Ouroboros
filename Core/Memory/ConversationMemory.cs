@@ -3,8 +3,6 @@
 // Integrates memory management into the monadic pipeline architecture
 // ============================================================================
 
-using LangChainPipeline.Core.Steps;
-using LangChainPipeline.Core.Kleisli;
 using System.Collections.Concurrent;
 
 namespace LangChainPipeline.Core.Memory;
@@ -204,7 +202,7 @@ public static class MemoryArrows
     /// <summary>
     /// Create a mock LLM step for demonstration purposes
     /// </summary>
-    public static Step<MemoryContext<string>, MemoryContext<string>> MockLLM(string mockPrefix = "AI Response:")
+    public static Step<MemoryContext<string>, MemoryContext<string>> MockLlm(string mockPrefix = "AI Response:")
     {
         return context =>
         {
@@ -222,7 +220,7 @@ public static class MemoryArrows
     /// <summary>
     /// Create a mock LLM step for demonstration purposes (generic version)
     /// </summary>
-    public static Step<MemoryContext<object>, MemoryContext<object>> MockLLM<T>(string mockPrefix = "AI Response:")
+    public static Step<MemoryContext<object>, MemoryContext<object>> MockLlm<T>(string mockPrefix = "AI Response:")
     {
         return context =>
         {

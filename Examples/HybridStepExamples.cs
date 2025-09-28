@@ -3,9 +3,6 @@
 // Shows integration between SyncStep and async Step systems
 // ==========================================================
 
-using System;
-using System.Threading.Tasks;
-
 namespace LangChainPipeline.Examples;
 
 /// <summary>

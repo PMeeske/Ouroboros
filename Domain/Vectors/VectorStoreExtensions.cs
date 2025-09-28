@@ -1,5 +1,4 @@
 using LangChain.DocumentLoaders;
-using LangChainPipeline.Providers;
 
 namespace LangChainPipeline.Domain.Vectors;
 

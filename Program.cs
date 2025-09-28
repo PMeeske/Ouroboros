@@ -3,7 +3,6 @@
 // ==============================
 
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Providers;
 using LangChain.DocumentLoaders;
 using LangChain.Databases;
 using LangChainPipeline.CLI;
@@ -11,7 +10,6 @@ using CommandLine;
 using LangChainPipeline.Options;
 using System.Diagnostics;
 using LangChainPipeline.Diagnostics; // added
-using LangChainPipeline.Domain.Vectors;
 using Microsoft.Extensions.Hosting;
 
 try
@@ -41,33 +39,6 @@ return;
 
 static async Task ParseAndRunAsync(string[] args)
 {
-    // Back-compat shims for legacy flags (e.g., -pipeline "...")
-    if (args.Length > 0)
-    {
-        if (string.Equals(args[0], "-pipeline", StringComparison.OrdinalIgnoreCase) && args.Length >= 2)
-        {
-            args = new[] { "pipeline", "--dsl", args[1] };
-        }
-        else if (string.Equals(args[0], "--list-tokens", StringComparison.OrdinalIgnoreCase))
-        {
-            args = new[] { "list" };
-        }
-        else if (string.Equals(args[0], "--explain-pipeline", StringComparison.OrdinalIgnoreCase) && args.Length >= 2)
-        {
-            args = new[] { "explain", "--dsl", args[1] };
-        }
-    }
-
-    // Back-compat for previously invalid long names --k and --q (now --topk / --question)
-    // CommandLineParser requires long names > 1 char; we rewrite if encountered.
-    for (int i = 0; i < args.Length; i++)
-    {
-        if (string.Equals(args[i], "--k", StringComparison.OrdinalIgnoreCase))
-            args[i] = "--topk";
-        else if (string.Equals(args[i], "--q", StringComparison.OrdinalIgnoreCase))
-            args[i] = "--question";
-    }
-
     // CommandLineParser verbs
     await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions>(args)
         .MapResult(

@@ -74,7 +74,7 @@ public static class MonadicToolExtensions
         {
             var result = await tool.InvokeAsync(input);
             var log = logMessage ?? $"Tool '{tool.Name}' executed";
-            return (result, new List<string> { log });
+            return (result, [log]);
         };
     }
 }

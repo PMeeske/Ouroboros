@@ -3,9 +3,6 @@
 // Demonstrates the integration of LangChain memory concepts with Kleisli pipes
 // ============================================================================
 
-using LangChainPipeline.Core.Memory;
-using LangChainPipeline.Core.Steps;
-
 namespace LangChainPipeline.Examples;
 
 /// <summary>
@@ -39,7 +36,7 @@ AI: ";
             .StartConversation(memory)
             .LoadMemory(outputKey: "history")
             .Template(template)
-            .LLM("AI Response:")
+            .Llm("AI Response:")
             .UpdateMemory(inputKey: "input", responseKey: "text");
         
         // Simulate a conversation
@@ -99,7 +96,7 @@ AI: ";
             .Set("Hello, I'm learning about AI", "input")
             .LoadMemory()
             .Template("Context: {history}\nHuman: {input}\nAI: ")
-            .LLM("Buffer AI:")
+            .Llm("Buffer AI:")
             .UpdateMemory();
         
         var result = await pipeline.RunAsync();
@@ -124,7 +121,7 @@ AI: ";
             .Set("What do you remember?", "input")
             .LoadMemory()
             .Template("Recent context: {history}\nHuman: {input}\nAI: ")
-            .LLM("Window AI:")
+            .Llm("Window AI:")
             .UpdateMemory();
         
         var result = await pipeline.RunAsync();
@@ -146,13 +143,13 @@ AI: ";
         // Create individual memory-aware Kleisli arrows
         var memoryLoader = MemoryArrows.LoadMemory<string>("history");
         var templateProcessor = MemoryArrows.Template("Context: {history}\nQuery: {input}\nResponse: ");
-        var mockLLM = MemoryArrows.MockLLM("Composed AI:");
+        var mockLlm = MemoryArrows.MockLlm("Composed AI:");
         var memoryUpdater = MemoryArrows.UpdateMemory<string>("input", "text");
         
         // Compose them using traditional Kleisli composition
         var composedPipeline = memoryLoader
             .Then(templateProcessor)
-            .Then(mockLLM)
+            .Then(mockLlm)
             .Then(memoryUpdater);
         
         // Test the composed pipeline

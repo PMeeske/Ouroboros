@@ -5,13 +5,13 @@ namespace LangChainPipeline.Interop.LangChain;
 /// </summary>
 public static class ExternalChainRegistry
 {
-    private static readonly Dictionary<string, object> _chains = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, object> Chains = new(StringComparer.OrdinalIgnoreCase);
 
     public static void Register(string name, object chain)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name required", nameof(name));
-        _chains[name] = chain;
+        Chains[name] = chain;
     }
-    public static bool TryGet(string name, out object? chain) => _chains.TryGetValue(name, out chain);
-    public static IReadOnlyCollection<string> Names => _chains.Keys.ToArray();
+    public static bool TryGet(string name, out object? chain) => Chains.TryGetValue(name, out chain);
+    public static IReadOnlyCollection<string> Names => Chains.Keys.ToArray();
 }

@@ -1,5 +1,5 @@
 // LangChain-integrated conversation pipeline builder
-using LangChain.Chains.HelperChains;
+
 using LangChain.Providers;
 using LangChain.Prompts.Base;
 
@@ -11,7 +11,7 @@ namespace LangChainPipeline.Core.LangChain;
 /// </summary>
 public class LangChainConversationPipeline
 {
-    private readonly List<Func<LangChainConversationContext, Task<LangChainConversationContext>>> _steps = new();
+    private readonly List<Func<LangChainConversationContext, Task<LangChainConversationContext>>> _steps = [];
 
     /// <summary>
     /// Adds a processing step to the pipeline using LangChain patterns
@@ -94,19 +94,19 @@ public static class LangChainConversationBuilder
     /// <summary>
     /// Extension to add AI response generation step using proper LangChain LLMChain
     /// </summary>
-    public static LangChainConversationPipeline AddAIResponseGeneration(
+    public static LangChainConversationPipeline AddAiResponseGeneration(
         this LangChainConversationPipeline pipeline,
         IChatModel llm,
         BasePromptTemplate prompt,
         string outputKey = "text")
     {
-        return pipeline.AddLangChainLLM(llm, prompt, outputKey);
+        return pipeline.AddLangChainLlm(llm, prompt, outputKey);
     }
 
     /// <summary>
     /// Extension to add AI response generation step (backward compatibility with function generator)
     /// </summary>
-    public static LangChainConversationPipeline AddAIResponseGeneration(
+    public static LangChainConversationPipeline AddAiResponseGeneration(
         this LangChainConversationPipeline pipeline,
         Func<string, Task<string>> responseGenerator)
     {

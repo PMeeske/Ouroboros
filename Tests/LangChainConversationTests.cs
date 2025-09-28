@@ -1,5 +1,3 @@
-using LangChainPipeline.Core.LangChain;
-
 namespace LangChainPipeline.Tests;
 
 /// <summary>
@@ -98,7 +96,7 @@ public class LangChainConversationTests
         var pipeline = LangChainConversationBuilder.CreateConversationPipeline()
             .WithConversationHistory()
             .SetProperty("test_prop", "test_value")
-            .AddAIResponseGeneration(async input => await Task.FromResult($"Response to: {input}"));
+            .AddAiResponseGeneration(async input => await Task.FromResult($"Response to: {input}"));
         
         var result = await pipeline.RunAsync(context);
         

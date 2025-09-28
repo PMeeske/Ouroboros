@@ -1,10 +1,8 @@
 using System.Xml.Linq;
 using LangChain.Databases;
-using LangChainPipeline.Providers;
 using LangChain.Splitters.Text;
-using LangChain.DocumentLoaders;
-using LangChainPipeline.Core;
-using LangChainPipeline.Domain.Vectors; // TrackedVectorStore
+
+// TrackedVectorStore
 
 namespace LangChainPipeline.Pipeline.Ingestion;
 
@@ -16,7 +14,7 @@ namespace LangChainPipeline.Pipeline.Ingestion;
 /// </summary>
 public static class SolutionIngestion
 {
-    private static readonly string[] DefaultCodeExtensions = new[] { ".cs" };
+    private static readonly string[] DefaultCodeExtensions = [".cs"];
 
     public sealed record SolutionIngestionOptions(
         int MaxFiles,
@@ -33,7 +31,7 @@ public static class SolutionIngestion
         bool metaOnly = false;
         bool includeProjectMeta = true;
         bool includeSolutionMeta = true;
-        List<string> exts = new(DefaultCodeExtensions);
+        List<string> exts = [..DefaultCodeExtensions];
         if (!string.IsNullOrWhiteSpace(raw))
         {
             foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))

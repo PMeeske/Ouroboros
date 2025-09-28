@@ -1,14 +1,10 @@
 // LangChain Integration Layer for Monadic Pipeline System
-using LangChain.Abstractions.Schema;
+
 using LangChain.Chains.HelperChains;
 using LangChain.Chains.LLM;
-using LangChain.Chains.StackableChains.Context;
 using LangChain.Providers;
 using LangChain.Schema;
 using LangChain.Prompts.Base;
-using LangChainPipeline.Core.Steps;
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Core.Kleisli;
 
 namespace LangChainPipeline.Core.LangChain;
 
@@ -100,7 +96,7 @@ public static class LangChainIntegration
     /// <summary>
     /// Creates a LangChain LLMChain wrapped as a monadic KleisliResult
     /// </summary>
-    public static KleisliResult<Dictionary<string, object>, Dictionary<string, object>, string> CreateLLMKleisli(
+    public static KleisliResult<Dictionary<string, object>, Dictionary<string, object>, string> CreateLlmKleisli(
         IChatModel llm, 
         BasePromptTemplate prompt,
         string outputKey = "text")
@@ -126,7 +122,7 @@ public static class LangChainIntegration
     /// <summary>
     /// Creates a LangChain LLMChain wrapped as a Step
     /// </summary>
-    public static Step<Dictionary<string, object>, Dictionary<string, object>> CreateLLMStep(
+    public static Step<Dictionary<string, object>, Dictionary<string, object>> CreateLlmStep(
         IChatModel llm, 
         BasePromptTemplate prompt,
         string outputKey = "text")
@@ -148,7 +144,7 @@ public static class LangChainConversationIntegration
     /// <summary>
     /// Updates the LangChain conversation pipeline to use proper LangChain chains
     /// </summary>
-    public static LangChainConversationPipeline AddLangChainLLM(
+    public static LangChainConversationPipeline AddLangChainLlm(
         this LangChainConversationPipeline pipeline,
         IChatModel llm,
         BasePromptTemplate prompt,

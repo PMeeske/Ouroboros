@@ -1,7 +1,6 @@
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Splitters.Text;
-using LangChainPipeline.Providers;
 
 namespace LangChainPipeline.Pipeline.Ingestion;
 
@@ -16,7 +15,7 @@ public static class InMemoryIngestion
         where TLoader : IDocumentLoader, new()
     {
         TLoader loader = new TLoader();
-        List<Vector> vectors = new List<Vector>();
+        List<Vector> vectors = [];
 
         foreach (Document doc in await loader.LoadAsync(source, cancellationToken: ct))
         {

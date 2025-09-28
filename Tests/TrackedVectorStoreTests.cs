@@ -1,12 +1,11 @@
 using LangChain.Databases;
-using LangChain.DocumentLoaders;
-using LangChainPipeline.Domain.Vectors;
 
 namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for the TrackedVectorStore fix to verify the PR issues are resolved.
 /// </summary>
+// ReSharper disable once UnusedMember.Global
 public static class TrackedVectorStoreTests
 {
     public static async Task RunAllTests()
@@ -28,18 +27,18 @@ public static class TrackedVectorStoreTests
         var store = new TrackedVectorStore();
         var vectors = new List<Vector>
         {
-            new Vector
+            new()
             {
                 Id = "test1",
                 Text = "This is a test document",
-                Embedding = new float[] { 1f, 0f, 0f },
+                Embedding = [1f, 0f, 0f],
                 Metadata = new Dictionary<string, object> { ["type"] = "test" }
             },
-            new Vector
+            new()
             {
                 Id = "test2", 
                 Text = "Another test document",
-                Embedding = new float[] { 0f, 1f, 0f },
+                Embedding = [0f, 1f, 0f],
                 Metadata = new Dictionary<string, object> { ["type"] = "test" }
             }
         };
@@ -60,18 +59,18 @@ public static class TrackedVectorStoreTests
         var store = new TrackedVectorStore();
         var vectors = new List<Vector>
         {
-            new Vector
+            new()
             {
                 Id = "doc1",
                 Text = "Machine learning is fascinating",
-                Embedding = new float[] { 1f, 0.5f, 0f },
+                Embedding = [1f, 0.5f, 0f],
                 Metadata = new Dictionary<string, object> { ["category"] = "ai" }
             },
-            new Vector
+            new()
             {
                 Id = "doc2",
                 Text = "Cooking recipes are useful",
-                Embedding = new float[] { 0f, 0f, 1f },
+                Embedding = [0f, 0f, 1f],
                 Metadata = new Dictionary<string, object> { ["category"] = "cooking" }
             }
         };
@@ -79,7 +78,7 @@ public static class TrackedVectorStoreTests
         await store.AddAsync(vectors);
         
         // Test similarity search with embedding close to first document
-        var queryEmbedding = new float[] { 0.9f, 0.4f, 0.1f };
+        var queryEmbedding = new[] { 0.9f, 0.4f, 0.1f };
         var results = await store.GetSimilarDocumentsAsync(queryEmbedding, amount: 1);
         
         if (results.Count != 1)
@@ -101,7 +100,7 @@ public static class TrackedVectorStoreTests
         {
             Id = "clear-test",
             Text = "Document to be cleared",
-            Embedding = new float[] { 1f, 1f, 1f }
+            Embedding = [1f, 1f, 1f]
         };
 
         await store.AddAsync(new[] { vector });

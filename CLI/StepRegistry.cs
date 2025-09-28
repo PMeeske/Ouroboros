@@ -1,5 +1,4 @@
 using System.Reflection;
-using LangChainPipeline.Core.Steps;
 
 namespace LangChainPipeline.CLI;
 
@@ -8,7 +7,7 @@ namespace LangChainPipeline.CLI;
 /// </summary>
 public static class StepRegistry
 {
-    private static readonly Lazy<Dictionary<string, MethodInfo>> _map = new(BuildMap, isThreadSafe: true);
+    private static readonly Lazy<Dictionary<string, MethodInfo>> Map = new(BuildMap, isThreadSafe: true);
 
     private static Dictionary<string, MethodInfo> BuildMap()
     {
@@ -35,13 +34,13 @@ public static class StepRegistry
     public static bool TryResolve(string tokenName, string? args, out Step<CliPipelineState, CliPipelineState>? step)
     {
         step = null;
-        if (!_map.Value.TryGetValue(tokenName, out var mi))
+        if (!Map.Value.TryGetValue(tokenName, out var mi))
             return false;
 
         var parameters = mi.GetParameters();
         object?[] callArgs = parameters.Length == 0
             ? Array.Empty<object?>()
-            : new object?[] { args };
+            : [args];
 
         var result = mi.Invoke(null, callArgs);
         if (result is Step<CliPipelineState, CliPipelineState> s)
@@ -55,14 +54,14 @@ public static class StepRegistry
     /// <summary>
     /// List of available token names (for help/diagnostics).
     /// </summary>
-    public static IReadOnlyCollection<string> Tokens => _map.Value.Keys.ToArray();
+    public static IReadOnlyCollection<string> Tokens => Map.Value.Keys.ToArray();
 
     /// <summary>
     /// Try resolve only the MethodInfo for a token name.
     /// </summary>
     public static bool TryResolveInfo(string tokenName, out MethodInfo? method)
     {
-        if (_map.Value.TryGetValue(tokenName, out var mi))
+        if (Map.Value.TryGetValue(tokenName, out var mi))
         {
             method = mi;
             return true;
@@ -76,7 +75,7 @@ public static class StepRegistry
     /// </summary>
     public static IEnumerable<(MethodInfo Method, IReadOnlyList<string> Names)> GetTokenGroups()
     {
-        return _map.Value
+        return Map.Value
             .GroupBy(kv => kv.Value)
             .Select(g => (g.Key, (IReadOnlyList<string>)g.Select(kv => kv.Key).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList()));
     }

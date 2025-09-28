@@ -6,8 +6,8 @@ namespace LangChainPipeline.Pipeline.Branches;
 public sealed class BranchSnapshot
 {
     public string Name { get; set; } = "";
-    public List<PipelineEvent> Events { get; set; } = new();
-    public List<SerializableVector> Vectors { get; set; } = new();
+    public List<PipelineEvent> Events { get; set; } = [];
+    public List<SerializableVector> Vectors { get; set; } = [];
 
     public static Task<BranchSnapshot> Capture(PipelineBranch branch)
     {

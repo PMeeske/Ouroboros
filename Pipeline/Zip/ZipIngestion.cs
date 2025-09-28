@@ -1,7 +1,6 @@
 using System.Text;
 using System.Xml.Linq;
 using System.IO.Compression;
-using LangChain.DocumentLoaders;
 
 namespace LangChainPipeline.Pipeline.Ingestion.Zip;
 
@@ -124,7 +123,7 @@ public static class ZipIngestion
                 // Last resort: preserve kind intent
                 parsed = item.Kind switch
                 {
-                    ZipContentKind.Csv => new Dictionary<string, object>{{"type","csv"},{"table", new CsvTable(Array.Empty<string>(), new List<string[]>())},{"error", ex.Message}},
+                    ZipContentKind.Csv => new Dictionary<string, object>{{"type","csv"},{"table", new CsvTable(Array.Empty<string>(), [])},{"error", ex.Message}},
                     ZipContentKind.Xml => new Dictionary<string, object>{{"type","xml"},{"root", string.Empty},{"textPreview", string.Empty},{"error", ex.Message}},
                     ZipContentKind.Text => new Dictionary<string, object>{{"type","text"},{"preview", string.Empty},{"truncated", true},{"error", ex.Message}},
                     ZipContentKind.Binary => new Dictionary<string, object>{{"type","binary"},{"size", 0L},{"sha256", string.Empty},{"error", ex.Message}},
@@ -152,7 +151,7 @@ public static class ZipIngestion
             return new Dictionary<string, object>
             {
                 ["type"] = "csv",
-                ["table"] = new CsvTable(Array.Empty<string>(), new List<string[]>()),
+                ["table"] = new CsvTable(Array.Empty<string>(), []),
                 ["error"] = ex.Message
             };
         }
@@ -203,7 +202,7 @@ public static class ZipIngestion
     {
         // Robust-ish CSV splitter handling quotes and escaped quotes.
         if (string.IsNullOrEmpty(line)) return Array.Empty<string>();
-        List<string> fields = new();
+        List<string> fields = [];
         var sb = new StringBuilder();
         bool inQuotes = false;
         for (int i = 0; i < line.Length; i++)
@@ -263,7 +262,7 @@ public static class ZipIngestion
             ["elementCount"] = elementCount,
             ["attributeCount"] = attributeCount,
             ["maxDepth"] = maxDepth,
-            ["topChildren"] = topChildren?.Select(tc => new Dictionary<string, object>{{"name", tc.Name},{"count", tc.Count}}).ToList() ?? new List<Dictionary<string, object>>(),
+            ["topChildren"] = topChildren?.Select(tc => new Dictionary<string, object>{{"name", tc.Name},{"count", tc.Count}}).ToList() ?? [],
             ["doc"] = new XmlDoc(doc),
             ["textPreview"] = includeText ? (doc.Root?.Value ?? string.Empty) : string.Empty
         };
@@ -395,14 +394,14 @@ internal static class ZipIngestionStreamingHelpers
 
 internal static class DeferredZipTextCache
 {
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string,string> _map = new();
-    public static void Store(string id, string text) => _map[id] = text;
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string,string> Map = new();
+    public static void Store(string id, string text) => Map[id] = text;
     public static bool TryTake(string id, out string text)
     {
-        if (_map.TryRemove(id, out text!)) return true;
+        if (Map.TryRemove(id, out text!)) return true;
         text = string.Empty; return false;
     }
-    public static bool TryPeek(string id, out string text) => _map.TryGetValue(id, out text!);
+    public static bool TryPeek(string id, out string text) => Map.TryGetValue(id, out text!);
 }
 
 internal sealed class ZipArchiveHolder : IDisposable
@@ -427,21 +426,21 @@ internal sealed class ZipArchiveHolder : IDisposable
 
 internal static class ZipArchiveRegistry
 {
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ZipArchiveHolder> _map = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ZipArchiveHolder> Map = new(StringComparer.OrdinalIgnoreCase);
     public static ZipArchiveHolder Acquire(string path)
     {
-        return _map.AddOrUpdate(path,
+        return Map.AddOrUpdate(path,
             p => new ZipArchiveHolder(p),
             (p, existing) => { existing.AddRef(); return existing; });
     }
     public static void Release(string path)
     {
-        if (_map.TryGetValue(path, out var holder))
+        if (Map.TryGetValue(path, out var holder))
         {
             if (holder.ReleaseRef() <= 0)
             {
                 holder.Dispose();
-                _map.TryRemove(path, out _);
+                Map.TryRemove(path, out _);
             }
         }
     }

@@ -2,20 +2,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Core;
-using LangChainPipeline.Core.Steps;
-using LangChainPipeline.Pipeline.Ingestion;
-using LangChainPipeline.Pipeline.Reasoning;
-using LangChainPipeline.Tools;
 using LangChainPipeline.Pipeline.Ingestion.Zip;
 using LangChain.Databases; // for Vector
-using LangChainPipeline.Domain.Vectors; // for TrackedVectorStore
-using LangChainPipeline.Domain.States;
+// for TrackedVectorStore
 using LangChain.Splitters.Text;
 using LangChainPipeline.Interop.LangChain; // for ExternalChainRegistry (reflection-based chain integration)
 using System.Reflection; // for BindingFlags
-using LangChainPipeline.Pipeline.Reasoning;
-using LangChainPipeline.Providers;
 
 namespace LangChainPipeline.CLI;
 
@@ -83,7 +75,7 @@ public static class CliSteps
                     Recursive = recursive,
                     Extensions = exts.Count == 0 ? null : exts.ToArray(),
                     ExcludeDirectories = excludeDirs.Count == 0 ? null : excludeDirs.ToArray(),
-                    Patterns = patterns.Count == 0 ? new[] { "*" } : patterns.ToArray(),
+                    Patterns = patterns.Count == 0 ? ["*"] : patterns.ToArray(),
                     MaxFileBytes = maxBytes,
                     ChunkSize = 1800,
                     ChunkOverlap = 180
@@ -383,9 +375,9 @@ public static class CliSteps
                     else if (mod.StartsWith("batch=", StringComparison.OrdinalIgnoreCase) && int.TryParse(mod.AsSpan(6), out var bs) && bs > 0)
                         batchSize = bs;
                     else if (mod.StartsWith("skip=", StringComparison.OrdinalIgnoreCase))
-                        skipKinds = new HashSet<string>(mod.Substring(5).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(v => v.ToLowerInvariant()));
+                        skipKinds = [..mod.Substring(5).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(v => v.ToLowerInvariant())];
                     else if (mod.StartsWith("only=", StringComparison.OrdinalIgnoreCase))
-                        onlyKinds = new HashSet<string>(mod.Substring(5).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(v => v.ToLowerInvariant()));
+                        onlyKinds = [..mod.Substring(5).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(v => v.ToLowerInvariant())];
                 }
             }
             if (string.IsNullOrWhiteSpace(path)) return s;
@@ -964,7 +956,7 @@ public static class CliSteps
         {
             var raw = ParseString(args);
             if (string.IsNullOrWhiteSpace(raw)) return s;
-            string? name = null; string[] inKeys = Array.Empty<string>(); string[] outKeys = new[]{"Output"}; bool trace=false;
+            string? name = null; string[] inKeys = Array.Empty<string>(); string[] outKeys = ["Output"]; bool trace=false;
             foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 if (part.StartsWith("name=", StringComparison.OrdinalIgnoreCase)) name = part.Substring(5);
@@ -1028,7 +1020,7 @@ public static class CliSteps
                     }
                 }
                 if (trace) Console.WriteLine($"[chain] {name} export={dict?.Count ?? 0}");
-                var taskObj = call.Invoke(chain, new[] { valuesObj });
+                var taskObj = call.Invoke(chain, [valuesObj]);
                 if (taskObj is Task t) await t.ConfigureAwait(false);
                 // if Task<T> try to get Result object as updated values
                 if (taskObj?.GetType().IsGenericType == true && taskObj.GetType().GetProperty("Result") is { } rp)

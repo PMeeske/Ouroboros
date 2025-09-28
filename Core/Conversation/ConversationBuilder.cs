@@ -1,6 +1,3 @@
-using LangChainPipeline.Core.Memory;
-using LangChainPipeline.Core.Steps;
-
 namespace LangChainPipeline.Core.Conversation;
 
 /// <summary>
@@ -10,7 +7,7 @@ namespace LangChainPipeline.Core.Conversation;
 /// <typeparam name="TContext">The context type</typeparam>
 public class ConversationBuilder<TInput, TContext>
 {
-    private readonly List<ContextualStep<MemoryContext<TInput>, MemoryContext<TInput>, TContext>> _steps = new();
+    private readonly List<ContextualStep<MemoryContext<TInput>, MemoryContext<TInput>, TContext>> _steps = [];
     private readonly TContext _context;
 
     /// <summary>
@@ -48,7 +45,7 @@ public class ConversationBuilder<TInput, TContext>
             async (input, context) =>
             {
                 var result = await processor(input, context);
-                var logs = logMessage != null ? new List<string> { logMessage } : new List<string>();
+                var logs = logMessage != null ? [logMessage] : new List<string>();
                 return (result, logs);
             });
 

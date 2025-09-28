@@ -1,5 +1,3 @@
-using LangChainPipeline.Tools;
-
 namespace LangChainPipeline.Domain.Events;
 
 public sealed record ReasoningStep(

@@ -1,5 +1,3 @@
-using LangChainPipeline.Core.Memory;
-
 namespace LangChainPipeline.Tests;
 
 /// <summary>

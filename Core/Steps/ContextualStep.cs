@@ -8,7 +8,7 @@ namespace LangChainPipeline.Core.Steps;
 /// <summary>
 /// A contextual step that depends on context and produces logs (Reader + Writer pattern)
 /// </summary>
-public delegate Task<(TOut result, List<string> logs)> ContextualStep<TIn, TOut, TContext>(TIn input, TContext context);
+public delegate Task<(TOut result, List<string> logs)> ContextualStep<in TIn, TOut, in TContext>(TIn input, TContext context);
 
 /// <summary>
 /// Static factory methods for contextual steps
@@ -25,7 +25,7 @@ public static class ContextualStep
         {
             await Task.Yield();
             var result = func(input);
-            var logs = log != null ? new List<string> { log } : new List<string>();
+            var logs = log != null ? [log] : new List<string>();
             return (result, logs);
         };
 
@@ -38,7 +38,7 @@ public static class ContextualStep
         => async (input, context) =>
         {
             var result = await step(input);
-            var logs = log != null ? new List<string> { log } : new List<string>();
+            var logs = log != null ? [log] : new List<string>();
             return (result, logs);
         };
 
@@ -51,7 +51,7 @@ public static class ContextualStep
         {
             var innerStep = await contextStep(context);
             var result = await innerStep(input);
-            return (result, new List<string>());
+            return (result, []);
         };
 
     /// <summary>
@@ -164,7 +164,7 @@ public static class ContextualStepExtensions
             }
             catch (Exception ex)
             {
-                return (Result<TOut, Exception>.Failure(ex), new List<string> { $"Error: {ex.Message}" });
+                return (Result<TOut, Exception>.Failure(ex), [$"Error: {ex.Message}"]);
             }
         };
 

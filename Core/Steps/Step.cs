@@ -109,13 +109,13 @@ public static class SyncStepExtensions
     /// Lift a pure function to SyncStep
     /// </summary>
     public static SyncStep<TIn, TOut> ToSyncStep<TIn, TOut>(this Func<TIn, TOut> func)
-        => new SyncStep<TIn, TOut>(func);
+        => new(func);
 
     /// <summary>
     /// Convert async Step to sync (blocking - use with caution)
     /// </summary>
     public static SyncStep<TIn, TOut> ToSync<TIn, TOut>(this Step<TIn, TOut> asyncStep)
-        => new SyncStep<TIn, TOut>(input => asyncStep(input).GetAwaiter().GetResult());
+        => new(input => asyncStep(input).GetAwaiter().GetResult());
 
     /// <summary>
     /// Compose sync step with async step
@@ -146,7 +146,7 @@ public static class SyncStepExtensions
     /// </summary>
     public static SyncStep<TIn, Result<TOut, Exception>> TrySync<TIn, TOut>(
         this SyncStep<TIn, TOut> syncStep)
-        => new SyncStep<TIn, Result<TOut, Exception>>(input =>
+        => new(input =>
         {
             try
             {
@@ -165,7 +165,7 @@ public static class SyncStepExtensions
     public static SyncStep<TIn, Option<TOut>> TryOption<TIn, TOut>(
         this SyncStep<TIn, TOut> syncStep,
         Func<TOut, bool> predicate)
-        => new SyncStep<TIn, Option<TOut>>(input =>
+        => new(input =>
         {
             try
             {

@@ -3,10 +3,6 @@
 // Enhanced integration with our unified monadic operations
 // ==========================================================
 
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace LangChainPipeline.Core.Interop;
 
 using LangChainPipeline.Core.Steps;
@@ -29,7 +25,7 @@ public static class StepInteropExtensions
     /// Lifts an async function into a Step
     /// </summary>
     public static Step<TA, TB> ToStep<TA, TB>(this Func<TA, Task<TB>> func)
-        => new Step<TA, TB>(func);
+        => new(func);
 }
 
 #endregion
@@ -150,7 +146,7 @@ public static class CompatInterop
     /// Convert Step to compatible node
     /// </summary>
     public static PipeNode<TIn, TOut> ToCompatNode<TIn, TOut>(this Step<TIn, TOut> step, string? name = null)
-        => new PipeNode<TIn, TOut>(new LambdaNode<TIn, TOut>(
+        => new(new LambdaNode<TIn, TOut>(
             name ?? $"Step[{typeof(TIn).Name}->{typeof(TOut).Name}]",
             async (input, ct) => await step(input).ConfigureAwait(false)));
 
@@ -160,7 +156,7 @@ public static class CompatInterop
     public static PipeNode<TIn, Result<TOut, TError>> ToCompatNode<TIn, TOut, TError>(
         this KleisliResult<TIn, TOut, TError> kleisliResult, 
         string? name = null)
-        => new PipeNode<TIn, Result<TOut, TError>>(new LambdaNode<TIn, Result<TOut, TError>>(
+        => new(new LambdaNode<TIn, Result<TOut, TError>>(
             name ?? $"KleisliResult[{typeof(TIn).Name}->{typeof(TOut).Name}]",
             async (input, ct) => await kleisliResult(input).ConfigureAwait(false)));
 
@@ -170,7 +166,7 @@ public static class CompatInterop
     public static PipeNode<TIn, Option<TOut>> ToCompatNode<TIn, TOut>(
         this KleisliOption<TIn, TOut> kleisliOption, 
         string? name = null)
-        => new PipeNode<TIn, Option<TOut>>(new LambdaNode<TIn, Option<TOut>>(
+        => new(new LambdaNode<TIn, Option<TOut>>(
             name ?? $"KleisliOption[{typeof(TIn).Name}->{typeof(TOut).Name}]",
             async (input, ct) => await kleisliOption(input).ConfigureAwait(false)));
 
@@ -178,7 +174,7 @@ public static class CompatInterop
     /// Convert pure function to compatible node
     /// </summary>
     public static PipeNode<TIn, TOut> ToCompatNode<TIn, TOut>(this Func<TIn, TOut> f, string? name = null)
-        => new PipeNode<TIn, TOut>(new LambdaNode<TIn, TOut>(
+        => new(new LambdaNode<TIn, TOut>(
             name ?? $"Func[{typeof(TIn).Name}->{typeof(TOut).Name}]",
             (input, ct) => Task.FromResult(f(input))));
 
@@ -186,7 +182,7 @@ public static class CompatInterop
     /// Convert async function to compatible node
     /// </summary>
     public static PipeNode<TIn, TOut> ToCompatNode<TIn, TOut>(this Func<TIn, Task<TOut>> f, string? name = null)
-        => new PipeNode<TIn, TOut>(new LambdaNode<TIn, TOut>(
+        => new(new LambdaNode<TIn, TOut>(
             name ?? $"Async[{typeof(TIn).Name}->{typeof(TOut).Name}]",
             (input, ct) => f(input)));
 
@@ -194,7 +190,7 @@ public static class CompatInterop
     /// Create a pipeline builder for fluent composition
     /// </summary>
     public static PipelineBuilder<TIn> StartPipeline<TIn>(string name = "Pipeline")
-        => new PipelineBuilder<TIn>(name);
+        => new(name);
 }
 
 #endregion
@@ -217,7 +213,7 @@ public class PipelineBuilder<TIn>
     /// Add a Step to the pipeline
     /// </summary>
     public PipelineBuilder<TIn, TOut> AddStep<TOut>(Step<TIn, TOut> step, string? stepName = null)
-        => new PipelineBuilder<TIn, TOut>(_name, step.ToCompatNode(stepName));
+        => new(_name, step.ToCompatNode(stepName));
     
     /// <summary>
     /// Add a KleisliResult to the pipeline
@@ -225,13 +221,13 @@ public class PipelineBuilder<TIn>
     public PipelineBuilder<TIn, Result<TOut, TError>> AddResultStep<TOut, TError>(
         KleisliResult<TIn, TOut, TError> kleisliResult, 
         string? stepName = null)
-        => new PipelineBuilder<TIn, Result<TOut, TError>>(_name, kleisliResult.ToCompatNode(stepName));
+        => new(_name, kleisliResult.ToCompatNode(stepName));
     
     /// <summary>
     /// Add a function to the pipeline
     /// </summary>
     public PipelineBuilder<TIn, TOut> AddFunc<TOut>(Func<TIn, TOut> func, string? stepName = null)
-        => new PipelineBuilder<TIn, TOut>(_name, func.ToCompatNode(stepName));
+        => new(_name, func.ToCompatNode(stepName));
 }
 
 /// <summary>
@@ -252,13 +248,13 @@ public class PipelineBuilder<TIn, TCurrent>
     /// Add another step to the pipeline
     /// </summary>
     public PipelineBuilder<TIn, TOut> Then<TOut>(Step<TCurrent, TOut> step, string? stepName = null)
-        => new PipelineBuilder<TIn, TOut>(_name, _currentPipeline.Pipe(step.ToCompatNode(stepName)));
+        => new(_name, _currentPipeline.Pipe(step.ToCompatNode(stepName)));
     
     /// <summary>
     /// Add a function step to the pipeline
     /// </summary>
     public PipelineBuilder<TIn, TOut> Then<TOut>(Func<TCurrent, TOut> func, string? stepName = null)
-        => new PipelineBuilder<TIn, TOut>(_name, _currentPipeline.Pipe(func.ToCompatNode(stepName)));
+        => new(_name, _currentPipeline.Pipe(func.ToCompatNode(stepName)));
     
     /// <summary>
     /// Build the final pipeline

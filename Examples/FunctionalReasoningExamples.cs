@@ -4,12 +4,6 @@
 // ==========================================================
 
 using LangChain.DocumentLoaders;
-using LangChainPipeline.Core;
-using LangChainPipeline.Core.Kleisli;
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Pipeline.Branches;
-using LangChainPipeline.Pipeline.Reasoning;
-using LangChainPipeline.Tools;
 
 namespace LangChainPipeline.Examples;
 
