@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
@@ -9,6 +10,7 @@ using LangChainPipeline.Tools;
 using LangChainPipeline.Pipeline.Ingestion.Zip;
 using LangChain.Databases; // for Vector
 using LangChainPipeline.Domain.Vectors; // for TrackedVectorStore
+using LangChainPipeline.Domain.States;
 using LangChain.Splitters.Text;
 using LangChainPipeline.Interop.LangChain; // for ExternalChainRegistry (reflection-based chain integration)
 using System.Reflection; // for BindingFlags
@@ -96,25 +98,43 @@ public static class CliSteps
                 int fileIndex = 0;
                 foreach (var doc in docs)
                 {
-                    if (string.IsNullOrWhiteSpace(doc.PageContent)) continue;
+                    if (string.IsNullOrWhiteSpace(doc.PageContent))
+                    {
+                        fileIndex++;
+                        continue;
+                    }
+
                     var chunks = splitter.SplitText(doc.PageContent);
+                    int chunkCount = chunks.Count;
+                    var baseMetadata = BuildDocumentMetadata(doc, root, fileIndex);
+
                     int chunkIdx = 0;
                     foreach (var chunk in chunks)
                     {
+                        string vectorId = $"dir:{fileIndex}:{chunkIdx}";
+                        var chunkMetadata = BuildChunkMetadata(baseMetadata, chunkIdx, chunkCount, vectorId);
+
                         try
                         {
                             var emb = await s.Embed.CreateEmbeddingsAsync(chunk);
-                            var vec = new Vector
+                            vectors.Add(new Vector
                             {
-                                Id = $"dir:{fileIndex}:{chunkIdx}",
+                                Id = vectorId,
                                 Text = chunk,
                                 Embedding = emb,
-                            };
-                            vectors.Add(vec);
+                                Metadata = chunkMetadata
+                            });
                         }
                         catch
                         {
-                            vectors.Add(new Vector { Id = $"dir:{fileIndex}:{chunkIdx}:fallback", Text = chunk, Embedding = new float[8] });
+                            chunkMetadata["embedding"] = "fallback";
+                            vectors.Add(new Vector
+                            {
+                                Id = $"{vectorId}:fallback",
+                                Text = chunk,
+                                Embedding = new float[8],
+                                Metadata = chunkMetadata
+                            });
                         }
                         chunkIdx++;
                     }
@@ -774,6 +794,107 @@ public static class CliSteps
             return s;
         };
 
+    [PipelineToken("EnhanceMarkdown", "ImproveMarkdown", "RewriteMarkdown")]
+    public static Step<CliPipelineState, CliPipelineState> EnhanceMarkdown(string? args = null)
+        => async s =>
+        {
+            var options = ParseKeyValueArgs(args);
+            if (!options.TryGetValue("file", out var fileValue) || string.IsNullOrWhiteSpace(fileValue))
+            {
+                s.Branch = s.Branch.WithIngestEvent("markdown:error:no-file", Array.Empty<string>());
+                return s;
+            }
+
+            int iterations = 1;
+            if (options.TryGetValue("iterations", out var iterationsRaw) && int.TryParse(iterationsRaw, out var parsedIterations) && parsedIterations > 0)
+            {
+                iterations = Math.Min(parsedIterations, 10);
+            }
+
+            int contextCount = s.RetrievalK;
+            if (options.TryGetValue("context", out var contextRaw) && int.TryParse(contextRaw, out var parsedContext) && parsedContext >= 0)
+            {
+                contextCount = parsedContext;
+            }
+            contextCount = Math.Clamp(contextCount, 0, 16);
+
+            bool createBackup = true;
+            if (options.TryGetValue("backup", out var backupRaw))
+            {
+                createBackup = ParseBool(backupRaw, true);
+            }
+
+            string? goal = options.TryGetValue("goal", out var goalValue) ? goalValue : null;
+            goal = ChooseFirstNonEmpty(goal, s.Prompt, s.Topic, s.Query);
+
+            string basePath = s.Branch.Source.Value as string ?? Environment.CurrentDirectory;
+            string resolvedFile = Path.IsPathRooted(fileValue)
+                ? Path.GetFullPath(fileValue)
+                : Path.GetFullPath(Path.Combine(basePath, fileValue));
+
+            if (!File.Exists(resolvedFile))
+            {
+                s.Branch = s.Branch.WithIngestEvent($"markdown:missing:{resolvedFile}", Array.Empty<string>());
+                return s;
+            }
+
+            if (createBackup)
+            {
+                try
+                {
+                    string backupPath = resolvedFile + ".bak";
+                    if (!File.Exists(backupPath))
+                    {
+                        File.Copy(resolvedFile, backupPath, overwrite: false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    s.Branch = s.Branch.WithIngestEvent($"markdown:backup-failed:{ex.GetType().Name}:{resolvedFile}", Array.Empty<string>());
+                }
+            }
+
+            for (int iteration = 1; iteration <= iterations; iteration++)
+            {
+                string original = await File.ReadAllTextAsync(resolvedFile);
+                var contextBlocks = await BuildMarkdownContextAsync(s, resolvedFile, goal, contextCount);
+                string prompt = BuildMarkdownRewritePrompt(resolvedFile, original, goal, contextBlocks, iteration, iterations);
+
+                try
+                {
+                    var (response, toolCalls) = await s.Llm.GenerateWithToolsAsync(prompt);
+                    var improved = NormalizeMarkdownOutput(response);
+                    if (string.IsNullOrWhiteSpace(improved))
+                    {
+                        improved = original;
+                    }
+
+                    bool changed = !string.Equals(improved.Trim(), original.Trim(), StringComparison.Ordinal);
+                    if (changed)
+                    {
+                        await File.WriteAllTextAsync(resolvedFile, improved);
+                    }
+
+                    var revision = new DocumentRevision(resolvedFile, improved, iteration, goal);
+                    s.Branch = s.Branch.WithReasoning(revision, prompt, toolCalls);
+                    s.Output = improved;
+                    s.Context = string.Join("\n---\n", contextBlocks);
+
+                    if (!changed)
+                    {
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    s.Branch = s.Branch.WithIngestEvent($"markdown:error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
+                    break;
+                }
+            }
+
+            return s;
+        };
+
     [PipelineToken("SwitchModel", "Model")] // Usage: SwitchModel('model=gpt-4o-mini|embed=text-embedding-3-small|remote')
     public static Step<CliPipelineState, CliPipelineState> SwitchModel(string? args = null)
         => async s =>
@@ -989,4 +1110,269 @@ public static class CliSteps
             Console.WriteLine($"[tokendocs] updated {docPath}");
             return Task.FromResult(s);
         };
+
+    private static Dictionary<string, string> ParseKeyValueArgs(string? args)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var raw = ParseString(args);
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return map;
+        }
+
+        foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            int idx = part.IndexOf('=');
+            if (idx > 0)
+            {
+                string key = part.Substring(0, idx).Trim();
+                string value = part.Substring(idx + 1).Trim();
+                map[key] = value;
+            }
+            else
+            {
+                map[part.Trim()] = "true";
+            }
+        }
+
+        return map;
+    }
+
+    private static bool ParseBool(string raw, bool defaultValue)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return defaultValue;
+        if (bool.TryParse(raw, out bool parsed)) return parsed;
+        if (int.TryParse(raw, out int numeric)) return numeric != 0;
+
+        return raw.Equals("yes", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("y", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("on", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("enable", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("enabled", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ChooseFirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(static v => !string.IsNullOrWhiteSpace(v));
+
+    private static async Task<List<string>> BuildMarkdownContextAsync(
+        CliPipelineState state,
+        string filePath,
+        string? goal,
+        int count)
+    {
+        var blocks = new List<string>();
+        if (count <= 0) return blocks;
+        if (state.Branch.Store is not TrackedVectorStore store) return blocks;
+
+        string? query = ChooseFirstNonEmpty(goal, Path.GetFileNameWithoutExtension(filePath), state.Topic, state.Query, state.Prompt);
+        query ??= Path.GetFileName(filePath);
+
+        try
+        {
+            IReadOnlyCollection<Document> docs = await store.GetSimilarDocuments(state.Embed, query, count);
+            foreach (var doc in docs)
+            {
+                if (doc is null || string.IsNullOrWhiteSpace(doc.PageContent))
+                {
+                    continue;
+                }
+
+                var metadata = doc.Metadata ?? new Dictionary<string, object>();
+                if (metadata.TryGetValue("source", out var sourceObj) && sourceObj is string src && PathsEqual(src, filePath))
+                {
+                    continue;
+                }
+
+                string sourceLabel = metadata.TryGetValue("relative", out var relObj) && relObj is string rel && !string.IsNullOrWhiteSpace(rel)
+                    ? rel
+                    : metadata.TryGetValue("source", out var srcObj2) && srcObj2 is string src2
+                        ? src2
+                        : "unknown source";
+
+                blocks.Add($"Source: {sourceLabel}\n{Truncate(doc.PageContent, 1200)}");
+
+                if (blocks.Count >= count)
+                {
+                    break;
+                }
+            }
+        }
+        catch
+        {
+            // Retrieval context is optional; ignore failures.
+        }
+
+        return blocks;
+    }
+
+    private static string BuildMarkdownRewritePrompt(
+        string filePath,
+        string original,
+        string? goal,
+        List<string> contextBlocks,
+        int iteration,
+        int totalIterations)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("You are an expert technical writer and software engineer.");
+        sb.AppendLine($"File path: {filePath}");
+        sb.AppendLine($"Iteration: {iteration} of {Math.Max(totalIterations, 1)}.");
+        if (!string.IsNullOrWhiteSpace(goal))
+        {
+            sb.AppendLine($"Primary objective: {goal}");
+        }
+
+        sb.AppendLine("Revise the markdown to improve clarity, accuracy, and usefulness while preserving correct facts.");
+        sb.AppendLine("Apply these rules:");
+        sb.AppendLine("- Keep markdown syntax valid and consistent.");
+        sb.AppendLine("- Promote clear headings, ordered steps, and actionable guidance.");
+        sb.AppendLine("- Integrate important insights from the provided context when relevant.");
+        sb.AppendLine("- Remove redundancies, fix typography, and ensure concise language.");
+        sb.AppendLine("- Respond with the complete rewritten markdown only; don't wrap it in fences or add narration.");
+
+        if (contextBlocks.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Supporting context:");
+            foreach (var block in contextBlocks)
+            {
+                sb.AppendLine("---");
+                sb.AppendLine(block);
+            }
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("Current markdown:");
+        sb.AppendLine("```markdown");
+        sb.AppendLine(original);
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("Return the rewritten markdown now (no backticks, no extra commentary).");
+        return sb.ToString();
+    }
+
+    private static string NormalizeMarkdownOutput(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+        string text = raw.Trim();
+
+        if (text.StartsWith("```", StringComparison.Ordinal))
+        {
+            int firstLineBreak = text.IndexOf('\n');
+            if (firstLineBreak >= 0)
+            {
+                text = text[(firstLineBreak + 1)..];
+            }
+            int closingFence = text.LastIndexOf("```", StringComparison.Ordinal);
+            if (closingFence >= 0)
+            {
+                text = text[..closingFence];
+            }
+        }
+
+        if (text.StartsWith("Updated Markdown:", StringComparison.OrdinalIgnoreCase))
+        {
+            text = text.Substring("Updated Markdown:".Length).TrimStart();
+        }
+
+        return text.Trim();
+    }
+
+    private static string Truncate(string value, int maxLength)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
+        {
+            return value;
+        }
+
+        return value[..maxLength] + "…";
+    }
+
+    private static bool PathsEqual(string a, string b)
+    {
+        try
+        {
+            return string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private static string TryGetRelativePath(string root, string path)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(path))
+            {
+                return path;
+            }
+
+            return Path.GetRelativePath(root, path);
+        }
+        catch
+        {
+            return path;
+        }
+    }
+
+    private static Dictionary<string, object> BuildDocumentMetadata(Document doc, string root, int fileIndex)
+    {
+        var metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        if (doc.Metadata is not null)
+        {
+            foreach (var kvp in doc.Metadata)
+            {
+                metadata[kvp.Key] = kvp.Value ?? string.Empty;
+            }
+        }
+
+        string? sourcePath = null;
+        if (metadata.TryGetValue("source", out var sourceObj) && sourceObj is string sourceStr)
+        {
+            sourcePath = sourceStr;
+        }
+        else if (metadata.TryGetValue("path", out var pathObj) && pathObj is string pathStr)
+        {
+            sourcePath = pathStr;
+        }
+
+        if (!string.IsNullOrWhiteSpace(sourcePath))
+        {
+            try
+            {
+                sourcePath = Path.GetFullPath(sourcePath);
+            }
+            catch
+            {
+                // ignore invalid paths
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            sourcePath = Path.Combine(root, $"document_{fileIndex}.md");
+        }
+
+        metadata["source"] = sourcePath;
+        metadata["relative"] = TryGetRelativePath(root, sourcePath);
+        return metadata;
+    }
+
+    private static Dictionary<string, object> BuildChunkMetadata(
+        Dictionary<string, object> baseMetadata,
+        int chunkIndex,
+        int chunkCount,
+        string vectorId)
+    {
+        var metadata = new Dictionary<string, object>(baseMetadata, StringComparer.OrdinalIgnoreCase)
+        {
+            ["chunkIndex"] = chunkIndex,
+            ["chunkCount"] = chunkCount,
+            ["vectorId"] = vectorId
+        };
+        return metadata;
+    }
 }

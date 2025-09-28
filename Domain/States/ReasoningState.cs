@@ -7,5 +7,6 @@ namespace LangChainPipeline.Domain.States;
 [JsonDerivedType(typeof(Draft), "Draft")]
 [JsonDerivedType(typeof(Critique), "Critique")]
 [JsonDerivedType(typeof(FinalSpec), "Final")]
+[JsonDerivedType(typeof(DocumentRevision), "DocumentRevision")]
 public abstract record ReasoningState(string Kind, string Text);
 
