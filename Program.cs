@@ -67,6 +67,14 @@ internal static class Program
             Console.WriteLine("=== TRACKEDVECTORSTORE FIX TESTING ===");
             await TrackedVectorStoreTests.RunAllTests();
 
+            // Test DSL Parser for tool calls
+            Console.WriteLine("=== DSL PARSER TESTING ===");
+            ToolCallParserTests.RunAllTests();
+
+            // Demonstrate DSL Parser functionality
+            Console.WriteLine("=== DSL PARSER FUNCTIONALITY ===");
+            await DslParserExamples.RunDslParserExamples();
+
             // Demonstrate conversational pipeline examples
             Console.WriteLine("=== CONVERSATIONAL PIPELINE DEMONSTRATION ===");
             await ConversationalPipelineExample.RunConversationalExample();

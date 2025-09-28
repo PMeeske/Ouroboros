@@ -22,29 +22,22 @@ public sealed class ToolAwareChatModel(OllamaChatModel llm, ToolRegistry registr
         List<ToolExecution> toolCalls = new List<ToolExecution>();
         string result = chatResponse.LastMessageContent;
         
-        foreach (string rawLine in result.Split('\n'))
+        // Use the sophisticated DSL parser for tool calls
+        var parsedToolCalls = ToolCallParser.ParseToolCalls(result);
+        
+        foreach (var toolCall in parsedToolCalls)
         {
-            string line = rawLine.Trim();
-            if (!line.StartsWith("[TOOL:", StringComparison.Ordinal)) 
-                continue;
-
-            // Parse tool invocation: [TOOL:name args]
-            string inside = line.Trim('[', ']')[5..].Trim(); // Remove "[TOOL:" prefix
-            string[] split = inside.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-            string name = split[0];
-            string args = split.Length > 1 ? split[1] : string.Empty;
-
-            ITool? tool = registry.Get(name);
+            ITool? tool = registry.Get(toolCall.Name);
             if (tool is null)
             {
-                result += $"\n[TOOL-RESULT:{name}] error: tool not found";
+                result += $"\n[TOOL-RESULT:{toolCall.Name}] error: tool not found";
                 continue;
             }
 
             string output;
             try 
             { 
-                var toolResult = await tool.InvokeAsync(args, ct);
+                var toolResult = await tool.InvokeAsync(toolCall.Arguments, ct);
                 output = toolResult.Match(
                     success => success,
                     error => $"error: {error}"
@@ -55,8 +48,8 @@ public sealed class ToolAwareChatModel(OllamaChatModel llm, ToolRegistry registr
                 output = $"error: {ex.Message}"; 
             }
 
-            toolCalls.Add(new ToolExecution(name, args, output, DateTime.UtcNow));
-            result += $"\n[TOOL-RESULT:{name}] {output}";
+            toolCalls.Add(new ToolExecution(toolCall.Name, toolCall.Arguments, output, DateTime.UtcNow));
+            result += $"\n[TOOL-RESULT:{toolCall.Name}] {output}";
         }
 
         return (result, toolCalls);
