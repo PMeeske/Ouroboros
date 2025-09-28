@@ -1,5 +1,3 @@
-using LangChain.Providers;
-using LangChain.Providers.Ollama;
 using LangChainPipeline.Tools;
 
 namespace LangChainPipeline.Providers;
@@ -8,7 +6,7 @@ namespace LangChainPipeline.Providers;
 /// A chat model wrapper that can execute tools based on special tool invocation syntax in responses.
 /// Uses monadic Result<T,E> for consistent error handling throughout the pipeline.
 /// </summary>
-public sealed class ToolAwareChatModel(OllamaChatModel llm, ToolRegistry registry)
+public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry registry)
 {
     /// <summary>
     /// Generates a response and executes any tools mentioned in the response.
@@ -18,9 +16,8 @@ public sealed class ToolAwareChatModel(OllamaChatModel llm, ToolRegistry registr
     /// <returns>A tuple containing the final text and list of tool executions.</returns>
     public async Task<(string Text, List<ToolExecution> Tools)> GenerateWithToolsAsync(string prompt, CancellationToken ct = default)
     {
-        ChatResponse chatResponse = await llm.GenerateAsync(prompt);
-        List<ToolExecution> toolCalls = new List<ToolExecution>();
-        string result = chatResponse.LastMessageContent;
+    string result = await llm.GenerateTextAsync(prompt, ct);
+    List<ToolExecution> toolCalls = new List<ToolExecution>();
         
         foreach (string rawLine in result.Split('\n'))
         {

@@ -1,555 +1,431 @@
-// ============================================================================
-// LangChain Pipeline System - Main Entry Point
-// Enhanced with proper monadic operations and functional programming concepts
-// ============================================================================
+// ==============================
+// Minimal CLI entry (top-level)
+// ==============================
 
-using ConsoleApp1;
-using LangChain.Databases;
-using LangChain.DocumentLoaders;
-using LangChain.Providers;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Tools;
-using LangChainPipeline.Core;
-using LangChainPipeline.Examples;
-using LangChainPipeline.Tests;
+using LangChainPipeline.Providers;
+using LangChain.DocumentLoaders;
+using LangChain.Databases;
+using LangChainPipeline.CLI;
+using CommandLine;
+using LangChainPipeline.Options;
+using System.Diagnostics;
+using LangChainPipeline.Diagnostics; // added
+using LangChainPipeline.Domain.Vectors;
+using Microsoft.Extensions.Hosting;
 
-namespace ConsoleApp1;
-
-/// <summary>
-/// Main program entry point for the LangChain Pipeline System.
-/// Now enhanced with proper monadic operations and functional programming demonstrations.
-/// </summary>
-internal static class Program
+try
 {
-    private static async Task Main(string[] args)
+    // Optional minimal host
+    if (args.Contains("--host-only"))
     {
-        try
+        using IHost onlyHost = await LangChainPipeline.Interop.Hosting.MinimalHost.BuildAsync(args);
+        await onlyHost.RunAsync();
+        return;
+    }
+
+    await ParseAndRunAsync(args);
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine($"Error: {ex.Message}");
+    Console.Error.WriteLine(ex.StackTrace);
+    Environment.Exit(1);
+}
+
+return;
+
+// ---------------
+// Local functions
+// ---------------
+
+static async Task ParseAndRunAsync(string[] args)
+{
+    // Back-compat shims for legacy flags (e.g., -pipeline "...")
+    if (args.Length > 0)
+    {
+        if (string.Equals(args[0], "-pipeline", StringComparison.OrdinalIgnoreCase) && args.Length >= 2)
         {
-            Console.WriteLine("=== Enhanced LangChain Pipeline System ===");
-            Console.WriteLine("Now with proper monadic operations!\n");
-
-            // First, demonstrate the enhanced monadic operations
-            Console.WriteLine("=== MONADIC OPERATIONS DEMONSTRATION ===\n");
-            await MonadicExamples.RunAllDemonstrations();
-            
-            // Demonstrate KleisliCompose higher-order functions
-            Console.WriteLine("\n=== KLEISLI COMPOSE HIGHER-ORDER FUNCTIONS ===\n");
-            await DemonstrateKleisliCompose();
-            
-            // Demonstrate enhanced interop capabilities
-            Console.WriteLine("\n=== ENHANCED KLEISLI <-> LANGCHAIN INTEROP DEMONSTRATION ===\n");
-            await EnhancedDemo.RunAllEnhanced();
-
-            // Test hybrid sync/async step system
-            Console.WriteLine("\n=== HYBRID SYNC/ASYNC STEP DEMONSTRATIONS ===\n");
-            await HybridStepExamples.RunAllHybridDemonstrations();
-
-            // Demonstrate the new conversational Kleisli system
-            Console.WriteLine("\n=== CONVERSATIONAL KLEISLI WITH MEMORY INTEGRATION ===\n");
-            await ConversationalKleisliExamples.RunAllDemonstrations();
-            
-            // Demonstrate the direct LangChain example integration
-            Console.WriteLine("\n=== DIRECT LANGCHAIN EXAMPLE INTEGRATION ===\n");
-            await LangChainStyleExample.DemonstrateLangChainEquivalence();
-            await LangChainStyleExample.RunLangChainStyleConversation();
-
-            Console.WriteLine("\n" + new string('=', 70) + "\n");
-
-            // Test the new conversational features
-            Console.WriteLine("=== CONVERSATIONAL FEATURES TESTING ===");
-            MemoryContextTests.RunAllTests();
-            
-            // Test LangChain-based conversational features
-            Console.WriteLine("=== LANGCHAIN CONVERSATIONAL FEATURES TESTING ===");
-            await LangChainConversationTests.RunAllTests();
-
-            // Test TrackedVectorStore fixes
-            Console.WriteLine("=== TRACKEDVECTORSTORE FIX TESTING ===");
-            await TrackedVectorStoreTests.RunAllTests();
-
-            // Demonstrate conversational pipeline examples
-            Console.WriteLine("=== CONVERSATIONAL PIPELINE DEMONSTRATION ===");
-            await ConversationalPipelineExample.RunConversationalExample();
-
-            // Demonstrate LangChain-based conversational pipeline
-            Console.WriteLine("=== LANGCHAIN CONVERSATIONAL PIPELINE DEMONSTRATION ===");
-            await LangChainConversationExample.RunLangChainConversationalExample();
-
-            Console.WriteLine("\n" + new string('=', 70) + "\n");
-
-            // Then run the original pipeline with enhancements
-            Console.WriteLine("=== PROPER LANGCHAIN CHAIN INTEGRATION ===");
-            await ProperLangChainIntegrationExamples.RunAllExamples();
-            
-            Console.WriteLine("=== LANGCHAIN PIPELINE WITH MONADIC ENHANCEMENTS ===");
-            Console.WriteLine("Initializing components...\n");
-
-            await RunEnhancedPipelineAsync();
-            
-            Console.WriteLine("\n=== All systems completed successfully ===");
+            args = new[] { "pipeline", "--dsl", args[1] };
         }
-        catch (Exception ex)
+        else if (string.Equals(args[0], "--list-tokens", StringComparison.OrdinalIgnoreCase))
         {
-            Console.WriteLine($"An error occurred: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
-            Environment.Exit(1);
+            args = new[] { "list" };
         }
-
-        // Only wait for input if running in a truly interactive console
-        try
+        else if (string.Equals(args[0], "--explain-pipeline", StringComparison.OrdinalIgnoreCase) && args.Length >= 2)
         {
-            if (Environment.UserInteractive && !Console.IsInputRedirected && !Console.IsOutputRedirected)
-            {
-                Console.WriteLine("\nPress any key to exit...");
-                Console.ReadKey();
-            }
-            else
-            {
-                Console.WriteLine("\nApplication completed successfully.");
-            }
-        }
-        catch (InvalidOperationException)
-        {
-            // Console operations may not be available in some environments
-            Console.WriteLine("\nApplication completed successfully.");
+            args = new[] { "explain", "--dsl", args[1] };
         }
     }
 
-    private static async Task RunEnhancedPipelineAsync()
+    // Back-compat for previously invalid long names --k and --q (now --topk / --question)
+    // CommandLineParser requires long names > 1 char; we rewrite if encountered.
+    for (int i = 0; i < args.Length; i++)
     {
-        // Enhanced pipeline using monadic operations for better error handling
-        var pipelineResult = await CreateEnhancedPipeline()
-            .Catch()  // Convert exceptions to Result type
-            .Invoke("pipeline");
+        if (string.Equals(args[i], "--k", StringComparison.OrdinalIgnoreCase))
+            args[i] = "--topk";
+        else if (string.Equals(args[i], "--q", StringComparison.OrdinalIgnoreCase))
+            args[i] = "--question";
+    }
 
-        pipelineResult.Match(
-            success => Console.WriteLine("Pipeline completed successfully!"),
-            error => Console.WriteLine($"Pipeline failed: {error.Message}")
+    // CommandLineParser verbs
+    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions>(args)
+        .MapResult(
+            (AskOptions o) => RunAskAsync(o),
+            (PipelineOptions o) => RunPipelineAsync(o),
+            (ListTokensOptions _) => RunListTokensAsync(),
+            (ExplainOptions o) => RunExplainAsync(o),
+            _ => Task.CompletedTask
         );
-    }
+}
 
-    /// <summary>
-    /// Creates an enhanced pipeline using monadic operations.
-    /// </summary>
-    private static Step<string, string> CreateEnhancedPipeline()
+static async Task RunPipelineDslAsync(string dsl, string modelName, string embedName, string sourcePath, int k, bool trace, ChatRuntimeSettings? settings = null)
+{
+    // Setup minimal environment for reasoning/ingest arrows
+    // Remote model support (OpenAI-compatible) via environment variables only inside this function
+    var (endpoint, apiKey) = ChatConfig.Resolve();
+
+    var provider = new OllamaProvider();
+    IChatCompletionModel chatModel;
+    if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
     {
-        // Step 1: Initialize models with error handling
-        var initializeModels = Arrow.Lift<string, (OllamaChatModel chat, OllamaEmbeddingModel embed)>(_ =>
-        {
-            Console.WriteLine("Creating models...");
-            var provider = new OllamaProvider();
-            var coderSettings = OllamaPresets.DeepSeekCoder33B;
-
-            var llmBase = new OllamaChatModel(provider, "deepseek-coder:33b").UseConsoleForDebug();
-            llmBase.Settings = coderSettings;
-            
-            var embed = new OllamaEmbeddingModel(provider, "nomic-embed-text");
-
-            return (llmBase, embed);
-        });
-
-        // Step 2: Create branch and setup
-        var createBranch = Arrow.Lift<(OllamaChatModel, OllamaEmbeddingModel), PipelineBranch>(models =>
-        {
-            Console.WriteLine("Creating branch and components...");
-            return new PipelineBranch("main", new TrackedVectorStore(), DataSource.FromPath(Environment.CurrentDirectory));
-        });
-
-        // Step 3: Setup tools with monadic composition
-        var setupTools = Arrow.Lift<PipelineBranch, (PipelineBranch branch, ToolRegistry tools)>(branch =>
-        {
-            Console.WriteLine("Setting up tools...");
-            var tools = new ToolRegistry()
-                .WithTool(new MathTool())
-                .WithFunction("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
-            
-            return (branch, tools);
-        });
-
-        // Step 4: Ingest content with enhanced error handling
-        var ingestContent = Arrow.LiftAsync<(PipelineBranch, ToolRegistry), (PipelineBranch, ToolRegistry)>(async data =>
-        {
-            var (branch, tools) = data;
-            Console.WriteLine("Ingesting content...");
-
-            var updatedBranch = branch; // Default to original branch
-            try
-            {
-                // Simplified ingestion - in real scenario we'd use the embedding model
-                await Task.Delay(100); // Simulate ingestion work
-                
-                // Fallback: seed with fake vectors
-                await branch.Store.AddAsync(new[]
-                {
-                    new Vector 
-                    { 
-                        Id = "1", 
-                        Text = "Enhanced monadic operations provide better error handling.", 
-                        Embedding = new float[8] 
-                    },
-                    new Vector 
-                    { 
-                        Id = "2", 
-                        Text = "Kleisli arrows enable composition of computations in monadic contexts.", 
-                        Embedding = new float[8] 
-                    }
-                });
-                
-                updatedBranch = branch.WithIngestEvent("monadic-seed", new[] { "1", "2" });
-                Console.WriteLine("Enhanced seed data loaded with monadic concepts.\n");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ingestion had issues: {ex.Message}");
-                // Continue with empty store for demonstration
-            }
-
-            return (updatedBranch, tools);
-        });
-
-        // Step 5: Run enhanced reasoning with monadic error handling
-        var runReasoning = Arrow.LiftAsync<(PipelineBranch, ToolRegistry), string>(async data =>
-        {
-            var (branch, tools) = data;
-            Console.WriteLine("Running enhanced reasoning with monadic operations...");
-
-            // Simulate reasoning process with functional composition
-            var reasoningPipeline = CreateMonadicReasoningPipeline();
-            
-            var reasoningState = new Draft("Demonstrate enhanced monadic operations in LangChain pipeline");
-
-            var result = await reasoningPipeline(reasoningState);
-            
-            return result.Match(
-                success => 
-                {
-                    Console.WriteLine($"Reasoning completed: {success.Kind}");
-                    Console.WriteLine($"Enhanced with monadic context: {success.Text[..Math.Min(100, success.Text.Length)]}...");
-                    return "Enhanced reasoning pipeline completed successfully with monadic operations";
-                },
-                error => $"Reasoning failed: {error}"
-            );
-        });
-
-        // Compose the entire pipeline using monadic operations
-        return initializeModels
-            .Then(createBranch)
-            .Then(setupTools)
-            .Then(ingestContent)
-            .Then(runReasoning)
-            .Tap(result => Console.WriteLine($"Pipeline result: {result}"));
+        chatModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings);
     }
-
-    /// <summary>
-    /// Creates a reasoning pipeline using enhanced monadic operations.
-    /// Demonstrates proper error handling with KleisliResult.
-    /// </summary>
-    private static KleisliResult<ReasoningState, ReasoningState, string> CreateMonadicReasoningPipeline()
+    else
     {
-        // Step 1: Validate input with monadic error handling
-        KleisliResult<ReasoningState, ReasoningState, string> validateInput = 
-            async state =>
-            {
-                await Task.Delay(10); // Simulate validation
-                return string.IsNullOrEmpty(state.Text)
-                    ? Result<ReasoningState, string>.Failure("Text content cannot be empty")
-                    : Result<ReasoningState, string>.Success(state);
-            };
-
-        // Step 2: Enhanced analysis with monadic composition
-        KleisliResult<ReasoningState, ReasoningState, string> enhancedAnalysis = 
-            async state =>
-            {
-                await Task.Delay(50); // Simulate analysis
-                
-                // Enhance the text with monadic concepts
-                var enhancedText = state.Text + " (enhanced with Option and Result monads for robust error handling and Kleisli arrows for composition)";
-                
-                var newState = new Critique(enhancedText);
-
-                Console.WriteLine($"  → Enhanced analysis completed with monadic operations");
-                return Result<ReasoningState, string>.Success(newState);
-            };
-
-        // Step 3: Finalize with monadic laws compliance
-        KleisliResult<ReasoningState, ReasoningState, string> finalizeWithMonads = 
-            async state =>
-            {
-                await Task.Delay(20); // Simulate finalization
-                
-                var finalText = state.Text + " | Final state achieved through monadic composition satisfying identity, associativity, and functor laws";
-                var finalState = new FinalSpec(finalText);
-
-                Console.WriteLine($"  → Monadic finalization completed with category theory compliance");
-                return Result<ReasoningState, string>.Success(finalState);
-            };
-
-        // Compose using enhanced monadic operations
-        return validateInput
-            .Then(enhancedAnalysis)
-            .Then(finalizeWithMonads)
-            .Tap(state => Console.WriteLine($"  → Monadic step completed: {state.Kind} with enhanced content"));
+        var chat = new OllamaChatModel(provider, modelName);
+        if (modelName == "deepseek-coder:33b")
+            chat.Settings = OllamaPresets.DeepSeekCoder33B;
+        chatModel = new OllamaChatAdapter(chat); // adapter added below
     }
+    IEmbeddingModel embed = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embedName));
 
-    /// <summary>
-    /// Demonstrates the original pipeline functionality (preserved for compatibility).
-    /// </summary>
-    private static async Task RunOriginalPipelineAsync()
+    var tools = new ToolRegistry();
+    var llm = new ToolAwareChatModel(chatModel, tools);
+    var resolvedSource = string.IsNullOrWhiteSpace(sourcePath) ? Environment.CurrentDirectory : Path.GetFullPath(sourcePath);
+    if (!Directory.Exists(resolvedSource))
     {
-        // 1. Create and configure models
-        var (chatModel, embeddingModel) = CreateModels();
-
-        // 2. Create branch and store
-        var branch = new PipelineBranch("main", new TrackedVectorStore(), DataSource.FromPath(Environment.CurrentDirectory));
-
-        // 3. Create and configure tools
-        var toolRegistry = CreateToolRegistry(branch.Store, embeddingModel);
-        var toolAwareLlm = new ToolAwareChatModel(chatModel, toolRegistry);
-
-        // 4. Ingest content
-        await IngestContentAsync(branch, embeddingModel);
-
-        // 5. Run reasoning pipeline
-        await RunReasoningPipelineAsync(branch, toolAwareLlm, toolRegistry, embeddingModel);
-
-        // 6. Save and replay
-        await SaveAndReplayAsync(branch, toolAwareLlm, embeddingModel, toolRegistry);
+        Console.WriteLine($"Source path '{resolvedSource}' does not exist - creating.");
+        Directory.CreateDirectory(resolvedSource);
     }
+    var branch = new PipelineBranch("cli", new TrackedVectorStore(), DataSource.FromPath(resolvedSource));
 
-    /// <summary>
-    /// Creates and configures the LLM providers.
-    /// </summary>
-    private static (OllamaChatModel chatModel, OllamaEmbeddingModel embeddingModel) CreateModels()
+    var state = new CliPipelineState
     {
-        Console.WriteLine("Creating models...");
-        
-        var provider = new OllamaProvider();
-        var coderSettings = OllamaPresets.DeepSeekCoder33B;
+        Branch = branch,
+        Llm = llm,
+        Tools = tools,
+        Embed = embed,
+        RetrievalK = k,
+        Trace = trace
+    };
 
-        var llmBase = new OllamaChatModel(provider, "deepseek-coder:33b").UseConsoleForDebug();
-        llmBase.Settings = coderSettings;
-        
-        var embed = new OllamaEmbeddingModel(provider, "nomic-embed-text");
-
-        return (llmBase, embed);
-    }
-
-    /// <summary>
-    /// Creates and configures the tool registry with default tools.
-    /// </summary>
-    private static ToolRegistry CreateToolRegistry(TrackedVectorStore vectorStore, OllamaEmbeddingModel embeddingModel)
+    try
     {
-        Console.WriteLine("Setting up tools...");
-        
-        return new ToolRegistry()
-            .WithTool(new MathTool())
-            .WithTool(new RetrievalTool(vectorStore, embeddingModel))
-            .WithFunction("upper", "Converts input text to uppercase", s => s.ToUpperInvariant());
-    }
+        var step = PipelineDsl.Build(dsl); // Steps will use embed & llm from state; k optionally influences reasoning if we extend arrows
+        state = await step(state);
 
-    /// <summary>
-    /// Ingests content into the vector store.
-    /// </summary>
-    private static async Task IngestContentAsync(PipelineBranch branch, OllamaEmbeddingModel embeddingModel)
-    {
-        Console.WriteLine("Ingesting content...");
-
-        try
+        var last = state.Branch.Events.OfType<ReasoningStep>().LastOrDefault();
+        if (last is not null)
         {
-            var ingestArrow = IngestionArrows.IngestArrow<FileLoader>(embeddingModel, tag: "fs");
-            await ingestArrow.Invoke(branch);
-            Console.WriteLine("Content ingestion completed.\n");
+            Console.WriteLine("\n=== PIPELINE RESULT ===");
+            Console.WriteLine(last.State.Text);
         }
-        catch
+        else
         {
-            Console.WriteLine("File ingestion failed, using fallback seed data...");
-            
-            // Fallback: seed with fake vectors
-            await branch.Store.AddAsync(new[]
-            {
-                new Vector 
-                { 
-                    Id = "1", 
-                    Text = "KeyTable supports multi-tenant parameters and caching.", 
-                    Embedding = new float[8] 
-                },
-                new Vector 
-                { 
-                    Id = "2", 
-                    Text = "KeyTable validates tenantId and supports PageSize default 50.", 
-                    Embedding = new float[8] 
-                }
-            });
-            
-            // Note: In a functional approach, this would return the updated branch
-            // For now, we'll ignore the result of WithIngestEvent to maintain compatibility
-            _ = branch.WithIngestEvent("seed", new[] { "1", "2" });
-            Console.WriteLine("Fallback seed data loaded.\n");
+            Console.WriteLine("\n(no reasoning output; pipeline may only have ingested or set values)");
         }
+        Telemetry.PrintSummary();
     }
-
-    /// <summary>
-    /// Runs the main reasoning pipeline.
-    /// </summary>
-    private static async Task RunReasoningPipelineAsync(
-        PipelineBranch branch, 
-        ToolAwareChatModel llm, 
-        ToolRegistry tools, 
-        OllamaEmbeddingModel embed)
+    catch (Exception ex)
     {
-        Console.WriteLine("Running reasoning pipeline (Draft -> Critique -> Improve)...");
-
-        const string topic = "Vita.KeyTables_Grosses_Konzept.md";
-        const string query = "KeyTable parameters and edge cases";
-
-        var pipeline = ReasoningArrows.DraftArrow(llm, tools, embed, topic, query)
-            .Then(ReasoningArrows.CritiqueArrow(llm, tools, embed, topic, query))
-            .Then(ReasoningArrows.ImproveArrow(llm, tools, embed, topic, query));
-
-        var updatedBranch = await pipeline.Invoke(branch);
-        
-        // Print final result
-        var lastStep = updatedBranch.Events.OfType<ReasoningStep>().LastOrDefault();
-        if (lastStep != null)
-        {
-            Console.WriteLine("=== FINAL RESULT ===");
-            var preview = lastStep.State.Text.Length > 1200 
-                ? lastStep.State.Text[..1200] + "..." 
-                : lastStep.State.Text;
-            Console.WriteLine(preview);
-            Console.WriteLine();
-        }
-    }
-
-    /// <summary>
-    /// Saves the pipeline state and tests replay functionality.
-    /// </summary>
-    private static async Task SaveAndReplayAsync(
-        PipelineBranch branch, 
-        ToolAwareChatModel llm, 
-        OllamaEmbeddingModel embed, 
-        ToolRegistry tools)
-    {
-        Console.WriteLine("Saving snapshot...");
-        
-        const string snapshotFile = "branch_main.json";
-        var snapshot = await BranchSnapshot.Capture(branch);
-        await BranchPersistence.SaveAsync(snapshot, snapshotFile);
-        Console.WriteLine($"Snapshot saved: {snapshotFile}");
-
-        Console.WriteLine("Testing replay functionality...");
-        var loadedSnapshot = await BranchPersistence.LoadAsync(snapshotFile);
-        var restoredBranch = await loadedSnapshot.Restore();
-        
-        var replayEngine = new ReplayEngine(llm, embed);
-        const string topic = "Vita.KeyTables_Grosses_Konzept.md";
-        const string query = "KeyTable parameters and edge cases";
-        
-        var replayedBranch = await replayEngine.ReplayAsync(restoredBranch, topic, query, tools);
-
-        var replayLastStep = replayedBranch.Events.OfType<ReasoningStep>().LastOrDefault();
-        if (replayLastStep != null)
-        {
-            Console.WriteLine("\n=== REPLAY RESULT ===");
-            var preview = replayLastStep.State.Text.Length > 1200 
-                ? replayLastStep.State.Text[..1200] + "..." 
-                : replayLastStep.State.Text;
-            Console.WriteLine(preview);
-
-            if (replayLastStep.ToolCalls?.Any() == true)
-            {
-                Console.WriteLine("\nTool calls during replay:");
-                foreach (var toolCall in replayLastStep.ToolCalls)
-                {
-                    Console.WriteLine($"- {toolCall.ToolName}({toolCall.Arguments}) => {toolCall.Output}");
-                }
-            }
-        }
-    }
-
-    private static async Task DemonstrateKleisliCompose()
-    {
-        Console.WriteLine("\n=== KleisliCompose Higher-Order Composition Demonstration ===");
-
-        // Create basic Kleisli arrows (not Step arrows)
-        Kleisli<string, int> parseNumber = async input =>
-        {
-            await Task.Delay(10);
-            return int.TryParse(input, out var result) ? result : 0;
-        };
-
-        Kleisli<int, int> doubleValue = async input =>
-        {
-            await Task.Delay(10);
-            return input * 2;
-        };
-
-        Kleisli<int, string> formatResult = async input =>
-        {
-            await Task.Delay(10);
-            return $"Final Result: {input}";
-        };
-
-        // Demonstrate basic higher-order composition using the Arrow factory
-        Console.WriteLine("\n--- Higher-Order Composition Factory ---");
-        var composeFunc = Arrow.Compose<string, int, int>();
-        var parseAndDouble = composeFunc(parseNumber, doubleValue);
-        
-        var result1 = await parseAndDouble("21");
-        Console.WriteLine($"Compose factory - Parse '21' and double: {result1}");
-
-        // Demonstrate ComposeWith currying (fixed parameter order)
-        Console.WriteLine("\n--- ComposeWith Curried Composition ---");
-        var composeWithParse = Arrow.ComposeWith<string, int, int>(parseNumber);
-        var curriedComposition = composeWithParse(doubleValue);
-        
-        var result2 = await curriedComposition("15");
-        Console.WriteLine($"ComposeWith curried - Parse '15' and double: {result2}");
-
-        // Demonstrate the new extension method composition
-        Console.WriteLine("\n--- Extension Method with KleisliCompose ---");
-        var extensionComposition = parseNumber.ComposeWith(Arrow.Compose<string, int, string>(), formatResult);
-        
-        var result3 = await extensionComposition("12");
-        Console.WriteLine($"Extension method composition '12': {result3}");
-
-        // Demonstrate higher-order function creation pattern
-        Console.WriteLine("\n--- Higher-Order Function Patterns ---");
-        
-        // Create a factory for multiplier arrows
-        var createMultiplier = (int factor) => new Kleisli<int, int>(async x =>
-        {
-            await Task.Delay(5);
-            return x * factor;
-        });
-
-        // Use the factory with KleisliCompose
-        var tripler = createMultiplier(3);
-        var parseAndTriple = Arrow.Compose<string, int, int>()(parseNumber, tripler);
-        
-        var result4 = await parseAndTriple("7");
-        Console.WriteLine($"Factory pattern - Parse '7' and triple: {result4}");
-
-        // Demonstrate partial application
-        Console.WriteLine("\n--- Partial Application ---");
-        var partialComposer = parseNumber.PartialCompose<string, int, string>();
-        var completeComposition = partialComposer(formatResult);
-        
-        var result5 = await completeComposition("25");
-        Console.WriteLine($"Partial application '25': {result5}");
-
-        // Demonstrate multi-step composition
-        Console.WriteLine("\n--- Multi-Step Composition Chain ---");
-        var step1 = Arrow.ComposeWith<string, int, int>(parseNumber);
-        var step2 = step1(doubleValue);
-        var step3 = Arrow.ComposeWith<string, int, string>(step2);
-        var finalChain = step3(formatResult);
-        
-        var result6 = await finalChain("8");
-        Console.WriteLine($"Multi-step chain '8': {result6}");
-
-        Console.WriteLine("\n--- KleisliCompose successfully demonstrates higher-order composition patterns ---");
+        Console.WriteLine($"Pipeline failed: {ex.Message}");
     }
 }
 
+// Builds a Step<string,string> that runs either simple chat or chat+RAG in monadic form
+static Step<string, string> CreateSemanticCliPipeline(bool withRag, string modelName, string embedName, int k, ChatRuntimeSettings? settings = null, AskOptions? askOpts = null)
+{
+    return Arrow.LiftAsync<string, string>(async question =>
+    {
+        // Initialize models
+        var provider = new OllamaProvider();
+        var (endpoint, apiKey) = ChatConfig.Resolve();
+        IChatCompletionModel chatModel;
+        if (askOpts is not null && askOpts.Router.Equals("auto", StringComparison.OrdinalIgnoreCase))
+        {
+            // Build router using provided model overrides; fallback to primary modelName
+            var modelMap = new Dictionary<string, IChatCompletionModel>(StringComparer.OrdinalIgnoreCase);
+            IChatCompletionModel MakeLocal(string name)
+            {
+                var m = new OllamaChatModel(provider, name);
+                if (name == "deepseek-coder:33b") m.Settings = OllamaPresets.DeepSeekCoder33B;
+                return new OllamaChatAdapter(m);
+            }
+            string general = askOpts.GeneralModel ?? modelName;
+            modelMap["general"] = MakeLocal(general);
+            if (!string.IsNullOrWhiteSpace(askOpts.CoderModel)) modelMap["coder"] = MakeLocal(askOpts.CoderModel!);
+            if (!string.IsNullOrWhiteSpace(askOpts.SummarizeModel)) modelMap["summarize"] = MakeLocal(askOpts.SummarizeModel!);
+            if (!string.IsNullOrWhiteSpace(askOpts.ReasonModel)) modelMap["reason"] = MakeLocal(askOpts.ReasonModel!);
+            chatModel = new MultiModelRouter(modelMap, fallbackKey: "general");
+        }
+        else if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
+        {
+            try
+            {
+                chatModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings);
+            }
+            catch (Exception ex) when (askOpts is not null && !askOpts.StrictModel && ex.Message.Contains("Invalid model", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"[WARN] Remote model '{modelName}' invalid. Falling back to local 'llama3'. Use --strict-model to disable fallback.");
+                var local = new OllamaChatModel(provider, "llama3");
+                chatModel = new OllamaChatAdapter(local);
+            }
+            catch (Exception ex) when (askOpts is not null && !askOpts.StrictModel)
+            {
+                Console.WriteLine($"[WARN] Remote model '{modelName}' unavailable ({ex.GetType().Name}). Falling back to local 'llama3'. Use --strict-model to disable fallback.");
+                var local = new OllamaChatModel(provider, "llama3");
+                chatModel = new OllamaChatAdapter(local);
+            }
+        }
+        else
+        {
+            var chat = new OllamaChatModel(provider, modelName);
+            if (modelName == "deepseek-coder:33b")
+                chat.Settings = OllamaPresets.DeepSeekCoder33B;
+            chatModel = new OllamaChatAdapter(chat);
+        }
+        IEmbeddingModel embed = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embedName));
+
+        // Tool-aware LLM and in-memory vector store
+        var tools = new ToolRegistry();
+        var llm = new ToolAwareChatModel(chatModel, tools);
+        var store = new TrackedVectorStore();
+
+        // Optional minimal RAG: seed a few docs
+        if (withRag)
+        {
+            var docs = new[]
+            {
+                "API versioning best practices with backward compatibility",
+                "Circuit breaker using Polly in .NET",
+                "Event sourcing and CQRS patterns overview"
+            };
+            foreach (var (text, idx) in docs.Select((d, i) => (d, i)))
+            {
+                try
+                {
+                    Telemetry.RecordEmbeddingInput(new[]{text});
+                    var resp = await embed.CreateEmbeddingsAsync(text);
+                    await store.AddAsync(new[]
+                    {
+                        new Vector
+                        {
+                            Id = (idx + 1).ToString(),
+                            Text = text,
+                            Embedding = resp
+                        }
+                    });
+                    Telemetry.RecordEmbeddingSuccess(resp.Length);
+                    Telemetry.RecordVectors(1);
+                    if (Environment.GetEnvironmentVariable("MONADIC_DEBUG") == "1")
+                        Console.WriteLine($"[embed] seed ok id={(idx+1)} dim={resp.Length}");
+                }
+                catch
+                {
+                    await store.AddAsync(new[]
+                    {
+                        new Vector
+                        {
+                            Id = (idx + 1).ToString(),
+                            Text = text,
+                            Embedding = new float[8]
+                        }
+                    });
+                    Telemetry.RecordEmbeddingFailure();
+                    Telemetry.RecordVectors(1);
+                    if (Environment.GetEnvironmentVariable("MONADIC_DEBUG") == "1")
+                        Console.WriteLine($"[embed] seed fail id={(idx+1)} fallback-dim=8");
+                }
+            }
+        }
+
+        // Answer
+        if (!withRag)
+        {
+            var (text, _) = await llm.GenerateWithToolsAsync($"Answer the following question clearly and concisely.\nQuestion: {{q}}".Replace("{q}", question));
+            return text;
+        }
+        else
+        {
+            Telemetry.RecordEmbeddingInput(new[]{question});
+            var qEmb = await embed.CreateEmbeddingsAsync(question);
+            Telemetry.RecordEmbeddingSuccess(qEmb.Length);
+            var hits = await store.GetSimilarDocumentsAsync(qEmb, k);
+            var ctx = string.Join("\n- ", hits.Select(h => h.PageContent));
+            var prompt = $"Use the following context to answer.\nContext:\n- {ctx}\n\nQuestion: {{q}}".Replace("{q}", question);
+            var (ragText, _) = await llm.GenerateWithToolsAsync(prompt);
+            return ragText;
+        }
+    });
+}
+
+// (usage handled by CommandLineParser built-in help)
+
+static Task RunListTokensAsync()
+{
+    Console.WriteLine("Available token groups:");
+    foreach (var (method, names) in StepRegistry.GetTokenGroups())
+    {
+        Console.WriteLine($"- {method.DeclaringType?.Name}.{method.Name}(): {string.Join(", ", names)}");
+    }
+    return Task.CompletedTask;
+}
+
+static Task RunExplainAsync(ExplainOptions o)
+{
+    Console.WriteLine(PipelineDsl.Explain(o.Dsl));
+    return Task.CompletedTask;
+}
+
+static async Task RunPipelineAsync(PipelineOptions o)
+{
+    if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
+    await RunPipelineDslAsync(o.Dsl, o.Model, o.Embed, o.Source, o.K, o.Trace, new ChatRuntimeSettings());
+}
+
+static async Task RunAskAsync(AskOptions o)
+{
+    if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase)) Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
+    if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
+    var settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
+    ValidateSecrets();
+    LogBackendSelection(o.Model, settings);
+    var sw = Stopwatch.StartNew();
+    if (o.Agent)
+    {
+        // Build minimal environment (always RAG off for initial agent version; agent can internally call tools)
+        var provider = new OllamaProvider();
+        var (endpoint, apiKey) = ChatConfig.Resolve();
+        IChatCompletionModel chatModel;
+        if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
+        {
+            try
+            {
+                chatModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey, o.Model, settings);
+            }
+            catch (Exception ex) when (!o.StrictModel && ex.Message.Contains("Invalid model", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"[WARN] Remote model '{o.Model}' invalid. Falling back to local 'llama3'. Use --strict-model to disable fallback.");
+                chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+            }
+        }
+        else
+        {
+            chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
+        }
+
+        var tools = new ToolRegistry();
+        // Register a couple of default utility tools if absent
+        if (!tools.All.Any())
+        {
+            tools = tools
+                .WithFunction("echo", "Echo back the input", s => s)
+                .WithFunction("uppercase", "Convert text to uppercase", s => s.ToUpperInvariant());
+        }
+        TrackedVectorStore? ragStore = null;
+        IEmbeddingModel? embedModel = null;
+        if (o.Rag)
+        {
+            var provider2 = new OllamaProvider();
+            embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider2, o.Embed));
+            ragStore = new TrackedVectorStore();
+            var seedDocs = new[]
+            {
+                "Event sourcing captures all changes as immutable events.",
+                "Circuit breakers prevent cascading failures in distributed systems.",
+                "CQRS separates reads from writes for scalability.",
+            };
+            foreach (var (text, idx) in seedDocs.Select((d,i)=>(d,i)))
+            {
+                try
+                {
+                    var emb = await embedModel.CreateEmbeddingsAsync(text);
+                    await ragStore.AddAsync(new[]{ new Vector{ Id=(idx+1).ToString(), Text=text, Embedding=emb } });
+                }
+                catch
+                {
+                    await ragStore.AddAsync(new[]{ new Vector{ Id=(idx+1).ToString(), Text=text, Embedding=new float[8] } });
+                }
+            }
+               if (tools.Get("search") is null && embedModel is not null)
+               {
+                   tools = tools.WithTool(new LangChainPipeline.Tools.RetrievalTool(ragStore, embedModel));
+               }
+        }
+
+        var agentInstance = LangChainPipeline.Agent.AgentFactory.Create(o.AgentMode, chatModel, tools, o.Debug, o.AgentMaxSteps, o.Rag, o.Embed, jsonTools: o.JsonTools, stream: o.Stream);
+        try
+        {
+            string questionForAgent = o.Question;
+            if (o.Rag && ragStore != null && embedModel != null)
+            {
+                try
+                {
+                    var results = await ragStore.GetSimilarDocuments(embedModel, o.Question, 3);
+                    if (results.Count > 0)
+                    {
+                        var ctx = string.Join("\n- ", results.Select(r=>r.PageContent.Length>160? r.PageContent[..160]+"...": r.PageContent));
+                        questionForAgent = $"Context:\n- {ctx}\n\nQuestion: {o.Question}";
+                    }
+                }
+                catch { /* fallback silently */ }
+            }
+            var answer = await agentInstance.RunAsync(questionForAgent);
+            sw.Stop();
+            Console.WriteLine(answer);
+            Console.WriteLine($"[timing] total={sw.ElapsedMilliseconds}ms (agent-{agentInstance.Mode})");
+            return;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            return;
+        }
+    }
+
+    var run = await CreateSemanticCliPipeline(o.Rag, o.Model, o.Embed, o.K, settings, o)
+        .Catch()
+        .Invoke(o.Question);
+    sw.Stop();
+    run.Match(
+        success => {
+            Console.WriteLine(success);
+            Console.WriteLine($"[timing] total={sw.ElapsedMilliseconds}ms");
+            Telemetry.PrintSummary();
+        },
+        error => Console.WriteLine($"Error: {error.Message}")
+    );
+}
+
+// ------------------
+// CommandLineParser
+// ------------------
+
+static void ValidateSecrets()
+{
+    var (endpoint, apiKey) = ChatConfig.Resolve();
+    if (!string.IsNullOrWhiteSpace(endpoint) ^ !string.IsNullOrWhiteSpace(apiKey))
+    {
+        Console.WriteLine("[WARN] Only one of CHAT_ENDPOINT / CHAT_API_KEY is set; remote backend will be ignored.");
+    }
+}
+
+static void LogBackendSelection(string model, ChatRuntimeSettings settings)
+{
+    var (endpoint, apiKey) = ChatConfig.Resolve();
+    string backend = (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey)) ? "remote-openai-compatible" : "ollama-local";
+    string maskedKey = string.IsNullOrWhiteSpace(apiKey) ? "(none)" : apiKey.Length <= 8 ? "********" : apiKey[..4] + "..." + apiKey[^4..];
+    Console.WriteLine($"[INIT] Backend={backend} Model={model} Temp={settings.Temperature} MaxTok={settings.MaxTokens} Key={maskedKey} Endpoint={(endpoint ?? "(none)")}");
+}
 

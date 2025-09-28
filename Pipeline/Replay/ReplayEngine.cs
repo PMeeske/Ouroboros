@@ -1,15 +1,16 @@
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Extensions;
-using LangChain.Providers.Ollama;
 using LangChainPipeline.Tools;
+using LangChainPipeline.Domain.Vectors;
+using LangChainPipeline.Providers;
 
 namespace LangChainPipeline.Pipeline.Replay;
 
 /// <summary>
 /// Engine for replaying pipeline execution with fresh context and tool re-execution.
 /// </summary>
-public sealed class ReplayEngine(ToolAwareChatModel llm, OllamaEmbeddingModel embed)
+public sealed class ReplayEngine(ToolAwareChatModel llm, IEmbeddingModel embed)
 {
     /// <summary>
     /// Replays a pipeline branch, re-executing all reasoning steps with fresh context.

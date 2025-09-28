@@ -31,6 +31,13 @@
   <ItemGroup>
     <PackageReference Include="LangChain" Version="0.17.0" />
     <PackageReference Include="System.Reactive" Version="6.0.2" />
+    <PackageReference Include="CommandLineParser" Version="2.9.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="example\**\*.cs" />
+    <Compile Remove="Example\**\*.cs" />
   </ItemGroup>
 
 </Project>

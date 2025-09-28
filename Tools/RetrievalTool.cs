@@ -1,6 +1,7 @@
 ﻿using LangChain.DocumentLoaders;
 using LangChain.Extensions;
-using LangChain.Providers.Ollama;
+using LangChainPipeline.Domain.Vectors;
+using LangChainPipeline.Providers;
 using LangChainPipeline.Tools;
 
 namespace LangChainPipeline.Tools;
@@ -8,7 +9,7 @@ namespace LangChainPipeline.Tools;
 /// <summary>
 /// A tool for performing semantic search over ingested documents.
 /// </summary>
-public sealed class RetrievalTool(TrackedVectorStore store, OllamaEmbeddingModel embed) : ITool
+public sealed class RetrievalTool(TrackedVectorStore store, IEmbeddingModel embed) : ITool
 {
     /// <inheritdoc />
     public string Name => "search";

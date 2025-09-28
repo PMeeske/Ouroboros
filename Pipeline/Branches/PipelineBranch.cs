@@ -96,6 +96,17 @@ public sealed record PipelineBranch
     }
 
     /// <summary>
+    /// Returns a new branch with a different data source while preserving events and store.
+    /// </summary>
+    /// <param name="source">The new data source.</param>
+    /// <returns>A new <see cref="PipelineBranch"/> with the updated source.</returns>
+    public PipelineBranch WithSource(DataSource source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return new PipelineBranch(Name, Store, source, _events);
+    }
+
+    /// <summary>
     /// Creates a new branch (fork) with a different name and store, copying all events.
     /// This is a pure functional operation that doesn't modify the original branch.
     /// </summary>

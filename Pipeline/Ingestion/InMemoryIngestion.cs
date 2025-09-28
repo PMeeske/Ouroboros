@@ -1,8 +1,7 @@
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
-using LangChain.Providers;
-using LangChain.Providers.Ollama;
 using LangChain.Splitters.Text;
+using LangChainPipeline.Providers;
 
 namespace LangChainPipeline.Pipeline.Ingestion;
 
@@ -10,7 +9,7 @@ public static class InMemoryIngestion
 {
     public static async Task<List<Vector>> LoadToMemory<TLoader>(
         TrackedVectorStore store,
-        OllamaEmbeddingModel embedding,
+    IEmbeddingModel embedding,
         DataSource source,
         ITextSplitter splitter,
         CancellationToken ct = default)
@@ -28,7 +27,7 @@ public static class InMemoryIngestion
             int i = 0;
             foreach (string chunk in chunks)
             {
-                EmbeddingResponse resp = await embedding.CreateEmbeddingsAsync(chunk, cancellationToken: ct);
+                var resp = await embedding.CreateEmbeddingsAsync(chunk, ct);
                 Vector vec = new Vector()
                 {
                     Id = $"{(doc.Metadata != null && doc.Metadata.TryGetValue("path", out object? p) ? p?.ToString() : "doc")}#{i}",

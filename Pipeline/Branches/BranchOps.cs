@@ -1,9 +1,9 @@
 using LangChain.Databases;
-using LangChain.Databases.InMemory;
 using LangChain.DocumentLoaders;
 using LangChain.Extensions;
-using LangChain.Providers.Ollama;
+using LangChainPipeline.Domain.Vectors;
 using LangChainPipeline.Core;
+using LangChainPipeline.Providers;
 
 namespace LangChainPipeline.Pipeline.Branches;
 
@@ -19,7 +19,7 @@ public static class BranchOps
     /// <param name="topK">Number of top results to consider for tie-breaking.</param>
     /// <returns>A step that merges two branches.</returns>
     public static Step<(PipelineBranch A, PipelineBranch B, string Query), PipelineBranch> MergeByRelevance(
-        OllamaEmbeddingModel embed, int topK = 1)
+        IEmbeddingModel embed, int topK = 1)
         => async input =>
         {
             (PipelineBranch a, PipelineBranch b, string query) = input;
@@ -42,12 +42,25 @@ public static class BranchOps
                 }
 
                 // Build temporary store for tie-breaking
-                InMemoryVectorCollection temp = new InMemoryVectorCollection();
-                await temp.AddAsync(group.ToArray());
+                var temp = new TrackedVectorStore();
+                await temp.AddAsync(group.Select(v => new Vector
+                {
+                    Id = v.Id,
+                    Text = v.Text,
+                    Metadata = v.Metadata,
+                    Embedding = v.Embedding
+                }));
 
                 IReadOnlyCollection<Document> top = await temp.GetSimilarDocuments(embed, query, amount: topK);
-                object bestId = top.Count > 0 ? top.First().Metadata["id"] : group.First().Id;
-                resolved.Add(group.First(g => g.Id == (string)bestId));
+                var best = top.FirstOrDefault();
+                if (best is not null && best.Metadata.TryGetValue("id", out var idObj) && idObj is string idStr)
+                {
+                    resolved.Add(group.First(g => g.Id == idStr));
+                }
+                else
+                {
+                    resolved.Add(group.First());
+                }
             }
 
             await mergedStore.AddAsync(resolved);
