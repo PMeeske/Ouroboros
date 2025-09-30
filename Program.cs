@@ -40,12 +40,13 @@ return;
 static async Task ParseAndRunAsync(string[] args)
 {
     // CommandLineParser verbs
-    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions>(args)
+    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions>(args)
         .MapResult(
             (AskOptions o) => RunAskAsync(o),
             (PipelineOptions o) => RunPipelineAsync(o),
             (ListTokensOptions _) => RunListTokensAsync(),
             (ExplainOptions o) => RunExplainAsync(o),
+            (TestOptions o) => RunTestAsync(o),
             _ => Task.CompletedTask
         );
 }
@@ -257,6 +258,44 @@ static Task RunExplainAsync(ExplainOptions o)
 {
     Console.WriteLine(PipelineDsl.Explain(o.Dsl));
     return Task.CompletedTask;
+}
+
+static async Task RunTestAsync(TestOptions o)
+{
+    try
+    {
+        switch (o.Suite.ToLowerInvariant())
+        {
+            case "cli":
+                await LangChainPipeline.Tests.CliEndToEndTests.RunAllTests();
+                break;
+            case "vector":
+                await LangChainPipeline.Tests.TrackedVectorStoreTests.RunAllTests();
+                break;
+            case "memory":
+                LangChainPipeline.Tests.MemoryContextTests.RunAllTests();
+                break;
+            case "conversation":
+                await LangChainPipeline.Tests.LangChainConversationTests.RunAllTests();
+                break;
+            case "all":
+                await LangChainPipeline.Tests.CliEndToEndTests.RunAllTests();
+                await LangChainPipeline.Tests.TrackedVectorStoreTests.RunAllTests();
+                LangChainPipeline.Tests.MemoryContextTests.RunAllTests();
+                await LangChainPipeline.Tests.LangChainConversationTests.RunAllTests();
+                break;
+            default:
+                Console.WriteLine($"Unknown test suite: {o.Suite}");
+                Console.WriteLine("Available suites: cli, vector, memory, conversation, all");
+                break;
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Test execution failed: {ex.Message}");
+        Console.WriteLine(ex.StackTrace);
+        Environment.Exit(1);
+    }
 }
 
 static async Task RunPipelineAsync(PipelineOptions o)
