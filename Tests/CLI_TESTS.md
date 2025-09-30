@@ -78,6 +78,13 @@ dotnet run -- test --integration
   - Tests SetTopic, UseDraft, UseCritique, UseImprove tokens
   - Validates DSL parsing for reasoning steps
 
+- **TestCompleteRefinementLoop**: Validates complete refinement loop workflow
+  - Tests automatic draft creation when none exists
+  - Tests Draft -> Critique -> Improve cycle execution
+  - Validates that existing drafts are reused
+  - Tests multiple refinement iterations
+  - Handles Ollama unavailability gracefully
+
 - **TestPipelineCommandWithTrace**: Validates trace control
   - Tests TraceOn step
   - Tests TraceOff step
