@@ -40,12 +40,13 @@ return;
 static async Task ParseAndRunAsync(string[] args)
 {
     // CommandLineParser verbs
-    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions>(args)
+    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions>(args)
         .MapResult(
             (AskOptions o) => RunAskAsync(o),
             (PipelineOptions o) => RunPipelineAsync(o),
             (ListTokensOptions _) => RunListTokensAsync(),
             (ExplainOptions o) => RunExplainAsync(o),
+            (TestOptions o) => RunTestsAsync(o),
             _ => Task.CompletedTask
         );
 }
@@ -430,4 +431,40 @@ static void LogBackendSelection(string model, ChatRuntimeSettings settings, AskO
     string maskedKey = string.IsNullOrWhiteSpace(apiKey) ? "(none)" : apiKey.Length <= 8 ? "********" : apiKey[..4] + "..." + apiKey[^4..];
     Console.WriteLine($"[INIT] Backend={backend} Model={model} Temp={settings.Temperature} MaxTok={settings.MaxTokens} Key={maskedKey} Endpoint={(endpoint ?? "(none)")}");
 }
+
+static async Task RunTestsAsync(TestOptions o)
+{
+    Console.WriteLine("=== Running MonadicPipeline Tests ===\n");
+    
+    try
+    {
+        if (o.All || o.IntegrationOnly)
+        {
+            await LangChainPipeline.Tests.OllamaCloudIntegrationTests.RunAllTests();
+            Console.WriteLine();
+        }
+        
+        if (o.All)
+        {
+            await LangChainPipeline.Tests.TrackedVectorStoreTests.RunAllTests();
+            Console.WriteLine();
+            
+            LangChainPipeline.Tests.MemoryContextTests.RunAllTests();
+            Console.WriteLine();
+            
+            await LangChainPipeline.Tests.LangChainConversationTests.RunAllTests();
+            Console.WriteLine();
+        }
+        
+        Console.WriteLine("=== ✅ All Tests Passed ===");
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"\n=== ❌ Test Failed ===");
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        Console.Error.WriteLine(ex.StackTrace);
+        Environment.Exit(1);
+    }
+}
+
 
