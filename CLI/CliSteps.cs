@@ -3,11 +3,13 @@ using System.Text.RegularExpressions;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Pipeline.Ingestion.Zip;
-using LangChain.Databases; // for Vector
+using LangChain.Databases; // for Vector, IVectorCollection
 // for TrackedVectorStore
 using LangChain.Splitters.Text;
 using LangChainPipeline.Interop.LangChain; // for ExternalChainRegistry (reflection-based chain integration)
 using System.Reflection; // for BindingFlags
+using LangChain.Chains.StackableChains.Context; // for StackableChainValues
+using LangChain.Providers; // for IChatModel
 
 namespace LangChainPipeline.CLI;
 
@@ -1394,4 +1396,302 @@ public static class CliSteps
         };
         return metadata;
     }
+
+    // ============================================================================
+    // LangChain Native Pipe Operators
+    // These steps leverage the original LangChain.Chains.Chain static helpers
+    // to provide direct access to LangChain's pipe operator pattern
+    // ============================================================================
+
+    /// <summary>
+    /// Uses LangChain's native Chain.Set() operator to set a value in the chain context.
+    /// Wraps the LangChain operator for use in the monadic pipeline system.
+    /// </summary>
+    /// <param name="args">Format: 'value|key' where key defaults to 'text' if not specified</param>
+    [PipelineToken("LangChainSet", "ChainSet")]
+    public static Step<CliPipelineState, CliPipelineState> LangChainSetStep(string? args = null)
+    {
+        var raw = ParseString(args);
+        var parts = raw?.Split('|', 2, StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+        var value = parts.Length > 0 ? parts[0] : string.Empty;
+        var key = parts.Length > 1 ? parts[1] : "text";
+
+        var chain = LangChain.Chains.Chain.Set(value, key);
+        return chain.ToStep(
+            inputKeys: Array.Empty<string>(),
+            outputKeys: new[] { key },
+            trace: false);
+    }
+
+    /// <summary>
+    /// Uses LangChain's native Chain.RetrieveSimilarDocuments() operator.
+    /// Retrieves similar documents from the vector store using the query.
+    /// </summary>
+    /// <param name="args">Optional: 'amount=5'</param>
+    [PipelineToken("LangChainRetrieve", "ChainRetrieve")]
+    public static Step<CliPipelineState, CliPipelineState> LangChainRetrieveStep(string? args = null)
+        => async s =>
+        {
+            int amount = 5;
+
+            var raw = ParseString(args);
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                var m = Regex.Match(raw, @"amount=(\d+)");
+                if (m.Success && int.TryParse(m.Groups[1].Value, out var amt))
+                    amount = amt;
+            }
+
+            // Get vector collection from the branch store
+            if (s.Branch.Store is not IVectorCollection vectorCollection)
+            {
+                if (s.Trace) Console.WriteLine("[trace] LangChainRetrieve: store is not IVectorCollection");
+                return s;
+            }
+
+            // Set the input text from Query or Prompt
+            var query = string.IsNullOrWhiteSpace(s.Query) ? s.Prompt : s.Query;
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                if (s.Trace) Console.WriteLine("[trace] LangChainRetrieve: no query text");
+                return s;
+            }
+
+            // Retrieve using the vector collection directly
+            try
+            {
+                // Create embedding for the query
+                var queryEmbedding = await s.Embed.CreateEmbeddingsAsync(query);
+                
+                // Create search request
+                var request = new LangChain.Databases.VectorSearchRequest
+                {
+                    Embeddings = new[] { queryEmbedding }
+                };
+                
+                var settings = new LangChain.Databases.VectorSearchSettings
+                {
+                    NumberOfResults = amount
+                };
+                
+                // Search in vector store
+                var results = await vectorCollection.SearchAsync(request, settings);
+                
+                s.Retrieved.Clear();
+                foreach (var result in results.Items)
+                {
+                    if (!string.IsNullOrWhiteSpace(result.Text))
+                    {
+                        s.Retrieved.Add(result.Text);
+                    }
+                }
+                
+                if (s.Trace) Console.WriteLine($"[trace] LangChainRetrieve: retrieved {s.Retrieved.Count} documents");
+            }
+            catch (Exception ex)
+            {
+                if (s.Trace) Console.WriteLine($"[trace] LangChainRetrieve: error {ex.Message}");
+            }
+
+            return s;
+        };
+
+    /// <summary>
+    /// Uses LangChain's native Chain.CombineDocuments() operator.
+    /// Combines documents from the retrieved list into a single context string.
+    /// </summary>
+    /// <param name="args">Optional: 'inputKey=documents|outputKey=context'</param>
+    [PipelineToken("LangChainCombine", "ChainCombine")]
+    public static Step<CliPipelineState, CliPipelineState> LangChainCombineStep(string? args = null)
+        => async s =>
+        {
+            string inputKey = "documents";
+            string outputKey = "context";
+
+            var raw = ParseString(args);
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    if (part.StartsWith("inputKey=", StringComparison.OrdinalIgnoreCase))
+                        inputKey = part.Substring(9);
+                    else if (part.StartsWith("outputKey=", StringComparison.OrdinalIgnoreCase))
+                        outputKey = part.Substring(10);
+                }
+            }
+
+            var chain = LangChain.Chains.Chain.CombineDocuments(inputKey, outputKey);
+
+            // Prepare documents from Retrieved list
+            var docs = s.Retrieved
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .Select(text => new Document { PageContent = text })
+                .ToList();
+
+            if (docs.Count == 0)
+            {
+                if (s.Trace) Console.WriteLine("[trace] LangChainCombine: no documents to combine");
+                return s;
+            }
+
+            var values = new StackableChainValues();
+            values.Value[inputKey] = docs;
+            
+            var result = await chain.CallAsync(values);
+            
+            if (result.Value.TryGetValue(outputKey, out var context))
+            {
+                s.Context = context?.ToString() ?? string.Empty;
+                if (s.Trace) Console.WriteLine($"[trace] LangChainCombine: combined context length={s.Context.Length}");
+            }
+
+            return s;
+        };
+
+    /// <summary>
+    /// Uses LangChain's native Chain.Template() operator.
+    /// Applies a prompt template with variable substitution.
+    /// </summary>
+    /// <param name="args">Template string with {variable} placeholders</param>
+    [PipelineToken("LangChainTemplate", "ChainTemplate")]
+    public static Step<CliPipelineState, CliPipelineState> LangChainTemplateStep(string? args = null)
+        => async s =>
+        {
+            var templateText = ParseString(args);
+            if (string.IsNullOrWhiteSpace(templateText))
+            {
+                if (s.Trace) Console.WriteLine("[trace] LangChainTemplate: no template provided");
+                return s;
+            }
+
+            var chain = LangChain.Chains.Chain.Template(templateText, "text");
+
+            var values = new StackableChainValues();
+            values.Value["context"] = s.Context;
+            values.Value["text"] = string.IsNullOrWhiteSpace(s.Query) ? s.Prompt : s.Query;
+            values.Value["question"] = values.Value["text"];
+            values.Value["input"] = values.Value["text"];
+            values.Value["prompt"] = s.Prompt;
+            values.Value["topic"] = s.Topic;
+            values.Value["query"] = s.Query;
+            
+            var result = await chain.CallAsync(values);
+            
+            if (result.Value.TryGetValue("text", out var output))
+            {
+                s.Prompt = output?.ToString() ?? string.Empty;
+                if (s.Trace) Console.WriteLine($"[trace] LangChainTemplate: formatted prompt length={s.Prompt.Length}");
+            }
+
+            return s;
+        };
+
+    /// <summary>
+    /// Uses LangChain's native Chain.LLM() operator.
+    /// Sends the prompt to the language model using LangChain's chain system.
+    /// </summary>
+    /// <param name="args">Optional: 'inputKey=text|outputKey=text'</param>
+    [PipelineToken("LangChainLLM", "ChainLLM")]
+    public static Step<CliPipelineState, CliPipelineState> LangChainLlmStep(string? args = null)
+        => async s =>
+        {
+            string inputKey = "text";
+            string outputKey = "text";
+
+            var raw = ParseString(args);
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    if (part.StartsWith("inputKey=", StringComparison.OrdinalIgnoreCase))
+                        inputKey = part.Substring(9);
+                    else if (part.StartsWith("outputKey=", StringComparison.OrdinalIgnoreCase))
+                        outputKey = part.Substring(10);
+                }
+            }
+
+            // Extract the underlying IChatModel from ToolAwareChatModel
+            var llmField = s.Llm.GetType().GetField("_model", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (llmField == null)
+            {
+                if (s.Trace) Console.WriteLine("[trace] LangChainLLM: cannot access underlying chat model");
+                return s;
+            }
+
+            var chatModel = llmField.GetValue(s.Llm) as IChatModel;
+            if (chatModel == null)
+            {
+                if (s.Trace) Console.WriteLine("[trace] LangChainLLM: chat model is null");
+                return s;
+            }
+
+            var chain = LangChain.Chains.Chain.LLM(chatModel, inputKey, outputKey);
+
+            var values = new StackableChainValues();
+            values.Value[inputKey] = s.Prompt;
+            
+            var result = await chain.CallAsync(values);
+            
+            if (result.Value.TryGetValue(outputKey, out var output))
+            {
+                s.Output = output?.ToString() ?? string.Empty;
+                s.Branch = s.Branch.WithReasoning(new FinalSpec(s.Output), s.Prompt, null);
+                if (s.Trace) Console.WriteLine($"[trace] LangChainLLM: output length={s.Output.Length}");
+            }
+
+            return s;
+        };
+
+    /// <summary>
+    /// Creates a complete RAG pipeline using LangChain native operators.
+    /// This demonstrates the pivot example pattern: Set | Retrieve | Combine | Template | LLM
+    /// </summary>
+    /// <param name="args">Optional: 'question=...|template=...|k=5'</param>
+    [PipelineToken("LangChainRAG", "ChainRAG")]
+    public static Step<CliPipelineState, CliPipelineState> LangChainRagPipeline(string? args = null)
+        => async s =>
+        {
+            string? question = null;
+            string? template = null;
+            int k = 5;
+
+            var raw = ParseString(args);
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    if (part.StartsWith("question=", StringComparison.OrdinalIgnoreCase))
+                        question = part.Substring(9);
+                    else if (part.StartsWith("template=", StringComparison.OrdinalIgnoreCase))
+                        template = part.Substring(9);
+                    else if (part.StartsWith("k=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(2), out var kVal))
+                        k = kVal;
+                }
+            }
+
+            // Use default question and template if not provided
+            question ??= string.IsNullOrWhiteSpace(s.Query) ? s.Prompt : s.Query;
+            template ??= @"Use the following pieces of context to answer the question at the end. If the answer is not in context then just say that you don't know, don't try to make up an answer. Keep the answer as short as possible.
+{context}
+Question: {text}
+Helpful Answer:";
+
+            if (string.IsNullOrWhiteSpace(question))
+            {
+                if (s.Trace) Console.WriteLine("[trace] LangChainRAG: no question provided");
+                return s;
+            }
+
+            // Set the question
+            s.Query = question;
+            s.Prompt = question;
+
+            // Execute the pipeline: Retrieve | Combine | Template | LLM
+            s = await LangChainRetrieveStep($"amount={k}")(s);
+            s = await LangChainCombineStep()(s);
+            s = await LangChainTemplateStep($"'{template}'")(s);
+            s = await LangChainLlmStep()(s);
+
+            return s;
+        };
 }

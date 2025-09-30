@@ -11,6 +11,7 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
 - **🧮 Monadic Composition**: Type-safe pipeline operations using `Result<T>` and `Option<T>` monads
 - **🔗 Kleisli Arrows**: Mathematical composition of computations in monadic contexts  
 - **🤖 LangChain Integration**: Native integration with LangChain providers and tools
+- **⚡ LangChain Pipe Operators**: Familiar `Set | Retrieve | Template | LLM` syntax with monadic safety
 - **📊 Vector Database Support**: Built-in vector storage and retrieval capabilities
 - **🔄 Event Sourcing**: Complete audit trail with replay functionality
 - **🛠️ Extensible Tool System**: Plugin architecture for custom tools and functions
@@ -145,11 +146,49 @@ The `Examples/` directory contains comprehensive demonstrations:
 - **`ConversationalKleisliExamples.cs`**: Memory-integrated conversations
 - **`HybridStepExamples.cs`**: Sync/async step combinations
 - **`FunctionalReasoningExamples.cs`**: AI reasoning workflows
+- **`LangChainPipeOperatorsExample.cs`**: **NEW!** LangChain-style pipe operators
 
 Run all examples:
 ```bash
 dotnet run
 ```
+
+## 🔗 LangChain Pipe Operators
+
+MonadicPipeline now supports **LangChain's familiar pipe operator syntax** while maintaining functional programming guarantees. This provides the best of both worlds: LangChain's convenience with MonadicPipeline's safety.
+
+### Quick Example
+
+```bash
+# CLI DSL usage - RAG pipeline
+dotnet run -- pipeline --dsl "SetQuery('What is AI?') | LangChainRetrieve('amount=5') | LangChainCombine() | LangChainTemplate('Context: {context}...') | LangChainLLM()"
+
+# Or use the complete RAG operator
+dotnet run -- pipeline --dsl "LangChainRAG('question=What is AI?|k=5')"
+```
+
+### Code-Based Composition
+
+```csharp
+using static LangChainPipeline.Core.Interop.Pipe;
+
+var pipeline = Set("Who was drinking unicorn blood?", "query")
+    .Bind(RetrieveSimilarDocuments(5))
+    .Bind(CombineDocuments())
+    .Bind(Template("Use context: {context}\nQuestion: {question}\nAnswer:"))
+    .Bind(LLM());
+```
+
+### Available Operators
+
+- **`Set`** / `LangChainSet` - Sets values in pipeline state
+- **`RetrieveSimilarDocuments`** / `LangChainRetrieve` - Semantic document search
+- **`CombineDocuments`** / `LangChainCombine` - Combines retrieved documents
+- **`Template`** / `LangChainTemplate` - Applies prompt templates
+- **`LLM`** / `LangChainLLM` - Sends to language model
+- **`LangChainRAG`** - Complete RAG pipeline
+
+See [`docs/LANGCHAIN_OPERATORS.md`](docs/LANGCHAIN_OPERATORS.md) for comprehensive documentation.
 
 ## 🌐 Remote Endpoint Configuration
 
