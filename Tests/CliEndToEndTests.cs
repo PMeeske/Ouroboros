@@ -226,16 +226,16 @@ public static class CliEndToEndTests
     {
         Console.WriteLine("Testing ask command with remote endpoints...");
         
-        // Test Ollama Cloud endpoint
-        var ollamaCloudChat = new OllamaCloudChatModel("https://fake.api.ollama.com", "fake-key", "llama3");
+        // Test Ollama Cloud endpoint (using localhost to avoid DNS lookup)
+        var ollamaCloudChat = new OllamaCloudChatModel("http://127.0.0.1:9999", "fake-key", "llama3");
         var ollamaCloudResponse = await ollamaCloudChat.GenerateTextAsync("test", CancellationToken.None);
         if (!ollamaCloudResponse.Contains("ollama-cloud-fallback"))
         {
             throw new Exception("OllamaCloud should use fallback for unreachable endpoint");
         }
         
-        // Test OpenAI-compatible endpoint
-        var openAiChat = new HttpOpenAiCompatibleChatModel("https://fake.api.openai.com", "fake-key", "gpt-4");
+        // Test OpenAI-compatible endpoint (using localhost to avoid DNS lookup)
+        var openAiChat = new HttpOpenAiCompatibleChatModel("http://127.0.0.1:9998", "fake-key", "gpt-4");
         var openAiResponse = await openAiChat.GenerateTextAsync("test", CancellationToken.None);
         if (!openAiResponse.Contains("remote-fallback"))
         {
