@@ -906,14 +906,21 @@ public static class CliSteps
             }
             if (string.IsNullOrWhiteSpace(newModel) && string.IsNullOrWhiteSpace(newEmbed)) return s; // nothing to do
             // Rebuild chat model similar to Program.cs logic but simplified, prioritizing remote if key present OR remote flag
-            var (endpoint, key) = ChatConfig.Resolve();
+            var (endpoint, key, endpointType) = ChatConfig.Resolve();
             IChatCompletionModel? model = null;
             if (!string.IsNullOrWhiteSpace(key) && (forceRemote || !string.IsNullOrWhiteSpace(newModel)))
             {
                 try
                 {
                     string baseUrl = string.IsNullOrWhiteSpace(endpoint) ? "https://api.openai.com" : endpoint!;
-                    model = new HttpOpenAiCompatibleChatModel(baseUrl, key!, newModel ?? "gpt-4o-mini", new ChatRuntimeSettings());
+                    // Create appropriate model based on detected endpoint type
+                    model = endpointType switch
+                    {
+                        ChatEndpointType.OllamaCloud => new OllamaCloudChatModel(baseUrl, key!, newModel ?? "llama3.2", new ChatRuntimeSettings()),
+                        ChatEndpointType.OpenAiCompatible => new HttpOpenAiCompatibleChatModel(baseUrl, key!, newModel ?? "gpt-4o-mini", new ChatRuntimeSettings()),
+                        ChatEndpointType.Auto => new HttpOpenAiCompatibleChatModel(baseUrl, key!, newModel ?? "gpt-4o-mini", new ChatRuntimeSettings()),
+                        _ => new HttpOpenAiCompatibleChatModel(baseUrl, key!, newModel ?? "gpt-4o-mini", new ChatRuntimeSettings())
+                    };
                 }
                 catch (Exception ex)
                 {

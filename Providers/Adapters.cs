@@ -157,6 +157,69 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
 }
 
 /// <summary>
+/// HTTP client specifically designed for Ollama Cloud API endpoints.
+/// Uses Ollama's native JSON API format with /api/generate endpoint.
+/// </summary>
+public sealed class OllamaCloudChatModel : IChatCompletionModel
+{
+    private readonly HttpClient _client;
+    private readonly string _model;
+    private readonly ChatRuntimeSettings _settings;
+
+    public OllamaCloudChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
+
+        _client = new HttpClient
+        {
+            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute)
+        };
+        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        _model = model;
+        _settings = settings ?? new ChatRuntimeSettings();
+    }
+
+    public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
+    {
+        try
+        {
+            // Use Ollama's native /api/generate endpoint and JSON format
+            using var payload = JsonContent.Create(new
+            {
+                model = _model,
+                prompt = prompt,
+                stream = false,
+                options = new
+                {
+                    temperature = _settings.Temperature,
+                    num_predict = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null
+                }
+            });
+
+            using var response = await _client.PostAsync("/api/generate", payload, ct).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            
+            var json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
+            if (json is not null && json.TryGetValue("response", out var responseText) && responseText is string s)
+            {
+                return s;
+            }
+        }
+        catch
+        {
+            // Remote Ollama Cloud not reachable → fall back to indicating failure.
+        }
+        return $"[ollama-cloud-fallback:{_model}] {prompt}";
+    }
+
+    public void Dispose()
+    {
+        _client?.Dispose();
+    }
+}
+
+/// <summary>
 /// Naive ensemble that routes requests based on simple heuristics. Real routing
 /// logic is outside the scope of the repair, but preserving the public surface
 /// lets CLI switches keep working.
@@ -323,5 +386,75 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
         }
 
         return false;
+    }
+}
+
+/// <summary>
+/// Embedding adapter specifically for Ollama Cloud API endpoints.
+/// Uses Ollama's native /api/embeddings endpoint and JSON format.
+/// </summary>
+public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
+{
+    private readonly HttpClient _client;
+    private readonly string _model;
+    private readonly DeterministicEmbeddingModel _fallback = new();
+
+    public OllamaCloudEmbeddingModel(string endpoint, string apiKey, string model)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
+
+        _client = new HttpClient
+        {
+            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute)
+        };
+        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        _model = model;
+    }
+
+    public async Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
+    {
+        try
+        {
+            // Use Ollama's native /api/embeddings endpoint and JSON format
+            using var payload = JsonContent.Create(new
+            {
+                model = _model,
+                prompt = input
+            });
+
+            using var response = await _client.PostAsync("/api/embeddings", payload, ct).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            
+            var json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
+            if (json is not null && json.TryGetValue("embedding", out var embeddingValue))
+            {
+                if (embeddingValue is System.Text.Json.JsonElement jsonElement && jsonElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    var floats = new List<float>();
+                    foreach (var element in jsonElement.EnumerateArray())
+                    {
+                        if (element.TryGetSingle(out var value))
+                        {
+                            floats.Add(value);
+                        }
+                    }
+                    if (floats.Count > 0)
+                    {
+                        return floats.ToArray();
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Remote Ollama Cloud not reachable → fall back to deterministic embedding
+        }
+        return await _fallback.CreateEmbeddingsAsync(input, ct).ConfigureAwait(false);
+    }
+
+    public void Dispose()
+    {
+        _client?.Dispose();
     }
 }
