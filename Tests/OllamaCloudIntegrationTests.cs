@@ -231,8 +231,8 @@ public static class OllamaCloudIntegrationTests
     {
         Console.WriteLine("Testing OllamaCloudChatModel fallback behavior...");
         
-        // Create model with fake endpoint (will fail and use fallback)
-        var model = new OllamaCloudChatModel("https://fake.ollama.test", "fake-key", "llama3");
+        // Use localhost URL to avoid DNS lookup while testing fallback
+        var model = new OllamaCloudChatModel("http://127.0.0.1:9999", "fake-key", "llama3");
         
         var response = await model.GenerateTextAsync("Test prompt", CancellationToken.None);
         
@@ -253,8 +253,8 @@ public static class OllamaCloudIntegrationTests
     {
         Console.WriteLine("Testing HttpOpenAiCompatibleChatModel fallback behavior...");
         
-        // Create model with fake endpoint
-        var model = new HttpOpenAiCompatibleChatModel("https://fake.openai.test", "fake-key", "gpt-4");
+        // Use localhost URL to avoid DNS lookup while testing fallback
+        var model = new HttpOpenAiCompatibleChatModel("http://127.0.0.1:9998", "fake-key", "gpt-4");
         
         var response = await model.GenerateTextAsync("Test prompt", CancellationToken.None);
         
@@ -279,7 +279,8 @@ public static class OllamaCloudIntegrationTests
     {
         Console.WriteLine("Testing OllamaCloudEmbeddingModel fallback behavior...");
         
-        var model = new OllamaCloudEmbeddingModel("https://fake.ollama.test", "fake-key", "nomic-embed-text");
+        // Use localhost URL to avoid DNS lookup while testing fallback
+        var model = new OllamaCloudEmbeddingModel("http://127.0.0.1:9999", "fake-key", "nomic-embed-text");
         
         var embedding = await model.CreateEmbeddingsAsync("test text", CancellationToken.None);
         
@@ -410,9 +411,9 @@ public static class OllamaCloudIntegrationTests
     {
         Console.WriteLine("Testing end-to-end remote Ollama Cloud scenario...");
         
-        // Simulate remote Ollama Cloud setup (with fallback since no real endpoint)
-        var chatModel = new OllamaCloudChatModel("https://fake.api.ollama.com", "fake-key", "llama3");
-        var embedModel = new OllamaCloudEmbeddingModel("https://fake.api.ollama.com", "fake-key", "nomic-embed-text");
+        // Use localhost URLs to avoid DNS lookup while testing fallback
+        var chatModel = new OllamaCloudChatModel("http://127.0.0.1:9999", "fake-key", "llama3");
+        var embedModel = new OllamaCloudEmbeddingModel("http://127.0.0.1:9999", "fake-key", "nomic-embed-text");
         
         // Test chat (will use fallback)
         var chatResponse = await chatModel.GenerateTextAsync("Hello from cloud", CancellationToken.None);

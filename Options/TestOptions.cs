@@ -10,4 +10,7 @@ sealed class TestOptions
     
     [Option("all", Required = false, HelpText = "Run all tests including integration", Default = false)]
     public bool All { get; set; }
+    
+    [Option("cli", Required = false, HelpText = "Run CLI end-to-end tests", Default = false)]
+    public bool CliOnly { get; set; }
 }

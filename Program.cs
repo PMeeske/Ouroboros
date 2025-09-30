@@ -444,6 +444,12 @@ static async Task RunTestsAsync(TestOptions o)
             Console.WriteLine();
         }
         
+        if (o.All || o.CliOnly)
+        {
+            await LangChainPipeline.Tests.CliEndToEndTests.RunAllTests();
+            Console.WriteLine();
+        }
+        
         if (o.All)
         {
             await LangChainPipeline.Tests.TrackedVectorStoreTests.RunAllTests();
