@@ -210,6 +210,15 @@ public static class CliSteps
             return s;
         };
 
+    /// <summary>
+    /// Executes a complete refinement loop: Draft -> Critique -> Improve.
+    /// If no draft exists, one will be created automatically. Then the critique-improve
+    /// cycle runs for the specified number of iterations (default: 1).
+    /// </summary>
+    /// <param name="args">Number of critique-improve iterations (default: 1)</param>
+    /// <example>
+    /// UseRefinementLoop('3')  -- Creates draft (if needed), then runs 3 critique-improve cycles
+    /// </example>
     [PipelineToken("UseRefinementLoop")]
     public static Step<CliPipelineState, CliPipelineState> UseRefinementLoop(string? args = null)
         => async s =>
@@ -221,6 +230,17 @@ public static class CliSteps
                 if (m.Success && int.TryParse(m.Groups[1].Value, out var n)) count = n;
             }
 
+            // Check if a draft already exists
+            bool hasDraft = s.Branch.Events.OfType<ReasoningStep>()
+                .Any(e => e.State is Draft);
+
+            // Create initial draft if none exists
+            if (!hasDraft)
+            {
+                s = await UseDraft()(s);
+            }
+
+            // Run complete refinement cycles: Critique -> Improve
             for (int i = 0; i < count; i++)
             {
                 s = await UseCritique()(s);
