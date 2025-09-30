@@ -1,16 +1,64 @@
-# End-to-End Integration Tests for Ollama Cloud
+# End-to-End Integration Tests
 
 ## Overview
 
-This test suite provides comprehensive end-to-end integration testing for the Ollama Cloud endpoint support feature. The tests validate both remote Ollama Cloud functionality and ensure that local Ollama integration remains intact (regression testing).
+This directory contains comprehensive end-to-end testing suites for MonadicPipeline, including integration tests for Ollama Cloud endpoint support and CLI command end-to-end tests.
+
+## Test Suites
+
+### 1. Ollama Cloud Integration Tests
+End-to-end integration testing for Ollama Cloud endpoint support. Validates both remote Ollama Cloud functionality and ensures that local Ollama integration remains intact (regression testing).
+
+**See**: [OllamaCloudIntegrationTests.cs](./OllamaCloudIntegrationTests.cs)
+
+### 2. CLI End-to-End Tests
+Comprehensive end-to-end tests for all CLI commands and their variations. Tests command execution, option handling, and integration with cloud implementations.
+
+**See**: [CLI_TESTS.md](./CLI_TESTS.md) for detailed documentation
+
+### 3. TrackedVectorStore Tests
+Tests for the in-memory vector store implementation.
+
+**See**: [TrackedVectorStoreTests.cs](./TrackedVectorStoreTests.cs)
+
+### 4. Memory Context Tests
+Tests for conversation memory and context management.
+
+**See**: [MemoryContextTests.cs](./MemoryContextTests.cs)
+
+### 5. LangChain Conversation Tests
+Tests for LangChain conversation integration.
+
+**See**: [LangChainConversationTests.cs](./LangChainConversationTests.cs)
+
+## Running the Tests
+
+### Run Only Integration Tests (Ollama Cloud)
+```bash
+dotnet run -- test --integration
+```
+
+### Run Only CLI End-to-End Tests
+```bash
+dotnet run -- test --cli
+```
+
+### Run All Tests
+```bash
+dotnet run -- test --all
+```
 
 ## Test Coverage
 
-### 1. Local Ollama Regression Tests
+### Ollama Cloud Integration Tests
+
+### Ollama Cloud Integration Tests
+
+#### 1. Local Ollama Regression Tests
 - **TestLocalOllamaChatModel**: Validates local Ollama chat adapter with fallback behavior
 - **TestLocalOllamaEmbeddingModel**: Validates local Ollama embedding adapter
 
-### 2. Configuration Tests  
+#### 2. Configuration Tests  
 - **TestChatConfigAutoDetection**: Validates URL-based auto-detection
   - `api.ollama.com` → OllamaCloud
   - `ollama.cloud` → OllamaCloud  
@@ -18,20 +66,20 @@ This test suite provides comprehensive end-to-end integration testing for the Ol
 - **TestChatConfigManualOverride**: Validates explicit endpoint type specification
 - **TestChatConfigEnvironmentVariables**: Validates environment variable resolution and CLI override precedence
 
-### 3. Chat Model Adapter Tests
+#### 3. Chat Model Adapter Tests
 - **TestOllamaCloudChatModelFallback**: Validates fallback behavior for unreachable Ollama Cloud endpoints
 - **TestHttpOpenAiCompatibleChatModelFallback**: Validates fallback for OpenAI-compatible endpoints
 
-### 4. Embedding Model Adapter Tests
+#### 4. Embedding Model Adapter Tests
 - **TestOllamaCloudEmbeddingModelFallback**: Validates deterministic embedding fallback
   - Tests consistent dimensions
   - Tests deterministic values (same input = same output)
 
-### 5. Model Selection Logic Tests
+#### 5. Model Selection Logic Tests
 - **TestCreateRemoteChatModelSelection**: Validates correct model type instantiation
 - **TestCreateEmbeddingModelSelection**: Validates embedding model selection
 
-### 6. End-to-End Scenario Tests
+#### 6. End-to-End Scenario Tests
 - **TestEndToEndLocalOllamaScenario**: Complete workflow with local Ollama
   - Chat generation
   - Embedding creation
@@ -41,14 +89,14 @@ This test suite provides comprehensive end-to-end integration testing for the Ol
   - Remote embeddings with deterministic fallback
   - Vector store integration
 
-## Running the Tests
+## Running Ollama Cloud Tests
 
-### Using CLI Command (when build is working)
+### Using CLI Command
 ```bash
 dotnet run -- test --integration
 ```
 
-### Run All Tests
+### Run All Tests (including CLI tests)
 ```bash
 dotnet run -- test --all
 ```
