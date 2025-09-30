@@ -32,6 +32,7 @@ public static class CliEndToEndTests
         await TestPipelineCommandBasic();
         await TestPipelineCommandWithIngestion();
         await TestPipelineCommandWithReasoning();
+        await TestCompleteRefinementLoop();
         await TestPipelineCommandWithTrace();
         await TestPipelineCommandWithDebug();
         
@@ -412,6 +413,87 @@ public static class CliEndToEndTests
         
         Console.WriteLine("  ✓ Pipeline reasoning steps parsing works correctly");
         return Task.CompletedTask;
+    }
+
+    private static async Task TestCompleteRefinementLoop()
+    {
+        Console.WriteLine("Testing complete refinement loop...");
+        
+        // Setup test environment
+        var provider = new OllamaProvider();
+        var embed = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        var chat = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        var tools = new ToolRegistry();
+        var llm = new ToolAwareChatModel(chat, tools);
+        var store = new TrackedVectorStore();
+        var branch = new PipelineBranch("test", store, DataSource.FromPath("."));
+        
+        var state = new CliPipelineState
+        {
+            Branch = branch,
+            Llm = llm,
+            Tools = tools,
+            Embed = embed,
+            Topic = "Test refinement",
+            Trace = false
+        };
+        
+        try
+        {
+            // Test that refinement loop creates draft if none exists
+            var refinementStep = CliSteps.UseRefinementLoop("1");
+            var resultState = await refinementStep(state);
+            
+            // Verify Draft, Critique, and Improve were all created
+            var events = resultState.Branch.Events.OfType<ReasoningStep>().ToList();
+            
+            bool hasDraft = events.Any(e => e.State is Draft);
+            bool hasCritique = events.Any(e => e.State is Critique);
+            bool hasImprove = events.Any(e => e.State is FinalSpec);
+            
+            if (!hasDraft)
+            {
+                throw new Exception("Complete refinement loop should create a Draft");
+            }
+            if (!hasCritique)
+            {
+                throw new Exception("Complete refinement loop should create a Critique");
+            }
+            if (!hasImprove)
+            {
+                throw new Exception("Complete refinement loop should create a FinalSpec (Improve)");
+            }
+            
+            Console.WriteLine("  ✓ Complete refinement loop creates Draft, Critique, and Improve");
+            
+            // Test that refinement loop with existing draft skips draft creation
+            var state2 = resultState;
+            var refinementStep2 = CliSteps.UseRefinementLoop("1");
+            var resultState2 = await refinementStep2(state2);
+            
+            var events2 = resultState2.Branch.Events.OfType<ReasoningStep>().ToList();
+            var draftCount = events2.Count(e => e.State is Draft);
+            
+            if (draftCount != 1)
+            {
+                throw new Exception($"Refinement loop should reuse existing draft (expected 1 draft, got {draftCount})");
+            }
+            
+            Console.WriteLine("  ✓ Complete refinement loop reuses existing draft");
+            Console.WriteLine("  ✓ Complete refinement loop works correctly");
+        }
+        catch (Exception ex)
+        {
+            // Fallback expected if Ollama not running
+            if (ex.Message.Contains("Connection refused") || ex.Message.Contains("No connection"))
+            {
+                Console.WriteLine("  ✓ Complete refinement loop test skipped (Ollama not available)");
+            }
+            else
+            {
+                throw;
+            }
+        }
     }
 
     private static async Task TestPipelineCommandWithTrace()

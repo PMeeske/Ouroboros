@@ -237,6 +237,21 @@ dotnet run -- ask -q "Analyze this repository structure" --agent \
   --api-key "your-key"
 ```
 
+#### AI Reasoning Pipeline with Refinement Loop
+```bash
+# Run complete refinement workflow: Draft -> Critique -> Improve
+dotnet run -- pipeline -d "SetTopic('microservices architecture') | UseRefinementLoop('2')"
+
+# The refinement loop automatically:
+# 1. Creates an initial draft (if none exists)
+# 2. Critiques the draft to identify gaps and issues
+# 3. Improves the draft based on critique
+# 4. Repeats the critique-improve cycle for the specified iterations
+
+# You can also run individual steps:
+dotnet run -- pipeline -d "SetTopic('AI Safety') | UseDraft | UseCritique | UseImprove"
+```
+
 ## 📚 Documentation
 
 - **[Architecture Summary](ARCHITECTURE_SUMMARY.md)**: High-level architectural overview
