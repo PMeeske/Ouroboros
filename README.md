@@ -12,10 +12,11 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
 - **🔗 Kleisli Arrows**: Mathematical composition of computations in monadic contexts  
 - **🤖 LangChain Integration**: Native integration with LangChain providers and tools
 - **⚡ LangChain Pipe Operators**: Familiar `Set | Retrieve | Template | LLM` syntax with monadic safety
-- **🧠 Meta-AI Layer**: Pipeline steps exposed as tools - the LLM can invoke pipeline operations to think about its own thinking! **NEW!**
+- **🧠 Meta-AI Layer**: Pipeline steps exposed as tools - the LLM can invoke pipeline operations to think about its own thinking!
+- **🎯 AI Orchestrator**: Performance-aware model selection based on use case classification and metrics tracking **NEW!**
 - **📊 Vector Database Support**: Built-in vector storage and retrieval capabilities
 - **🔄 Event Sourcing**: Complete audit trail with replay functionality
-- **🛠️ Extensible Tool System**: Plugin architecture for custom tools and functions
+- **🛠️ Extensible Tool System**: Plugin architecture for custom tools and functions with advanced composition patterns
 - **💾 Memory Management**: Multiple conversation memory strategies
 - **🎯 Type Safety**: Leverages C# type system for compile-time guarantees
 
@@ -147,7 +148,8 @@ The `Examples/` directory contains comprehensive demonstrations:
 - **`ConversationalKleisliExamples.cs`**: Memory-integrated conversations
 - **`HybridStepExamples.cs`**: Sync/async step combinations
 - **`FunctionalReasoningExamples.cs`**: AI reasoning workflows
-- **`LangChainPipeOperatorsExample.cs`**: **NEW!** LangChain-style pipe operators
+- **`LangChainPipeOperatorsExample.cs`**: LangChain-style pipe operators
+- **`OrchestratorExample.cs`**: **NEW!** AI orchestrator with intelligent model selection
 
 Run all examples:
 ```bash
@@ -259,6 +261,103 @@ state.Llm = llm;
 
 See [`docs/META_AI_LAYER.md`](docs/META_AI_LAYER.md) for complete documentation and examples.
 
+## 🎯 AI Orchestrator - Intelligent Model & Tool Selection
+
+MonadicPipeline features a sophisticated **AI orchestrator** that automatically selects the best models and tools based on prompt analysis and performance metrics. This creates a self-optimizing system that continuously improves.
+
+### How It Works
+
+The orchestrator analyzes each prompt to classify its use case, then selects the optimal model based on:
+- **Use Case Matching**: Code generation, reasoning, creative, summarization, etc.
+- **Model Capabilities**: Strengths and specializations
+- **Performance Metrics**: Historical success rate and latency
+
+```csharp
+// Build orchestrator with multiple specialized models
+var orchestrator = new OrchestratorBuilder(tools, "general")
+    .WithModel("general", generalModel, ModelType.General,
+        new[] { "conversation", "general-purpose" })
+    .WithModel("coder", codeModel, ModelType.Code,
+        new[] { "code", "programming", "debugging" })
+    .WithModel("reasoner", reasoningModel, ModelType.Reasoning,
+        new[] { "reasoning", "analysis", "logic" })
+    .WithMetricTracking(true)
+    .Build();
+
+// Automatically routes to best model
+var response = await orchestrator.GenerateTextAsync(
+    "Write a function to calculate factorial");
+// → Automatically selects 'coder' model
+```
+
+### Composable Tools
+
+Advanced tool composition with performance tracking:
+
+```csharp
+var enhancedTool = tool
+    .WithRetry(maxRetries: 3)              // Retry on failure
+    .WithPerformanceTracking(callback)     // Track metrics
+    .WithCaching(TimeSpan.FromMinutes(5))  // Cache results
+    .WithTimeout(TimeSpan.FromSeconds(10)) // Timeout protection
+    .WithFallback(fallbackTool);           // Graceful degradation
+```
+
+### Use Case Classification
+
+Prompts are automatically classified into use case types:
+- **CodeGeneration**: "Write a function to..."
+- **Reasoning**: "Explain why..." / "Analyze..."
+- **Creative**: "Create a story about..."
+- **Summarization**: "Summarize this document..."
+- **ToolUse**: "Use the search tool to..."
+- **Conversation**: General chat
+
+### Performance Tracking
+
+Every execution is tracked for continuous optimization:
+
+```csharp
+var metrics = orchestrator.GetMetrics();
+foreach (var (name, metric) in metrics)
+{
+    Console.WriteLine($"{name}:");
+    Console.WriteLine($"  Executions: {metric.ExecutionCount}");
+    Console.WriteLine($"  Success Rate: {metric.SuccessRate:P0}");
+    Console.WriteLine($"  Avg Latency: {metric.AverageLatencyMs:F0}ms");
+}
+```
+
+### Advanced Tool Patterns
+
+**Parallel Execution**:
+```csharp
+var parallelSearch = OrchestratorToolExtensions.Parallel(
+    "multi_search",
+    "Searches multiple sources",
+    results => string.Join("\n", results),
+    webSearch, docSearch, codeSearch);
+```
+
+**Conditional Routing**:
+```csharp
+var smartTool = AdvancedToolBuilder.Switch(
+    "smart_calc",
+    "Routes to appropriate calculator",
+    (input => input.Contains("complex"), advancedCalc),
+    (input => true, simpleCalc));
+```
+
+**Pipeline Composition**:
+```csharp
+var analysisPipeline = AdvancedToolBuilder.Pipeline(
+    "analysis",
+    "Complete analysis workflow",
+    dataTool, processTool, analyzeTool, reportTool);
+```
+
+See [`docs/ORCHESTRATOR.md`](docs/ORCHESTRATOR.md) for comprehensive documentation and examples.
+
 ## 🌐 Remote Endpoint Configuration
 
 MonadicPipeline supports multiple remote AI endpoints including **Ollama Cloud**, **OpenAI**, and other OpenAI-compatible services.
@@ -364,6 +463,9 @@ dotnet run -- pipeline -d "SetTopic('AI Safety') | UseDraft | UseCritique | UseI
 
 - **[Architecture Summary](ARCHITECTURE_SUMMARY.md)**: High-level architectural overview
 - **[Architectural Review](ARCHITECTURAL_REVIEW.md)**: Detailed technical analysis
+- **[AI Orchestrator](docs/ORCHESTRATOR.md)**: **NEW!** Intelligent model and tool selection guide
+- **[Meta-AI Layer](docs/META_AI_LAYER.md)**: Self-reflective pipeline documentation
+- **[LangChain Operators](docs/LANGCHAIN_OPERATORS.md)**: LangChain pipe operator reference
 - **[Memory Integration](MEMORY_INTEGRATION.md)**: Conversation memory strategies
 - **[Development Roadmap](ROADMAP.md)**: Project roadmap and milestones
 - **[Work Items](WORK_ITEMS.md)**: Development tasks and backlog
