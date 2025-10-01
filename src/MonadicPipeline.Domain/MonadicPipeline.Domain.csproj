@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <PackageReference Include="LangChain" Version="0.17.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
   </ItemGroup>
 
 </Project>
