@@ -7,6 +7,7 @@ using LangChain.Databases; // for Vector, IVectorCollection
 // for TrackedVectorStore
 using LangChain.Splitters.Text;
 using LangChainPipeline.Interop.LangChain; // for ExternalChainRegistry (reflection-based chain integration)
+using LangChainPipeline.CLI.Interop; // for ChainAdapters
 using System.Reflection; // for BindingFlags
 using LangChain.Chains.StackableChains.Context; // for StackableChainValues
 using LangChain.Providers; // for IChatModel

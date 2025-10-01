@@ -1,7 +1,6 @@
-namespace LangChainPipeline.Core.Interop;
-
-using LangChainPipeline.CLI;
 using LangChainPipeline.Core.Steps;
+
+namespace LangChainPipeline.CLI.Interop;
 
 /// <summary>
 /// Provides static methods for creating pipe operations.
