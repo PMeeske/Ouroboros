@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>LangChainPipeline.WebApi</RootNamespace>
+    <AssemblyName>LangChainPipeline.WebApi</AssemblyName>
+    <Product>MonadicPipeline Web API</Product>
+    <Description>ASP.NET Core Web API for MonadicPipeline - Kubernetes-friendly remoting layer</Description>
+    <Copyright>Copyright © 2025</Copyright>
+    <Version>1.0.0</Version>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MonadicPipeline.Core\MonadicPipeline.Core.csproj" />
+    <ProjectReference Include="..\MonadicPipeline.Domain\MonadicPipeline.Domain.csproj" />
+    <ProjectReference Include="..\MonadicPipeline.Pipeline\MonadicPipeline.Pipeline.csproj" />
+    <ProjectReference Include="..\MonadicPipeline.Tools\MonadicPipeline.Tools.csproj" />
+    <ProjectReference Include="..\MonadicPipeline.Providers\MonadicPipeline.Providers.csproj" />
+    <ProjectReference Include="..\MonadicPipeline.Agent\MonadicPipeline.Agent.csproj" />
+    <ProjectReference Include="..\MonadicPipeline.CLI\MonadicPipeline.CLI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LangChain" Version="0.17.0" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+  </ItemGroup>
+
+</Project>
