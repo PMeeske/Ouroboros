@@ -9,3 +9,9 @@ logs/
 *.log
 appsettings.*.local.json
 .env
+
+# Test results
+**/TestResults/
+*.trx
+*.coverage
+*.coveragexml
