@@ -140,9 +140,29 @@ public class ObservabilityConfiguration
     public bool EnableMetrics { get; set; } = false;
 
     /// <summary>
+    /// Metrics export format (e.g., "Prometheus", "ApplicationInsights").
+    /// </summary>
+    public string MetricsExportFormat { get; set; } = "Prometheus";
+
+    /// <summary>
+    /// Metrics export endpoint (e.g., "/metrics" for Prometheus scraping).
+    /// </summary>
+    public string? MetricsExportEndpoint { get; set; } = "/metrics";
+
+    /// <summary>
     /// Enable distributed tracing.
     /// </summary>
     public bool EnableTracing { get; set; } = false;
+
+    /// <summary>
+    /// Tracing service name.
+    /// </summary>
+    public string TracingServiceName { get; set; } = "MonadicPipeline";
+
+    /// <summary>
+    /// OpenTelemetry endpoint for trace export (e.g., Jaeger, Zipkin).
+    /// </summary>
+    public string? OpenTelemetryEndpoint { get; set; }
 
     /// <summary>
     /// Application Insights connection string.

@@ -1,0 +1,371 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+
+namespace LangChainPipeline.Diagnostics;
+
+/// <summary>
+/// Metric type enumeration.
+/// </summary>
+public enum MetricType
+{
+    Counter,
+    Gauge,
+    Histogram,
+    Summary
+}
+
+/// <summary>
+/// Represents a collected metric with metadata.
+/// </summary>
+public class Metric
+{
+    public string Name { get; init; } = string.Empty;
+    public MetricType Type { get; init; }
+    public double Value { get; init; }
+    public Dictionary<string, string> Labels { get; init; } = new();
+    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Histogram bucket for tracking value distributions.
+/// </summary>
+public class HistogramBucket
+{
+    public double UpperBound { get; init; }
+    public long Count { get; set; }
+}
+
+/// <summary>
+/// Collects and aggregates performance metrics for monitoring and observability.
+/// </summary>
+public class MetricsCollector
+{
+    private readonly ConcurrentDictionary<string, double> _counters = new();
+    private readonly ConcurrentDictionary<string, double> _gauges = new();
+    private readonly ConcurrentDictionary<string, ConcurrentBag<double>> _histograms = new();
+    private readonly ConcurrentDictionary<string, (double Sum, long Count)> _summaries = new();
+    private readonly object _lock = new();
+
+    /// <summary>
+    /// Gets the singleton instance of the metrics collector.
+    /// </summary>
+    public static MetricsCollector Instance { get; } = new();
+
+    /// <summary>
+    /// Increments a counter metric by the specified value.
+    /// </summary>
+    /// <param name="name">Metric name</param>
+    /// <param name="value">Value to increment by (default: 1)</param>
+    /// <param name="labels">Optional labels for the metric</param>
+    public void IncrementCounter(string name, double value = 1.0, Dictionary<string, string>? labels = null)
+    {
+        var key = BuildKey(name, labels);
+        _counters.AddOrUpdate(key, value, (_, current) => current + value);
+    }
+
+    /// <summary>
+    /// Sets a gauge metric to a specific value.
+    /// </summary>
+    /// <param name="name">Metric name</param>
+    /// <param name="value">Value to set</param>
+    /// <param name="labels">Optional labels for the metric</param>
+    public void SetGauge(string name, double value, Dictionary<string, string>? labels = null)
+    {
+        var key = BuildKey(name, labels);
+        _gauges[key] = value;
+    }
+
+    /// <summary>
+    /// Records an observation in a histogram metric.
+    /// </summary>
+    /// <param name="name">Metric name</param>
+    /// <param name="value">Observed value</param>
+    /// <param name="labels">Optional labels for the metric</param>
+    public void ObserveHistogram(string name, double value, Dictionary<string, string>? labels = null)
+    {
+        var key = BuildKey(name, labels);
+        var bag = _histograms.GetOrAdd(key, _ => new ConcurrentBag<double>());
+        bag.Add(value);
+    }
+
+    /// <summary>
+    /// Records an observation in a summary metric.
+    /// </summary>
+    /// <param name="name">Metric name</param>
+    /// <param name="value">Observed value</param>
+    /// <param name="labels">Optional labels for the metric</param>
+    public void ObserveSummary(string name, double value, Dictionary<string, string>? labels = null)
+    {
+        var key = BuildKey(name, labels);
+        _summaries.AddOrUpdate(
+            key,
+            (value, 1L),
+            (_, current) => (current.Sum + value, current.Count + 1));
+    }
+
+    /// <summary>
+    /// Records the duration of an operation using a stopwatch pattern.
+    /// </summary>
+    /// <param name="name">Metric name</param>
+    /// <param name="labels">Optional labels for the metric</param>
+    /// <returns>IDisposable that records duration when disposed</returns>
+    public IDisposable MeasureDuration(string name, Dictionary<string, string>? labels = null)
+    {
+        return new DurationMeasurement(this, name, labels);
+    }
+
+    /// <summary>
+    /// Gets all collected metrics as a snapshot.
+    /// </summary>
+    public List<Metric> GetMetrics()
+    {
+        var metrics = new List<Metric>();
+
+        // Add counters
+        foreach (var kvp in _counters)
+        {
+            var (name, labels) = ParseKey(kvp.Key);
+            metrics.Add(new Metric
+            {
+                Name = name,
+                Type = MetricType.Counter,
+                Value = kvp.Value,
+                Labels = labels
+            });
+        }
+
+        // Add gauges
+        foreach (var kvp in _gauges)
+        {
+            var (name, labels) = ParseKey(kvp.Key);
+            metrics.Add(new Metric
+            {
+                Name = name,
+                Type = MetricType.Gauge,
+                Value = kvp.Value,
+                Labels = labels
+            });
+        }
+
+        // Add histograms (as summary statistics)
+        foreach (var kvp in _histograms)
+        {
+            var (name, labels) = ParseKey(kvp.Key);
+            var values = kvp.Value.ToArray();
+            if (values.Length > 0)
+            {
+                metrics.Add(new Metric
+                {
+                    Name = $"{name}_count",
+                    Type = MetricType.Histogram,
+                    Value = values.Length,
+                    Labels = labels
+                });
+                metrics.Add(new Metric
+                {
+                    Name = $"{name}_sum",
+                    Type = MetricType.Histogram,
+                    Value = values.Sum(),
+                    Labels = labels
+                });
+                metrics.Add(new Metric
+                {
+                    Name = $"{name}_avg",
+                    Type = MetricType.Histogram,
+                    Value = values.Average(),
+                    Labels = labels
+                });
+            }
+        }
+
+        // Add summaries
+        foreach (var kvp in _summaries)
+        {
+            var (name, labels) = ParseKey(kvp.Key);
+            var (sum, count) = kvp.Value;
+            metrics.Add(new Metric
+            {
+                Name = $"{name}_sum",
+                Type = MetricType.Summary,
+                Value = sum,
+                Labels = labels
+            });
+            metrics.Add(new Metric
+            {
+                Name = $"{name}_count",
+                Type = MetricType.Summary,
+                Value = count,
+                Labels = labels
+            });
+            if (count > 0)
+            {
+                metrics.Add(new Metric
+                {
+                    Name = $"{name}_avg",
+                    Type = MetricType.Summary,
+                    Value = sum / count,
+                    Labels = labels
+                });
+            }
+        }
+
+        return metrics;
+    }
+
+    /// <summary>
+    /// Exports metrics in Prometheus text format.
+    /// </summary>
+    public string ExportPrometheusFormat()
+    {
+        var metrics = GetMetrics();
+        var output = new System.Text.StringBuilder();
+
+        foreach (var group in metrics.GroupBy(m => m.Name.Split('_')[0]))
+        {
+            var metricName = group.Key;
+            var metricType = group.First().Type;
+
+            // Write HELP comment
+            output.AppendLine($"# HELP {metricName} {metricName} metric");
+            output.AppendLine($"# TYPE {metricName} {metricType.ToString().ToLowerInvariant()}");
+
+            foreach (var metric in group)
+            {
+                var labels = metric.Labels.Any()
+                    ? "{" + string.Join(",", metric.Labels.Select(kvp => $"{kvp.Key}=\"{kvp.Value}\"")) + "}"
+                    : "";
+                output.AppendLine($"{metric.Name}{labels} {metric.Value}");
+            }
+
+            output.AppendLine();
+        }
+
+        return output.ToString();
+    }
+
+    /// <summary>
+    /// Resets all collected metrics.
+    /// </summary>
+    public void Reset()
+    {
+        _counters.Clear();
+        _gauges.Clear();
+        _histograms.Clear();
+        _summaries.Clear();
+    }
+
+    private string BuildKey(string name, Dictionary<string, string>? labels)
+    {
+        if (labels == null || !labels.Any())
+            return name;
+
+        var sortedLabels = string.Join(",", labels.OrderBy(kvp => kvp.Key)
+            .Select(kvp => $"{kvp.Key}={kvp.Value}"));
+        return $"{name}|{sortedLabels}";
+    }
+
+    private (string Name, Dictionary<string, string> Labels) ParseKey(string key)
+    {
+        var parts = key.Split('|');
+        if (parts.Length == 1)
+            return (parts[0], new Dictionary<string, string>());
+
+        var labels = new Dictionary<string, string>();
+        foreach (var labelPair in parts[1].Split(','))
+        {
+            var kv = labelPair.Split('=');
+            if (kv.Length == 2)
+                labels[kv[0]] = kv[1];
+        }
+
+        return (parts[0], labels);
+    }
+
+    private class DurationMeasurement : IDisposable
+    {
+        private readonly MetricsCollector _collector;
+        private readonly string _name;
+        private readonly Dictionary<string, string>? _labels;
+        private readonly Stopwatch _stopwatch;
+
+        public DurationMeasurement(MetricsCollector collector, string name, Dictionary<string, string>? labels)
+        {
+            _collector = collector;
+            _name = name;
+            _labels = labels;
+            _stopwatch = Stopwatch.StartNew();
+        }
+
+        public void Dispose()
+        {
+            _stopwatch.Stop();
+            _collector.ObserveHistogram(_name, _stopwatch.Elapsed.TotalMilliseconds, _labels);
+        }
+    }
+}
+
+/// <summary>
+/// Extension methods for metrics collection.
+/// </summary>
+public static class MetricsExtensions
+{
+    /// <summary>
+    /// Records tool execution metrics.
+    /// </summary>
+    public static void RecordToolExecution(this MetricsCollector collector, string toolName, double durationMs, bool success)
+    {
+        var labels = new Dictionary<string, string>
+        {
+            ["tool_name"] = toolName,
+            ["status"] = success ? "success" : "failure"
+        };
+
+        collector.IncrementCounter("tool_executions_total", 1, labels);
+        collector.ObserveHistogram("tool_execution_duration_ms", durationMs, labels);
+    }
+
+    /// <summary>
+    /// Records pipeline execution metrics.
+    /// </summary>
+    public static void RecordPipelineExecution(this MetricsCollector collector, string pipelineName, double durationMs, bool success)
+    {
+        var labels = new Dictionary<string, string>
+        {
+            ["pipeline"] = pipelineName,
+            ["status"] = success ? "success" : "failure"
+        };
+
+        collector.IncrementCounter("pipeline_executions_total", 1, labels);
+        collector.ObserveHistogram("pipeline_execution_duration_ms", durationMs, labels);
+    }
+
+    /// <summary>
+    /// Records LLM request metrics.
+    /// </summary>
+    public static void RecordLlmRequest(this MetricsCollector collector, string model, int tokenCount, double durationMs)
+    {
+        var labels = new Dictionary<string, string>
+        {
+            ["model"] = model
+        };
+
+        collector.IncrementCounter("llm_requests_total", 1, labels);
+        collector.IncrementCounter("llm_tokens_total", tokenCount, labels);
+        collector.ObserveHistogram("llm_request_duration_ms", durationMs, labels);
+    }
+
+    /// <summary>
+    /// Records vector store operation metrics.
+    /// </summary>
+    public static void RecordVectorOperation(this MetricsCollector collector, string operation, int vectorCount, double durationMs)
+    {
+        var labels = new Dictionary<string, string>
+        {
+            ["operation"] = operation
+        };
+
+        collector.IncrementCounter("vector_operations_total", 1, labels);
+        collector.IncrementCounter("vectors_processed_total", vectorCount, labels);
+        collector.ObserveHistogram("vector_operation_duration_ms", durationMs, labels);
+    }
+}
