@@ -15,11 +15,14 @@ public static class MeTTaToolExtensions
     {
         var mettaEngine = engine ?? new SubprocessMeTTaEngine();
 
-        return registry
+        var newRegistry = registry
             .WithTool(new MeTTaQueryTool(mettaEngine))
             .WithTool(new MeTTaRuleTool(mettaEngine))
             .WithTool(new MeTTaPlanVerifierTool(mettaEngine))
             .WithTool(new MeTTaFactTool(mettaEngine));
+
+        // Add NextNode tool (requires reference to registry for tool queries)
+        return newRegistry.WithTool(new NextNodeTool(mettaEngine, newRegistry));
     }
 
     /// <summary>
