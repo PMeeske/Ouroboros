@@ -1,0 +1,34 @@
+[Unit]
+Description=MonadicPipeline AI Pipeline Service
+After=network.target
+
+[Service]
+Type=simple
+User=monadic
+Group=monadic
+WorkingDirectory=/opt/monadic-pipeline
+ExecStart=/usr/bin/dotnet /opt/monadic-pipeline/LangChainPipeline.dll
+
+# Environment variables
+Environment="ASPNETCORE_ENVIRONMENT=Production"
+Environment="DOTNET_ENVIRONMENT=Production"
+Environment="PIPELINE__LlmProvider__OllamaEndpoint=http://localhost:11434"
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/monadic-pipeline/logs
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=monadic-pipeline
+
+[Install]
+WantedBy=multi-user.target

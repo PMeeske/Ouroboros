@@ -494,8 +494,55 @@ See [`.github/copilot-instructions.md`](.github/copilot-instructions.md) for det
 - **LangChain**: 0.17.0
 - **Ollama** (optional): For local LLM providers
 
+## 🚀 Deployment
+
+MonadicPipeline supports multiple deployment options for various environments:
+
+### Docker Deployment
+
+```bash
+# Build Docker image
+docker build -t monadic-pipeline:latest .
+
+# Run with Docker Compose (includes Ollama, Qdrant, Jaeger)
+docker-compose up -d
+
+# Or use the automated script
+./scripts/deploy-docker.sh production
+```
+
+### Kubernetes Deployment
+
+```bash
+# Deploy to Kubernetes cluster
+./scripts/deploy-k8s.sh monadic-pipeline
+
+# Or manually
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/secrets.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/ollama.yaml
+kubectl apply -f k8s/qdrant.yaml
+kubectl apply -f k8s/deployment.yaml
+```
+
+### Local/Systemd Deployment
+
+```bash
+# Publish application
+./scripts/deploy-local.sh /opt/monadic-pipeline
+
+# Install as systemd service (Linux)
+sudo cp scripts/monadic-pipeline.service /etc/systemd/system/
+sudo systemctl enable monadic-pipeline
+sudo systemctl start monadic-pipeline
+```
+
+For comprehensive deployment instructions including Docker, Kubernetes, configuration management, monitoring, and security, see the complete [**Deployment Guide**](DEPLOYMENT.md).
+
 ## 📚 Additional Documentation
 
+- [**Deployment Guide**](DEPLOYMENT.md) - **Comprehensive deployment instructions for all environments**
 - [Configuration and Security](CONFIGURATION_AND_SECURITY.md) - Security best practices and configuration guide
 - [Implementation Guide](IMPLEMENTATION_GUIDE.md) - Detailed implementation guidance
 - [Sprint Summary](SPRINT_3_4_SUMMARY.md) - Recent development progress

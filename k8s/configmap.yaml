@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monadic-pipeline-config
+  namespace: monadic-pipeline
+data:
+  appsettings.Production.json: |
+    {
+      "Pipeline": {
+        "LlmProvider": {
+          "DefaultProvider": "Ollama",
+          "OllamaEndpoint": "http://ollama-service:11434",
+          "DefaultChatModel": "llama3",
+          "DefaultEmbeddingModel": "nomic-embed-text",
+          "RequestTimeoutSeconds": 180
+        },
+        "VectorStore": {
+          "Type": "Qdrant",
+          "ConnectionString": "http://qdrant-service:6333",
+          "BatchSize": 200,
+          "DefaultCollection": "pipeline_vectors_prod"
+        },
+        "Execution": {
+          "MaxTurns": 5,
+          "MaxParallelToolExecutions": 10,
+          "EnableDebugOutput": false,
+          "ToolExecutionTimeoutSeconds": 60
+        },
+        "Observability": {
+          "EnableStructuredLogging": true,
+          "MinimumLogLevel": "Warning",
+          "EnableMetrics": true,
+          "EnableTracing": true,
+          "OpenTelemetryEndpoint": "http://jaeger-collector:4317"
+        }
+      },
+      "Logging": {
+        "LogLevel": {
+          "Default": "Warning",
+          "Microsoft": "Error",
+          "Microsoft.Hosting.Lifetime": "Information"
+        }
+      }
+    }

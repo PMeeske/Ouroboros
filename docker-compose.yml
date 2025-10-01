@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  # MonadicPipeline CLI Application
+  monadic-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: monadic-pipeline:latest
+    container_name: monadic-pipeline
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - DOTNET_ENVIRONMENT=Production
+      - PIPELINE__LlmProvider__OllamaEndpoint=http://ollama:11434
+      - PIPELINE__VectorStore__Type=Qdrant
+      - PIPELINE__VectorStore__ConnectionString=http://qdrant:6333
+      - PIPELINE__Observability__EnableMetrics=true
+      - PIPELINE__Observability__EnableTracing=true
+      - PIPELINE__Observability__OpenTelemetryEndpoint=http://jaeger:4317
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    depends_on:
+      - ollama
+      - qdrant
+      - jaeger
+    networks:
+      - pipeline-network
+    # Interactive mode for CLI
+    stdin_open: true
+    tty: true
+    command: ["--help"]
+
+  # Ollama LLM Service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - pipeline-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - pipeline-network
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Jaeger for Distributed Tracing (Optional)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "5778:5778"
+      - "16686:16686"  # UI
+      - "14268:14268"
+      - "14250:14250"
+      - "9411:9411"
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - pipeline-network
+
+  # Redis for Caching (Optional - for future enhancements)
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - pipeline-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+networks:
+  pipeline-network:
+    driver: bridge
+
+volumes:
+  ollama-data:
+  qdrant-data:
+  redis-data:

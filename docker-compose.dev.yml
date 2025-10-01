@@ -1,0 +1,50 @@
+version: '3.8'
+
+# Development-focused Docker Compose configuration
+# Includes development tools and debugging capabilities
+
+services:
+  # MonadicPipeline CLI Application (Development)
+  monadic-pipeline-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build  # Use build stage for development
+    image: monadic-pipeline:dev
+    container_name: monadic-pipeline-dev
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - DOTNET_ENVIRONMENT=Development
+      - PIPELINE__LlmProvider__OllamaEndpoint=http://ollama:11434
+      - PIPELINE__VectorStore__Type=InMemory
+      - PIPELINE__Observability__EnableMetrics=true
+      - PIPELINE__Observability__MinimumLogLevel=Debug
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./src:/src/src:ro  # Mount source for hot reload
+    depends_on:
+      - ollama
+    networks:
+      - pipeline-network
+    stdin_open: true
+    tty: true
+    command: ["dotnet", "run", "--project", "/src/src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj", "--", "--help"]
+
+  # Ollama LLM Service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-dev
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-dev-data:/root/.ollama
+    networks:
+      - pipeline-network
+
+networks:
+  pipeline-network:
+    driver: bridge
+
+volumes:
+  ollama-dev-data:

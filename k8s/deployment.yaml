@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monadic-pipeline
+  namespace: monadic-pipeline
+  labels:
+    app: monadic-pipeline
+    version: v1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monadic-pipeline
+  template:
+    metadata:
+      labels:
+        app: monadic-pipeline
+        version: v1.0.0
+    spec:
+      containers:
+      - name: monadic-pipeline
+        image: monadic-pipeline:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: DOTNET_ENVIRONMENT
+          value: "Production"
+        - name: PIPELINE__LlmProvider__OllamaEndpoint
+          value: "http://ollama-service:11434"
+        - name: PIPELINE__VectorStore__Type
+          value: "Qdrant"
+        - name: PIPELINE__VectorStore__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              name: monadic-pipeline-secrets
+              key: vector-store-connection-string
+        - name: PIPELINE__Observability__EnableMetrics
+          value: "true"
+        - name: PIPELINE__Observability__EnableTracing
+          value: "true"
+        - name: PIPELINE__Observability__OpenTelemetryEndpoint
+          value: "http://jaeger-collector:4317"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: config
+          mountPath: /app/appsettings.Production.json
+          subPath: appsettings.Production.json
+          readOnly: true
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: config
+        configMap:
+          name: monadic-pipeline-config
+      - name: logs
+        emptyDir: {}
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monadic-pipeline-service
+  namespace: monadic-pipeline
+  labels:
+    app: monadic-pipeline
+spec:
+  selector:
+    app: monadic-pipeline
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+    name: http
+  type: ClusterIP
