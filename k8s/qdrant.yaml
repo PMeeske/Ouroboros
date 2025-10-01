@@ -82,7 +82,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: managed-csi # ✅ Azure Disk CSI storage class
+  storageClassName: managed-csi   # ✅ Use Azure Disk CSI provisioner
   resources:
     requests:
       storage: 10Gi
