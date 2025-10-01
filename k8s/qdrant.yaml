@@ -6,7 +6,6 @@ metadata:
   labels:
     app: qdrant
 spec:
-  storageClassName: standard
   replicas: 1
   selector:
     matchLabels:
@@ -83,6 +82,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  storageClassName: managed-csi # ✅ Azure Disk CSI storage class
   resources:
     requests:
       storage: 10Gi
