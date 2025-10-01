@@ -40,26 +40,64 @@ on:
 env:
   ACR_RESOURCE_GROUP: MyCluster
   AZURE_CONTAINER_REGISTRY: monadicpipelineregistry
-  CONTAINER_NAME: monadic-pipeline
+  CONTAINER_NAME_CLI: monadic-pipeline
+  CONTAINER_NAME_WEBAPI: monadic-pipeline-webapi
   CLUSTER_NAME: MonadicPipeline
   CLUSTER_RESOURCE_GROUP: MyCluster
   CLUSTER_RESOURCE_TYPE: Microsoft.ContainerService/managedClusters
   DEPLOYMENT_MANIFEST_PATH: |
     ./k8s/configmap.yaml
     ./k8s/deployment.yaml
+    ./k8s/webapi-deployment.yaml
     ./k8s/jaeger.yaml
     ./k8s/namespace.yaml
     ./k8s/ollama.yaml
     ./k8s/qdrant.yaml
     ./k8s/secrets.yaml
-  DOCKER_FILE: ./Dockerfile
+  DOCKER_FILE_CLI: ./Dockerfile
+  DOCKER_FILE_WEBAPI: ./Dockerfile.webapi
   BUILD_CONTEXT_PATH: ./
   NAMESPACE: monadic-pipeline
   ENABLENAMESPACECREATION: false
   AUTH_TYPE: SERVICE_PRINCIPAL
 
 jobs:
+  test:
+    permissions:
+      contents: read
+      checks: write
+    runs-on: ubuntu-latest
+    steps:
+      # Checks out the repository this file is in
+      - uses: actions/checkout@v3
+
+      # Setup .NET SDK
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      # Restore dependencies
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # Build the solution
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      # Run xUnit tests
+      - name: Run xUnit tests
+        run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+      # Publish test results
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: '**/test-results.trx'
+
   buildImage:
+    needs: [test]
     permissions:
       contents: read
       id-token: write
@@ -83,9 +121,14 @@ jobs:
           az acr login -n ${{ env.AZURE_CONTAINER_REGISTRY }}
 
       # Builds and pushes an image up to your Azure Container Registry
-      - name: Build and push image to ACR
+      - name: Build and push CLI image to ACR
         run: |
-          az acr build --image ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }} --registry ${{ env.AZURE_CONTAINER_REGISTRY }} -g ${{ env.ACR_RESOURCE_GROUP }} -f ${{ env.DOCKER_FILE }} ${{ env.BUILD_CONTEXT_PATH }}
+          az acr build --image ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME_CLI }}:${{ github.sha }} --registry ${{ env.AZURE_CONTAINER_REGISTRY }} -g ${{ env.ACR_RESOURCE_GROUP }} -f ${{ env.DOCKER_FILE_CLI }} ${{ env.BUILD_CONTEXT_PATH }}
+
+      # Builds and pushes WebAPI image up to your Azure Container Registry
+      - name: Build and push WebAPI image to ACR
+        run: |
+          az acr build --image ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME_WEBAPI }}:${{ github.sha }} --registry ${{ env.AZURE_CONTAINER_REGISTRY }} -g ${{ env.ACR_RESOURCE_GROUP }} -f ${{ env.DOCKER_FILE_WEBAPI }} ${{ env.BUILD_CONTEXT_PATH }}
   deploy:
     permissions:
       actions: read
@@ -168,7 +211,8 @@ jobs:
           action: deploy
           manifests: ${{ env.DEPLOYMENT_MANIFEST_PATH }}
           images: |
-            ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }}
+            ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME_CLI }}:${{ github.sha }}
+            ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME_WEBAPI }}:${{ github.sha }}
           resource-group: ${{ env.CLUSTER_RESOURCE_GROUP }}
           name: ${{ env.CLUSTER_NAME }}
           private-cluster: ${{ steps.isPrivate.outputs.PRIVATE_CLUSTER == 'true' }}

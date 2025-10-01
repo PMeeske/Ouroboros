@@ -14,6 +14,10 @@ COPY src/MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj src/MonadicPip
 COPY src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj src/MonadicPipeline.Tools/
 COPY src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj src/MonadicPipeline.Providers/
 COPY src/MonadicPipeline.Agent/MonadicPipeline.Agent.csproj src/MonadicPipeline.Agent/
+COPY src/MonadicPipeline.WebApi/MonadicPipeline.WebApi.csproj src/MonadicPipeline.WebApi/
+COPY src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj src/MonadicPipeline.Tests/
+COPY src/MonadicPipeline.Examples/MonadicPipeline.Examples.csproj src/MonadicPipeline.Examples/
+COPY src/MonadicPipeline.Benchmarks/MonadicPipeline.Benchmarks.csproj src/MonadicPipeline.Benchmarks/
 
 # Restore dependencies
 RUN dotnet restore src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj
