@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>LangChainPipeline</RootNamespace>
+    <AssemblyName>MonadicPipeline.Tools</AssemblyName>
+    <Product>MonadicPipeline Tools</Product>
+    <Description>Extensible tool system and MeTTa integration for MonadicPipeline</Description>
+    <Copyright>Copyright © 2025</Copyright>
+    <Version>1.0.0</Version>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MonadicPipeline.Core\MonadicPipeline.Core.csproj" />
+    <ProjectReference Include="..\MonadicPipeline.Domain\MonadicPipeline.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LangChain" Version="0.17.0" />
+  </ItemGroup>
+
+</Project>

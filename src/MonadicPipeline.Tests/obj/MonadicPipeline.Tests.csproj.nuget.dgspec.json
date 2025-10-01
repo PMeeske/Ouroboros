@@ -1,0 +1,647 @@
+{
+  "format": 1,
+  "restore": {
+    "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj": {}
+  },
+  "projects": {
+    "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Agent/MonadicPipeline.Agent.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Agent/MonadicPipeline.Agent.csproj",
+        "projectName": "MonadicPipeline.Agent",
+        "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Agent/MonadicPipeline.Agent.csproj",
+        "packagesPath": "/home/runner/.nuget/packages/",
+        "outputPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Agent/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/runner/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "allWarningsAsErrors": true,
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "LangChain": {
+              "target": "Package",
+              "version": "[0.17.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.305/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj",
+        "projectName": "LangChainPipeline",
+        "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj",
+        "packagesPath": "/home/runner/.nuget/packages/",
+        "outputPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.CLI/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/runner/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Agent/MonadicPipeline.Agent.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Agent/MonadicPipeline.Agent.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "allWarningsAsErrors": true,
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "CommandLineParser": {
+              "target": "Package",
+              "version": "[2.9.1, )"
+            },
+            "LangChain": {
+              "target": "Package",
+              "version": "[0.17.0, )"
+            },
+            "Microsoft.Extensions.Hosting": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.305/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj",
+        "projectName": "MonadicPipeline.Core",
+        "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj",
+        "packagesPath": "/home/runner/.nuget/packages/",
+        "outputPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/runner/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "allWarningsAsErrors": true,
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "LangChain": {
+              "target": "Package",
+              "version": "[0.17.0, )"
+            },
+            "Microsoft.Extensions.Hosting": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "System.Reactive": {
+              "target": "Package",
+              "version": "[6.0.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.305/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj",
+        "projectName": "MonadicPipeline.Domain",
+        "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj",
+        "packagesPath": "/home/runner/.nuget/packages/",
+        "outputPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/runner/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "allWarningsAsErrors": true,
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "LangChain": {
+              "target": "Package",
+              "version": "[0.17.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.305/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj",
+        "projectName": "MonadicPipeline.Pipeline",
+        "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj",
+        "packagesPath": "/home/runner/.nuget/packages/",
+        "outputPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Pipeline/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/runner/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "allWarningsAsErrors": true,
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "LangChain": {
+              "target": "Package",
+              "version": "[0.17.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.305/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj",
+        "projectName": "MonadicPipeline.Providers",
+        "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj",
+        "packagesPath": "/home/runner/.nuget/packages/",
+        "outputPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Providers/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/runner/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "allWarningsAsErrors": true,
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "LangChain": {
+              "target": "Package",
+              "version": "[0.17.0, )"
+            },
+            "Microsoft.Extensions.Hosting": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.305/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj",
+        "projectName": "MonadicPipeline.Tests",
+        "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj",
+        "packagesPath": "/home/runner/.nuget/packages/",
+        "outputPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tests/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/runner/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Agent/MonadicPipeline.Agent.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Agent/MonadicPipeline.Agent.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "allWarningsAsErrors": true,
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "LangChain": {
+              "target": "Package",
+              "version": "[0.17.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.305/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj",
+        "projectName": "MonadicPipeline.Tools",
+        "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj",
+        "packagesPath": "/home/runner/.nuget/packages/",
+        "outputPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tools/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/runner/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Core/MonadicPipeline.Core.csproj"
+              },
+              "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj": {
+                "projectPath": "/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "allWarningsAsErrors": true,
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "LangChain": {
+              "target": "Package",
+              "version": "[0.17.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.305/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tests/obj/Debug/net8.0/MonadicPipeline.Tests.csproj.AssemblyReference.cache
+/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tests/obj/Debug/net8.0/MonadicPipeline.Tests.GeneratedMSBuildEditorConfig.editorconfig
+/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tests/obj/Debug/net8.0/MonadicPipeline.Tests.AssemblyInfoInputs.cache
+/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tests/obj/Debug/net8.0/MonadicPipeline.Tests.AssemblyInfo.cs
+/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tests/obj/Debug/net8.0/MonadicPipeline.Tests.csproj.CoreCompileInputs.cache
+/home/runner/work/MonadicPipeline/MonadicPipeline/src/MonadicPipeline.Tests/obj/Debug/net8.0/MonadicPipeline.Tests.sourcelink.json
