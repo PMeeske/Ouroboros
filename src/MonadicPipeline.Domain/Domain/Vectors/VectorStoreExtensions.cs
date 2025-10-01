@@ -1,5 +1,4 @@
 using LangChain.DocumentLoaders;
-using LangChain.Providers;
 
 namespace LangChainPipeline.Domain.Vectors;
 
@@ -16,7 +15,7 @@ public static class VectorStoreExtensions
         if (embeddingModel is null) throw new ArgumentNullException(nameof(embeddingModel));
         if (query is null) query = string.Empty;
 
-        var embedding = await embeddingModel.CreateEmbeddingsAsync(query, settings: null, cancellationToken).ConfigureAwait(false);
+        var embedding = await embeddingModel.CreateEmbeddingsAsync(query, cancellationToken).ConfigureAwait(false);
         return await store.GetSimilarDocumentsAsync(embedding, amount, cancellationToken).ConfigureAwait(false);
     }
 }

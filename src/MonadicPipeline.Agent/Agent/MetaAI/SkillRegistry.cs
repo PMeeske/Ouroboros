@@ -4,7 +4,6 @@
 // ==========================================================
 
 using System.Collections.Concurrent;
-using IEmbeddingModel = LangChain.Providers.IEmbeddingModel;
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -45,12 +44,12 @@ public sealed class SkillRegistry : ISkillRegistry
         if (_embedding != null)
         {
             // Use semantic similarity if embedding model available
-            var goalEmbedding = await _embedding.CreateEmbeddingsAsync(goal, settings: null);
+            var goalEmbedding = await _embedding.CreateEmbeddingsAsync(goal);
             
             var skillScores = new List<(Skill skill, double score)>();
             foreach (var skill in allSkills)
             {
-                var skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description, settings: null);
+                var skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description);
                 var similarity = CosineSimilarity(goalEmbedding, skillEmbedding);
                 skillScores.Add((skill, similarity));
             }

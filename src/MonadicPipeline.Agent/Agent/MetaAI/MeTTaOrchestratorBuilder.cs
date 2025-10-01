@@ -4,7 +4,6 @@
 // ==========================================================
 
 using LangChainPipeline.Tools.MeTTa;
-using IEmbeddingModel = LangChain.Providers.IEmbeddingModel;
 
 namespace LangChainPipeline.Agent.MetaAI;
 

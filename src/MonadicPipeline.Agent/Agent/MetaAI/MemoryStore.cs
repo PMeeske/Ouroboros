@@ -5,7 +5,6 @@
 
 using System.Collections.Concurrent;
 using LangChain.Databases;
-using IEmbeddingModel = LangChain.Providers.IEmbeddingModel;
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -38,7 +37,7 @@ public sealed class MemoryStore : IMemoryStore
         if (_embedding != null && _vectorStore != null)
         {
             var text = $"Goal: {experience.Goal}\nPlan: {string.Join(", ", experience.Plan.Steps.Select(s => s.Action))}\nQuality: {experience.Verification.QualityScore}";
-            var embedding = await _embedding.CreateEmbeddingsAsync(text, settings: null, ct);
+            var embedding = await _embedding.CreateEmbeddingsAsync(text, ct);
 
             var vector = new Vector
             {
@@ -70,7 +69,7 @@ public sealed class MemoryStore : IMemoryStore
         // If vector store available, use semantic search
         if (_embedding != null && _vectorStore != null)
         {
-            var queryEmbedding = await _embedding.CreateEmbeddingsAsync(query.Goal, settings: null, ct);
+            var queryEmbedding = await _embedding.CreateEmbeddingsAsync(query.Goal, ct);
             var similarDocs = await _vectorStore.GetSimilarDocuments(
                 _embedding,
                 query.Goal,

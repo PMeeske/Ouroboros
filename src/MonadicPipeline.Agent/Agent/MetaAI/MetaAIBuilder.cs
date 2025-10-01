@@ -2,7 +2,6 @@
 // Meta-AI Builder - Fluent API for orchestrator configuration
 // ==========================================================
 
-using IEmbeddingModel = LangChain.Providers.IEmbeddingModel;
 
 namespace LangChainPipeline.Agent.MetaAI;
 

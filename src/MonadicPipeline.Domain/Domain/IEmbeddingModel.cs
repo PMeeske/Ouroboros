@@ -1,0 +1,10 @@
+namespace LangChainPipeline.Domain;
+
+/// <summary>
+/// Simple embedding abstraction used across the pipeline.
+/// Provides a wrapper around various embedding providers with a consistent interface.
+/// </summary>
+public interface IEmbeddingModel
+{
+    Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default);
+}

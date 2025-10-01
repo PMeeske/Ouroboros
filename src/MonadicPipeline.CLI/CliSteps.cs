@@ -10,7 +10,6 @@ using LangChainPipeline.Interop.LangChain; // for ExternalChainRegistry (reflect
 using System.Reflection; // for BindingFlags
 using LangChain.Chains.StackableChains.Context; // for StackableChainValues
 using LangChain.Providers; // for IChatModel
-using IEmbeddingModel = LangChain.Providers.IEmbeddingModel;
 
 namespace LangChainPipeline.CLI;
 

@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Copyright © 2025")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("Domain models, events, and state management for MonadicPipeline")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b6948fbc5a0439005e9099d691ed02b18f2160d5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a7aeed22c30648e9f3cb4f0ad9896a367a7334b9")]
 [assembly: System.Reflection.AssemblyProductAttribute("MonadicPipeline Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MonadicPipeline.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

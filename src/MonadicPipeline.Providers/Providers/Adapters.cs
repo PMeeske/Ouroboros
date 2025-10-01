@@ -256,14 +256,6 @@ public sealed class MultiModelRouter : IChatCompletionModel
 }
 
 /// <summary>
-/// Simple embedding abstraction used across the DSL pipeline.
-/// </summary>
-public interface IEmbeddingModel
-{
-    Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default);
-}
-
-/// <summary>
 /// Deterministic embedding generator that hashes the input string. It is not a
 /// semantic encoder, but it provides stable vectors for testing and demos when
 /// no real embedding service is available.

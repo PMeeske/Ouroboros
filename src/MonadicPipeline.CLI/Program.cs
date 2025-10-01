@@ -8,7 +8,6 @@ using LangChain.Databases;
 using LangChainPipeline.CLI;
 using CommandLine;
 using LangChainPipeline.Options;
-using IEmbeddingModel = LangChain.Providers.IEmbeddingModel;
 using System.Diagnostics;
 using LangChainPipeline.Diagnostics; // added
 using Microsoft.Extensions.Hosting;
@@ -479,7 +478,7 @@ static void LogBackendSelection(string model, ChatRuntimeSettings settings, AskO
     Console.WriteLine($"[INIT] Backend={backend} Model={model} Temp={settings.Temperature} MaxTok={settings.MaxTokens} Key={maskedKey} Endpoint={(endpoint ?? "(none)")}");
 }
 
-static async Task RunTestsAsync(TestOptions o)
+static Task RunTestsAsync(TestOptions o)
 {
     Console.WriteLine("=== Running MonadicPipeline Tests ===\n");
     
@@ -542,6 +541,7 @@ static async Task RunTestsAsync(TestOptions o)
         Console.Error.WriteLine(ex.StackTrace);
         Environment.Exit(1);
     }
+    return Task.CompletedTask;
 }
 
 

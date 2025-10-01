@@ -16,7 +16,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyDescriptionAttribute(("Core monadic abstractions and functional programming primitives for MonadicPipeli" +
     "ne"))]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b6948fbc5a0439005e9099d691ed02b18f2160d5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a7aeed22c30648e9f3cb4f0ad9896a367a7334b9")]
 [assembly: System.Reflection.AssemblyProductAttribute("MonadicPipeline Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MonadicPipeline.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1,5 +1,3 @@
-using IEmbeddingModel = LangChain.Providers.IEmbeddingModel;
-
 namespace LangChainPipeline.CLI;
 
 public sealed class CliPipelineState

@@ -2,7 +2,6 @@
 // Meta-AI Convenience Layer - Simplified orchestrator usage
 // ==========================================================
 
-using IEmbeddingModel = LangChain.Providers.IEmbeddingModel;
 
 namespace LangChainPipeline.Agent.MetaAI;
 

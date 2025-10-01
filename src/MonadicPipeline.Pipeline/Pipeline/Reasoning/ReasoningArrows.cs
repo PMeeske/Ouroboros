@@ -1,6 +1,4 @@
 using LangChain.DocumentLoaders;
-using LangChain.Providers;
-using IEmbeddingModel = LangChain.Providers.IEmbeddingModel;
 
 namespace LangChainPipeline.Pipeline.Reasoning;
 
