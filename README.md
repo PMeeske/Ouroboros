@@ -105,7 +105,87 @@ dotnet run -- explain -d "SetTopic('test') | UseDraft"
 
 # Run tests
 dotnet run -- test --all
+
+# Run smart model orchestrator
+dotnet run -- orchestrator --goal "Explain functional programming"
+
+# Run orchestrator with specific models
+dotnet run -- orchestrator \
+  --goal "Write a Python function for sorting" \
+  --coder-model "codellama" \
+  --reason-model "llama3"
+
+# Run MeTTa orchestrator with symbolic reasoning
+dotnet run -- metta --goal "Analyze data patterns and find insights"
+
+# Run MeTTa orchestrator in plan-only mode
+dotnet run -- metta --goal "Create a research plan" --plan-only
 ```
+
+#### Smart Model Orchestrator
+
+The orchestrator command provides intelligent model selection based on the task type:
+
+```bash
+# Basic orchestrator usage
+dotnet run -- orchestrator --goal "Your task here"
+
+# Configure models for different use cases
+dotnet run -- orchestrator \
+  --goal "Write and debug Python code" \
+  --model "llama3" \                    # General model
+  --coder-model "codellama" \           # For code tasks
+  --reason-model "llama3" \             # For reasoning
+  --metrics                             # Show performance metrics
+
+# Available options:
+# --goal           : Task to accomplish (required)
+# --model          : Primary model (default: llama3)
+# --coder-model    : Model for code tasks (default: codellama)
+# --reason-model   : Model for reasoning tasks
+# --metrics        : Display performance metrics (default: true)
+# --debug          : Enable verbose logging
+```
+
+The orchestrator:
+- Automatically classifies prompts by use case (code, reasoning, general)
+- Selects optimal models based on task requirements
+- Tracks performance metrics for continuous improvement
+- Falls back gracefully when models are unavailable
+
+#### MeTTa Symbolic Reasoning
+
+The metta command uses hybrid neural-symbolic AI with MeTTa integration:
+
+```bash
+# Basic MeTTa orchestrator usage
+dotnet run -- metta --goal "Your goal here"
+
+# Plan without execution
+dotnet run -- metta --goal "Research task" --plan-only
+
+# With custom configuration
+dotnet run -- metta \
+  --goal "Analyze and synthesize information" \
+  --model "llama3" \
+  --metrics \
+  --plan-only
+
+# Available options:
+# --goal           : Goal to plan and execute (required)
+# --model          : LLM model to use (default: llama3)
+# --embed          : Embedding model (default: nomic-embed-text)
+# --plan-only      : Generate plan without execution
+# --metrics        : Display performance metrics (default: true)
+# --debug          : Enable verbose logging
+```
+
+The MeTTa orchestrator:
+- Creates symbolic representations of plans and tools
+- Uses symbolic reasoning for next-step selection
+- Provides explainable AI through MeTTa symbolic queries
+- Requires `metta` executable in PATH (install from [hyperon-experimental](https://github.com/trueagi-io/hyperon-experimental))
+
 
 #### Using Remote Endpoints (Ollama Cloud, OpenAI)
 
