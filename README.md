@@ -16,6 +16,7 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
 - **🎯 AI Orchestrator**: Performance-aware model selection based on use case classification and metrics tracking
 - **🚀 Meta-AI Layer v2**: Planner/Executor/Verifier orchestrator with continual learning, skill acquisition, and self-improvement **NEW!**
 - **🔮 MeTTa Symbolic Reasoning**: Hybrid neural-symbolic AI with MeTTa integration for formal logic, rule-based inference, and plan verification **NEW!**
+- **🚀 Orchestrator v3.0**: MeTTa-first representation layer with symbolic next-node selection and neuro-symbolic execution **NEW!**
 - **📊 Vector Database Support**: Built-in vector storage and retrieval capabilities
 - **🔄 Event Sourcing**: Complete audit trail with replay functionality
 - **🛠️ Extensible Tool System**: Plugin architecture for custom tools and functions with advanced composition patterns
@@ -153,8 +154,9 @@ The `Examples/` directory contains comprehensive demonstrations:
 - **`HybridStepExamples.cs`**: Sync/async step combinations
 - **`FunctionalReasoningExamples.cs`**: AI reasoning workflows
 - **`LangChainPipeOperatorsExample.cs`**: LangChain-style pipe operators
-- **`OrchestratorExample.cs`**: **NEW!** AI orchestrator with intelligent model selection
-- **`MeTTaIntegrationExample.cs`**: **NEW!** MeTTa symbolic reasoning and hybrid neural-symbolic AI
+- **`OrchestratorExample.cs`**: AI orchestrator with intelligent model selection
+- **`MeTTaIntegrationExample.cs`**: MeTTa symbolic reasoning and hybrid neural-symbolic AI
+- **`OrchestratorV3Example.cs`**: **NEW!** Orchestrator v3.0 with MeTTa-first representation layer
 
 Run all examples:
 ```bash
@@ -405,11 +407,240 @@ See [`Examples/MeTTaIntegrationExample.cs`](Examples/MeTTaIntegrationExample.cs)
 - Orchestrator integration
 - Memory bridging
 
+See [`Examples/OrchestratorV3Example.cs`](Examples/OrchestratorV3Example.cs) for **Orchestrator v3.0** demonstrations.
+
 ### Installation Notes
 
 **For subprocess engine:**
 - Install `metta-stdlib` and ensure `metta` executable is in PATH
 - Or provide custom path: `new SubprocessMeTTaEngine("/path/to/metta")`
+
+**For HTTP client:**
+- Requires a running Python Hyperon service with HTTP API
+- See the Hyperon documentation for service setup
+
+---
+
+## 🚀 Orchestrator v3.0 — MeTTa-First Representation Layer
+
+**NEW in v3.0**: A groundbreaking neuro-symbolic orchestration system that represents all orchestrator concepts (plans, steps, tools, state, memory) as MeTTa symbolic atoms, enabling symbolic reasoning over execution flow.
+
+### Core Innovation
+
+Orchestrator v3.0 lifts the entire orchestration layer into a MeTTa-first representation:
+
+```
+Neural Layer (LLM)  ←→  Symbolic Layer (MeTTa)
+     ↓                        ↓
+ Plan Generation  →   MeTTa Atom Representation
+ Step Execution   →   Symbolic State Updates
+ Next Node Query  ←   Constraint-Based Reasoning
+```
+
+### Key Features
+
+- **🎯 MeTTa Representation Layer**: Translates plans, steps, tools, and state to MeTTa atoms
+- **🔍 NextNode Tool**: Symbolic next-step enumeration using constraint-based reasoning
+- **🧩 Constraint System**: Add domain rules to guide execution flow
+- **🔗 Hybrid Reasoning**: Combines neural planning with symbolic verification
+- **📊 Telemetry Integration**: Updates MeTTa knowledge base with execution results
+
+### Quick Start
+
+```csharp
+// Initialize v3.0 orchestrator with MeTTa
+var mettaEngine = new SubprocessMeTTaEngine();
+var tools = ToolRegistry.CreateDefault()
+    .WithMeTTaTools(mettaEngine);  // Includes NextNode tool
+
+// Create MeTTa representation layer
+var representation = new MeTTaRepresentation(mettaEngine);
+
+// Define a plan
+var plan = new Plan(
+    Goal: "Research and summarize functional programming",
+    Steps: new List<PlanStep>
+    {
+        new("search_docs", params, "Find relevant documents", 0.9),
+        new("analyze", params, "Extract key concepts", 0.8),
+        new("synthesize", params, "Create summary", 0.85)
+    },
+    ConfidenceScores: new Dictionary<string, double> { ["overall"] = 0.85 },
+    CreatedAt: DateTime.UtcNow
+);
+
+// Translate plan to MeTTa symbolic representation
+await representation.TranslatePlanAsync(plan);
+await representation.TranslateToolsAsync(tools);
+
+// Add domain constraints
+await representation.AddConstraintAsync("(requires analyze search_docs)");
+await representation.AddConstraintAsync("(requires synthesize analyze)");
+await representation.AddConstraintAsync("(capability search_docs information-retrieval)");
+
+// Use NextNode tool to query valid next steps
+var nextNodeTool = tools.GetTool("next_node");
+var nextNodes = await nextNodeTool.Value.InvokeAsync(@"{
+    ""current_step_id"": ""step_0"",
+    ""plan_goal"": ""Research and summarize functional programming"",
+    ""context"": { ""completed"": [""step_0""] }
+}");
+```
+
+### MeTTa Representation Examples
+
+**Plan as MeTTa Atoms:**
+```metta
+(goal plan_abc123 "Research functional programming")
+(step plan_abc123 step_0 0 "search_docs")
+(step plan_abc123 step_1 1 "analyze")
+(step plan_abc123 step_2 2 "synthesize")
+(before step_0 step_1)
+(before step_1 step_2)
+(confidence step_0 0.90)
+(confidence step_1 0.80)
+```
+
+**Tools as MeTTa Atoms:**
+```metta
+(tool tool_search "search_docs")
+(tool-desc tool_search "Search for documents")
+(capability tool_search information-retrieval)
+(capability tool_analyze content-analysis)
+(capability tool_synthesize content-creation)
+```
+
+**Constraints:**
+```metta
+(requires step_2 step_1)
+(forbids parallel step_1 step_2)
+(min-confidence step_2 0.8)
+(requires-capability step_1 nlp-processing)
+```
+
+### NextNode Tool
+
+The `next_node` tool uses symbolic reasoning to enumerate valid next execution nodes:
+
+**Input Schema:**
+```json
+{
+  "current_step_id": "step_0",
+  "plan_goal": "Goal description",
+  "context": { "step_index": 0, "total_steps": 3 },
+  "constraints": [
+    "(requires step_2 step_1)",
+    "(capability step_1 processing)"
+  ]
+}
+```
+
+**Output:**
+```json
+{
+  "nextSteps": [
+    {
+      "nodeId": "step_1",
+      "action": "analyze",
+      "confidence": 0.9
+    }
+  ],
+  "recommendedTools": ["tool_analyze"],
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
+### MeTTaOrchestrator Integration
+
+Use the v3.0 orchestrator for full neuro-symbolic execution:
+
+```csharp
+// Create v3.0 orchestrator
+var orchestrator = new MeTTaOrchestrator(
+    llm: chatModel,
+    tools: toolsWithMeTTa,
+    memory: memoryStore,
+    skills: skillRegistry,
+    router: uncertaintyRouter,
+    safety: safetyGuard,
+    mettaEngine: mettaEngine
+);
+
+// Plan with symbolic representation
+var planResult = await orchestrator.PlanAsync(
+    "Create research summary",
+    context: new Dictionary<string, object> { ["domain"] = "AI" }
+);
+
+// Execute with MeTTa-guided next-step selection
+var executionResult = await orchestrator.ExecuteAsync(planResult.Value);
+
+// Verify with symbolic reasoning
+var verification = await orchestrator.VerifyAsync(executionResult.Value);
+
+// Learn and update MeTTa knowledge base
+orchestrator.LearnFromExecution(verification.Value);
+```
+
+### Advanced Constraint Reasoning
+
+Add sophisticated constraints for complex orchestration:
+
+```csharp
+var advancedConstraints = new[]
+{
+    // Dependencies
+    "(depends step_analyze step_fetch)",
+    "(depends step_summarize step_analyze)",
+    
+    // Capability requirements
+    "(requires-capability step_fetch network-access)",
+    "(requires-capability step_analyze nlp-processing)",
+    
+    // Resource constraints
+    "(max-concurrent step_fetch 3)",
+    "(memory-intensive step_analyze)",
+    
+    // Quality constraints
+    "(min-confidence step_summarize 0.8)",
+    "(requires-validation step_summarize)"
+};
+
+foreach (var constraint in advancedConstraints)
+{
+    await representation.AddConstraintAsync(constraint);
+}
+
+// Query tools matching constraints
+var toolQuery = await representation.QueryToolsForGoalAsync(
+    "Analyze large dataset"
+);
+```
+
+### Benefits of v3.0
+
+1. **Explainable Decisions**: Trace why each next node was selected via symbolic proof
+2. **Constraint Satisfaction**: Ensure execution respects formal requirements
+3. **Hybrid Intelligence**: Neural creativity + symbolic precision
+4. **Formal Verification**: Prove plans are correct before execution
+5. **Knowledge Accumulation**: MeTTa facts persist across executions
+
+### Example Programs
+
+See [`Examples/OrchestratorV3Example.cs`](Examples/OrchestratorV3Example.cs) for comprehensive demonstrations:
+- Basic MeTTa-first orchestration
+- Constraint-based reasoning
+- NextNode tool usage
+- Advanced symbolic planning
+
+### Testing
+
+Run v3.0 tests:
+```bash
+dotnet run -- test --all  # Includes MeTTa Orchestrator v3.0 tests
+```
+
+---
 
 **For HTTP client:**
 - Start a Python Hyperon service (see MeTTa documentation)
