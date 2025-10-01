@@ -122,6 +122,49 @@ dotnet run -- metta --goal "Analyze data patterns and find insights"
 dotnet run -- metta --goal "Create a research plan" --plan-only
 ```
 
+#### Web API (Kubernetes-Friendly Remoting)
+
+The Web API provides REST endpoints for the same pipeline functionality, ideal for containerized and cloud-native deployments:
+
+```bash
+# Navigate to Web API directory
+cd src/MonadicPipeline.WebApi
+
+# Run locally
+dotnet run
+
+# Or use Docker
+docker-compose up -d monadic-pipeline-webapi
+```
+
+Access the API at `http://localhost:8080` with Swagger UI at the root `/`.
+
+**API Examples:**
+
+```bash
+# Ask a question
+curl -X POST http://localhost:8080/api/ask \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What is functional programming?",
+    "useRag": false,
+    "model": "llama3"
+  }'
+
+# Execute a pipeline
+curl -X POST http://localhost:8080/api/pipeline \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dsl": "SetTopic(\"AI\") | UseDraft | UseCritique",
+    "model": "llama3"
+  }'
+
+# Health check (for Kubernetes)
+curl http://localhost:8080/health
+```
+
+See [Web API Documentation](src/MonadicPipeline.WebApi/README.md) for more details.
+
 #### Smart Model Orchestrator
 
 The orchestrator command provides intelligent model selection based on the task type:
