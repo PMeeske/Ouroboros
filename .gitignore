@@ -1,5 +1,7 @@
 /bin
 /obj
+**/bin/
+**/obj/
 /example/Entwicklung
 /.vscode
 /.monadic_ingest_cache.json

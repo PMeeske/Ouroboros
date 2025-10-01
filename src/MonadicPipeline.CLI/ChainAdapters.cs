@@ -2,11 +2,9 @@ using LangChain.Chains.StackableChains.Context; // StackableChainValues
 using LangChain.Abstractions.Schema;            // IChainValues
 // BaseStackableChain (namespace assumption)
 using LangChain.Chains.HelperChains;            // StackChain (optional)
-
-namespace LangChainPipeline.Interop.LangChain;
-
-using LangChainPipeline.CLI;
 using LangChainPipeline.Core.Steps;
+
+namespace LangChainPipeline.CLI.Interop;
 
 /// <summary>
 /// Adapters to interoperate NuGet LangChain <c>BaseStackableChain</c> / <c>StackChain</c> with the functional <c>Step&lt;CliPipelineState,CliPipelineState&gt;</c> pipeline.

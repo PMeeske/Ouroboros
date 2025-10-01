@@ -4,7 +4,7 @@
 // pipe operators (Set, RetrieveSimilarDocuments, CombineDocuments, Template, LLM)
 // ============================================================================
 
-using static LangChainPipeline.Core.Interop.Pipe;
+using static LangChainPipeline.CLI.Interop.Pipe;
 
 namespace LangChainPipeline.Examples;
 
@@ -70,7 +70,7 @@ public static class LangChainPipeOperatorsExample
         Console.WriteLine();
         
         Console.WriteLine("MonadicPipeline equivalent (Code using static imports):");
-        Console.WriteLine("  using static LangChainPipeline.Core.Interop.Pipe;");
+        Console.WriteLine("  using static LangChainPipeline.CLI.Interop.Pipe;");
         Console.WriteLine();
         Console.WriteLine("  var step = Set(\"Who was drinking unicorn blood?\", \"query\")");
         Console.WriteLine("      .Bind(RetrieveSimilarDocuments(5))");
