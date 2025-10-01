@@ -46,6 +46,12 @@ public static class CliEndToEndTests
         // Test 'test' command variations
         TestTestCommandStructure();
         
+        // Test 'orchestrator' command
+        TestOrchestratorCommand();
+        
+        // Test 'metta' command
+        TestMeTTaCommand();
+        
         // Test error handling and validation
         TestCommandValidation();
         TestEnvironmentVariableHandling();
@@ -754,6 +760,106 @@ public static class CliEndToEndTests
             Environment.SetEnvironmentVariable("CHAT_API_KEY", origKey);
             Environment.SetEnvironmentVariable("CHAT_ENDPOINT_TYPE", origType);
         }
+    }
+
+    #endregion
+
+    #region Orchestrator Command Tests
+
+    private static void TestOrchestratorCommand()
+    {
+        Console.WriteLine("Testing orchestrator command structure...");
+        
+        // Verify that OrchestratorBuilder and related types exist
+        var builderType = typeof(OrchestratorBuilder);
+        if (builderType == null)
+        {
+            throw new Exception("OrchestratorBuilder type should exist");
+        }
+        
+        var orchestratedModelType = typeof(OrchestratedChatModel);
+        if (orchestratedModelType == null)
+        {
+            throw new Exception("OrchestratedChatModel type should exist");
+        }
+        
+        // Verify builder has expected methods
+        var withModelMethod = builderType.GetMethod("WithModel");
+        if (withModelMethod == null)
+        {
+            throw new Exception("OrchestratorBuilder should have WithModel method");
+        }
+        
+        var buildMethod = builderType.GetMethod("Build");
+        if (buildMethod == null)
+        {
+            throw new Exception("OrchestratorBuilder should have Build method");
+        }
+        
+        var getOrchestratorMethod = builderType.GetMethod("GetOrchestrator");
+        if (getOrchestratorMethod == null)
+        {
+            throw new Exception("OrchestratorBuilder should have GetOrchestrator method");
+        }
+        
+        Console.WriteLine("  ✓ Orchestrator command structure is valid");
+    }
+
+    #endregion
+
+    #region MeTTa Command Tests
+
+    private static void TestMeTTaCommand()
+    {
+        Console.WriteLine("Testing MeTTa command structure...");
+        
+        // Verify that MeTTa orchestrator types exist
+        var mettaOrchestratorType = typeof(LangChainPipeline.Agent.MetaAI.MeTTaOrchestrator);
+        if (mettaOrchestratorType == null)
+        {
+            throw new Exception("MeTTaOrchestrator type should exist");
+        }
+        
+        var mettaBuilderType = typeof(LangChainPipeline.Agent.MetaAI.MeTTaOrchestratorBuilder);
+        if (mettaBuilderType == null)
+        {
+            throw new Exception("MeTTaOrchestratorBuilder type should exist");
+        }
+        
+        // Verify builder has expected methods
+        var createDefaultMethod = mettaBuilderType.GetMethod("CreateDefault", 
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        if (createDefaultMethod == null)
+        {
+            throw new Exception("MeTTaOrchestratorBuilder should have CreateDefault static method");
+        }
+        
+        var buildMethod = mettaBuilderType.GetMethod("Build");
+        if (buildMethod == null)
+        {
+            throw new Exception("MeTTaOrchestratorBuilder should have Build method");
+        }
+        
+        // Verify orchestrator has expected methods
+        var planMethod = mettaOrchestratorType.GetMethod("PlanAsync");
+        if (planMethod == null)
+        {
+            throw new Exception("MeTTaOrchestrator should have PlanAsync method");
+        }
+        
+        var executeMethod = mettaOrchestratorType.GetMethod("ExecuteAsync");
+        if (executeMethod == null)
+        {
+            throw new Exception("MeTTaOrchestrator should have ExecuteAsync method");
+        }
+        
+        var getMetricsMethod = mettaOrchestratorType.GetMethod("GetMetrics");
+        if (getMetricsMethod == null)
+        {
+            throw new Exception("MeTTaOrchestrator should have GetMetrics method");
+        }
+        
+        Console.WriteLine("  ✓ MeTTa command structure is valid");
     }
 
     #endregion
