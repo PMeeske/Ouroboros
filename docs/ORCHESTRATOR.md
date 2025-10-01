@@ -536,3 +536,17 @@ The AI Orchestrator provides:
 ✅ **Production Ready**: Comprehensive testing and error handling  
 
 This creates a self-optimizing AI system that continuously improves model and tool selection based on real-world performance data.
+
+---
+
+## Meta-AI Layer v2 Integration
+
+The orchestrator is a key component of the **Meta-AI Layer v2** system, which extends these capabilities with:
+
+- **Planner/Executor/Verifier Loop**: Systematic task decomposition and execution
+- **Continual Learning**: Persistent memory and experience tracking
+- **Skill Acquisition**: Automatic extraction and reuse of successful patterns
+- **Uncertainty-Aware Routing**: Confidence-based routing with fallback strategies
+- **Safety & Permissions**: Multi-level security framework
+
+See [META_AI_LAYER_V2.md](META_AI_LAYER_V2.md) for complete documentation on the advanced orchestration capabilities.

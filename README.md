@@ -13,12 +13,14 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
 - **🤖 LangChain Integration**: Native integration with LangChain providers and tools
 - **⚡ LangChain Pipe Operators**: Familiar `Set | Retrieve | Template | LLM` syntax with monadic safety
 - **🧠 Meta-AI Layer**: Pipeline steps exposed as tools - the LLM can invoke pipeline operations to think about its own thinking!
-- **🎯 AI Orchestrator**: Performance-aware model selection based on use case classification and metrics tracking **NEW!**
+- **🎯 AI Orchestrator**: Performance-aware model selection based on use case classification and metrics tracking
+- **🚀 Meta-AI Layer v2**: Planner/Executor/Verifier orchestrator with continual learning, skill acquisition, and self-improvement **NEW!**
 - **📊 Vector Database Support**: Built-in vector storage and retrieval capabilities
 - **🔄 Event Sourcing**: Complete audit trail with replay functionality
 - **🛠️ Extensible Tool System**: Plugin architecture for custom tools and functions with advanced composition patterns
 - **💾 Memory Management**: Multiple conversation memory strategies
 - **🎯 Type Safety**: Leverages C# type system for compile-time guarantees
+- **🔒 Safety & Permissions**: Multi-level security framework with sandboxed execution **NEW!**
 
 ## 🏗️ Architecture
 
@@ -463,7 +465,8 @@ dotnet run -- pipeline -d "SetTopic('AI Safety') | UseDraft | UseCritique | UseI
 
 - **[Architecture Summary](ARCHITECTURE_SUMMARY.md)**: High-level architectural overview
 - **[Architectural Review](ARCHITECTURAL_REVIEW.md)**: Detailed technical analysis
-- **[AI Orchestrator](docs/ORCHESTRATOR.md)**: **NEW!** Intelligent model and tool selection guide
+- **[Meta-AI Layer v2](docs/META_AI_LAYER_V2.md)**: **NEW!** Planner/Executor/Verifier orchestrator with continual learning
+- **[AI Orchestrator](docs/ORCHESTRATOR.md)**: Intelligent model and tool selection guide
 - **[Meta-AI Layer](docs/META_AI_LAYER.md)**: Self-reflective pipeline documentation
 - **[LangChain Operators](docs/LANGCHAIN_OPERATORS.md)**: LangChain pipe operator reference
 - **[Memory Integration](MEMORY_INTEGRATION.md)**: Conversation memory strategies
