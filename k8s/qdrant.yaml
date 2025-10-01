@@ -6,6 +6,7 @@ metadata:
   labels:
     app: qdrant
 spec:
+  storageClassName: standard
   replicas: 1
   selector:
     matchLabels:
