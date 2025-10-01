@@ -15,6 +15,7 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
 - **🧠 Meta-AI Layer**: Pipeline steps exposed as tools - the LLM can invoke pipeline operations to think about its own thinking!
 - **🎯 AI Orchestrator**: Performance-aware model selection based on use case classification and metrics tracking
 - **🚀 Meta-AI Layer v2**: Planner/Executor/Verifier orchestrator with continual learning, skill acquisition, and self-improvement **NEW!**
+- **🔮 MeTTa Symbolic Reasoning**: Hybrid neural-symbolic AI with MeTTa integration for formal logic, rule-based inference, and plan verification **NEW!**
 - **📊 Vector Database Support**: Built-in vector storage and retrieval capabilities
 - **🔄 Event Sourcing**: Complete audit trail with replay functionality
 - **🛠️ Extensible Tool System**: Plugin architecture for custom tools and functions with advanced composition patterns
@@ -138,6 +139,7 @@ var enhancedPipeline = Step.Pure<string>()
 │   ├── Reasoning/          # AI reasoning workflows
 │   └── Replay/             # Execution replay functionality
 ├── Tools/                  # Extensible tool system
+│   └── MeTTa/              # **NEW!** MeTTa symbolic reasoning integration
 ├── Providers/              # External service providers
 └── Examples/               # Comprehensive examples and demonstrations
 ```
@@ -152,6 +154,7 @@ The `Examples/` directory contains comprehensive demonstrations:
 - **`FunctionalReasoningExamples.cs`**: AI reasoning workflows
 - **`LangChainPipeOperatorsExample.cs`**: LangChain-style pipe operators
 - **`OrchestratorExample.cs`**: **NEW!** AI orchestrator with intelligent model selection
+- **`MeTTaIntegrationExample.cs`**: **NEW!** MeTTa symbolic reasoning and hybrid neural-symbolic AI
 
 Run all examples:
 ```bash
@@ -262,6 +265,155 @@ state.Llm = llm;
 - **Transparency**: Full tool execution history in event log
 
 See [`docs/META_AI_LAYER.md`](docs/META_AI_LAYER.md) for complete documentation and examples.
+
+## 🔮 MeTTa Symbolic Reasoning Integration
+
+MonadicPipeline integrates with **MeTTa** (meta-type-talk), a powerful symbolic reasoning system, to enable hybrid neural-symbolic AI capabilities. This allows combining LLM reasoning with formal logic, rule-based inference, and symbolic plan verification.
+
+### Key Features
+
+- **Symbolic Querying**: Execute MeTTa queries for logical inference
+- **Rule Application**: Apply symbolic rules to derive new knowledge
+- **Plan Verification**: Formally verify AI plans using symbolic reasoning
+- **Memory Bridge**: Sync orchestrator experiences to MeTTa facts
+- **Multiple Backends**: Subprocess-based (default) or HTTP client for Python Hyperon service
+
+### Quick Start
+
+```csharp
+// Create MeTTa engine (subprocess-based by default)
+using var engine = new SubprocessMeTTaEngine();
+
+// Add symbolic facts
+await engine.AddFactAsync("(human Socrates)");
+await engine.AddFactAsync("(mortal $x) :- (human $x)");
+
+// Execute symbolic query
+var result = await engine.ExecuteQueryAsync("!(match &self (mortal Socrates) $result)");
+result.Match(
+    success => Console.WriteLine($"Result: {success}"),
+    error => Console.WriteLine($"Error: {error}")
+);
+```
+
+### Tool Integration
+
+Register MeTTa tools with the tool registry:
+
+```csharp
+// Add MeTTa tools to tool registry
+var tools = ToolRegistry.CreateDefault()
+    .WithMeTTaTools();  // Subprocess-based engine
+
+// Or use HTTP client for Python Hyperon service
+var tools = ToolRegistry.CreateDefault()
+    .WithMeTTaHttpTools("http://localhost:8000", apiKey: "your-key");
+
+// MeTTa tools are now available to the LLM
+var llm = new ToolAwareChatModel(chatModel, tools);
+```
+
+### Available MeTTa Tools
+
+| Tool | Description |
+|------|-------------|
+| `metta_query` | Execute symbolic queries against knowledge base |
+| `metta_rule` | Apply inference rules to derive new knowledge |
+| `metta_verify_plan` | Verify plans using symbolic reasoning |
+| `metta_add_fact` | Add facts to the symbolic knowledge base |
+
+### Memory Bridge
+
+Sync orchestrator memory to MeTTa for symbolic reasoning:
+
+```csharp
+var memory = new MemoryStore(embedModel);
+var engine = new SubprocessMeTTaEngine();
+
+// Create bridge between memory and MeTTa
+var bridge = memory.CreateMeTTaBridge(engine);
+
+// Sync experiences as symbolic facts
+var result = await bridge.SyncAllExperiencesAsync();
+result.Match(
+    count => Console.WriteLine($"Synced {count} facts to MeTTa"),
+    error => Console.WriteLine($"Error: {error}")
+);
+
+// Query experiences using symbolic reasoning
+var queryResult = await bridge.QueryExperiencesAsync(
+    "!(match &self (experience-quality $id $score) $result)"
+);
+```
+
+### Backend Options
+
+**Subprocess Engine (Default):**
+```csharp
+// Requires 'metta' executable in PATH
+var engine = new SubprocessMeTTaEngine();
+
+// Or specify custom path
+var engine = new SubprocessMeTTaEngine("/path/to/metta");
+```
+
+**HTTP Client (Python Hyperon Service):**
+```csharp
+// Connect to Python-based MeTTa/Hyperon service
+var engine = new HttpMeTTaEngine("http://localhost:8000", apiKey: "optional-key");
+```
+
+### Meta-AI Orchestrator Integration
+
+Combine MeTTa with the Meta-AI orchestrator for hybrid neural-symbolic reasoning:
+
+```csharp
+var engine = new SubprocessMeTTaEngine();
+var tools = ToolRegistry.CreateDefault()
+    .WithMeTTaTools(engine);
+
+var orchestrator = MetaAIBuilder.CreateDefault()
+    .WithLLM(chatModel)
+    .WithTools(tools)  // Includes MeTTa tools
+    .WithEmbedding(embedModel)
+    .Build();
+
+// Add domain knowledge to MeTTa
+await engine.AddFactAsync("(requires teaching-fp basic-programming)");
+await engine.AddFactAsync("(requires teaching-fp higher-order-functions)");
+
+// Orchestrator can now use symbolic reasoning during planning
+var planResult = await orchestrator.PlanAsync(
+    "Create a curriculum for teaching functional programming"
+);
+```
+
+### Use Cases
+
+- **Plan Verification**: Formally verify that AI-generated plans are logically sound
+- **Knowledge Representation**: Store domain knowledge as symbolic facts and rules
+- **Hybrid Reasoning**: Combine neural pattern recognition with symbolic logic
+- **Constraint Checking**: Verify outputs satisfy formal constraints
+- **Explainable AI**: Trace reasoning through symbolic proof chains
+
+### Example Programs
+
+See [`Examples/MeTTaIntegrationExample.cs`](Examples/MeTTaIntegrationExample.cs) for complete examples including:
+- Basic symbolic reasoning
+- Tool integration
+- HTTP client usage
+- Orchestrator integration
+- Memory bridging
+
+### Installation Notes
+
+**For subprocess engine:**
+- Install `metta-stdlib` and ensure `metta` executable is in PATH
+- Or provide custom path: `new SubprocessMeTTaEngine("/path/to/metta")`
+
+**For HTTP client:**
+- Start a Python Hyperon service (see MeTTa documentation)
+- Configure endpoint: `new HttpMeTTaEngine("http://localhost:8000")`
 
 ## 🎯 AI Orchestrator - Intelligent Model & Tool Selection
 
