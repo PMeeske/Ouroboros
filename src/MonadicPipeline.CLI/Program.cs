@@ -11,6 +11,7 @@ using LangChainPipeline.Options;
 using System.Diagnostics;
 using LangChainPipeline.Diagnostics; // added
 using Microsoft.Extensions.Hosting;
+using LangChainPipeline.Agent.MetaAI;
 
 try
 {
@@ -40,13 +41,15 @@ return;
 static async Task ParseAndRunAsync(string[] args)
 {
     // CommandLineParser verbs
-    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions>(args)
+    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions>(args)
         .MapResult(
             (AskOptions o) => RunAskAsync(o),
             (PipelineOptions o) => RunPipelineAsync(o),
             (ListTokensOptions _) => RunListTokensAsync(),
             (ExplainOptions o) => RunExplainAsync(o),
             (TestOptions o) => RunTestsAsync(o),
+            (OrchestratorOptions o) => RunOrchestratorAsync(o),
+            (MeTTaOptions o) => RunMeTTaAsync(o),
             _ => Task.CompletedTask
         );
 }
@@ -542,6 +545,249 @@ static Task RunTestsAsync(TestOptions o)
         Environment.Exit(1);
     }
     return Task.CompletedTask;
+}
+
+static async Task RunOrchestratorAsync(OrchestratorOptions o)
+{
+    Console.WriteLine("╔════════════════════════════════════════════════════════════╗");
+    Console.WriteLine("║   Smart Model Orchestrator - Intelligent Model Selection  ║");
+    Console.WriteLine("╚════════════════════════════════════════════════════════════╝\n");
+
+    if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
+
+    try
+    {
+        var provider = new OllamaProvider();
+        var settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false);
+
+        // Create models
+        var generalModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
+        var coderModel = o.CoderModel != null 
+            ? new OllamaChatAdapter(new OllamaChatModel(provider, o.CoderModel))
+            : generalModel;
+        var reasonModel = o.ReasonModel != null
+            ? new OllamaChatAdapter(new OllamaChatModel(provider, o.ReasonModel))
+            : generalModel;
+
+        // Create tool registry
+        var tools = ToolRegistry.CreateDefault();
+        Console.WriteLine($"✓ Tool registry created with {tools.Count} tools\n");
+
+        // Build orchestrator with multiple models
+        var builder = new OrchestratorBuilder(tools, "general")
+            .WithModel(
+                "general",
+                generalModel,
+                ModelType.General,
+                new[] { "conversation", "general-purpose", "versatile" },
+                maxTokens: o.MaxTokens,
+                avgLatencyMs: 1000)
+            .WithModel(
+                "coder",
+                coderModel,
+                ModelType.Code,
+                new[] { "code", "programming", "debugging", "syntax" },
+                maxTokens: o.MaxTokens,
+                avgLatencyMs: 1500)
+            .WithModel(
+                "reasoner",
+                reasonModel,
+                ModelType.Reasoning,
+                new[] { "reasoning", "analysis", "logic", "explanation" },
+                maxTokens: o.MaxTokens,
+                avgLatencyMs: 1200)
+            .WithMetricTracking(true);
+        
+        var orchestrator = builder.Build();
+
+        Console.WriteLine($"✓ Orchestrator configured with multiple models\n");
+        Console.WriteLine($"Goal: {o.Goal}\n");
+
+        var sw = Stopwatch.StartNew();
+        var response = await orchestrator.GenerateTextAsync(o.Goal);
+        sw.Stop();
+
+        Console.WriteLine("=== Response ===");
+        Console.WriteLine(response);
+        Console.WriteLine();
+        Console.WriteLine($"[timing] Execution time: {sw.ElapsedMilliseconds}ms");
+
+        if (o.ShowMetrics)
+        {
+            Console.WriteLine("\n=== Performance Metrics ===");
+            var underlyingOrchestrator = builder.GetOrchestrator();
+            var metrics = underlyingOrchestrator.GetMetrics();
+            
+            foreach (var (modelName, metric) in metrics)
+            {
+                Console.WriteLine($"\nModel: {modelName}");
+                Console.WriteLine($"  Executions: {metric.ExecutionCount}");
+                Console.WriteLine($"  Avg Latency: {metric.AverageLatencyMs:F2}ms");
+                Console.WriteLine($"  Success Rate: {metric.SuccessRate:P2}");
+                Console.WriteLine($"  Last Used: {metric.LastUsed:g}");
+            }
+        }
+
+        Console.WriteLine("\n✓ Orchestrator execution completed successfully");
+    }
+    catch (Exception ex) when (ex.Message.Contains("Connection refused") || ex.Message.Contains("ECONNREFUSED"))
+    {
+        Console.Error.WriteLine("⚠ Error: Ollama is not running. Please start Ollama before using the orchestrator.");
+        Console.Error.WriteLine("   Run: ollama serve");
+        Environment.Exit(1);
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"\n=== ❌ Orchestrator Failed ===");
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        if (o.Debug)
+        {
+            Console.Error.WriteLine(ex.StackTrace);
+        }
+        Environment.Exit(1);
+    }
+}
+
+static async Task RunMeTTaAsync(MeTTaOptions o)
+{
+    Console.WriteLine("╔════════════════════════════════════════════════════════════╗");
+    Console.WriteLine("║   MeTTa Orchestrator v3.0 - Symbolic Reasoning            ║");
+    Console.WriteLine("╚════════════════════════════════════════════════════════════╝\n");
+
+    if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
+
+    try
+    {
+        var provider = new OllamaProvider();
+        var settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false);
+
+        // Create LLM
+        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
+        Console.WriteLine($"✓ Using model: {o.Model}");
+
+        // Create embedding model
+        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, o.Embed));
+        Console.WriteLine($"✓ Using embedding model: {o.Embed}");
+
+        // Build MeTTa orchestrator using the builder
+        Console.WriteLine("✓ Initializing MeTTa orchestrator...");
+        var orchestratorBuilder = MeTTaOrchestratorBuilder.CreateDefault(embedModel)
+            .WithLLM(chatModel);
+
+        var orchestrator = orchestratorBuilder.Build();
+        Console.WriteLine($"✓ MeTTa orchestrator v3.0 initialized\n");
+
+        Console.WriteLine($"Goal: {o.Goal}\n");
+
+        // Plan phase
+        Console.WriteLine("=== Planning Phase ===");
+        var sw = Stopwatch.StartNew();
+        var planResult = await orchestrator.PlanAsync(o.Goal);
+        
+        var plan = planResult.Match(
+            success => success,
+            error => {
+                Console.Error.WriteLine($"Planning failed: {error}");
+                Environment.Exit(1);
+                return null!;
+            }
+        );
+
+        sw.Stop();
+        Console.WriteLine($"✓ Plan generated in {sw.ElapsedMilliseconds}ms");
+        Console.WriteLine($"  Steps: {plan.Steps.Count}");
+        Console.WriteLine($"  Overall confidence: {plan.ConfidenceScores.GetValueOrDefault("overall", 0):P2}\n");
+
+        for (int i = 0; i < plan.Steps.Count; i++)
+        {
+            var step = plan.Steps[i];
+            Console.WriteLine($"  {i + 1}. {step.Action}");
+            Console.WriteLine($"     Expected: {step.ExpectedOutcome}");
+            Console.WriteLine($"     Confidence: {step.ConfidenceScore:P2}");
+        }
+        Console.WriteLine();
+
+        if (o.PlanOnly)
+        {
+            Console.WriteLine("✓ Plan-only mode - skipping execution");
+            return;
+        }
+
+        // Execution phase
+        Console.WriteLine("=== Execution Phase ===");
+        sw.Restart();
+        var executionResult = await orchestrator.ExecuteAsync(plan);
+        sw.Stop();
+
+        executionResult.Match(
+            success => {
+                Console.WriteLine($"✓ Execution completed in {sw.ElapsedMilliseconds}ms");
+                Console.WriteLine($"\nFinal Result:");
+                Console.WriteLine($"  Success: {success.Success}");
+                Console.WriteLine($"  Duration: {success.Duration.TotalSeconds:F2}s");
+                if (!string.IsNullOrWhiteSpace(success.FinalOutput))
+                {
+                    Console.WriteLine($"  Output: {success.FinalOutput}");
+                }
+                Console.WriteLine($"\nStep Results:");
+                for (int i = 0; i < success.StepResults.Count; i++)
+                {
+                    var stepResult = success.StepResults[i];
+                    Console.WriteLine($"  {i + 1}. {stepResult.Step.Action}");
+                    Console.WriteLine($"     Success: {stepResult.Success}");
+                    Console.WriteLine($"     Output: {stepResult.Output}");
+                    if (!string.IsNullOrEmpty(stepResult.Error))
+                    {
+                        Console.WriteLine($"     Error: {stepResult.Error}");
+                    }
+                }
+            },
+            error => {
+                Console.Error.WriteLine($"Execution failed: {error}");
+                Environment.Exit(1);
+            }
+        );
+
+        if (o.ShowMetrics)
+        {
+            Console.WriteLine("\n=== Performance Metrics ===");
+            var metrics = orchestrator.GetMetrics();
+            
+            foreach (var (key, metric) in metrics)
+            {
+                Console.WriteLine($"\n{key}:");
+                Console.WriteLine($"  Executions: {metric.ExecutionCount}");
+                Console.WriteLine($"  Avg Latency: {metric.AverageLatencyMs:F2}ms");
+                Console.WriteLine($"  Success Rate: {metric.SuccessRate:P2}");
+                Console.WriteLine($"  Last Used: {metric.LastUsed:g}");
+            }
+        }
+
+        Console.WriteLine("\n✓ MeTTa orchestrator execution completed successfully");
+    }
+    catch (Exception ex) when (ex.Message.Contains("Connection refused") || ex.Message.Contains("ECONNREFUSED"))
+    {
+        Console.Error.WriteLine("⚠ Error: Ollama is not running. Please start Ollama before using the MeTTa orchestrator.");
+        Console.Error.WriteLine("   Run: ollama serve");
+        Environment.Exit(1);
+    }
+    catch (Exception ex) when (ex.Message.Contains("metta") && (ex.Message.Contains("not found") || ex.Message.Contains("No such file")))
+    {
+        Console.Error.WriteLine("⚠ Error: MeTTa engine not found. Please install MeTTa:");
+        Console.Error.WriteLine("   Install from: https://github.com/trueagi-io/hyperon-experimental");
+        Console.Error.WriteLine("   Ensure 'metta' executable is in your PATH");
+        Environment.Exit(1);
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"\n=== ❌ MeTTa Orchestrator Failed ===");
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        if (o.Debug)
+        {
+            Console.Error.WriteLine(ex.StackTrace);
+        }
+        Environment.Exit(1);
+    }
 }
 
 
