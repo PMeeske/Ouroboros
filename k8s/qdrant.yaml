@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: qdrant
-        image: qdrant/qdrant:latest
+        image: qdrant/qdrant:v1.13.3   # ✅ pinned stable version
         ports:
         - containerPort: 6333
           name: http
@@ -38,13 +38,13 @@ spec:
           mountPath: /qdrant/storage
         livenessProbe:
           httpGet:
-            path: /livez         # ✅ Correct endpoint
+            path: /livez       # ✅ correct endpoint
             port: 6333
           initialDelaySeconds: 30
           periodSeconds: 30
         readinessProbe:
           httpGet:
-            path: /readyz        # ✅ Correct endpoint
+            path: /readyz      # ✅ correct endpoint
             port: 6333
           initialDelaySeconds: 10
           periodSeconds: 10
@@ -82,7 +82,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: managed-csi   # ✅ Azure Disk CSI storage class
+  storageClassName: managed-csi   # ✅ Azure Disk CSI storage
   resources:
     requests:
       storage: 10Gi
