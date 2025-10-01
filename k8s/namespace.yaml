@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monadic-pipeline
+  labels:
+    name: monadic-pipeline
+    environment: production
