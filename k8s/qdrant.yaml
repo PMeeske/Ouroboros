@@ -38,13 +38,13 @@ spec:
           mountPath: /qdrant/storage
         livenessProbe:
           httpGet:
-            path: /health
+            path: /livez         # ✅ Correct endpoint
             port: 6333
           initialDelaySeconds: 30
           periodSeconds: 30
         readinessProbe:
           httpGet:
-            path: /health
+            path: /readyz        # ✅ Correct endpoint
             port: 6333
           initialDelaySeconds: 10
           periodSeconds: 10
@@ -82,7 +82,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: managed-csi   # ✅ Use Azure Disk CSI provisioner
+  storageClassName: managed-csi   # ✅ Azure Disk CSI storage class
   resources:
     requests:
       storage: 10Gi
