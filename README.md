@@ -15,6 +15,7 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
 - **🧠 Meta-AI Layer**: Pipeline steps exposed as tools - the LLM can invoke pipeline operations to think about its own thinking!
 - **🎯 AI Orchestrator**: Performance-aware model selection based on use case classification and metrics tracking
 - **🚀 Meta-AI Layer v2**: Planner/Executor/Verifier orchestrator with continual learning, skill acquisition, and self-improvement **NEW!**
+- **✨ Convenience Layer**: Simplified one-liner methods and preset configurations for quick orchestrator setup **NEW!**
 - **🔮 MeTTa Symbolic Reasoning**: Hybrid neural-symbolic AI with MeTTa integration for formal logic, rule-based inference, and plan verification **NEW!**
 - **🚀 Orchestrator v3.0**: MeTTa-first representation layer with symbolic next-node selection and neuro-symbolic execution **NEW!**
 - **📊 Vector Database Support**: Built-in vector storage and retrieval capabilities
@@ -79,6 +80,29 @@ MonadicPipeline follows a **Functional Pipeline Architecture** with monadic comp
    ```
 
 ### Quick Start Example
+
+#### Using the Convenience Layer (Recommended for Beginners)
+
+```csharp
+using LangChain.Providers.Ollama;
+using LangChainPipeline.Agent.MetaAI;
+
+// Create a chat assistant in one line
+var provider = new OllamaProvider();
+var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+var orchestrator = MetaAIConvenience.CreateChatAssistant(chatModel).Value;
+
+// Ask a question and get an answer
+var result = await orchestrator.AskQuestion("What is functional programming?");
+
+result.Match(
+    answer => Console.WriteLine($"Answer: {answer}"),
+    error => Console.WriteLine($"Error: {error}"));
+```
+
+See [Convenience Layer Documentation](docs/CONVENIENCE_LAYER.md) for more preset configurations and one-liner methods.
+
+#### Using Core Pipeline Composition
 
 ```csharp
 // Create a simple monadic pipeline
