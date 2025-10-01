@@ -555,7 +555,14 @@ The `next_node` tool uses symbolic reasoning to enumerate valid next execution n
 Use the v3.0 orchestrator for full neuro-symbolic execution:
 
 ```csharp
-// Create v3.0 orchestrator
+// Option 1: Using the builder pattern
+var orchestrator = MeTTaOrchestratorBuilder
+    .CreateDefault(embedModel)
+    .WithLLM(chatModel)
+    .WithTools(toolsWithMeTTa)
+    .Build();
+
+// Option 2: Manual construction
 var orchestrator = new MeTTaOrchestrator(
     llm: chatModel,
     tools: toolsWithMeTTa,
