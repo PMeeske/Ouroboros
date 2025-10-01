@@ -31,6 +31,41 @@ services:
     tty: true
     command: ["--help"]
 
+  # MonadicPipeline Web API
+  monadic-pipeline-webapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.webapi
+    image: monadic-pipeline-webapi:latest
+    container_name: monadic-pipeline-webapi
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - DOTNET_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - PIPELINE__LlmProvider__OllamaEndpoint=http://ollama:11434
+      - PIPELINE__VectorStore__Type=Qdrant
+      - PIPELINE__VectorStore__ConnectionString=http://qdrant:6333
+      - PIPELINE__Observability__EnableMetrics=true
+      - PIPELINE__Observability__EnableTracing=true
+      - PIPELINE__Observability__OpenTelemetryEndpoint=http://jaeger:4317
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    depends_on:
+      - ollama
+      - qdrant
+      - jaeger
+    networks:
+      - pipeline-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   # Ollama LLM Service
   ollama:
     image: ollama/ollama:latest
