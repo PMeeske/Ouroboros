@@ -480,6 +480,10 @@ static async Task RunTestsAsync(TestOptions o)
             // Run orchestrator tests
             await LangChainPipeline.Tests.OrchestratorTests.RunAllTests();
             Console.WriteLine();
+            
+            // Run MeTTa integration tests
+            await LangChainPipeline.Tests.MeTTaTests.RunAllTests();
+            Console.WriteLine();
         }
         
         Console.WriteLine("=== ✅ All Tests Passed ===");
