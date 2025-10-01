@@ -100,7 +100,7 @@ result.Match(
     error => Console.WriteLine($"Error: {error}"));
 ```
 
-See [Convenience Layer Documentation](docs/CONVENIENCE_LAYER.md) for more preset configurations and one-liner methods.
+See the [Meta-AI Convenience Layer](#meta-ai-convenience-layer) section in the documentation below for more preset configurations and one-liner methods.
 
 #### Using Core Pipeline Composition
 
@@ -222,7 +222,7 @@ var pipeline = Set("Who was drinking unicorn blood?", "query")
 - **`LLM`** / `LangChainLLM` - Sends to language model
 - **`LangChainRAG`** - Complete RAG pipeline
 
-See [`docs/LANGCHAIN_OPERATORS.md`](docs/LANGCHAIN_OPERATORS.md) for comprehensive documentation.
+See the [LangChain Pipe Operators Integration](#langchain-pipe-operators-integration) section in the documentation below for comprehensive documentation.
 
 ## 🧠 Meta-AI Layer - Self-Reflective Pipelines
 
@@ -290,7 +290,7 @@ state.Llm = llm;
 - **Emergent Behavior**: Complex reasoning patterns emerge naturally
 - **Transparency**: Full tool execution history in event log
 
-See [`docs/META_AI_LAYER.md`](docs/META_AI_LAYER.md) for complete documentation and examples.
+See the [Meta-AI Layer Documentation](#meta-ai-layer-documentation) section in the documentation below for complete documentation and examples.
 
 ## 🔮 MeTTa Symbolic Reasoning Integration
 
@@ -772,7 +772,7 @@ var analysisPipeline = AdvancedToolBuilder.Pipeline(
     dataTool, processTool, analyzeTool, reportTool);
 ```
 
-See [`docs/ORCHESTRATOR.md`](docs/ORCHESTRATOR.md) for comprehensive documentation and examples.
+See the [AI Orchestrator - Model Selection and Composable Tools](#ai-orchestrator---model-selection-and-composable-tools) section in the documentation below for comprehensive documentation and examples.
 
 ## 🌐 Remote Endpoint Configuration
 
@@ -1371,7 +1371,7 @@ public sealed class TrackedVectorStore
 
 **Strengths:**
 - Comprehensive XML documentation
-- Detailed architectural documentation (MEMORY_INTEGRATION.md)
+- Detailed architectural documentation (see [LangChain Memory Integration](#langchain-memory-integration-with-kleisli-pipelines) below)
 - Extensive examples demonstrating usage patterns
 - Clear naming conventions
 
@@ -2111,9 +2111,9 @@ gantt
 
 ## References
 
-- [Architectural Review](ARCHITECTURAL_REVIEW.md) - Comprehensive architectural analysis
-- [Architecture Summary](ARCHITECTURE_SUMMARY.md) - Executive summary and recommendations
-- [Memory Integration](MEMORY_INTEGRATION.md) - Memory management documentation
+- [Architectural Review](#architectural-review-of-monadicpipeline) - Comprehensive architectural analysis
+- [Architecture Summary](#monadicpipeline-architecture-summary--recommendations) - Executive summary and recommendations
+- [Memory Integration](#langchain-memory-integration-with-kleisli-pipelines) - Memory management documentation
 
 ---
 
@@ -2125,7 +2125,7 @@ gantt
 
 > *Source: `BACKLOG.md`*
 
-> **Quick Reference**: Priority-ordered work items extracted from architectural review. See [WORK_ITEMS.md](WORK_ITEMS.md) for detailed implementation guidance.
+> **Quick Reference**: Priority-ordered work items extracted from architectural review. See [Work Items](#monadicpipeline-work-items) in the documentation below for detailed implementation guidance.
 
 ## 🔥 Sprint 1-2: Foundation & Production Readiness
 
@@ -2224,7 +2224,7 @@ gantt
 
 ---
 
-*See [WORK_ITEMS.md](WORK_ITEMS.md) for detailed implementation guidance, acceptance criteria, and architectural review references.*
+*See [Work Items](#monadicpipeline-work-items) in the documentation below for detailed implementation guidance, acceptance criteria, and architectural review references.*
 
 ---
 
@@ -2413,30 +2413,30 @@ While maintaining:
 ## 📋 Work Management Documents
 
 ### Primary Documents
-- **[📝 WORK_ITEMS.md](WORK_ITEMS.md)** - Comprehensive work items with detailed implementation guidance
-- **[📊 BACKLOG.md](BACKLOG.md)** - Priority-ordered quick reference backlog  
-- **[🛣️ ROADMAP.md](ROADMAP.md)** - Strategic roadmap with phases and milestones
+- **[📝 Work Items](#monadicpipeline-work-items)** - Comprehensive work items with detailed implementation guidance
+- **[📊 Backlog](#monadicpipeline-backlog)** - Priority-ordered quick reference backlog  
+- **[🛣️ Development Roadmap](#monadicpipeline-development-roadmap)** - Strategic roadmap with phases and milestones
 
 ### Supporting Documents  
 - **[📋 WORK_ITEM_TEMPLATE.md](WORK_ITEM_TEMPLATE.md)** - Template for tracking individual work items
-- **[🏗️ ARCHITECTURAL_REVIEW.md](ARCHITECTURAL_REVIEW.md)** - Comprehensive architectural analysis (source)
-- **[📈 ARCHITECTURE_SUMMARY.md](ARCHITECTURE_SUMMARY.md)** - Executive summary and recommendations (source)
+- **[🏗️ Architectural Review](#architectural-review-of-monadicpipeline)** - Comprehensive architectural analysis (source)
+- **[📈 Architecture Summary](#monadicpipeline-architecture-summary--recommendations)** - Executive summary and recommendations (source)
 
 ## 🎯 Quick Start
 
 ### For Project Managers
-1. **Review** [ROADMAP.md](ROADMAP.md) for strategic overview
-2. **Use** [BACKLOG.md](BACKLOG.md) for sprint planning  
+1. **Review** [Development Roadmap](#monadicpipeline-development-roadmap) for strategic overview
+2. **Use** [Backlog](#monadicpipeline-backlog) for sprint planning  
 3. **Track** progress using [WORK_ITEM_TEMPLATE.md](WORK_ITEM_TEMPLATE.md)
 
 ### For Developers
-1. **Start with** [WORK_ITEMS.md](WORK_ITEMS.md) for implementation details
+1. **Start with** [Work Items](#monadicpipeline-work-items) for implementation details
 2. **Check** acceptance criteria and architectural references
 3. **Follow** the implementation guidance and best practices
 
 ### For Stakeholders
-1. **Review** [ROADMAP.md](ROADMAP.md) for timeline and milestones
-2. **Monitor** progress against [BACKLOG.md](BACKLOG.md)
+1. **Review** [Development Roadmap](#monadicpipeline-development-roadmap) for timeline and milestones
+2. **Monitor** progress against [Backlog](#monadicpipeline-backlog)
 3. **Understand** technical decisions via architectural review documents
 
 ## 📊 Current Status
@@ -3917,7 +3917,7 @@ The orchestrator is a key component of the **Meta-AI Layer v2** system, which ex
 - **Uncertainty-Aware Routing**: Confidence-based routing with fallback strategies
 - **Safety & Permissions**: Multi-level security framework
 
-See [META_AI_LAYER_V2.md](META_AI_LAYER_V2.md) for complete documentation on the advanced orchestration capabilities.
+See [Meta-AI Layer v2 - Continual Learning Orchestrator](#meta-ai-layer-v2---continual-learning-orchestrator) in the documentation below for complete documentation on the advanced orchestration capabilities.
 
 ---
 
@@ -7028,7 +7028,7 @@ End-to-end integration testing for Ollama Cloud endpoint support. Validates both
 ### 2. CLI End-to-End Tests
 Comprehensive end-to-end tests for all CLI commands and their variations. Tests command execution, option handling, and integration with cloud implementations.
 
-**See**: [CLI_TESTS.md](./CLI_TESTS.md) for detailed documentation
+**See**: [CLI End-to-End Tests](#cli-end-to-end-tests) in the documentation below for detailed documentation
 
 ### 3. TrackedVectorStore Tests
 Tests for the in-memory vector store implementation.
@@ -7452,7 +7452,7 @@ Custom test framework with tests integrated into the main program execution.
 
 ## 🔮 Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for detailed development plans including:
+See the [Development Roadmap](#monadicpipeline-development-roadmap) section in the documentation below for detailed development plans including:
 - **Phase 1**: Production Readiness (Persistence, Testing, Configuration)
 - **Phase 2**: Operations & Scale (Observability, Performance, Security)  
 - **Phase 3**: Strategic Capabilities (Advanced Features, Developer Tooling)
