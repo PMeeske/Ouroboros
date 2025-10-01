@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Copyright © 2025")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("Command-line interface for MonadicPipeline")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b6ff37f537e755e1d18fdb555bd7bae2558a7a89")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d823c50e6362c19cca2ef7000afa16b2ab1b02c4")]
 [assembly: System.Reflection.AssemblyProductAttribute("LangChain Pipeline System")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LangChainPipeline")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

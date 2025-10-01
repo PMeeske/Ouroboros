@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Copyright © 2025")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("AI orchestration and Meta-AI layer for MonadicPipeline")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b6ff37f537e755e1d18fdb555bd7bae2558a7a89")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d823c50e6362c19cca2ef7000afa16b2ab1b02c4")]
 [assembly: System.Reflection.AssemblyProductAttribute("MonadicPipeline Agent")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MonadicPipeline.Agent")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
