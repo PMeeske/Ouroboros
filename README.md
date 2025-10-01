@@ -12,6 +12,7 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
 - **🔗 Kleisli Arrows**: Mathematical composition of computations in monadic contexts  
 - **🤖 LangChain Integration**: Native integration with LangChain providers and tools
 - **⚡ LangChain Pipe Operators**: Familiar `Set | Retrieve | Template | LLM` syntax with monadic safety
+- **🧠 Meta-AI Layer**: Pipeline steps exposed as tools - the LLM can invoke pipeline operations to think about its own thinking! **NEW!**
 - **📊 Vector Database Support**: Built-in vector storage and retrieval capabilities
 - **🔄 Event Sourcing**: Complete audit trail with replay functionality
 - **🛠️ Extensible Tool System**: Plugin architecture for custom tools and functions
@@ -189,6 +190,74 @@ var pipeline = Set("Who was drinking unicorn blood?", "query")
 - **`LangChainRAG`** - Complete RAG pipeline
 
 See [`docs/LANGCHAIN_OPERATORS.md`](docs/LANGCHAIN_OPERATORS.md) for comprehensive documentation.
+
+## 🧠 Meta-AI Layer - Self-Reflective Pipelines
+
+MonadicPipeline features a groundbreaking **meta-AI layer** where the pipeline can think about its own thinking. Pipeline steps are automatically registered as tools that the LLM can invoke, creating a self-improving AI system.
+
+### How It Works
+
+All CLI pipeline steps (like `UseDraft`, `UseCritique`, `UseImprove`) are exposed as tools:
+
+```csharp
+// Automatic registration happens in DSL pipelines
+tools = tools.WithPipelineSteps(state);
+var llm = new ToolAwareChatModel(chatModel, tools);
+
+// LLM can now invoke pipeline steps as tools
+var (response, toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+```
+
+### Self-Reflective Execution
+
+The LLM can invoke pipeline operations during generation:
+
+```bash
+# The LLM can use pipeline tools to improve its own output
+dotnet run -- pipeline --dsl "SetPrompt('Explain functional programming') | LLM"
+```
+
+During execution, the LLM might emit:
+```
+[TOOL:run_usedraft]        # Generate initial draft
+[TOOL:run_usecritique]     # Critique the draft
+[TOOL:run_useimprove]      # Improve based on critique
+```
+
+### Available Pipeline Tools
+
+| Tool | Description |
+|------|-------------|
+| `run_usedraft` | Generate initial draft response |
+| `run_usecritique` | Critique current draft |
+| `run_useimprove` | Improve draft based on critique |
+| `run_setprompt` | Set new prompt |
+| `run_retrieve` | Semantic search over documents |
+| `run_llm` | Execute LLM generation |
+| ... | All CLI steps available |
+
+### Programmatic Usage
+
+```csharp
+// Register all pipeline steps as tools
+tools = tools.WithPipelineSteps(state);
+
+// Or register specific steps
+tools = tools.WithPipelineSteps(state, "UseDraft", "UseCritique", "UseImprove");
+
+// Create meta-AI enabled LLM
+var llm = new ToolAwareChatModel(chatModel, tools);
+state.Llm = llm;
+```
+
+### Benefits
+
+- **Self-Improvement**: Pipeline can refine its own outputs
+- **Dynamic Workflows**: LLM chooses which steps to execute
+- **Emergent Behavior**: Complex reasoning patterns emerge naturally
+- **Transparency**: Full tool execution history in event log
+
+See [`docs/META_AI_LAYER.md`](docs/META_AI_LAYER.md) for complete documentation and examples.
 
 ## 🌐 Remote Endpoint Configuration
 

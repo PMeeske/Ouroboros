@@ -73,7 +73,6 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
     IEmbeddingModel embed = CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);
 
     var tools = new ToolRegistry();
-    var llm = new ToolAwareChatModel(chatModel, tools);
     var resolvedSource = string.IsNullOrWhiteSpace(sourcePath) ? Environment.CurrentDirectory : Path.GetFullPath(sourcePath);
     if (!Directory.Exists(resolvedSource))
     {
@@ -85,12 +84,21 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
     var state = new CliPipelineState
     {
         Branch = branch,
-        Llm = llm,
+        Llm = null!, // Will be set after tools are registered
         Tools = tools,
         Embed = embed,
         RetrievalK = k,
         Trace = trace
     };
+
+    // Register pipeline steps as tools for meta-AI capabilities
+    // This allows the LLM to invoke pipeline operations, enabling self-reflective reasoning
+    tools = tools.WithPipelineSteps(state);
+    
+    // Now create the LLM with all tools (including pipeline steps) registered
+    var llm = new ToolAwareChatModel(chatModel, tools);
+    state.Llm = llm;
+    state.Tools = tools;
 
     try
     {
@@ -459,6 +467,10 @@ static async Task RunTestsAsync(TestOptions o)
             Console.WriteLine();
             
             await LangChainPipeline.Tests.LangChainConversationTests.RunAllTests();
+            Console.WriteLine();
+            
+            // Run meta-AI tests
+            await LangChainPipeline.Tests.MetaAiTests.RunAllTests();
             Console.WriteLine();
         }
         
