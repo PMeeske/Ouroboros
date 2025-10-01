@@ -1,0 +1,11 @@
+using System.Text.Json.Serialization;
+
+namespace LangChainPipeline.Domain.Events;
+
+/// <summary>
+/// Base class for all pipeline events that can occur during execution.
+/// </summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(IngestBatch), typeDiscriminator: "Ingest")]
+[JsonDerivedType(typeof(ReasoningStep), typeDiscriminator: "Reasoning")]
+public abstract record PipelineEvent(Guid Id, string Kind, DateTime Timestamp);

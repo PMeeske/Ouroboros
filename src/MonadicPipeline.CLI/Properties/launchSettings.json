@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MonadicPipeline": {
+      "commandName": "Project",
+      "commandLineArgs": "pipeline --dsl \"SetSource('D:\\projects\\MonadicPipeline\\MonadicPipeline\\example\\Entwicklung')|\r\nTraceOn()|\r\nUseDir('root=D:\\projects\\MonadicPipeline\\MonadicPipeline\\example\\Entwicklung|pattern=*.md;*.sln;*.csproj;*.cs|ext=.md,.sln,.csproj,.cs|exclude=.vs,bin,obj|max=700000')|\r\nZip('D:\\projects\\MonadicPipeline\\MonadicPipeline\\example\\Entwicklung\\Examples\\1.7.DB.FUKMITTE.XAPP.cache.zip|noText|batch=24|maxBytes=1500000')|\r\nEnhanceMarkdown('file=Vita.KeyTables_Grosses_Konzept.md|goal=Connect the Vita.KeyTables solution structure with the architecture brief|iterations=2|context=12|backup=true')\""
+    }
+  }
+}

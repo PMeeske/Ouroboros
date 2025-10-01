@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>LangChainPipeline</RootNamespace>
+    <AssemblyName>MonadicPipeline.Agent</AssemblyName>
+    <Product>MonadicPipeline Agent</Product>
+    <Description>AI orchestration and Meta-AI layer for MonadicPipeline</Description>
+    <Copyright>Copyright © 2025</Copyright>
+    <Version>1.0.0</Version>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MonadicPipeline.Core\MonadicPipeline.Core.csproj" />
+    <ProjectReference Include="..\MonadicPipeline.Domain\MonadicPipeline.Domain.csproj" />
+    <ProjectReference Include="..\MonadicPipeline.Pipeline\MonadicPipeline.Pipeline.csproj" />
+    <ProjectReference Include="..\MonadicPipeline.Tools\MonadicPipeline.Tools.csproj" />
+    <ProjectReference Include="..\MonadicPipeline.Providers\MonadicPipeline.Providers.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LangChain" Version="0.17.0" />
+  </ItemGroup>
+
+</Project>
