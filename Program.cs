@@ -477,6 +477,10 @@ static async Task RunTestsAsync(TestOptions o)
             await LangChainPipeline.Tests.MetaAIv2Tests.RunAllTests();
             Console.WriteLine();
             
+            // Run Meta-AI Convenience Layer tests
+            await LangChainPipeline.Tests.MetaAIConvenienceTests.RunAll();
+            Console.WriteLine();
+            
             // Run orchestrator tests
             await LangChainPipeline.Tests.OrchestratorTests.RunAllTests();
             Console.WriteLine();
