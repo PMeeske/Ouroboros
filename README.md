@@ -74,6 +74,7 @@ MonadicPipeline follows a **Functional Pipeline Architecture** with monadic comp
 
 4. **Run examples:**
    ```bash
+   cd src/MonadicPipeline.Examples
    dotnet run
    ```
 
@@ -81,9 +82,12 @@ MonadicPipeline follows a **Functional Pipeline Architecture** with monadic comp
 
 #### Command Line Interface
 
-The CLI provides several commands for interacting with the pipeline system:
+The CLI provides several commands for interacting with the pipeline system. All commands should be run from the `src/MonadicPipeline.CLI` directory:
 
 ```bash
+# Navigate to CLI directory
+cd src/MonadicPipeline.CLI
+
 # Ask a question
 dotnet run -- ask -q "What is functional programming?"
 
@@ -108,6 +112,9 @@ dotnet run -- test --all
 Configure remote AI endpoints via environment variables or CLI flags:
 
 ```bash
+# Navigate to CLI directory
+cd src/MonadicPipeline.CLI
+
 # Set environment variables
 export CHAT_ENDPOINT="https://api.ollama.com"
 export CHAT_API_KEY="your-api-key"
@@ -229,6 +236,7 @@ The `src/MonadicPipeline.Examples/Examples/` directory contains comprehensive de
 
 Run all examples:
 ```bash
+cd src/MonadicPipeline.Examples
 dotnet run
 ```
 
@@ -239,6 +247,9 @@ dotnet run
 MonadicPipeline supports **LangChain's familiar pipe operator syntax** while maintaining functional programming guarantees:
 
 ```bash
+# Navigate to CLI directory
+cd src/MonadicPipeline.CLI
+
 # CLI DSL usage - RAG pipeline
 dotnet run -- pipeline --dsl "SetQuery('What is AI?') | Retrieve | Template | LLM"
 ```
@@ -260,6 +271,9 @@ var pipeline = Set("Who was drinking unicorn blood?", "query")
 Pipeline steps are automatically registered as tools that the LLM can invoke:
 
 ```bash
+# Navigate to CLI directory
+cd src/MonadicPipeline.CLI
+
 # The LLM can use pipeline tools to improve its own output
 dotnet run -- pipeline --dsl "SetPrompt('Explain functional programming') | UseDraft | UseCritique | UseImprove"
 ```
@@ -274,6 +288,9 @@ Available pipeline tools:
 ### AI Reasoning Pipeline with Refinement Loop
 
 ```bash
+# Navigate to CLI directory
+cd src/MonadicPipeline.CLI
+
 # Run complete refinement workflow: Draft -> Critique -> Improve
 dotnet run -- pipeline -d "SetTopic('microservices architecture') | UseRefinementLoop('2')"
 
@@ -360,6 +377,9 @@ public class CustomTool : ITool
 Run the comprehensive test suite:
 
 ```bash
+# Navigate to CLI directory
+cd src/MonadicPipeline.CLI
+
 # Run all tests
 dotnet run -- test --all
 
