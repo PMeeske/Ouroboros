@@ -51,17 +51,53 @@ static async Task ParseAndRunAsync(string[] args)
         );
 }
 
-static async Task RunPipelineDslAsync(string dsl, string modelName, string embedName, string sourcePath, int k, bool trace, ChatRuntimeSettings? settings = null)
+static async Task RunPipelineDslAsync(string dsl, string modelName, string embedName, string sourcePath, int k, bool trace, ChatRuntimeSettings? settings = null, PipelineOptions? pipelineOpts = null)
 {
     // Setup minimal environment for reasoning/ingest arrows
-    // Remote model support (OpenAI-compatible and Ollama Cloud) via environment variables only inside this function
-    var (endpoint, apiKey, endpointType) = ChatConfig.Resolve();
+    // Remote model support (OpenAI-compatible and Ollama Cloud) via environment variables or CLI overrides
+    var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(
+        pipelineOpts?.Endpoint, 
+        pipelineOpts?.ApiKey, 
+        pipelineOpts?.EndpointType);
 
     var provider = new OllamaProvider();
     IChatCompletionModel chatModel;
-    if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
+    
+    if (pipelineOpts is not null && pipelineOpts.Router.Equals("auto", StringComparison.OrdinalIgnoreCase))
     {
-        chatModel = CreateRemoteChatModel(endpoint, apiKey, modelName, settings, endpointType);
+        // Build router using provided model overrides; fallback to primary modelName
+        var modelMap = new Dictionary<string, IChatCompletionModel>(StringComparer.OrdinalIgnoreCase);
+        IChatCompletionModel MakeLocal(string name)
+        {
+            var m = new OllamaChatModel(provider, name);
+            if (name == "deepseek-coder:33b") m.Settings = OllamaPresets.DeepSeekCoder33B;
+            return new OllamaChatAdapter(m);
+        }
+        string general = pipelineOpts.GeneralModel ?? modelName;
+        modelMap["general"] = MakeLocal(general);
+        if (!string.IsNullOrWhiteSpace(pipelineOpts.CoderModel)) modelMap["coder"] = MakeLocal(pipelineOpts.CoderModel!);
+        if (!string.IsNullOrWhiteSpace(pipelineOpts.SummarizeModel)) modelMap["summarize"] = MakeLocal(pipelineOpts.SummarizeModel!);
+        if (!string.IsNullOrWhiteSpace(pipelineOpts.ReasonModel)) modelMap["reason"] = MakeLocal(pipelineOpts.ReasonModel!);
+        chatModel = new MultiModelRouter(modelMap, fallbackKey: "general");
+    }
+    else if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
+    {
+        try
+        {
+            chatModel = CreateRemoteChatModel(endpoint, apiKey, modelName, settings, endpointType);
+        }
+        catch (Exception ex) when (pipelineOpts is not null && !pipelineOpts.StrictModel && ex.Message.Contains("Invalid model", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine($"[WARN] Remote model '{modelName}' invalid. Falling back to local 'llama3'. Use --strict-model to disable fallback.");
+            var local = new OllamaChatModel(provider, "llama3");
+            chatModel = new OllamaChatAdapter(local);
+        }
+        catch (Exception ex) when (pipelineOpts is not null && !pipelineOpts.StrictModel)
+        {
+            Console.WriteLine($"[WARN] Remote model '{modelName}' unavailable ({ex.GetType().Name}). Falling back to local 'llama3'. Use --strict-model to disable fallback.");
+            var local = new OllamaChatModel(provider, "llama3");
+            chatModel = new OllamaChatAdapter(local);
+        }
     }
     else
     {
@@ -299,8 +335,10 @@ static Task RunExplainAsync(ExplainOptions o)
 
 static async Task RunPipelineAsync(PipelineOptions o)
 {
+    if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase)) Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
     if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
-    await RunPipelineDslAsync(o.Dsl, o.Model, o.Embed, o.Source, o.K, o.Trace, new ChatRuntimeSettings());
+    var settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
+    await RunPipelineDslAsync(o.Dsl, o.Model, o.Embed, o.Source, o.K, o.Trace, settings, o);
 }
 
 static async Task RunAskAsync(AskOptions o)
