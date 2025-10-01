@@ -1,29 +1,18 @@
 using LangChain.Databases;
+using Xunit;
+using FluentAssertions;
 
 namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for the TrackedVectorStore fix to verify the PR issues are resolved.
 /// </summary>
-// ReSharper disable once UnusedMember.Global
-public static class TrackedVectorStoreTests
+public class TrackedVectorStoreTests
 {
-    public static async Task RunAllTests()
+    [Fact]
+    public async Task AddAsync_ShouldAddVectorsToStore()
     {
-        Console.WriteLine("=== Running TrackedVectorStore Tests ===");
-        
-        await TestAddAsync();
-        await TestGetSimilarDocumentsAsync();
-        await TestClearAsync();
-        TestGetAll();
-        
-        Console.WriteLine("✓ All TrackedVectorStore tests passed!");
-    }
-
-    private static async Task TestAddAsync()
-    {
-        Console.WriteLine("Testing AddAsync...");
-        
+        // Arrange
         var store = new TrackedVectorStore();
         var vectors = new List<Vector>
         {
@@ -43,19 +32,20 @@ public static class TrackedVectorStoreTests
             }
         };
 
+        // Act
         await store.AddAsync(vectors);
         var allVectors = store.GetAll().ToList();
         
-        if (allVectors.Count != 2)
-            throw new Exception($"Expected 2 vectors, got {allVectors.Count}");
-        
-        Console.WriteLine("✓ AddAsync test passed");
+        // Assert
+        allVectors.Should().HaveCount(2);
+        allVectors.Should().Contain(v => v.Id == "test1");
+        allVectors.Should().Contain(v => v.Id == "test2");
     }
 
-    private static async Task TestGetSimilarDocumentsAsync()
+    [Fact]
+    public async Task GetSimilarDocumentsAsync_ShouldReturnMostSimilarDocument()
     {
-        Console.WriteLine("Testing GetSimilarDocumentsAsync...");
-        
+        // Arrange
         var store = new TrackedVectorStore();
         var vectors = new List<Vector>
         {
@@ -77,24 +67,19 @@ public static class TrackedVectorStoreTests
 
         await store.AddAsync(vectors);
         
-        // Test similarity search with embedding close to first document
+        // Act
         var queryEmbedding = new[] { 0.9f, 0.4f, 0.1f };
         var results = await store.GetSimilarDocumentsAsync(queryEmbedding, amount: 1);
         
-        if (results.Count != 1)
-            throw new Exception($"Expected 1 result, got {results.Count}");
-        
-        var firstResult = results.First();
-        if (!firstResult.PageContent.Contains("Machine learning"))
-            throw new Exception("Expected most similar result to be about machine learning");
-        
-        Console.WriteLine("✓ GetSimilarDocumentsAsync test passed");
+        // Assert
+        results.Should().HaveCount(1);
+        results.First().PageContent.Should().Contain("Machine learning");
     }
 
-    private static async Task TestClearAsync()
+    [Fact]
+    public async Task ClearAsync_ShouldRemoveAllVectors()
     {
-        Console.WriteLine("Testing ClearAsync...");
-        
+        // Arrange
         var store = new TrackedVectorStore();
         var vector = new Vector
         {
@@ -107,31 +92,26 @@ public static class TrackedVectorStoreTests
         
         // Verify it was added
         var beforeClear = store.GetAll().ToList();
-        if (beforeClear.Count != 1)
-            throw new Exception($"Expected 1 vector before clear, got {beforeClear.Count}");
+        beforeClear.Should().HaveCount(1);
         
-        // Clear the store
+        // Act
         await store.ClearAsync();
         
-        // Verify it was cleared
+        // Assert
         var afterClear = store.GetAll().ToList();
-        if (afterClear.Count != 0)
-            throw new Exception($"Expected 0 vectors after clear, got {afterClear.Count}");
-        
-        Console.WriteLine("✓ ClearAsync test passed");
+        afterClear.Should().BeEmpty();
     }
 
-    private static void TestGetAll()
+    [Fact]
+    public void GetAll_ShouldReturnEmptyCollectionInitially()
     {
-        Console.WriteLine("Testing GetAll consistency...");
-        
+        // Arrange
         var store = new TrackedVectorStore();
         
-        // Initially should be empty
+        // Act
         var initialVectors = store.GetAll().ToList();
-        if (initialVectors.Count != 0)
-            throw new Exception($"Expected 0 vectors initially, got {initialVectors.Count}");
         
-        Console.WriteLine("✓ GetAll test passed");
+        // Assert
+        initialVectors.Should().BeEmpty();
     }
 }

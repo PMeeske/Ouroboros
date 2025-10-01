@@ -5,3 +5,7 @@
 /example/Entwicklung
 /.vscode
 /.monadic_ingest_cache.json
+logs/
+*.log
+appsettings.*.local.json
+.env

@@ -28,15 +28,16 @@ jobs:
       run: dotnet restore
 
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build --no-restore --configuration Release
 
-    - name: Run application (test mode)
-      run: timeout 30s dotnet run --no-build
-      env:
-        # Set environment to indicate non-interactive mode for CI
-        CI: true
-        
-    - name: Check application startup
-      run: |
-        echo "Build and basic startup verification completed"
-        echo "Custom tests are integrated into the main application for backwards compatibility"
+    - name: Run xUnit tests
+      run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+    - name: Publish test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: '**/test-results.trx'
+        check_name: 'Test Results'
+        comment_title: 'Test Results'
+
