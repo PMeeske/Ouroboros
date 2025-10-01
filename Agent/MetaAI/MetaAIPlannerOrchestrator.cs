@@ -92,6 +92,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
 
     /// <summary>
     /// Executes a plan step by step with monitoring and safety checks.
+    /// Supports optional parallel execution of independent steps.
     /// </summary>
     public async Task<Result<ExecutionResult, string>> ExecuteAsync(
         Plan plan,
@@ -101,31 +102,51 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             return Result<ExecutionResult, string>.Failure("Plan cannot be null");
 
         var stopwatch = Stopwatch.StartNew();
-        var stepResults = new List<StepResult>();
-        var overallSuccess = true;
-        var finalOutput = "";
+        
+        // Check if parallel execution is beneficial
+        var parallelExecutor = new ParallelExecutor(_safety, ExecuteStepAsync);
+        var estimatedSpeedup = parallelExecutor.EstimateSpeedup(plan);
+        
+        List<StepResult> stepResults;
+        bool overallSuccess;
+        string finalOutput;
 
         try
         {
-            foreach (var step in plan.Steps)
+            // Use parallel execution if speedup is significant
+            if (estimatedSpeedup > 1.5)
             {
-                if (ct.IsCancellationRequested)
-                    break;
+                (stepResults, overallSuccess, finalOutput) = await parallelExecutor.ExecuteParallelAsync(plan, ct);
+            }
+            else
+            {
+                // Sequential execution
+                stepResults = new List<StepResult>();
+                overallSuccess = true;
+                finalOutput = "";
 
-                // Apply safety sandbox
-                var sandboxedStep = _safety.SandboxStep(step);
-
-                // Execute step
-                var stepResult = await ExecuteStepAsync(sandboxedStep, ct);
-                stepResults.Add(stepResult);
-
-                if (!stepResult.Success)
+                foreach (var step in plan.Steps)
                 {
-                    overallSuccess = false;
-                    // Continue with remaining steps even if one fails
+                    if (ct.IsCancellationRequested)
+                        break;
+
+                    // Apply safety sandbox
+                    var sandboxedStep = _safety.SandboxStep(step);
+
+                    // Execute step
+                    var stepResult = await ExecuteStepAsync(sandboxedStep, ct);
+                    stepResults.Add(stepResult);
+
+                    if (!stepResult.Success)
+                    {
+                        overallSuccess = false;
+                        // Continue with remaining steps even if one fails
+                    }
+
+                    finalOutput += stepResult.Output + "\n";
                 }
 
-                finalOutput += stepResult.Output + "\n";
+                finalOutput = finalOutput.Trim();
             }
 
             stopwatch.Stop();
@@ -134,11 +155,13 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
                 plan,
                 stepResults,
                 overallSuccess,
-                finalOutput.Trim(),
+                finalOutput,
                 new Dictionary<string, object>
                 {
                     ["steps_completed"] = stepResults.Count,
-                    ["steps_total"] = plan.Steps.Count
+                    ["steps_total"] = plan.Steps.Count,
+                    ["parallel_execution"] = estimatedSpeedup > 1.5,
+                    ["estimated_speedup"] = estimatedSpeedup
                 },
                 stopwatch.Elapsed);
 
