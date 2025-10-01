@@ -473,6 +473,10 @@ static async Task RunTestsAsync(TestOptions o)
             await LangChainPipeline.Tests.MetaAiTests.RunAllTests();
             Console.WriteLine();
             
+            // Run Meta-AI v2 tests
+            await LangChainPipeline.Tests.MetaAIv2Tests.RunAllTests();
+            Console.WriteLine();
+            
             // Run orchestrator tests
             await LangChainPipeline.Tests.OrchestratorTests.RunAllTests();
             Console.WriteLine();
