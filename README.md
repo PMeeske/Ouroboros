@@ -556,10 +556,32 @@ docker-compose up -d
 
 ### Kubernetes Deployment
 
+**Local Kubernetes** (Docker Desktop, minikube, kind):
 ```bash
-# Deploy to Kubernetes cluster
+# Automated deployment - builds and loads images automatically
 ./scripts/deploy-k8s.sh monadic-pipeline
+```
 
+**Azure AKS** with Azure Container Registry:
+```bash
+# Automated deployment - builds, pushes to ACR, and deploys
+./scripts/deploy-aks.sh myregistry monadic-pipeline
+```
+
+**AWS EKS, GCP GKE, or Docker Hub**:
+```bash
+# AWS EKS with ECR
+./scripts/deploy-cloud.sh 123456789.dkr.ecr.us-east-1.amazonaws.com
+
+# GCP GKE with GCR
+./scripts/deploy-cloud.sh gcr.io/my-project
+
+# Docker Hub
+./scripts/deploy-cloud.sh docker.io/myusername
+```
+
+**Manual deployment**:
+```bash
 # Or manually
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/secrets.yaml
@@ -582,7 +604,11 @@ sudo systemctl enable monadic-pipeline
 sudo systemctl start monadic-pipeline
 ```
 
-For comprehensive deployment instructions including Docker, Kubernetes, configuration management, monitoring, and security, see the complete [**Deployment Guide**](DEPLOYMENT.md).
+For comprehensive deployment instructions including configuration management, monitoring, security, and troubleshooting, see:
+- [**Deployment Guide**](DEPLOYMENT.md) - Complete deployment instructions
+- [**ImagePullBackOff Quick Fix**](IMAGEPULLBACKOFF-FIX.md) - Solve Kubernetes image issues
+- [**Troubleshooting Guide**](TROUBLESHOOTING.md) - Common issues and solutions
+- [**Scripts README**](scripts/README.md) - Deployment scripts documentation
 
 ## 🔧 Troubleshooting
 
@@ -596,24 +622,41 @@ Failed to pull image "monadic-pipeline-webapi:latest": failed to pull and unpack
 not exist or may require authorization
 ```
 
-**Solution**: The image doesn't exist in Docker Hub. You have two options:
+Or `ImagePullBackOff` errors in your pods:
+```bash
+kubectl get events -n monadic-pipeline
+# Error: ImagePullBackOff
+```
+
+**Solution**: The image doesn't exist in Docker Hub or your container registry. Use our automated deployment scripts:
 
 1. **For local clusters** (Docker Desktop, minikube, kind):
-   - Use the deployment script which automatically builds and loads images:
-     ```bash
-     ./scripts/deploy-k8s.sh
-     ```
-   - The script detects your cluster type and handles image loading
+   ```bash
+   ./scripts/deploy-k8s.sh
+   ```
+   The script automatically builds and loads images into your cluster.
 
-2. **For cloud clusters** (AKS, EKS, GKE):
-   - Build and push images to a container registry:
-     ```bash
-     # Example with Azure Container Registry
-     docker build -f Dockerfile.webapi -t myregistry.azurecr.io/monadic-pipeline-webapi:latest .
-     docker push myregistry.azurecr.io/monadic-pipeline-webapi:latest
-     ```
-   - Update image references in `k8s/webapi-deployment.yaml`
-   - See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions
+2. **For Azure AKS with ACR**:
+   ```bash
+   ./scripts/deploy-aks.sh myregistry monadic-pipeline
+   ```
+   Automatically builds, pushes to ACR, and deploys to AKS.
+
+3. **For AWS EKS, GCP GKE, or Docker Hub**:
+   ```bash
+   # AWS EKS
+   ./scripts/deploy-cloud.sh 123456789.dkr.ecr.us-east-1.amazonaws.com
+   
+   # GCP GKE
+   ./scripts/deploy-cloud.sh gcr.io/my-project
+   
+   # Docker Hub
+   ./scripts/deploy-cloud.sh docker.io/myusername
+   ```
+
+**Quick Fix Guide**: See [IMAGEPULLBACKOFF-FIX.md](IMAGEPULLBACKOFF-FIX.md) for step-by-step solutions.
+
+**Detailed Troubleshooting**: See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for comprehensive troubleshooting.
 
 ## 📚 Additional Documentation
 
