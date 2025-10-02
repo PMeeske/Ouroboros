@@ -14,6 +14,20 @@ kubectl get events -n monadic-pipeline
 
 **Root Cause:** The image doesn't exist in a container registry accessible by your cloud cluster.
 
+## Pre-Deployment Validation
+
+**Before deploying, validate your setup:**
+
+```bash
+./scripts/validate-deployment.sh
+```
+
+This script will:
+- Detect your cluster type (local vs cloud)
+- Check if you're using the correct manifests
+- Provide specific guidance for your environment
+- Prevent common ImagePullBackOff errors
+
 ## Quick Solutions
 
 ### For Azure AKS

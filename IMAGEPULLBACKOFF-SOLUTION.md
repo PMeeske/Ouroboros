@@ -294,7 +294,9 @@ This implementation provides a comprehensive solution to the ImagePullBackOff is
 ## Related Documentation
 
 - [IMAGEPULLBACKOFF-FIX.md](IMAGEPULLBACKOFF-FIX.md) - Quick fix guide
+- [INCIDENT-RESPONSE-IMAGEPULLBACKOFF.md](INCIDENT-RESPONSE-IMAGEPULLBACKOFF.md) - Real incident post-mortem
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Detailed troubleshooting
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Complete deployment guide
 - [scripts/README.md](scripts/README.md) - Script documentation
+- [scripts/validate-deployment.sh](scripts/validate-deployment.sh) - Pre-deployment validation
 - [README.md](README.md) - Project overview with deployment section
