@@ -607,6 +607,7 @@ sudo systemctl start monadic-pipeline
 For comprehensive deployment instructions including configuration management, monitoring, security, and troubleshooting, see:
 - [**Deployment Guide**](DEPLOYMENT.md) - Complete deployment instructions
 - [**ImagePullBackOff Quick Fix**](IMAGEPULLBACKOFF-FIX.md) - Solve Kubernetes image issues
+- [**ImagePullBackOff Incident Response**](INCIDENT-RESPONSE-IMAGEPULLBACKOFF.md) - Real incident analysis and resolution
 - [**Troubleshooting Guide**](TROUBLESHOOTING.md) - Common issues and solutions
 - [**Scripts README**](scripts/README.md) - Deployment scripts documentation
 
@@ -629,6 +630,12 @@ kubectl get events -n monadic-pipeline
 ```
 
 **Solution**: The image doesn't exist in Docker Hub or your container registry. Use our automated deployment scripts:
+
+**First, validate your setup:**
+```bash
+./scripts/validate-deployment.sh
+```
+This script checks your cluster type and provides specific guidance.
 
 1. **For local clusters** (Docker Desktop, minikube, kind):
    ```bash
@@ -655,6 +662,8 @@ kubectl get events -n monadic-pipeline
    ```
 
 **Quick Fix Guide**: See [IMAGEPULLBACKOFF-FIX.md](IMAGEPULLBACKOFF-FIX.md) for step-by-step solutions.
+
+**Incident Response**: See [INCIDENT-RESPONSE-IMAGEPULLBACKOFF.md](INCIDENT-RESPONSE-IMAGEPULLBACKOFF.md) for real incident analysis.
 
 **Detailed Troubleshooting**: See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for comprehensive troubleshooting.
 
