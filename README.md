@@ -567,6 +567,7 @@ kubectl apply -f k8s/configmap.yaml
 kubectl apply -f k8s/ollama.yaml
 kubectl apply -f k8s/qdrant.yaml
 kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/webapi-deployment.yaml
 ```
 
 ### Local/Systemd Deployment
@@ -582,6 +583,37 @@ sudo systemctl start monadic-pipeline
 ```
 
 For comprehensive deployment instructions including Docker, Kubernetes, configuration management, monitoring, and security, see the complete [**Deployment Guide**](DEPLOYMENT.md).
+
+## 🔧 Troubleshooting
+
+### Kubernetes Image Pull Errors
+
+If you encounter errors like:
+```
+Failed to pull image "monadic-pipeline-webapi:latest": failed to pull and unpack image 
+"docker.io/library/monadic-pipeline-webapi:latest": failed to resolve reference 
+"docker.io/library/monadic-pipeline-webapi:latest": pull access denied, repository does 
+not exist or may require authorization
+```
+
+**Solution**: The image doesn't exist in Docker Hub. You have two options:
+
+1. **For local clusters** (Docker Desktop, minikube, kind):
+   - Use the deployment script which automatically builds and loads images:
+     ```bash
+     ./scripts/deploy-k8s.sh
+     ```
+   - The script detects your cluster type and handles image loading
+
+2. **For cloud clusters** (AKS, EKS, GKE):
+   - Build and push images to a container registry:
+     ```bash
+     # Example with Azure Container Registry
+     docker build -f Dockerfile.webapi -t myregistry.azurecr.io/monadic-pipeline-webapi:latest .
+     docker push myregistry.azurecr.io/monadic-pipeline-webapi:latest
+     ```
+   - Update image references in `k8s/webapi-deployment.yaml`
+   - See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions
 
 ## 📚 Additional Documentation
 

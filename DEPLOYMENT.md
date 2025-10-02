@@ -280,8 +280,11 @@ kubectl apply -f k8s/qdrant.yaml
 # Deploy Jaeger (optional)
 kubectl apply -f k8s/jaeger.yaml
 
-# Deploy MonadicPipeline
+# Deploy MonadicPipeline CLI
 kubectl apply -f k8s/deployment.yaml
+
+# Deploy MonadicPipeline Web API
+kubectl apply -f k8s/webapi-deployment.yaml
 ```
 
 #### Step 5: Verify Deployment
