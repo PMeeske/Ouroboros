@@ -607,6 +607,7 @@ sudo systemctl start monadic-pipeline
 For comprehensive deployment instructions including configuration management, monitoring, security, and troubleshooting, see:
 - [**Deployment Guide**](DEPLOYMENT.md) - Complete deployment instructions
 - [**ImagePullBackOff Quick Fix**](IMAGEPULLBACKOFF-FIX.md) - Solve Kubernetes image issues
+- [**ImagePullBackOff Incident Response**](INCIDENT-RESPONSE-IMAGEPULLBACKOFF.md) - Real incident analysis and resolution
 - [**Troubleshooting Guide**](TROUBLESHOOTING.md) - Common issues and solutions
 - [**Scripts README**](scripts/README.md) - Deployment scripts documentation
 

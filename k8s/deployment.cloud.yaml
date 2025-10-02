@@ -1,3 +1,16 @@
+# ✅ CLOUD DEPLOYMENT MANIFEST
+# This manifest is designed for CLOUD Kubernetes clusters (AKS/EKS/GKE).
+# 
+# BEFORE DEPLOYING:
+# 1. Replace REGISTRY_URL with your container registry URL
+# 2. Build and push images to your registry
+# 3. Ensure imagePullSecrets are configured if using a private registry
+#
+# AUTOMATED DEPLOYMENT (Recommended):
+# - Azure AKS: ./scripts/deploy-aks.sh <registry-name>
+# - Other clouds: ./scripts/deploy-cloud.sh <registry-url>
+#
+# For local Kubernetes, use: k8s/deployment.yaml instead
 ---
 apiVersion: apps/v1
 kind: Deployment

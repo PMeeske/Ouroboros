@@ -1,3 +1,12 @@
+# ⚠️ WARNING: This manifest is for LOCAL Kubernetes clusters only!
+# For cloud deployments (AKS/EKS/GKE), use:
+# - Azure AKS: ./scripts/deploy-aks.sh <registry-name>
+# - Other clouds: ./scripts/deploy-cloud.sh <registry-url>
+# - Or manually use: k8s/webapi-deployment.cloud.yaml
+#
+# This manifest uses imagePullPolicy: Never and local image names,
+# which will cause ImagePullBackOff errors on cloud Kubernetes.
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

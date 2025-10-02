@@ -22,6 +22,25 @@ Automated Docker Compose deployment with all dependencies.
 
 ### Kubernetes Deployments
 
+#### `validate-deployment.sh` - Pre-Deployment Validation (NEW)
+Validates your deployment setup before deploying to prevent ImagePullBackOff errors.
+
+```bash
+./scripts/validate-deployment.sh [namespace]
+```
+
+**What it does:**
+- Detects cluster type (local vs cloud)
+- Checks if you're using the correct manifests
+- Verifies local images exist (for local clusters)
+- Provides specific guidance for your cluster type
+- Prevents common deployment mistakes
+
+**Example:**
+```bash
+./scripts/validate-deployment.sh monadic-pipeline
+```
+
 #### `deploy-k8s.sh` - Local Kubernetes
 For local Kubernetes clusters (Docker Desktop, minikube, kind).
 
