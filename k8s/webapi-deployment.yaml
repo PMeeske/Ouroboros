@@ -22,7 +22,12 @@ spec:
       containers:
       - name: webapi
         image: monadic-pipeline-webapi:latest
-        imagePullPolicy: IfNotPresent
+        # imagePullPolicy options:
+        # - Never: Use for local development with locally built images
+        # - IfNotPresent: Use when image is loaded into cluster or available in local registry
+        # - Always: Use when pulling from a remote container registry (recommended for production)
+        # For production, push image to a registry and update this to use the registry URL
+        imagePullPolicy: Never
         ports:
         - containerPort: 8080
           name: http

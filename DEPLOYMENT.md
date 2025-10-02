@@ -157,6 +157,83 @@ docker-compose -f docker-compose.dev.yml up -d
 
 ## Kubernetes Deployment
 
+### Important: Container Registry Setup
+
+Before deploying to Kubernetes, understand how images work in your cluster:
+
+#### Local Kubernetes Clusters (Docker Desktop, Minikube, Kind)
+
+For local development clusters, the deployment script will automatically:
+- Build images locally
+- Load them into your cluster
+- Use `imagePullPolicy: Never` to prevent pulling from registries
+
+No additional setup needed!
+
+#### Cloud Kubernetes Clusters (AKS, EKS, GKE)
+
+For cloud deployments, you **must** push images to a container registry:
+
+1. **Build and tag images with your registry URL:**
+   ```bash
+   # Azure Container Registry (ACR)
+   docker build -t myregistry.azurecr.io/monadic-pipeline:latest .
+   docker build -f Dockerfile.webapi -t myregistry.azurecr.io/monadic-pipeline-webapi:latest .
+   
+   # AWS Elastic Container Registry (ECR)
+   docker build -t 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline:latest .
+   docker build -f Dockerfile.webapi -t 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline-webapi:latest .
+   
+   # Docker Hub
+   docker build -t your-username/monadic-pipeline:latest .
+   docker build -f Dockerfile.webapi -t your-username/monadic-pipeline-webapi:latest .
+   ```
+
+2. **Push to your registry:**
+   ```bash
+   # Azure
+   az acr login --name myregistry
+   docker push myregistry.azurecr.io/monadic-pipeline:latest
+   docker push myregistry.azurecr.io/monadic-pipeline-webapi:latest
+   
+   # AWS
+   aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 123456789.dkr.ecr.us-east-1.amazonaws.com
+   docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline:latest
+   docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline-webapi:latest
+   
+   # Docker Hub
+   docker login
+   docker push your-username/monadic-pipeline:latest
+   docker push your-username/monadic-pipeline-webapi:latest
+   ```
+
+3. **Update image references in `k8s/deployment.yaml` and `k8s/webapi-deployment.yaml`:**
+   ```yaml
+   containers:
+   - name: webapi
+     image: myregistry.azurecr.io/monadic-pipeline-webapi:latest
+     imagePullPolicy: Always  # or IfNotPresent
+   ```
+
+4. **For private registries, create imagePullSecrets:**
+   ```bash
+   kubectl create secret docker-registry regcred \
+     --docker-server=myregistry.azurecr.io \
+     --docker-username=myusername \
+     --docker-password=mypassword \
+     --namespace=monadic-pipeline
+   ```
+   
+   Then add to your deployment:
+   ```yaml
+   spec:
+     imagePullSecrets:
+     - name: regcred
+     containers:
+     - name: webapi
+       ...
+   ```
+
 ### Automated Deployment
 
 Use the provided deployment script:
@@ -203,8 +280,11 @@ kubectl apply -f k8s/qdrant.yaml
 # Deploy Jaeger (optional)
 kubectl apply -f k8s/jaeger.yaml
 
-# Deploy MonadicPipeline
+# Deploy MonadicPipeline CLI
 kubectl apply -f k8s/deployment.yaml
+
+# Deploy MonadicPipeline Web API
+kubectl apply -f k8s/webapi-deployment.yaml
 ```
 
 #### Step 5: Verify Deployment
