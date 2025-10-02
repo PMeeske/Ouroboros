@@ -125,15 +125,22 @@ echo ""
 # Create temporary deployment files with updated image references
 echo "Step 4: Preparing Kubernetes manifests..."
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 # Copy cloud deployment templates
 cp "$K8S_DIR/deployment.cloud.yaml" "$TEMP_DIR/deployment.yaml"
 cp "$K8S_DIR/webapi-deployment.cloud.yaml" "$TEMP_DIR/webapi-deployment.yaml"
 
-# Update image references
-sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" "$TEMP_DIR/deployment.yaml"
-sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" "$TEMP_DIR/webapi-deployment.yaml"
+# Update image references (portable sed for Linux and macOS)
+if sed --version >/dev/null 2>&1; then
+    # GNU sed (Linux)
+    sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" "$TEMP_DIR/deployment.yaml"
+    sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" "$TEMP_DIR/webapi-deployment.yaml"
+else
+    # BSD sed (macOS)
+    sed -i '' "s|REGISTRY_URL|${REGISTRY_URL}|g" "$TEMP_DIR/deployment.yaml"
+    sed -i '' "s|REGISTRY_URL|${REGISTRY_URL}|g" "$TEMP_DIR/webapi-deployment.yaml"
+fi
 
 echo "✓ Manifests prepared with registry: $REGISTRY_URL"
 echo ""
