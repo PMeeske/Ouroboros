@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -21,79 +22,79 @@ spec:
     spec:
       # Uncomment and configure imagePullSecrets if using a private registry
       # imagePullSecrets:
-      # - name: regcred
+      #   - name: regcred
       containers:
-      - name: webapi
-        # IMPORTANT: Update this image reference to your container registry URL
-        # Examples:
-        #   Azure ACR: myregistry.azurecr.io/monadic-pipeline-webapi:latest
-        #   AWS ECR: 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline-webapi:latest
-        #   GCP GCR: gcr.io/my-project/monadic-pipeline-webapi:latest
-        #   Docker Hub: yourusername/monadic-pipeline-webapi:latest
-        image: REGISTRY_URL/monadic-pipeline-webapi:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8080
-          name: http
-          protocol: TCP
-        env:
-        - name: ASPNETCORE_ENVIRONMENT
-          value: "Production"
-        - name: DOTNET_ENVIRONMENT
-          value: "Production"
-        - name: ASPNETCORE_URLS
-          value: "http://+:8080"
-        - name: PIPELINE__LlmProvider__OllamaEndpoint
-          value: "http://ollama-service:11434"
-        - name: PIPELINE__VectorStore__Type
-          value: "Qdrant"
-        - name: PIPELINE__VectorStore__ConnectionString
-          valueFrom:
-            secretKeyRef:
-              name: monadic-pipeline-secrets
-              key: vector-store-connection-string
-        - name: PIPELINE__Observability__EnableMetrics
-          value: "true"
-        - name: PIPELINE__Observability__EnableTracing
-          value: "true"
-        - name: PIPELINE__Observability__OpenTelemetryEndpoint
-          value: "http://jaeger-collector:4317"
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "250m"
-          limits:
-            memory: "2Gi"
-            cpu: "1000m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 8080
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
-        volumeMounts:
-        - name: config
-          mountPath: /app/appsettings.Production.json
-          subPath: appsettings.Production.json
-          readOnly: true
-        - name: logs
-          mountPath: /app/logs
+        - name: webapi
+          # IMPORTANT: Update this image reference to your registry URL
+          # Examples:
+          #   Azure ACR: myregistry.azurecr.io/monadic-pipeline-webapi:latest
+          #   AWS ECR: 123.dkr.ecr.us-east-1.amazonaws.com/webapi:latest
+          #   GCP GCR: gcr.io/my-project/monadic-pipeline-webapi:latest
+          #   Docker Hub: yourusername/monadic-pipeline-webapi:latest
+          image: REGISTRY_URL/monadic-pipeline-webapi:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Production"
+            - name: DOTNET_ENVIRONMENT
+              value: "Production"
+            - name: ASPNETCORE_URLS
+              value: "http://+:8080"
+            - name: PIPELINE__LlmProvider__OllamaEndpoint
+              value: "http://ollama-service:11434"
+            - name: PIPELINE__VectorStore__Type
+              value: "Qdrant"
+            - name: PIPELINE__VectorStore__ConnectionString
+              valueFrom:
+                secretKeyRef:
+                  name: monadic-pipeline-secrets
+                  key: vector-store-connection-string
+            - name: PIPELINE__Observability__EnableMetrics
+              value: "true"
+            - name: PIPELINE__Observability__EnableTracing
+              value: "true"
+            - name: PIPELINE__Observability__OpenTelemetryEndpoint
+              value: "http://jaeger-collector:4317"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: config
+              mountPath: /app/appsettings.Production.json
+              subPath: appsettings.Production.json
+              readOnly: true
+            - name: logs
+              mountPath: /app/logs
       volumes:
-      - name: config
-        configMap:
-          name: monadic-pipeline-config
-      - name: logs
-        emptyDir: {}
+        - name: config
+          configMap:
+            name: monadic-pipeline-config
+        - name: logs
+          emptyDir: {}
       restartPolicy: Always
 ---
 apiVersion: v1
@@ -107,10 +108,10 @@ spec:
   selector:
     app: monadic-pipeline-webapi
   ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 8080
-    name: http
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+      name: http
   type: ClusterIP
 ---
 apiVersion: networking.k8s.io/v1
@@ -124,13 +125,14 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
-  - host: monadic-pipeline.local
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: monadic-pipeline-webapi-service
-            port:
-              number: 80
+    - host: monadic-pipeline.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: monadic-pipeline-webapi-service
+                port:
+                  number: 80
+
