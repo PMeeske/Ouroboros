@@ -122,15 +122,22 @@ echo ""
 # Create temporary deployment files with updated image references
 echo "Step 3: Preparing Kubernetes manifests..."
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 # Copy cloud deployment templates
 cp "$K8S_DIR/deployment.cloud.yaml" "$TEMP_DIR/deployment.yaml"
 cp "$K8S_DIR/webapi-deployment.cloud.yaml" "$TEMP_DIR/webapi-deployment.yaml"
 
-# Update image references
-sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" "$TEMP_DIR/deployment.yaml"
-sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" "$TEMP_DIR/webapi-deployment.yaml"
+# Update image references (portable sed for Linux and macOS)
+if sed --version >/dev/null 2>&1; then
+    # GNU sed (Linux)
+    sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" "$TEMP_DIR/deployment.yaml"
+    sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" "$TEMP_DIR/webapi-deployment.yaml"
+else
+    # BSD sed (macOS)
+    sed -i '' "s|REGISTRY_URL|${REGISTRY_URL}|g" "$TEMP_DIR/deployment.yaml"
+    sed -i '' "s|REGISTRY_URL|${REGISTRY_URL}|g" "$TEMP_DIR/webapi-deployment.yaml"
+fi
 
 echo "✓ Manifests prepared with registry: $REGISTRY_URL"
 echo ""
@@ -143,9 +150,9 @@ echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo ""
     echo "Creating imagePullSecret..."
-    read -p "Docker server (e.g., gcr.io): " DOCKER_SERVER
-    read -p "Docker username: " DOCKER_USERNAME
-    read -sp "Docker password: " DOCKER_PASSWORD
+    read -r -p "Docker server (e.g., gcr.io): " DOCKER_SERVER
+    read -r -p "Docker username: " DOCKER_USERNAME
+    read -r -sp "Docker password: " DOCKER_PASSWORD
     echo ""
     
     kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
@@ -157,11 +164,20 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         --namespace="$NAMESPACE" \
         --dry-run=client -o yaml | kubectl apply -f -
     
-    # Update manifests to include imagePullSecrets
-    sed -i 's|# imagePullSecrets:|imagePullSecrets:|g' "$TEMP_DIR/deployment.yaml"
-    sed -i 's|# - name: regcred|- name: regcred|g' "$TEMP_DIR/deployment.yaml"
-    sed -i 's|# imagePullSecrets:|imagePullSecrets:|g' "$TEMP_DIR/webapi-deployment.yaml"
-    sed -i 's|# - name: regcred|- name: regcred|g' "$TEMP_DIR/webapi-deployment.yaml"
+    # Update manifests to include imagePullSecrets (portable sed for Linux and macOS)
+    if sed --version >/dev/null 2>&1; then
+        # GNU sed (Linux)
+        sed -i 's|# imagePullSecrets:|imagePullSecrets:|g' "$TEMP_DIR/deployment.yaml"
+        sed -i 's|# - name: regcred|- name: regcred|g' "$TEMP_DIR/deployment.yaml"
+        sed -i 's|# imagePullSecrets:|imagePullSecrets:|g' "$TEMP_DIR/webapi-deployment.yaml"
+        sed -i 's|# - name: regcred|- name: regcred|g' "$TEMP_DIR/webapi-deployment.yaml"
+    else
+        # BSD sed (macOS)
+        sed -i '' 's|# imagePullSecrets:|imagePullSecrets:|g' "$TEMP_DIR/deployment.yaml"
+        sed -i '' 's|# - name: regcred|- name: regcred|g' "$TEMP_DIR/deployment.yaml"
+        sed -i '' 's|# imagePullSecrets:|imagePullSecrets:|g' "$TEMP_DIR/webapi-deployment.yaml"
+        sed -i '' 's|# - name: regcred|- name: regcred|g' "$TEMP_DIR/webapi-deployment.yaml"
+    fi
     
     echo "✓ imagePullSecret created"
 fi
