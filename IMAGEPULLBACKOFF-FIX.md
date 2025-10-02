@@ -94,8 +94,13 @@ cp k8s/deployment.cloud.yaml k8s/deployment-custom.yaml
 cp k8s/webapi-deployment.cloud.yaml k8s/webapi-deployment-custom.yaml
 
 # Update REGISTRY_URL in both files
+# On Linux (GNU sed):
 sed -i 's|REGISTRY_URL|YOUR_REGISTRY|g' k8s/deployment-custom.yaml
 sed -i 's|REGISTRY_URL|YOUR_REGISTRY|g' k8s/webapi-deployment-custom.yaml
+
+# On macOS (BSD sed):
+# sed -i '' 's|REGISTRY_URL|YOUR_REGISTRY|g' k8s/deployment-custom.yaml
+# sed -i '' 's|REGISTRY_URL|YOUR_REGISTRY|g' k8s/webapi-deployment-custom.yaml
 ```
 
 ### Step 3: Deploy
