@@ -20,7 +20,12 @@ spec:
       containers:
       - name: monadic-pipeline
         image: monadic-pipeline:latest
-        imagePullPolicy: IfNotPresent
+        # imagePullPolicy options:
+        # - Never: Use for local development with locally built images
+        # - IfNotPresent: Use when image is loaded into cluster or available in local registry
+        # - Always: Use when pulling from a remote container registry (recommended for production)
+        # For production, push image to a registry and update this to use the registry URL
+        imagePullPolicy: Never
         env:
         - name: ASPNETCORE_ENVIRONMENT
           value: "Production"
