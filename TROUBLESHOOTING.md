@@ -22,11 +22,17 @@ not exist or may require authorization: server message: insufficient_scope:
 authorization failed
 ```
 
+Or in Kubernetes events:
+```bash
+kubectl get events -n monadic-pipeline --sort-by='.lastTimestamp'
+# Shows: Error: ImagePullBackOff
+```
+
 #### Root Cause
 The Kubernetes pod is trying to pull the Docker image from Docker Hub (docker.io/library/), but the image doesn't exist there. This happens when:
-1. The image wasn't built locally
-2. The image wasn't loaded into the cluster
-3. The `imagePullPolicy` is set to pull from a remote registry
+1. **Local clusters**: The image wasn't built locally or wasn't loaded into the cluster
+2. **Cloud clusters (AKS/EKS/GKE)**: The image wasn't pushed to a container registry, or the deployment is configured to look in the wrong place
+3. The `imagePullPolicy` is incompatible with your deployment type
 
 #### Solution
 
@@ -58,6 +64,31 @@ The Kubernetes pod is trying to pull the Docker image from Docker Hub (docker.io
 
 **For Cloud Kubernetes Clusters** (AKS, EKS, GKE):
 
+**Quick Solution - Use Automated Deployment Scripts:**
+
+The easiest way to deploy to cloud Kubernetes is to use our automated deployment scripts:
+
+```bash
+# For Azure AKS with ACR
+./scripts/deploy-aks.sh myregistry monadic-pipeline
+
+# For other cloud providers (AWS EKS, GCP GKE, Docker Hub)
+./scripts/deploy-cloud.sh 123456789.dkr.ecr.us-east-1.amazonaws.com monadic-pipeline
+./scripts/deploy-cloud.sh gcr.io/my-project monadic-pipeline
+./scripts/deploy-cloud.sh docker.io/myusername monadic-pipeline
+```
+
+These scripts will:
+- Build the Docker images
+- Push them to your container registry
+- Update the Kubernetes manifests with correct image references
+- Deploy everything to your cluster
+- Configure imagePullSecrets if needed
+
+**Manual Solution:**
+
+If you prefer to deploy manually or need to troubleshoot:
+
 1. **Build and tag images with your registry URL:**
    ```bash
    # Azure Container Registry (ACR)
@@ -68,6 +99,10 @@ The Kubernetes pod is trying to pull the Docker image from Docker Hub (docker.io
    docker build -t 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline:latest .
    docker build -f Dockerfile.webapi -t 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline-webapi:latest .
    
+   # GCP Google Container Registry (GCR)
+   docker build -t gcr.io/my-project/monadic-pipeline:latest .
+   docker build -f Dockerfile.webapi -t gcr.io/my-project/monadic-pipeline-webapi:latest .
+   
    # Docker Hub
    docker build -t yourusername/monadic-pipeline:latest .
    docker build -f Dockerfile.webapi -t yourusername/monadic-pipeline-webapi:latest .
@@ -75,15 +110,20 @@ The Kubernetes pod is trying to pull the Docker image from Docker Hub (docker.io
 
 2. **Push to your registry:**
    ```bash
-   # Azure
+   # Azure ACR
    az acr login --name myregistry
    docker push myregistry.azurecr.io/monadic-pipeline:latest
    docker push myregistry.azurecr.io/monadic-pipeline-webapi:latest
    
-   # AWS
+   # AWS ECR
    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 123456789.dkr.ecr.us-east-1.amazonaws.com
    docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline:latest
    docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline-webapi:latest
+   
+   # GCP GCR
+   gcloud auth configure-docker
+   docker push gcr.io/my-project/monadic-pipeline:latest
+   docker push gcr.io/my-project/monadic-pipeline-webapi:latest
    
    # Docker Hub
    docker login
@@ -91,18 +131,21 @@ The Kubernetes pod is trying to pull the Docker image from Docker Hub (docker.io
    docker push yourusername/monadic-pipeline-webapi:latest
    ```
 
-3. **Update image references in Kubernetes manifests:**
+3. **Use cloud-specific deployment manifests:**
    
-   Edit `k8s/deployment.yaml`:
+   The repository includes cloud-ready manifests in `k8s/deployment.cloud.yaml` and `k8s/webapi-deployment.cloud.yaml`.
+   
+   Update the image references in these files:
    ```yaml
+   # In k8s/deployment.cloud.yaml
    containers:
    - name: monadic-pipeline
      image: myregistry.azurecr.io/monadic-pipeline:latest
      imagePullPolicy: Always
    ```
    
-   Edit `k8s/webapi-deployment.yaml`:
    ```yaml
+   # In k8s/webapi-deployment.cloud.yaml
    containers:
    - name: webapi
      image: myregistry.azurecr.io/monadic-pipeline-webapi:latest
@@ -118,7 +161,7 @@ The Kubernetes pod is trying to pull the Docker image from Docker Hub (docker.io
      --namespace=monadic-pipeline
    ```
    
-   Then add to your deployment spec:
+   Then uncomment imagePullSecrets in the deployment manifests:
    ```yaml
    spec:
      imagePullSecrets:
@@ -126,6 +169,15 @@ The Kubernetes pod is trying to pull the Docker image from Docker Hub (docker.io
      containers:
      - name: webapi
        ...
+   ```
+
+5. **For AKS, ensure the cluster has permissions to pull from ACR:**
+   ```bash
+   # Attach ACR to AKS cluster
+   az aks update -n myAKSCluster -g myResourceGroup --attach-acr myregistry
+   
+   # Or verify existing permissions
+   az aks check-acr --resource-group myResourceGroup --name myAKSCluster --acr myregistry.azurecr.io
    ```
 
 ### Pod CrashLoopBackOff
@@ -160,6 +212,77 @@ monadic-pipeline-webapi-7ddcb5c887-xyz    0/1     CrashLoopBackOff   5          
    ```bash
    kubectl get pods -n monadic-pipeline
    ```
+
+### AKS-Specific Issues
+
+#### ImagePullBackOff on AKS
+
+**Symptom:**
+Pod cannot pull images from Azure Container Registry (ACR).
+
+**Common Causes:**
+1. AKS cluster doesn't have permission to pull from ACR
+2. Image not pushed to ACR
+3. Wrong image reference in deployment
+
+**Solutions:**
+
+1. **Attach ACR to AKS (Recommended):**
+   ```bash
+   # This grants AKS managed identity permission to pull from ACR
+   az aks update -n myAKSCluster -g myResourceGroup --attach-acr myACRName
+   ```
+
+2. **Verify ACR permissions:**
+   ```bash
+   az aks check-acr --resource-group myResourceGroup --name myAKSCluster --acr myACRName.azurecr.io
+   ```
+
+3. **Check if images exist in ACR:**
+   ```bash
+   az acr repository list --name myACRName
+   az acr repository show-tags --name myACRName --repository monadic-pipeline-webapi
+   ```
+
+4. **Use the automated deployment script:**
+   ```bash
+   ./scripts/deploy-aks.sh myACRName monadic-pipeline
+   ```
+
+5. **Manual imagePullSecret (if not using managed identity):**
+   ```bash
+   # Get ACR credentials
+   ACR_LOGIN_SERVER=$(az acr show --name myACRName --query loginServer --output tsv)
+   ACR_USERNAME=$(az acr credential show --name myACRName --query username --output tsv)
+   ACR_PASSWORD=$(az acr credential show --name myACRName --query "passwords[0].value" --output tsv)
+   
+   # Create secret
+   kubectl create secret docker-registry regcred \
+     --docker-server=$ACR_LOGIN_SERVER \
+     --docker-username=$ACR_USERNAME \
+     --docker-password=$ACR_PASSWORD \
+     --namespace=monadic-pipeline
+   ```
+
+#### AKS Node Issues
+
+**Symptom:**
+Pods stuck in Pending state.
+
+**Solution:**
+```bash
+# Check node status
+kubectl get nodes
+
+# Check node resources
+kubectl describe node <node-name>
+
+# Scale the node pool
+az aks nodepool scale --resource-group myResourceGroup \
+  --cluster-name myAKSCluster \
+  --name nodepool1 \
+  --node-count 3
+```
 
 ### Service Unavailable
 

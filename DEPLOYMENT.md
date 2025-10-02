@@ -168,11 +168,52 @@ For local development clusters, the deployment script will automatically:
 - Load them into your cluster
 - Use `imagePullPolicy: Never` to prevent pulling from registries
 
-No additional setup needed!
+No additional setup needed! Just run:
+```bash
+./scripts/deploy-k8s.sh
+```
 
 #### Cloud Kubernetes Clusters (AKS, EKS, GKE)
 
-For cloud deployments, you **must** push images to a container registry:
+For cloud deployments, you **must** push images to a container registry. We provide automated scripts:
+
+**Option 1: Azure AKS with ACR (Recommended for Azure)**
+
+```bash
+# Automated deployment to AKS
+./scripts/deploy-aks.sh myregistry monadic-pipeline
+```
+
+This script will:
+- Build Docker images
+- Login to Azure Container Registry
+- Push images to ACR
+- Update manifests with correct image references
+- Deploy to your AKS cluster
+
+**Prerequisites:**
+- Azure CLI installed and logged in (`az login`)
+- kubectl configured for your AKS cluster
+- ACR already created
+
+**Option 2: Other Cloud Providers (EKS, GKE, Docker Hub)**
+
+```bash
+# For AWS EKS with ECR
+./scripts/deploy-cloud.sh 123456789.dkr.ecr.us-east-1.amazonaws.com
+
+# For GCP GKE with GCR
+./scripts/deploy-cloud.sh gcr.io/my-project
+
+# For Docker Hub
+./scripts/deploy-cloud.sh docker.io/myusername
+```
+
+This script will handle authentication, building, pushing, and deployment.
+
+#### Manual Cloud Deployment
+
+If you prefer manual control:
 
 1. **Build and tag images with your registry URL:**
    ```bash

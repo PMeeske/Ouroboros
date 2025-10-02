@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monadic-pipeline
+  namespace: monadic-pipeline
+  labels:
+    app: monadic-pipeline
+    version: v1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monadic-pipeline
+  template:
+    metadata:
+      labels:
+        app: monadic-pipeline
+        version: v1.0.0
+    spec:
+      # Uncomment and configure imagePullSecrets if using a private registry
+      # imagePullSecrets:
+      # - name: regcred
+      containers:
+      - name: monadic-pipeline
+        # IMPORTANT: Update this image reference to your container registry URL
+        # Examples:
+        #   Azure ACR: myregistry.azurecr.io/monadic-pipeline:latest
+        #   AWS ECR: 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline:latest
+        #   GCP GCR: gcr.io/my-project/monadic-pipeline:latest
+        #   Docker Hub: yourusername/monadic-pipeline:latest
+        image: REGISTRY_URL/monadic-pipeline:latest
+        imagePullPolicy: Always
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: DOTNET_ENVIRONMENT
+          value: "Production"
+        - name: PIPELINE__LlmProvider__OllamaEndpoint
+          value: "http://ollama-service:11434"
+        - name: PIPELINE__VectorStore__Type
+          value: "Qdrant"
+        - name: PIPELINE__VectorStore__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              name: monadic-pipeline-secrets
+              key: vector-store-connection-string
+        - name: PIPELINE__Observability__EnableMetrics
+          value: "true"
+        - name: PIPELINE__Observability__EnableTracing
+          value: "true"
+        - name: PIPELINE__Observability__OpenTelemetryEndpoint
+          value: "http://jaeger-collector:4317"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: config
+          mountPath: /app/appsettings.Production.json
+          subPath: appsettings.Production.json
+          readOnly: true
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: config
+        configMap:
+          name: monadic-pipeline-config
+      - name: logs
+        emptyDir: {}
+      restartPolicy: Always
