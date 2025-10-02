@@ -73,9 +73,7 @@ echo "Step 1: Building Docker images..."
 cd "$PROJECT_ROOT"
 
 echo "Building CLI image..."
-docker build -t monadic-pipeline:latest .
-
-if [ $? -ne 0 ]; then
+if ! docker build -t monadic-pipeline:latest .; then
     echo "Error: CLI Docker build failed"
     exit 1
 fi
@@ -83,9 +81,7 @@ fi
 echo "✓ CLI Docker image built successfully"
 
 echo "Building Web API image..."
-docker build -f Dockerfile.webapi -t monadic-pipeline-webapi:latest .
-
-if [ $? -ne 0 ]; then
+if ! docker build -f Dockerfile.webapi -t monadic-pipeline-webapi:latest .; then
     echo "Error: Web API Docker build failed"
     exit 1
 fi
