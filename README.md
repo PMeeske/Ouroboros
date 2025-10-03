@@ -643,6 +643,20 @@ export IONOS_PASSWORD="your-password"
 # See docs/IONOS_DEPLOYMENT_GUIDE.md for detailed instructions
 ```
 
+**IONOS Cloud with GitHub Actions** (CI/CD):
+
+Automated deployment via GitHub Actions is configured in `.github/workflows/ionos-deploy.yml`. Every push to `main` automatically:
+1. Runs tests
+2. Builds and pushes Docker images to IONOS Container Registry
+3. Deploys to IONOS Kubernetes cluster
+
+Setup required secrets in GitHub repository settings:
+- `IONOS_REGISTRY_USERNAME`: IONOS Container Registry username
+- `IONOS_REGISTRY_PASSWORD`: IONOS Container Registry password
+- `IONOS_KUBECONFIG`: Base64-encoded kubeconfig file
+
+See [IONOS Deployment Guide](docs/IONOS_DEPLOYMENT_GUIDE.md#cicd-with-github-actions) for detailed setup.
+
 **Manual deployment**:
 ```bash
 # Or manually

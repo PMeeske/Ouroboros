@@ -9,6 +9,7 @@ This guide provides detailed instructions for deploying MonadicPipeline to IONOS
 - [IONOS Cloud Setup](#ionos-cloud-setup)
 - [Container Registry Configuration](#container-registry-configuration)
 - [Kubernetes Deployment](#kubernetes-deployment)
+- [CI/CD with GitHub Actions](#cicd-with-github-actions)
 - [Storage Configuration](#storage-configuration)
 - [Networking and Ingress](#networking-and-ingress)
 - [Monitoring and Logging](#monitoring-and-logging)
@@ -254,6 +255,96 @@ kubectl get services -n monadic-pipeline
 # Check persistent volumes
 kubectl get pvc -n monadic-pipeline
 ```
+
+## CI/CD with GitHub Actions
+
+MonadicPipeline includes a GitHub Actions workflow for automated deployment to IONOS Cloud. The workflow automatically builds, tests, and deploys your application whenever you push to the main branch.
+
+### Workflow Overview
+
+The IONOS Cloud deployment workflow (`.github/workflows/ionos-deploy.yml`) includes:
+
+1. **Test**: Runs xUnit tests
+2. **Build and Push**: Builds Docker images and pushes to IONOS Container Registry
+3. **Deploy**: Deploys to IONOS Kubernetes cluster
+
+### Setup GitHub Secrets
+
+Configure the following secrets in your GitHub repository settings (`Settings` → `Secrets and variables` → `Actions`):
+
+#### Required Secrets
+
+1. **IONOS_REGISTRY_USERNAME**: Your IONOS Container Registry username
+   ```
+   Settings → Secrets → New repository secret
+   Name: IONOS_REGISTRY_USERNAME
+   Value: <your-ionos-username>
+   ```
+
+2. **IONOS_REGISTRY_PASSWORD**: Your IONOS Container Registry password or access token
+   ```
+   Name: IONOS_REGISTRY_PASSWORD
+   Value: <your-ionos-password>
+   ```
+
+3. **IONOS_KUBECONFIG**: Base64-encoded kubeconfig for your IONOS cluster
+   ```bash
+   # Download kubeconfig from IONOS Console
+   # Then encode it:
+   cat kubeconfig.yaml | base64 -w 0
+   
+   # Add to GitHub Secrets:
+   Name: IONOS_KUBECONFIG
+   Value: <base64-encoded-kubeconfig>
+   ```
+
+#### Optional Variables
+
+You can also configure repository variables for flexibility:
+
+1. **IONOS_REGISTRY** (default: `registry.ionos.com`)
+   ```
+   Settings → Variables → New repository variable
+   Name: IONOS_REGISTRY
+   Value: registry.ionos.com
+   ```
+
+2. **IONOS_PROJECT** (default: `adaptive-systems`)
+   ```
+   Name: IONOS_PROJECT
+   Value: <your-project-name>
+   ```
+
+### Workflow Triggers
+
+The workflow runs automatically:
+- **On push to main branch**: Deploys changes automatically
+- **Manual trigger**: Via GitHub Actions UI (`Actions` → `IONOS Cloud Deployment` → `Run workflow`)
+
+### Monitoring Workflow Runs
+
+1. Navigate to `Actions` tab in your GitHub repository
+2. Click on `IONOS Cloud Deployment` workflow
+3. View the latest runs and their status
+4. Check logs for each step (test, build, deploy)
+
+### Manual Deployment
+
+If you prefer not to use automatic deployments:
+
+1. Disable auto-deployment by commenting out the `push` trigger in `.github/workflows/ionos-deploy.yml`:
+   ```yaml
+   on:
+     # push:
+     #   branches: [main]
+     workflow_dispatch:  # Manual trigger only
+   ```
+
+2. Trigger deployments manually from the GitHub Actions UI
+
+### Legacy Azure Workflow
+
+The previous Azure AKS workflow has been preserved as `.github/workflows/azure-deploy.yml` for reference. It's disabled by default but can be manually triggered if needed.
 
 ## Storage Configuration
 

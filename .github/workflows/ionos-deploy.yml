@@ -1,0 +1,220 @@
+# This workflow builds and deploys MonadicPipeline to IONOS Cloud Kubernetes
+#
+# This workflow includes:
+# - Testing: Runs xUnit tests before building images
+# - Building: Creates Docker images for both CLI and WebAPI components
+# - Registry: Pushes images to IONOS Container Registry
+# - Deployment: Deploys both CLI and WebAPI to IONOS Kubernetes cluster
+#
+# Prerequisites:
+# - IONOS Cloud Managed Kubernetes cluster
+# - IONOS Container Registry enabled
+# - kubectl configured with IONOS cluster access
+#
+# Required GitHub Secrets:
+#   - IONOS_REGISTRY_USERNAME: IONOS Container Registry username
+#   - IONOS_REGISTRY_PASSWORD: IONOS Container Registry password (or access token)
+#   - IONOS_KUBECONFIG: Base64-encoded kubeconfig for IONOS Kubernetes cluster
+#
+# Optional GitHub Secrets/Variables:
+#   - IONOS_REGISTRY: Registry URL (default: registry.ionos.com)
+#   - IONOS_PROJECT: Project/organization name (default: adaptive-systems)
+#
+# To configure kubeconfig secret:
+#   1. Download kubeconfig from IONOS Cloud Console
+#   2. Base64 encode it: cat kubeconfig.yaml | base64 -w 0
+#   3. Add to GitHub Secrets as IONOS_KUBECONFIG
+#
+# For more information:
+#   - IONOS Cloud: https://cloud.ionos.com/
+#   - Documentation: docs/IONOS_DEPLOYMENT_GUIDE.md
+
+name: IONOS Cloud Deployment
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  IONOS_REGISTRY: ${{ vars.IONOS_REGISTRY || 'registry.ionos.com' }}
+  IONOS_PROJECT: ${{ vars.IONOS_PROJECT || 'adaptive-systems' }}
+  NAMESPACE: monadic-pipeline
+  CONTAINER_NAME_CLI: monadic-pipeline
+  CONTAINER_NAME_WEBAPI: monadic-pipeline-webapi
+
+jobs:
+  test:
+    name: Run Tests
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run xUnit tests
+        run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: '**/test-results.trx'
+
+  build-and-push:
+    name: Build and Push Images
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to IONOS Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.IONOS_REGISTRY }}
+          username: ${{ secrets.IONOS_REGISTRY_USERNAME }}
+          password: ${{ secrets.IONOS_REGISTRY_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push CLI image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}/${{ env.CONTAINER_NAME_CLI }}:latest
+            ${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}/${{ env.CONTAINER_NAME_CLI }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push WebAPI image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.webapi
+          push: true
+          tags: |
+            ${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}/${{ env.CONTAINER_NAME_WEBAPI }}:latest
+            ${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}/${{ env.CONTAINER_NAME_WEBAPI }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to IONOS Kubernetes
+    needs: [build-and-push]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl for IONOS
+        run: |
+          echo "${{ secrets.IONOS_KUBECONFIG }}" | base64 -d > kubeconfig.yaml
+          export KUBECONFIG=$(pwd)/kubeconfig.yaml
+          kubectl cluster-info
+          echo "KUBECONFIG=$(pwd)/kubeconfig.yaml" >> $GITHUB_ENV
+
+      - name: Create namespace
+        run: |
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create registry pull secret
+        run: |
+          kubectl create secret docker-registry ionos-registry-secret \
+            --docker-server=${{ env.IONOS_REGISTRY }} \
+            --docker-username=${{ secrets.IONOS_REGISTRY_USERNAME }} \
+            --docker-password=${{ secrets.IONOS_REGISTRY_PASSWORD }} \
+            --namespace=${{ env.NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Prepare deployment manifests
+        run: |
+          # Create temporary directory for processed manifests
+          mkdir -p /tmp/k8s-manifests
+          
+          # Copy and process cloud deployment manifests
+          cp k8s/deployment.cloud.yaml /tmp/k8s-manifests/deployment.yaml
+          cp k8s/webapi-deployment.cloud.yaml /tmp/k8s-manifests/webapi-deployment.yaml
+          cp k8s/qdrant.yaml /tmp/k8s-manifests/qdrant.yaml
+          cp k8s/ollama.yaml /tmp/k8s-manifests/ollama.yaml
+          
+          # Replace REGISTRY_URL with actual IONOS registry URL
+          REGISTRY_URL="${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}"
+          sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" /tmp/k8s-manifests/deployment.yaml
+          sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" /tmp/k8s-manifests/webapi-deployment.yaml
+          
+          # Update storage class for IONOS
+          sed -i "s|storageClassName: managed-csi|storageClassName: ionos-enterprise-ssd|g" /tmp/k8s-manifests/qdrant.yaml
+          sed -i "s|storageClassName: managed-csi|storageClassName: ionos-enterprise-ssd|g" /tmp/k8s-manifests/ollama.yaml
+          
+          # Enable imagePullSecrets for IONOS registry
+          sed -i 's|# imagePullSecrets:|imagePullSecrets:|g' /tmp/k8s-manifests/deployment.yaml
+          sed -i 's|#   - name: ionos-registry-secret|  - name: ionos-registry-secret|g' /tmp/k8s-manifests/deployment.yaml
+          sed -i 's|# imagePullSecrets:|imagePullSecrets:|g' /tmp/k8s-manifests/webapi-deployment.yaml
+          sed -i 's|#   - name: ionos-registry-secret|  - name: ionos-registry-secret|g' /tmp/k8s-manifests/webapi-deployment.yaml
+
+      - name: Apply secrets and configmap
+        run: |
+          echo "⚠️  Applying secrets - ensure k8s/secrets.yaml is updated for production!"
+          kubectl apply -f k8s/secrets.yaml
+          kubectl apply -f k8s/configmap.yaml
+
+      - name: Deploy dependencies
+        run: |
+          kubectl apply -f /tmp/k8s-manifests/ollama.yaml
+          kubectl apply -f /tmp/k8s-manifests/qdrant.yaml
+          kubectl apply -f k8s/jaeger.yaml
+
+      - name: Deploy applications
+        run: |
+          kubectl apply -f /tmp/k8s-manifests/deployment.yaml
+          kubectl apply -f /tmp/k8s-manifests/webapi-deployment.yaml
+
+      - name: Wait for deployments
+        run: |
+          echo "Waiting for deployments to be ready..."
+          kubectl wait --for=condition=available --timeout=300s deployment/ollama -n ${{ env.NAMESPACE }} || true
+          kubectl wait --for=condition=available --timeout=300s deployment/qdrant -n ${{ env.NAMESPACE }} || true
+          kubectl wait --for=condition=available --timeout=300s deployment/monadic-pipeline -n ${{ env.NAMESPACE }} || true
+          kubectl wait --for=condition=available --timeout=300s deployment/monadic-pipeline-webapi -n ${{ env.NAMESPACE }} || true
+
+      - name: Deployment summary
+        run: |
+          echo "================================================"
+          echo "Deployment Complete!"
+          echo "================================================"
+          echo ""
+          echo "Images deployed:"
+          echo "  - ${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}/${{ env.CONTAINER_NAME_CLI }}:${{ github.sha }}"
+          echo "  - ${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}/${{ env.CONTAINER_NAME_WEBAPI }}:${{ github.sha }}"
+          echo ""
+          echo "Namespace: ${{ env.NAMESPACE }}"
+          echo "Storage class: ionos-enterprise-ssd"
+          echo ""
+          echo "Check deployment status:"
+          kubectl get all -n ${{ env.NAMESPACE }}
+          echo ""
+          kubectl get pvc -n ${{ env.NAMESPACE }}
