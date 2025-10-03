@@ -19,8 +19,7 @@
 #
 # IONOS Cloud Support:
 # For IONOS Cloud deployment, configure the following secrets:
-#   - IONOS_REGISTRY (default: registry.ionos.com)
-#   - IONOS_PROJECT (default: adaptive-systems)
+#   - IONOS_REGISTRY (default: adaptive-systems.cr.de-fra.ionos.com)
 #   - IONOS_USERNAME (IONOS Container Registry username)
 #   - IONOS_PASSWORD (IONOS Container Registry password)
 # Then use the deploy-ionos.sh script or adapt this workflow for IONOS deployment.

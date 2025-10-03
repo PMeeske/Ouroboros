@@ -12,7 +12,7 @@
 # - Other clouds: ./scripts/deploy-cloud.sh <registry-url>
 #
 # IONOS Cloud example:
-# - Registry: registry.ionos.com/adaptive-systems/monadic-pipeline-webapi:latest
+# - Registry: adaptive-systems.cr.de-fra.ionos.com/monadic-pipeline-webapi:latest
 # - Storage: ionos-enterprise-ssd or ionos-enterprise-hdd
 #
 # For local Kubernetes, use: k8s/webapi-deployment.yaml instead
@@ -47,7 +47,7 @@ spec:
         - name: webapi
           # IMPORTANT: Update this image reference to your registry URL
           # Examples:
-          #   IONOS: registry.ionos.com/adaptive-systems/monadic-pipeline-webapi:latest
+          #   IONOS: adaptive-systems.cr.de-fra.ionos.com/monadic-pipeline-webapi:latest
           #   Azure ACR: myregistry.azurecr.io/monadic-pipeline-webapi:latest
           #   AWS ECR: 123.dkr.ecr.us-east-1.amazonaws.com/webapi:latest
           #   GCP GCR: gcr.io/my-project/monadic-pipeline-webapi:latest

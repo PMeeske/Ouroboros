@@ -17,7 +17,7 @@ Created a comprehensive GitHub Actions workflow for IONOS Cloud deployment:
 - **Deploy Job**: Deploys to IONOS Kubernetes cluster
 
 **Key Features**:
-- Uses IONOS Container Registry (`registry.ionos.com`)
+- Uses IONOS Container Registry (`adaptive-systems.cr.de-fra.ionos.com`)
 - Configures `ionos-enterprise-ssd` storage class for optimal performance
 - Automatically creates namespace and registry pull secrets
 - Supports both tagged (SHA) and latest image deployments
@@ -30,8 +30,7 @@ Created a comprehensive GitHub Actions workflow for IONOS Cloud deployment:
 - `IONOS_KUBECONFIG`: Base64-encoded kubeconfig file
 
 **Optional Variables**:
-- `IONOS_REGISTRY`: Registry URL (default: registry.ionos.com)
-- `IONOS_PROJECT`: Project name (default: adaptive-systems)
+- `IONOS_REGISTRY`: Registry URL (default: adaptive-systems.cr.de-fra.ionos.com)
 
 ### 2. Legacy Azure Workflow
 

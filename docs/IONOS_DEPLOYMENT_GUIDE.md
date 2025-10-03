@@ -119,17 +119,17 @@ kubectl get nodes
 
 ```bash
 # Create registry (via IONOS Console or CLI)
-# Registry URL format: registry.ionos.com/<your-project-name>
+# Registry URL format: <project-name>.cr.<datacenter>.ionos.com
 
 # For Adaptive Systems Inc.:
-IONOS_REGISTRY="registry.ionos.com/adaptive-systems"
+IONOS_REGISTRY="adaptive-systems.cr.de-fra.ionos.com"
 ```
 
 ### 2. Authenticate Docker
 
 ```bash
 # Login to IONOS Container Registry
-docker login registry.ionos.com
+docker login adaptive-systems.cr.de-fra.ionos.com
 
 # Enter credentials when prompted
 Username: <your-ionos-username>
@@ -139,8 +139,7 @@ Password: <your-ionos-password>
 ### 3. Set Environment Variables
 
 ```bash
-export IONOS_REGISTRY="registry.ionos.com"
-export IONOS_PROJECT="adaptive-systems"
+export IONOS_REGISTRY="adaptive-systems.cr.de-fra.ionos.com"
 export IONOS_USERNAME="<your-username>"
 export IONOS_PASSWORD="<your-password>"
 ```
@@ -153,8 +152,7 @@ Use the provided deployment script:
 
 ```bash
 # Set environment variables
-export IONOS_REGISTRY="registry.ionos.com"
-export IONOS_PROJECT="adaptive-systems"
+export IONOS_REGISTRY="adaptive-systems.cr.de-fra.ionos.com"
 export IONOS_USERNAME="<your-username>"
 export IONOS_PASSWORD="<your-password>"
 
@@ -178,7 +176,7 @@ If you prefer manual deployment:
 #### Step 1: Build and Push Images
 
 ```bash
-REGISTRY="registry.ionos.com/adaptive-systems"
+REGISTRY="adaptive-systems.cr.de-fra.ionos.com"
 
 # Build CLI image
 docker build -t ${REGISTRY}/monadic-pipeline:latest -f Dockerfile .
@@ -197,7 +195,7 @@ kubectl apply -f k8s/namespace.yaml
 
 # Create registry pull secret
 kubectl create secret docker-registry ionos-registry-secret \
-  --docker-server=registry.ionos.com \
+  --docker-server=adaptive-systems.cr.de-fra.ionos.com \
   --docker-username=<your-username> \
   --docker-password=<your-password> \
   --namespace=monadic-pipeline
@@ -213,7 +211,7 @@ Update `k8s/deployment.cloud.yaml` and `k8s/webapi-deployment.cloud.yaml`:
 
 ```yaml
 # Change image references
-image: registry.ionos.com/adaptive-systems/monadic-pipeline:latest
+image: adaptive-systems.cr.de-fra.ionos.com/monadic-pipeline:latest
 
 # Uncomment imagePullSecrets
 imagePullSecrets:
@@ -302,17 +300,11 @@ Configure the following secrets in your GitHub repository settings (`Settings` �
 
 You can also configure repository variables for flexibility:
 
-1. **IONOS_REGISTRY** (default: `registry.ionos.com`)
+1. **IONOS_REGISTRY** (default: `adaptive-systems.cr.de-fra.ionos.com`)
    ```
    Settings → Variables → New repository variable
    Name: IONOS_REGISTRY
-   Value: registry.ionos.com
-   ```
-
-2. **IONOS_PROJECT** (default: `adaptive-systems`)
-   ```
-   Name: IONOS_PROJECT
-   Value: <your-project-name>
+   Value: adaptive-systems.cr.de-fra.ionos.com
    ```
 
 ### Workflow Triggers
@@ -556,7 +548,7 @@ kubectl get secret ionos-registry-secret -n monadic-pipeline
 # Re-create if necessary
 kubectl delete secret ionos-registry-secret -n monadic-pipeline
 kubectl create secret docker-registry ionos-registry-secret \
-  --docker-server=registry.ionos.com \
+  --docker-server=adaptive-systems.cr.de-fra.ionos.com \
   --docker-username=<username> \
   --docker-password=<password> \
   --namespace=monadic-pipeline

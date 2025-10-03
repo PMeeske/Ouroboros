@@ -11,8 +11,7 @@
 #   namespace: Kubernetes namespace (default: monadic-pipeline)
 #
 # Environment variables (optional):
-#   IONOS_REGISTRY: Registry URL (default: registry.ionos.com)
-#   IONOS_PROJECT: Project/organization name (default: adaptive-systems)
+#   IONOS_REGISTRY: Registry URL (default: adaptive-systems.cr.de-fra.ionos.com)
 #   IONOS_USERNAME: Registry username
 #   IONOS_PASSWORD: Registry password
 #
@@ -22,9 +21,8 @@
 set -e
 
 # Configuration
-IONOS_REGISTRY="${IONOS_REGISTRY:-registry.ionos.com}"
-IONOS_PROJECT="${IONOS_PROJECT:-adaptive-systems}"
-REGISTRY_URL="${IONOS_REGISTRY}/${IONOS_PROJECT}"
+IONOS_REGISTRY="${IONOS_REGISTRY:-adaptive-systems.cr.de-fra.ionos.com}"
+REGISTRY_URL="${IONOS_REGISTRY}"
 NAMESPACE="${1:-monadic-pipeline}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"

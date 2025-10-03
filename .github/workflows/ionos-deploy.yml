@@ -17,8 +17,7 @@
 #   - IONOS_KUBECONFIG: Base64-encoded kubeconfig for IONOS Kubernetes cluster
 #
 # Optional GitHub Secrets/Variables:
-#   - IONOS_REGISTRY: Registry URL (default: registry.ionos.com)
-#   - IONOS_PROJECT: Project/organization name (default: adaptive-systems)
+#   - IONOS_REGISTRY: Registry URL (default: adaptive-systems.cr.de-fra.ionos.com)
 #
 # To configure kubeconfig secret:
 #   1. Download kubeconfig from IONOS Cloud Console
@@ -37,8 +36,7 @@ on:
   workflow_dispatch:
 
 env:
-  IONOS_REGISTRY: ${{ vars.IONOS_REGISTRY || 'registry.ionos.com' }}
-  IONOS_PROJECT: ${{ vars.IONOS_PROJECT || 'adaptive-systems' }}
+  IONOS_REGISTRY: ${{ vars.IONOS_REGISTRY || 'adaptive-systems.cr.de-fra.ionos.com' }}
   NAMESPACE: monadic-pipeline
   CONTAINER_NAME_CLI: monadic-pipeline
   CONTAINER_NAME_WEBAPI: monadic-pipeline-webapi
@@ -100,8 +98,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}/${{ env.CONTAINER_NAME_CLI }}:latest
-            ${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}/${{ env.CONTAINER_NAME_CLI }}:${{ github.sha }}
+            ${{ env.IONOS_REGISTRY }}/${{ env.CONTAINER_NAME_CLI }}:latest
+            ${{ env.IONOS_REGISTRY }}/${{ env.CONTAINER_NAME_CLI }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -112,8 +110,8 @@ jobs:
           file: ./Dockerfile.webapi
           push: true
           tags: |
-            ${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}/${{ env.CONTAINER_NAME_WEBAPI }}:latest
-            ${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}/${{ env.CONTAINER_NAME_WEBAPI }}:${{ github.sha }}
+            ${{ env.IONOS_REGISTRY }}/${{ env.CONTAINER_NAME_WEBAPI }}:latest
+            ${{ env.IONOS_REGISTRY }}/${{ env.CONTAINER_NAME_WEBAPI }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -162,7 +160,7 @@ jobs:
           cp k8s/ollama.yaml /tmp/k8s-manifests/ollama.yaml
           
           # Replace REGISTRY_URL with actual IONOS registry URL
-          REGISTRY_URL="${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}"
+          REGISTRY_URL="${{ env.IONOS_REGISTRY }}"
           sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" /tmp/k8s-manifests/deployment.yaml
           sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" /tmp/k8s-manifests/webapi-deployment.yaml
           
@@ -208,8 +206,8 @@ jobs:
           echo "================================================"
           echo ""
           echo "Images deployed:"
-          echo "  - ${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}/${{ env.CONTAINER_NAME_CLI }}:${{ github.sha }}"
-          echo "  - ${{ env.IONOS_REGISTRY }}/${{ env.IONOS_PROJECT }}/${{ env.CONTAINER_NAME_WEBAPI }}:${{ github.sha }}"
+          echo "  - ${{ env.IONOS_REGISTRY }}/${{ env.CONTAINER_NAME_CLI }}:${{ github.sha }}"
+          echo "  - ${{ env.IONOS_REGISTRY }}/${{ env.CONTAINER_NAME_WEBAPI }}:${{ github.sha }}"
           echo ""
           echo "Namespace: ${{ env.NAMESPACE }}"
           echo "Storage class: ionos-enterprise-ssd"

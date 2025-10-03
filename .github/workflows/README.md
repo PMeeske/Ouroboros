@@ -25,8 +25,7 @@ Automatically builds, tests, and deploys MonadicPipeline to IONOS Cloud Kubernet
 - `IONOS_KUBECONFIG`: Base64-encoded kubeconfig file
 
 **Optional Variables**:
-- `IONOS_REGISTRY`: Registry URL (default: `registry.ionos.com`)
-- `IONOS_PROJECT`: Project name (default: `adaptive-systems`)
+- `IONOS_REGISTRY`: Registry URL (default: `adaptive-systems.cr.de-fra.ionos.com`)
 
 See [IONOS Deployment Guide](../../docs/IONOS_DEPLOYMENT_GUIDE.md) for detailed setup instructions.
 
