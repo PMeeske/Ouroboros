@@ -222,7 +222,7 @@ IONOS Cloud provides enterprise-grade Kubernetes with European data sovereignty 
 
 This script will:
 - Authenticate with IONOS Container Registry
-- Build and push images to registry.ionos.com
+- Build and push images to adaptive-systems.cr.de-fra.ionos.com
 - Configure IONOS-specific storage classes (ionos-enterprise-ssd)
 - Create registry pull secrets
 - Deploy all components with IONOS-optimized settings
@@ -234,8 +234,7 @@ This script will:
 
 **Environment Variables (optional):**
 ```bash
-export IONOS_REGISTRY="registry.ionos.com"
-export IONOS_PROJECT="adaptive-systems"
+export IONOS_REGISTRY="adaptive-systems.cr.de-fra.ionos.com"
 export IONOS_USERNAME="your-username"
 export IONOS_PASSWORD="your-password"
 
@@ -259,8 +258,8 @@ If you prefer manual control:
    docker build -f Dockerfile.webapi -t 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline-webapi:latest .
    
    # IONOS Cloud Container Registry
-   docker build -t registry.ionos.com/adaptive-systems/monadic-pipeline:latest .
-   docker build -f Dockerfile.webapi -t registry.ionos.com/adaptive-systems/monadic-pipeline-webapi:latest .
+   docker build -t adaptive-systems.cr.de-fra.ionos.com/monadic-pipeline:latest .
+   docker build -f Dockerfile.webapi -t adaptive-systems.cr.de-fra.ionos.com/monadic-pipeline-webapi:latest .
    
    # Docker Hub
    docker build -t your-username/monadic-pipeline:latest .
@@ -280,9 +279,9 @@ If you prefer manual control:
    docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline-webapi:latest
    
    # IONOS Cloud
-   docker login registry.ionos.com
-   docker push registry.ionos.com/adaptive-systems/monadic-pipeline:latest
-   docker push registry.ionos.com/adaptive-systems/monadic-pipeline-webapi:latest
+   docker login adaptive-systems.cr.de-fra.ionos.com
+   docker push adaptive-systems.cr.de-fra.ionos.com/monadic-pipeline:latest
+   docker push adaptive-systems.cr.de-fra.ionos.com/monadic-pipeline-webapi:latest
    
    # Docker Hub
    docker login
