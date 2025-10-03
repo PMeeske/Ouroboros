@@ -1,5 +1,5 @@
 # ✅ CLOUD DEPLOYMENT MANIFEST
-# This manifest is designed for CLOUD Kubernetes clusters (AKS/EKS/GKE).
+# This manifest is designed for CLOUD Kubernetes clusters (AKS/EKS/GKE/IONOS).
 # 
 # BEFORE DEPLOYING:
 # 1. Replace REGISTRY_URL with your container registry URL
@@ -8,7 +8,12 @@
 #
 # AUTOMATED DEPLOYMENT (Recommended):
 # - Azure AKS: ./scripts/deploy-aks.sh <registry-name>
+# - IONOS Cloud: ./scripts/deploy-ionos.sh
 # - Other clouds: ./scripts/deploy-cloud.sh <registry-url>
+#
+# IONOS Cloud example:
+# - Registry: registry.ionos.com/adaptive-systems/monadic-pipeline:latest
+# - Storage: ionos-enterprise-ssd or ionos-enterprise-hdd
 #
 # For local Kubernetes, use: k8s/deployment.yaml instead
 ---
@@ -32,12 +37,15 @@ spec:
         version: v1.0.0
     spec:
       # Uncomment and configure imagePullSecrets if using a private registry
+      # For IONOS Cloud, use: ionos-registry-secret
       # imagePullSecrets:
       #   - name: regcred
+      #   - name: ionos-registry-secret
       containers:
         - name: monadic-pipeline
           # IMPORTANT: Update this image reference to your container registry URL
           # Examples:
+          #   IONOS: registry.ionos.com/adaptive-systems/monadic-pipeline:latest
           #   Azure ACR: myregistry.azurecr.io/monadic-pipeline:latest
           #   AWS ECR: 123.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline:latest
           #   GCP GCR: gcr.io/my-project/monadic-pipeline:latest

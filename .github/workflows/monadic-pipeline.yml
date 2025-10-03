@@ -13,6 +13,15 @@
 #   - https://learn.microsoft.com/en-us/azure/aks/cluster-container-registry-integration?tabs=azure-cli#configure-acr-integration-for-existing-aks-clusters
 #   - https://github.com/Azure/aks-create-action
 #
+# IONOS Cloud Support:
+# For IONOS Cloud deployment, configure the following secrets:
+#   - IONOS_REGISTRY (default: registry.ionos.com)
+#   - IONOS_PROJECT (default: adaptive-systems)
+#   - IONOS_USERNAME (IONOS Container Registry username)
+#   - IONOS_PASSWORD (IONOS Container Registry password)
+# Then use the deploy-ionos.sh script or adapt this workflow for IONOS deployment.
+# See docs/IONOS_DEPLOYMENT_GUIDE.md for detailed instructions.
+#
 # To configure this workflow:
 #
 # 1. Set the following secrets in your repository (instructions for getting these can be found at https://docs.microsoft.com/en-us/azure/developer/github/connect-from-azure?tabs=azure-cli%2Clinux):

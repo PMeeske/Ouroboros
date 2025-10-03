@@ -21,7 +21,9 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
 - **🔄 Event Sourcing**: Complete audit trail with replay functionality
 - **🛠️ Extensible Tool System**: Plugin architecture for custom tools and functions
 - **💾 Memory Management**: Multiple conversation memory strategies
+- **📄 RecursiveChunkProcessor**: Process large contexts (100+ pages) with adaptive chunking and map-reduce
 - **🎯 Type Safety**: Leverages C# type system for compile-time guarantees
+- **☁️ IONOS Cloud Ready**: Optimized deployment for IONOS Cloud Kubernetes infrastructure
 
 ## 🏗️ Architecture
 
@@ -228,6 +230,53 @@ The MeTTa orchestrator:
 - Uses symbolic reasoning for next-step selection
 - Provides explainable AI through MeTTa symbolic queries
 - Requires `metta` executable in PATH (install from [hyperon-experimental](https://github.com/trueagi-io/hyperon-experimental))
+
+#### RecursiveChunkProcessor (Large Context Processing)
+
+Process documents and contexts that exceed model limits using adaptive chunking:
+
+```csharp
+using LangChainPipeline.Core.Processing;
+using LangChainPipeline.Core.Monads;
+
+// Define how to process each chunk
+Func<string, Task<Result<string>>> processChunk = async chunk =>
+{
+    var summary = await llm.SummarizeAsync(chunk);
+    return Result<string>.Success(summary);
+};
+
+// Define how to combine results
+Func<IEnumerable<string>, Task<Result<string>>> combineResults = async summaries =>
+{
+    var final = await llm.CombineSummariesAsync(summaries.ToList());
+    return Result<string>.Success(final);
+};
+
+// Create processor
+var processor = new RecursiveChunkProcessor(processChunk, combineResults);
+
+// Process large document (100+ pages)
+var result = await processor.ProcessLargeContextAsync<string, string>(
+    largeDocument,
+    maxChunkSize: 512,              // Adaptive chunk sizing
+    strategy: ChunkingStrategy.Adaptive  // Learns optimal size
+);
+```
+
+**Features:**
+- **Adaptive Chunking**: Learns optimal chunk sizes over time
+- **Map-Reduce Pattern**: Parallel processing for performance
+- **Token-Aware Splitting**: Respects semantic boundaries
+- **Hierarchical Joining**: Combines results intelligently
+
+**Use Cases:**
+- 📄 Long document summarization (100+ pages)
+- 💻 Large codebase analysis
+- 📚 Multi-document Q&A
+- 🔍 Research paper synthesis
+
+See [RecursiveChunking Documentation](docs/RECURSIVE_CHUNKING.md) for detailed guide and examples.
 
 
 #### Using Remote Endpoints (Ollama Cloud, OpenAI)
@@ -580,6 +629,20 @@ docker-compose up -d
 ./scripts/deploy-cloud.sh docker.io/myusername
 ```
 
+**IONOS Cloud** (recommended by Adaptive Systems Inc.):
+```bash
+# Automated deployment to IONOS Cloud Kubernetes
+# Includes registry authentication, image push, and deployment
+./scripts/deploy-ionos.sh monadic-pipeline
+
+# Or with environment variables
+export IONOS_USERNAME="your-username"
+export IONOS_PASSWORD="your-password"
+./scripts/deploy-ionos.sh
+
+# See docs/IONOS_DEPLOYMENT_GUIDE.md for detailed instructions
+```
+
 **Manual deployment**:
 ```bash
 # Or manually
@@ -670,6 +733,8 @@ This script checks your cluster type and provides specific guidance.
 ## 📚 Additional Documentation
 
 - [**Deployment Guide**](DEPLOYMENT.md) - **Comprehensive deployment instructions for all environments**
+- [**IONOS Cloud Deployment Guide**](docs/IONOS_DEPLOYMENT_GUIDE.md) - **Detailed IONOS Cloud deployment instructions**
+- [**RecursiveChunking Guide**](docs/RECURSIVE_CHUNKING.md) - **Large context processing with adaptive chunking**
 - [Configuration and Security](CONFIGURATION_AND_SECURITY.md) - Security best practices and configuration guide
 - [Implementation Guide](IMPLEMENTATION_GUIDE.md) - Detailed implementation guidance
 - [Sprint Summary](SPRINT_3_4_SUMMARY.md) - Recent development progress
@@ -684,7 +749,8 @@ This project is open source. Please check the repository for license details.
 - Built on [LangChain](https://github.com/tryAGI/LangChain) for AI/LLM integration
 - Inspired by category theory and functional programming principles
 - Special thanks to the functional programming community for mathematical foundations
+- Developed by **Adaptive Systems Inc.** for enterprise AI pipeline solutions
 
 ---
 
-**MonadicPipeline**: Where Category Theory Meets AI Pipeline Engineering 🚀
+**MonadicPipeline by Adaptive Systems Inc.**: Where Category Theory Meets AI Pipeline Engineering 🚀

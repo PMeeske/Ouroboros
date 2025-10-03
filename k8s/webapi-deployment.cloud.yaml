@@ -1,5 +1,5 @@
 # ✅ CLOUD DEPLOYMENT MANIFEST
-# This manifest is designed for CLOUD Kubernetes clusters (AKS/EKS/GKE).
+# This manifest is designed for CLOUD Kubernetes clusters (AKS/EKS/GKE/IONOS).
 # 
 # BEFORE DEPLOYING:
 # 1. Replace REGISTRY_URL with your container registry URL
@@ -8,7 +8,12 @@
 #
 # AUTOMATED DEPLOYMENT (Recommended):
 # - Azure AKS: ./scripts/deploy-aks.sh <registry-name>
+# - IONOS Cloud: ./scripts/deploy-ionos.sh
 # - Other clouds: ./scripts/deploy-cloud.sh <registry-url>
+#
+# IONOS Cloud example:
+# - Registry: registry.ionos.com/adaptive-systems/monadic-pipeline-webapi:latest
+# - Storage: ionos-enterprise-ssd or ionos-enterprise-hdd
 #
 # For local Kubernetes, use: k8s/webapi-deployment.yaml instead
 ---
@@ -34,12 +39,15 @@ spec:
         component: webapi
     spec:
       # Uncomment and configure imagePullSecrets if using a private registry
+      # For IONOS Cloud, use: ionos-registry-secret
       # imagePullSecrets:
       #   - name: regcred
+      #   - name: ionos-registry-secret
       containers:
         - name: webapi
           # IMPORTANT: Update this image reference to your registry URL
           # Examples:
+          #   IONOS: registry.ionos.com/adaptive-systems/monadic-pipeline-webapi:latest
           #   Azure ACR: myregistry.azurecr.io/monadic-pipeline-webapi:latest
           #   AWS ECR: 123.dkr.ecr.us-east-1.amazonaws.com/webapi:latest
           #   GCP GCR: gcr.io/my-project/monadic-pipeline-webapi:latest
@@ -117,6 +125,11 @@ metadata:
   namespace: monadic-pipeline
   labels:
     app: monadic-pipeline-webapi
+  annotations:
+    # IONOS Cloud LoadBalancer annotations
+    # Uncomment for IONOS Cloud deployment
+    # service.beta.kubernetes.io/ionos-loadbalancer-public-ip: "auto"
+    # service.beta.kubernetes.io/ionos-loadbalancer-algorithm: "round_robin"
 spec:
   selector:
     app: monadic-pipeline-webapi
@@ -125,7 +138,13 @@ spec:
       port: 80
       targetPort: 8080
       name: http
+    - protocol: TCP
+      port: 443
+      targetPort: 8080
+      name: https
+  # Use ClusterIP for internal access, LoadBalancer for external access (IONOS)
   type: ClusterIP
+  # For IONOS Cloud external access, change to: LoadBalancer
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -136,9 +155,17 @@ metadata:
     app: monadic-pipeline-webapi
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
+    # IONOS Cloud Ingress annotations
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
+  # Uncomment for IONOS Cloud SSL
+  # tls:
+  #   - hosts:
+  #       - monadic-pipeline.yourdomain.com
+  #     secretName: monadic-pipeline-tls
   rules:
-    - host: monadic-pipeline.local
+    - host: monadic-pipeline.local  # Change to your IONOS domain
       http:
         paths:
           - path: /

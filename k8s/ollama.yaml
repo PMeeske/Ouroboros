@@ -75,6 +75,13 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  # Storage class options:
+  # - managed-csi (Azure Disk CSI)
+  # - ionos-enterprise-ssd (IONOS Cloud SSD - recommended for models)
+  # - ionos-enterprise-hdd (IONOS Cloud HDD)
+  # - gp2 or gp3 (AWS EBS)
+  # - standard or premium-rwo (GCP)
+  storageClassName: managed-csi
   resources:
     requests:
       storage: 20Gi
