@@ -27,7 +27,7 @@ Created a comprehensive GitHub Actions workflow for IONOS Cloud deployment:
 **Required Secrets**:
 - `IONOS_REGISTRY_USERNAME`: IONOS Container Registry username
 - `IONOS_REGISTRY_PASSWORD`: IONOS Container Registry password
-- `IONOS_KUBECONFIG`: Base64-encoded kubeconfig file
+- `IONOS_KUBECONFIG`: Raw kubeconfig YAML content
 
 **Optional Variables**:
 - `IONOS_REGISTRY`: Registry URL (default: adaptive-systems.cr.de-fra.ionos.com)
@@ -99,7 +99,7 @@ Updated deployment section with:
    ```
    IONOS_REGISTRY_USERNAME: <your-ionos-username>
    IONOS_REGISTRY_PASSWORD: <your-ionos-password>
-   IONOS_KUBECONFIG: <base64-encoded-kubeconfig>
+   IONOS_KUBECONFIG: <raw-kubeconfig-yaml-content>
    ```
 6. **Push to main branch** or manually trigger workflow
 

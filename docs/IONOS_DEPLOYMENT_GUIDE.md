@@ -285,15 +285,14 @@ Configure the following secrets in your GitHub repository settings (`Settings` â
    Value: <your-ionos-password>
    ```
 
-3. **IONOS_KUBECONFIG**: Base64-encoded kubeconfig for your IONOS cluster
+3. **IONOS_KUBECONFIG**: Raw kubeconfig YAML content for your IONOS cluster
    ```bash
    # Download kubeconfig from IONOS Console
-   # Then encode it:
-   cat kubeconfig.yaml | base64 -w 0
+   # Copy the entire YAML content
    
    # Add to GitHub Secrets:
    Name: IONOS_KUBECONFIG
-   Value: <base64-encoded-kubeconfig>
+   Value: <paste-raw-kubeconfig-yaml-content>
    ```
 
 #### Optional Variables
