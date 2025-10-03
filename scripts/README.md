@@ -77,6 +77,67 @@ Automated deployment to Azure Kubernetes Service with Azure Container Registry.
 - kubectl configured for your AKS cluster
 - ACR already created
 
+#### `deploy-ionos.sh` - IONOS Cloud (NEW)
+Automated deployment to IONOS Cloud Kubernetes with IONOS Container Registry.
+
+```bash
+./scripts/deploy-ionos.sh [namespace]
+```
+
+**What it does:**
+- Authenticates with IONOS Container Registry
+- Builds and pushes images to IONOS registry
+- Updates manifests for IONOS Cloud (storage class, imagePullSecrets)
+- Deploys all components (Ollama, Qdrant, Jaeger, Web API, CLI)
+- Configures IONOS-specific settings
+
+**Example:**
+```bash
+./scripts/deploy-ionos.sh monadic-pipeline
+```
+
+**Prerequisites:**
+- kubectl configured for your IONOS Kubernetes cluster
+- Docker installed
+- IONOS Container Registry credentials (via env vars or interactive login)
+
+**Environment variables:**
+- `IONOS_REGISTRY`: Registry URL (default: adaptive-systems.cr.de-fra.ionos.com)
+- `IONOS_USERNAME`: Registry username (optional)
+- `IONOS_PASSWORD`: Registry password (optional)
+
+#### `check-ionos-deployment.sh` - IONOS Deployment Diagnostics (NEW)
+Comprehensive diagnostics tool for troubleshooting IONOS Web API deployments.
+
+```bash
+./scripts/check-ionos-deployment.sh [namespace]
+```
+
+**What it checks:**
+- Deployment and pod status
+- Recent Kubernetes events
+- Common errors (ImagePullBackOff, CrashLoopBackOff, pending PVCs)
+- Container logs (last 50 lines)
+- Service and LoadBalancer status
+- Registry secrets and ConfigMaps
+
+**Output includes:**
+- ✅ Health status indicators
+- ⚠️  Warning messages for issues
+- ❌ Error detection with solutions
+- Actionable troubleshooting recommendations
+
+**Example:**
+```bash
+./scripts/check-ionos-deployment.sh monadic-pipeline
+```
+
+**Use cases:**
+- Quick health check after deployment
+- Troubleshooting deployment failures
+- Identifying configuration issues
+- Checking service availability
+
 #### `deploy-cloud.sh` - Generic Cloud (NEW)
 Universal deployment script for any cloud Kubernetes (AWS EKS, GCP GKE, Docker Hub).
 
@@ -116,6 +177,8 @@ Helper script to load pre-built images into different cluster types.
 | Local Docker Compose | `deploy-docker.sh` | `./scripts/deploy-docker.sh production` |
 | Local Kubernetes | `deploy-k8s.sh` | `./scripts/deploy-k8s.sh` |
 | **Azure AKS + ACR** | **`deploy-aks.sh`** | **`./scripts/deploy-aks.sh myregistry`** |
+| **IONOS Cloud** | **`deploy-ionos.sh`** | **`./scripts/deploy-ionos.sh monadic-pipeline`** |
+| **IONOS Diagnostics** | **`check-ionos-deployment.sh`** | **`./scripts/check-ionos-deployment.sh`** |
 | **AWS EKS + ECR** | **`deploy-cloud.sh`** | **`./scripts/deploy-cloud.sh 123.dkr.ecr.us-east-1.amazonaws.com`** |
 | **GCP GKE + GCR** | **`deploy-cloud.sh`** | **`./scripts/deploy-cloud.sh gcr.io/my-project`** |
 
@@ -127,6 +190,15 @@ If you encounter `ImagePullBackOff` errors in Kubernetes:
 ```bash
 # Use the local deployment script
 ./scripts/deploy-k8s.sh
+```
+
+**On IONOS Cloud:**
+```bash
+# Deploy to IONOS Cloud
+./scripts/deploy-ionos.sh monadic-pipeline
+
+# Check deployment status and diagnose issues
+./scripts/check-ionos-deployment.sh monadic-pipeline
 ```
 
 **On Cloud Clusters (AKS/EKS/GKE):**
@@ -143,6 +215,9 @@ If you encounter `ImagePullBackOff` errors in Kubernetes:
 # Check pod events
 kubectl describe pod <pod-name> -n monadic-pipeline
 kubectl get events -n monadic-pipeline --sort-by='.lastTimestamp'
+
+# For IONOS Cloud
+kubectl get secret ionos-registry-secret -n monadic-pipeline
 
 # Verify images in registry (Azure)
 az acr repository list --name myregistry

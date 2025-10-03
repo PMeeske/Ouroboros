@@ -534,6 +534,25 @@ kubectl port-forward -n monadic-pipeline service/jaeger-query 16686:16686
 
 ## Troubleshooting
 
+### Quick Diagnostics
+
+For quick deployment diagnostics, use the automated diagnostics script:
+
+```bash
+./scripts/check-ionos-deployment.sh [namespace]
+
+# Example
+./scripts/check-ionos-deployment.sh monadic-pipeline
+```
+
+This script automatically checks:
+- Deployment and pod status
+- Recent events and errors
+- Common issues (ImagePullBackOff, CrashLoopBackOff, pending PVCs)
+- Container logs
+- Service and resource status
+- Provides actionable troubleshooting steps
+
 ### Common Issues
 
 #### 1. ImagePullBackOff
