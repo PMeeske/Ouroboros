@@ -1,4 +1,8 @@
-# This workflow will build and push an application to a Azure Kubernetes Service (AKS) cluster when you push your code
+# This workflow will build and push an application to an Azure Kubernetes Service (AKS) cluster
+#
+# ⚠️  NOTICE: This workflow is for Azure AKS deployments (Legacy)
+# The primary deployment target is now IONOS Cloud. See ionos-deploy.yml workflow.
+# This workflow is kept for reference and can be manually triggered if needed.
 #
 # This workflow includes:
 # - Testing: Runs xUnit tests before building images
@@ -46,11 +50,12 @@
 # For more samples to get started with GitHub Action workflows to deploy to Azure, refer to https://github.com/Azure/actions-workflow-samples
 # For more options with the actions used below please refer to https://github.com/Azure/login
 
-name: monadic-pipeline
+name: Azure AKS Deployment (Legacy)
 
 on:
-  push:
-    branches: [main]
+  # Disabled by default - IONOS Cloud is now the primary deployment target
+  # push:
+  #   branches: [main]
   workflow_dispatch:
 
 env:
