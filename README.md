@@ -726,7 +726,16 @@ This script checks your cluster type and provides specific guidance.
    ```
    Automatically builds, pushes to ACR, and deploys to AKS.
 
-3. **For AWS EKS, GCP GKE, or Docker Hub**:
+3. **For IONOS Cloud**:
+   ```bash
+   ./scripts/deploy-ionos.sh monadic-pipeline
+   
+   # Check deployment status
+   ./scripts/check-ionos-deployment.sh monadic-pipeline
+   ```
+   Automatically builds, pushes to IONOS registry, and deploys to IONOS Cloud.
+
+4. **For AWS EKS, GCP GKE, or Docker Hub**:
    ```bash
    # AWS EKS
    ./scripts/deploy-cloud.sh 123456789.dkr.ecr.us-east-1.amazonaws.com
