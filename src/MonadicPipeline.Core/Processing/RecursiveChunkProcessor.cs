@@ -1,0 +1,334 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using LangChainPipeline.Core.Monads;
+
+namespace LangChainPipeline.Core.Processing;
+
+/// <summary>
+/// Interface for processing large contexts by recursively chunking them into smaller pieces.
+/// Implements map-reduce pattern for parallel chunk processing with adaptive chunking strategies.
+/// </summary>
+public interface IRecursiveChunkProcessor
+{
+    /// <summary>
+    /// Processes a large context by chunking it and applying processing to each chunk.
+    /// </summary>
+    /// <typeparam name="TInput">Type of the input context.</typeparam>
+    /// <typeparam name="TOutput">Type of the output result.</typeparam>
+    /// <param name="largeContext">The large context to process.</param>
+    /// <param name="maxChunkSize">Maximum chunk size in tokens (default: 512).</param>
+    /// <param name="strategy">Chunking strategy to use (default: Adaptive).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Result containing the processed output or error.</returns>
+    Task<Result<TOutput>> ProcessLargeContextAsync<TInput, TOutput>(
+        TInput largeContext,
+        int maxChunkSize = 512,
+        ChunkingStrategy strategy = ChunkingStrategy.Adaptive,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Recursive chunk processor that splits large contexts into smaller chunks,
+/// processes them in parallel using map-reduce pattern, and combines results.
+/// Features adaptive chunking with conditioned stimulus learning.
+/// </summary>
+public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
+{
+    private readonly Func<string, Task<Result<string>>> _processChunkFunc;
+    private readonly Func<IEnumerable<string>, Task<Result<string>>> _combineResultsFunc;
+    private readonly ConcurrentDictionary<int, (int successCount, int failureCount)> _chunkSizePerformance;
+    private const int MinChunkSize = 256;
+    private const int MaxChunkSize = 1024;
+
+    /// <summary>
+    /// Initializes a new instance of RecursiveChunkProcessor.
+    /// </summary>
+    /// <param name="processChunkFunc">Function to process a single chunk of text.</param>
+    /// <param name="combineResultsFunc">Function to combine multiple chunk results into final output.</param>
+    public RecursiveChunkProcessor(
+        Func<string, Task<Result<string>>> processChunkFunc,
+        Func<IEnumerable<string>, Task<Result<string>>> combineResultsFunc)
+    {
+        _processChunkFunc = processChunkFunc ?? throw new ArgumentNullException(nameof(processChunkFunc));
+        _combineResultsFunc = combineResultsFunc ?? throw new ArgumentNullException(nameof(combineResultsFunc));
+        _chunkSizePerformance = new ConcurrentDictionary<int, (int successCount, int failureCount)>();
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<TOutput>> ProcessLargeContextAsync<TInput, TOutput>(
+        TInput largeContext,
+        int maxChunkSize = 512,
+        ChunkingStrategy strategy = ChunkingStrategy.Adaptive,
+        CancellationToken cancellationToken = default)
+    {
+        if (largeContext is not string textContext)
+        {
+            return Result<TOutput>.Failure("Only string input is currently supported");
+        }
+
+        try
+        {
+            // Determine optimal chunk size
+            var chunkSize = strategy == ChunkingStrategy.Adaptive 
+                ? GetAdaptiveChunkSize(maxChunkSize) 
+                : maxChunkSize;
+
+            // Split context into chunks
+            var chunks = SplitIntoChunks(textContext, chunkSize);
+            
+            if (chunks.Count == 0)
+            {
+                return Result<TOutput>.Failure("Failed to split context into chunks");
+            }
+
+            // Process chunks in parallel (map phase)
+            var chunkResults = await ProcessChunksInParallelAsync(chunks, chunkSize, strategy, cancellationToken);
+
+            // Check for failures
+            var failures = chunkResults.Where(r => !r.Success).ToList();
+            if (failures.Any())
+            {
+                // Update performance metrics for failures
+                if (strategy == ChunkingStrategy.Adaptive)
+                {
+                    UpdatePerformanceMetrics(chunkSize, false);
+                }
+                
+                return Result<TOutput>.Failure(
+                    $"Failed to process {failures.Count} out of {chunkResults.Count} chunks");
+            }
+
+            // Update performance metrics for successes
+            if (strategy == ChunkingStrategy.Adaptive)
+            {
+                UpdatePerformanceMetrics(chunkSize, true);
+            }
+
+            // Combine results (reduce phase)
+            var combinedResult = await CombineChunkResultsAsync(
+                chunkResults.Select(r => r.Output).ToList(),
+                cancellationToken);
+
+            if (combinedResult.IsFailure)
+            {
+                return Result<TOutput>.Failure($"Failed to combine chunk results: {combinedResult.Error}");
+            }
+
+            // Convert result to TOutput
+            if (combinedResult.Value is TOutput output)
+            {
+                return Result<TOutput>.Success(output);
+            }
+
+            return Result<TOutput>.Failure(
+                $"Cannot convert combined result of type {combinedResult.Value?.GetType()} to {typeof(TOutput)}");
+        }
+        catch (OperationCanceledException)
+        {
+            return Result<TOutput>.Failure("Processing was cancelled");
+        }
+        catch (Exception ex)
+        {
+            return Result<TOutput>.Failure($"Unexpected error during recursive processing: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Splits text into chunks of approximately the specified size.
+    /// Uses token-aware splitting to avoid breaking semantic units.
+    /// </summary>
+    private List<string> SplitIntoChunks(string text, int chunkSize)
+    {
+        var chunks = new List<string>();
+        
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return chunks;
+        }
+
+        // Simple token approximation: ~4 characters per token
+        var chunkCharSize = chunkSize * 4;
+        var overlap = chunkSize / 4; // 25% overlap to maintain context
+        var overlapCharSize = overlap * 4;
+
+        var position = 0;
+        while (position < text.Length)
+        {
+            var remainingLength = text.Length - position;
+            var currentChunkSize = Math.Min(chunkCharSize, remainingLength);
+
+            // Try to break at sentence boundaries
+            var chunk = text.Substring(position, currentChunkSize);
+            
+            // If not at the end, try to find a good break point
+            if (position + currentChunkSize < text.Length)
+            {
+                var lastPeriod = chunk.LastIndexOf(". ");
+                var lastNewline = chunk.LastIndexOf('\n');
+                var breakPoint = Math.Max(lastPeriod, lastNewline);
+
+                if (breakPoint > currentChunkSize / 2) // Only break if we're past halfway
+                {
+                    currentChunkSize = breakPoint + 1;
+                    chunk = text.Substring(position, currentChunkSize);
+                }
+            }
+
+            chunks.Add(chunk.Trim());
+            
+            // Move position forward with overlap
+            position += currentChunkSize - overlapCharSize;
+            
+            // Ensure we make progress even with overlap
+            if (position <= 0 || position >= text.Length - overlapCharSize)
+            {
+                position = text.Length;
+            }
+        }
+
+        return chunks;
+    }
+
+    /// <summary>
+    /// Processes chunks in parallel using the map pattern.
+    /// </summary>
+    private async Task<List<ChunkResult<string>>> ProcessChunksInParallelAsync(
+        List<string> chunks,
+        int chunkSize,
+        ChunkingStrategy strategy,
+        CancellationToken cancellationToken)
+    {
+        var results = new ConcurrentBag<ChunkResult<string>>();
+        var options = new ParallelOptions
+        {
+            CancellationToken = cancellationToken,
+            MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 4) // Limit parallelism
+        };
+
+        await Parallel.ForEachAsync(
+            chunks.Select((chunk, index) => (chunk, index)),
+            options,
+            async (item, ct) =>
+            {
+                var (chunk, index) = item;
+                var stopwatch = Stopwatch.StartNew();
+
+                try
+                {
+                    var result = await _processChunkFunc(chunk);
+                    stopwatch.Stop();
+
+                    var metadata = new ChunkMetadata(
+                        Index: index,
+                        TotalChunks: chunks.Count,
+                        TokenCount: EstimateTokenCount(chunk),
+                        Strategy: strategy
+                    );
+
+                    var chunkResult = new ChunkResult<string>(
+                        Output: result.IsSuccess ? result.Value : string.Empty,
+                        Metadata: metadata,
+                        ProcessingTime: stopwatch.Elapsed,
+                        Success: result.IsSuccess
+                    );
+
+                    results.Add(chunkResult);
+                }
+                catch
+                {
+                    stopwatch.Stop();
+                    
+                    var metadata = new ChunkMetadata(
+                        Index: index,
+                        TotalChunks: chunks.Count,
+                        TokenCount: EstimateTokenCount(chunk),
+                        Strategy: strategy
+                    );
+
+                    var failedResult = new ChunkResult<string>(
+                        Output: string.Empty,
+                        Metadata: metadata,
+                        ProcessingTime: stopwatch.Elapsed,
+                        Success: false
+                    );
+
+                    results.Add(failedResult);
+                }
+            });
+
+        return results.OrderBy(r => r.Metadata.Index).ToList();
+    }
+
+    /// <summary>
+    /// Combines chunk results using the reduce pattern with hierarchical joining.
+    /// </summary>
+    private async Task<Result<string>> CombineChunkResultsAsync(
+        List<string> chunkOutputs,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Use the provided combine function
+            var result = await _combineResultsFunc(chunkOutputs);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return Result<string>.Failure($"Error combining results: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Gets the adaptive chunk size based on historical performance using conditioned stimulus learning.
+    /// </summary>
+    private int GetAdaptiveChunkSize(int requestedMaxSize)
+    {
+        // Start with requested size
+        var candidateSize = Math.Clamp(requestedMaxSize, MinChunkSize, MaxChunkSize);
+
+        // If we have performance data, optimize based on success rates
+        if (_chunkSizePerformance.Any())
+        {
+            var bestPerforming = _chunkSizePerformance
+                .Where(kvp => kvp.Value.successCount > 0)
+                .Select(kvp => new
+                {
+                    Size = kvp.Key,
+                    SuccessRate = (double)kvp.Value.successCount / (kvp.Value.successCount + kvp.Value.failureCount)
+                })
+                .OrderByDescending(x => x.SuccessRate)
+                .ThenByDescending(x => x.Size) // Prefer larger chunks when success rates are equal
+                .FirstOrDefault();
+
+            if (bestPerforming != null && bestPerforming.SuccessRate > 0.8)
+            {
+                candidateSize = bestPerforming.Size;
+            }
+        }
+
+        return candidateSize;
+    }
+
+    /// <summary>
+    /// Updates performance metrics for adaptive learning.
+    /// </summary>
+    private void UpdatePerformanceMetrics(int chunkSize, bool success)
+    {
+        _chunkSizePerformance.AddOrUpdate(
+            chunkSize,
+            _ => success ? (1, 0) : (0, 1),
+            (_, current) => success 
+                ? (current.successCount + 1, current.failureCount)
+                : (current.successCount, current.failureCount + 1)
+        );
+    }
+
+    /// <summary>
+    /// Estimates token count from text (rough approximation).
+    /// </summary>
+    private static int EstimateTokenCount(string text)
+    {
+        // Rough approximation: ~4 characters per token on average
+        return text.Length / 4;
+    }
+}
