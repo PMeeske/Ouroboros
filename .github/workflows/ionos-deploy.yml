@@ -14,14 +14,14 @@
 # Required GitHub Secrets:
 #   - IONOS_REGISTRY_USERNAME: IONOS Container Registry username
 #   - IONOS_REGISTRY_PASSWORD: IONOS Container Registry password (or access token)
-#   - IONOS_KUBECONFIG: Base64-encoded kubeconfig for IONOS Kubernetes cluster
+#   - IONOS_KUBECONFIG: Raw kubeconfig YAML content for IONOS Kubernetes cluster
 #
 # Optional GitHub Secrets/Variables:
 #   - IONOS_REGISTRY: Registry URL (default: adaptive-systems.cr.de-fra.ionos.com)
 #
 # To configure kubeconfig secret:
 #   1. Download kubeconfig from IONOS Cloud Console
-#   2. Base64 encode it: cat kubeconfig.yaml | base64 -w 0
+#   2. Copy the raw YAML content
 #   3. Add to GitHub Secrets as IONOS_KUBECONFIG
 #
 # For more information:
@@ -130,7 +130,7 @@ jobs:
 
       - name: Configure kubectl for IONOS
         run: |
-          echo "${{ secrets.IONOS_KUBECONFIG }}" | base64 -d > kubeconfig.yaml
+          echo "${{ secrets.IONOS_KUBECONFIG }}" > kubeconfig.yaml
           export KUBECONFIG=$(pwd)/kubeconfig.yaml
           kubectl cluster-info
           echo "KUBECONFIG=$(pwd)/kubeconfig.yaml" >> $GITHUB_ENV
