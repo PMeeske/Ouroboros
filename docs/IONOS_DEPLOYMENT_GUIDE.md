@@ -68,7 +68,7 @@ Before deploying to IONOS Cloud, ensure you have:
 
 ### 1. Create Kubernetes Cluster
 
-Using IONOS Cloud Console:
+Using [IONOS Cloud Console (DCD)](https://dcd.ionos.com):
 
 1. Navigate to **Compute** → **Managed Kubernetes**
 2. Click **Create Cluster**
@@ -99,7 +99,7 @@ ionosctl k8s cluster create \
 After cluster creation:
 
 ```bash
-# Using IONOS Console
+# Using IONOS Console (https://dcd.ionos.com)
 # Navigate to Cluster → Download kubeconfig
 
 # Using CLI
@@ -118,7 +118,7 @@ kubectl get nodes
 ### 1. Enable IONOS Container Registry
 
 ```bash
-# Create registry (via IONOS Console or CLI)
+# Create registry (via IONOS Console https://dcd.ionos.com or CLI)
 # Registry URL format: <project-name>.cr.<datacenter>.ionos.com
 
 # For Adaptive Systems Inc.:
@@ -287,7 +287,7 @@ Configure the following secrets in your GitHub repository settings (`Settings` �
 
 3. **IONOS_KUBECONFIG**: Raw kubeconfig YAML content for your IONOS cluster
    ```bash
-   # Download kubeconfig from IONOS Console
+   # Download kubeconfig from IONOS Console (https://dcd.ionos.com)
    # Copy the entire YAML content
    
    # Add to GitHub Secrets:
@@ -596,7 +596,7 @@ kubectl describe storageclass ionos-enterprise-ssd
 
 **Solution**:
 ```bash
-# Check IONOS Cloud Console for load balancer creation
+# Check IONOS Cloud Console (https://dcd.ionos.com) for load balancer creation
 # It may take 5-10 minutes
 
 # Verify service configuration
@@ -611,7 +611,7 @@ kubectl describe service monadic-pipeline-webapi-service -n monadic-pipeline
 
 **Solution**:
 ```bash
-# Check firewall rules in IONOS Cloud Console
+# Check firewall rules in IONOS Cloud Console (https://dcd.ionos.com)
 # Ensure port 80/443 is open for LoadBalancer
 
 # Verify network policies
@@ -692,8 +692,9 @@ kubectl delete -f k8s/jaeger.yaml
 
 For IONOS Cloud specific issues:
 - **Documentation**: [cloud.ionos.com/docs](https://cloud.ionos.com/docs)
-- **Support**: IONOS Cloud Support Portal
-- **Community**: IONOS Cloud Community Forum
+- **Cloud Console (DCD)**: [dcd.ionos.com](https://dcd.ionos.com) - Manage Kubernetes clusters, container registry, and infrastructure
+- **Support Portal**: [cloud.ionos.com/support](https://cloud.ionos.com/support) - IONOS Cloud Support Portal
+- **Community Forum**: [community.ionos.com](https://community.ionos.com) - IONOS Cloud Community Forum
 
 For MonadicPipeline issues:
 - **GitHub Issues**: [github.com/PMeeske/MonadicPipeline/issues](https://github.com/PMeeske/MonadicPipeline/issues)
