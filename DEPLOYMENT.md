@@ -211,6 +211,39 @@ This script will:
 
 This script will handle authentication, building, pushing, and deployment.
 
+**Option 3: IONOS Cloud (Recommended by Adaptive Systems Inc.)**
+
+IONOS Cloud provides enterprise-grade Kubernetes with European data sovereignty and cost-effective pricing:
+
+```bash
+# Automated IONOS Cloud deployment
+./scripts/deploy-ionos.sh monadic-pipeline
+```
+
+This script will:
+- Authenticate with IONOS Container Registry
+- Build and push images to registry.ionos.com
+- Configure IONOS-specific storage classes (ionos-enterprise-ssd)
+- Create registry pull secrets
+- Deploy all components with IONOS-optimized settings
+
+**Prerequisites:**
+- IONOS Cloud account and Managed Kubernetes cluster
+- kubectl configured for IONOS cluster (download kubeconfig from IONOS Console)
+- IONOS Container Registry credentials
+
+**Environment Variables (optional):**
+```bash
+export IONOS_REGISTRY="registry.ionos.com"
+export IONOS_PROJECT="adaptive-systems"
+export IONOS_USERNAME="your-username"
+export IONOS_PASSWORD="your-password"
+
+./scripts/deploy-ionos.sh
+```
+
+For detailed IONOS deployment instructions, see [IONOS Cloud Deployment Guide](docs/IONOS_DEPLOYMENT_GUIDE.md).
+
 #### Manual Cloud Deployment
 
 If you prefer manual control:
@@ -224,6 +257,10 @@ If you prefer manual control:
    # AWS Elastic Container Registry (ECR)
    docker build -t 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline:latest .
    docker build -f Dockerfile.webapi -t 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline-webapi:latest .
+   
+   # IONOS Cloud Container Registry
+   docker build -t registry.ionos.com/adaptive-systems/monadic-pipeline:latest .
+   docker build -f Dockerfile.webapi -t registry.ionos.com/adaptive-systems/monadic-pipeline-webapi:latest .
    
    # Docker Hub
    docker build -t your-username/monadic-pipeline:latest .
@@ -241,6 +278,11 @@ If you prefer manual control:
    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 123456789.dkr.ecr.us-east-1.amazonaws.com
    docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline:latest
    docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/monadic-pipeline-webapi:latest
+   
+   # IONOS Cloud
+   docker login registry.ionos.com
+   docker push registry.ionos.com/adaptive-systems/monadic-pipeline:latest
+   docker push registry.ionos.com/adaptive-systems/monadic-pipeline-webapi:latest
    
    # Docker Hub
    docker login
