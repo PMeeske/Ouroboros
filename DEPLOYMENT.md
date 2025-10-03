@@ -387,6 +387,9 @@ kubectl rollout status deployment/monadic-pipeline -n monadic-pipeline
 #### Port Forwarding
 
 ```bash
+# Web API
+kubectl port-forward -n monadic-pipeline service/monadic-pipeline-webapi-service 8080:80
+
 # Jaeger UI
 kubectl port-forward -n monadic-pipeline service/jaeger-ui 16686:16686
 

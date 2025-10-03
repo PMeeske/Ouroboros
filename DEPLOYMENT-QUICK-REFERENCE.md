@@ -60,6 +60,7 @@ sudo systemctl status monadic-pipeline
 
 | Service | Local | Docker | Kubernetes |
 |---------|-------|--------|------------|
+| Web API | http://localhost:8080 | http://localhost:8080 | Port-forward required |
 | Ollama | http://localhost:11434 | http://localhost:11434 | Port-forward required |
 | Qdrant | http://localhost:6333 | http://localhost:6333 | Port-forward required |
 | Jaeger UI | http://localhost:16686 | http://localhost:16686 | Port-forward required |
@@ -87,6 +88,7 @@ docker-compose down -v
 ### Kubernetes Commands
 ```bash
 # Port forwarding
+kubectl port-forward -n monadic-pipeline service/monadic-pipeline-webapi-service 8080:80
 kubectl port-forward -n monadic-pipeline service/jaeger-ui 16686:16686
 kubectl port-forward -n monadic-pipeline service/qdrant-service 6333:6333
 
