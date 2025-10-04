@@ -29,7 +29,7 @@ variable "cluster_name" {
 variable "k8s_version" {
   description = "Kubernetes version"
   type        = string
-  default     = "1.29"  # Updated from 1.28 - See docs/K8S_VERSION_COMPATIBILITY.md
+  default     = "1.33.3"  # Updated from 1.28 - See docs/K8S_VERSION_COMPATIBILITY.md
   
   # Version Selection Guidelines:
   # - Use 1.29+ for best IONOS support and security updates
