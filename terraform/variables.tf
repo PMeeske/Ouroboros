@@ -69,9 +69,9 @@ variable "node_count" {
 }
 
 variable "cpu_family" {
-  description = "CPU family for nodes"
+  description = "CPU family for nodes (INTEL_SKYLAKE, INTEL_XEON, AMD_EPYC)"
   type        = string
-  default     = "AMD_OPTERON"
+  default     = "INTEL_SKYLAKE"
 }
 
 variable "cores_count" {
