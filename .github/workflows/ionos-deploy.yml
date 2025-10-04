@@ -15,9 +15,12 @@
 #   - IONOS_REGISTRY_USERNAME: IONOS Container Registry username
 #   - IONOS_REGISTRY_PASSWORD: IONOS Container Registry password (or access token)
 #   - IONOS_KUBECONFIG: Raw kubeconfig YAML content for IONOS Kubernetes cluster
+#   - IONOS_ADMIN_USERNAME: IONOS Cloud API username for infrastructure management
+#   - IONOS_ADMIN_PASSWORD: IONOS Cloud API password for infrastructure management
 #
 # Optional GitHub Secrets/Variables:
 #   - IONOS_REGISTRY: Registry URL (default: adaptive-systems.cr.de-fra.ionos.com)
+#   - IONOS_ADMIN_TOKEN: IONOS Cloud API token (alternative to username/password)
 #
 # To configure kubeconfig secret:
 #   1. Download kubeconfig from IONOS Cloud Console
@@ -42,8 +45,81 @@ env:
   CONTAINER_NAME_WEBAPI: monadic-pipeline-webapi
 
 jobs:
+  infrastructure:
+    name: Manage IONOS Infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify IONOS Cloud API access
+        env:
+          IONOS_USERNAME: ${{ secrets.IONOS_ADMIN_USERNAME }}
+          IONOS_PASSWORD: ${{ secrets.IONOS_ADMIN_PASSWORD }}
+          IONOS_TOKEN: ${{ secrets.IONOS_ADMIN_TOKEN }}
+        run: |
+          echo "Verifying IONOS Cloud API connectivity..."
+          
+          # Use token if available, otherwise use basic auth
+          if [ -n "$IONOS_TOKEN" ]; then
+            AUTH_HEADER="Authorization: Bearer $IONOS_TOKEN"
+          elif [ -n "$IONOS_USERNAME" ] && [ -n "$IONOS_PASSWORD" ]; then
+            AUTH_HEADER="Authorization: Basic $(echo -n "$IONOS_USERNAME:$IONOS_PASSWORD" | base64)"
+          else
+            echo "⚠️  Warning: No IONOS admin credentials provided. Skipping infrastructure verification."
+            echo "Set IONOS_ADMIN_USERNAME/IONOS_ADMIN_PASSWORD or IONOS_ADMIN_TOKEN secrets to enable infrastructure management."
+            exit 0
+          fi
+          
+          # Test API connectivity using IONOS Cloud API v6
+          # Reference: .github/workflows/ionos-api.yaml (IONOS Cloud API OpenAPI Specification)
+          response=$(curl -s -w "\n%{http_code}" -H "$AUTH_HEADER" \
+            -H "Content-Type: application/json" \
+            https://api.ionos.com/cloudapi/v6/ || echo "000")
+          
+          http_code=$(echo "$response" | tail -n1)
+          
+          if [ "$http_code" = "200" ]; then
+            echo "✓ Successfully connected to IONOS Cloud API"
+            echo "✓ API Specification: .github/workflows/ionos-api.yaml"
+          elif [ "$http_code" = "401" ]; then
+            echo "❌ Authentication failed. Please verify IONOS_ADMIN credentials."
+            exit 1
+          elif [ "$http_code" = "000" ]; then
+            echo "❌ Failed to connect to IONOS Cloud API"
+            exit 1
+          else
+            echo "⚠️  Unexpected HTTP status code: $http_code"
+            echo "Response: $(echo "$response" | head -n -1)"
+          fi
+
+      - name: Ensure infrastructure prerequisites
+        env:
+          IONOS_USERNAME: ${{ secrets.IONOS_ADMIN_USERNAME }}
+          IONOS_PASSWORD: ${{ secrets.IONOS_ADMIN_PASSWORD }}
+          IONOS_TOKEN: ${{ secrets.IONOS_ADMIN_TOKEN }}
+        run: |
+          # Skip if no credentials
+          if [ -z "$IONOS_TOKEN" ] && [ -z "$IONOS_USERNAME" ]; then
+            echo "⚠️  Skipping infrastructure management - no admin credentials configured"
+            exit 0
+          fi
+          
+          echo "Infrastructure management capabilities enabled via IONOS Cloud API v6"
+          echo "API Reference: .github/workflows/ionos-api.yaml"
+          echo ""
+          echo "Available infrastructure operations:"
+          echo "  - Data centers management"
+          echo "  - Kubernetes cluster provisioning"
+          echo "  - Network configuration"
+          echo "  - Storage provisioning"
+          echo ""
+          echo "Note: Infrastructure is assumed to be pre-provisioned."
+          echo "      For automated provisioning, extend this job with specific API calls."
+
   test:
     name: Run Tests
+    needs: [infrastructure]
     permissions:
       contents: read
       checks: write
