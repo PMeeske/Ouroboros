@@ -2,9 +2,59 @@
 
 This directory contains deployment scripts and configuration files for various deployment scenarios.
 
+## Quick Reference
+
+| Scenario | Script | Command |
+|----------|--------|---------| 
+| **Infrastructure Dependency Validation** | **`validate-infrastructure-dependencies.sh`** | **`./scripts/validate-infrastructure-dependencies.sh`** |
+| **Terraform Validation** | **`validate-terraform.sh`** | **`./scripts/validate-terraform.sh dev`** |
+| **Terraform Management** | **`manage-infrastructure.sh`** | **`./scripts/manage-infrastructure.sh apply dev`** |
+| **Check External Access** | **`check-external-access.sh`** | **`./scripts/check-external-access.sh dev`** |
+| Local Docker Compose | `deploy-docker.sh` | `./scripts/deploy-docker.sh production` |
+| Local Kubernetes | `deploy-k8s.sh` | `./scripts/deploy-k8s.sh` |
+| **Azure AKS + ACR** | **`deploy-aks.sh`** | **`./scripts/deploy-aks.sh myregistry`** |
+| **IONOS Cloud** | **`deploy-ionos.sh`** | **`./scripts/deploy-ionos.sh monadic-pipeline`** |
+
 ## Scripts Overview
 
 ### Infrastructure Management
+
+#### `validate-infrastructure-dependencies.sh` - Infrastructure Dependency Validation (NEW)
+Validates that all infrastructure dependencies between C#, Kubernetes, and Terraform are correctly configured.
+
+```bash
+./scripts/validate-infrastructure-dependencies.sh
+```
+
+**What it checks:**
+- Terraform configuration and validation
+- Kubernetes manifest syntax and structure  
+- C# application configuration (appsettings.json)
+- Configuration consistency across layers
+- Docker and Docker Compose files
+- Resource requirements and allocation
+- Storage configuration alignment
+- Network configuration
+- Security configuration (secrets, registry tokens)
+- CI/CD workflow configuration
+
+**Output:**
+- ✓ Passed checks in green
+- ✗ Failed checks in red
+- ⚠ Warnings in yellow
+- Comprehensive validation summary
+
+**Use case:**
+- Before deploying to any environment
+- After making infrastructure changes
+- When troubleshooting deployment issues
+- Before creating a PR with infrastructure changes
+- Validating end-to-end configuration
+
+**See also:**
+- [Infrastructure Dependencies Guide](../docs/INFRASTRUCTURE_DEPENDENCIES.md)
+- [Terraform-K8s Integration Guide](../docs/TERRAFORM_K8S_INTEGRATION.md)
+- [Environment Infrastructure Mapping](../docs/ENVIRONMENT_INFRASTRUCTURE_MAPPING.md)
 
 #### `validate-terraform.sh` - Terraform Validation (NEW)
 Validates your Terraform infrastructure setup before provisioning.
