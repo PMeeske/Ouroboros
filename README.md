@@ -49,6 +49,26 @@ MonadicPipeline follows a **Functional Pipeline Architecture** with monadic comp
                     └─────────────────┘
 ```
 
+### Iterative Refinement Architecture
+
+The reasoning pipeline implements a **sophisticated iterative refinement architecture** that enables true progressive enhancement across multiple critique-improve cycles:
+
+```
+Iteration 0:  Draft ──────────────────────────────────────┐
+                │                                          │
+Iteration 1:  Critique(Draft) → Improve → FinalSpec₁     │
+                                              │            │
+Iteration 2:  Critique(FinalSpec₁) → Improve → FinalSpec₂│
+                                              │            │
+Iteration N:  Critique(FinalSpec_{N-1}) → Improve → FinalSpec_N
+```
+
+**Key Architectural Features:**
+- **State Chaining**: Each iteration uses `GetMostRecentReasoningState()` to build upon the previous improvement
+- **Polymorphic States**: Both `Draft` and `FinalSpec` are `ReasoningState` instances that can be processed uniformly
+- **Event Sourcing**: Complete immutable audit trail enables replay and analysis of the entire reasoning process
+- **Monadic Composition**: `CritiqueArrow` and `ImproveArrow` compose as pure Kleisli arrows for type-safe pipelines
+
 ## 🔧 Getting Started
 
 ### Prerequisites
@@ -459,6 +479,8 @@ Available pipeline tools:
 
 ### AI Reasoning Pipeline with Refinement Loop
 
+The refinement loop implements an **iterative refinement architecture** where each iteration builds upon the previous improvement, creating a true progressive enhancement cycle.
+
 ```bash
 # Navigate to CLI directory
 cd src/MonadicPipeline.CLI
@@ -466,15 +488,22 @@ cd src/MonadicPipeline.CLI
 # Run complete refinement workflow: Draft -> Critique -> Improve
 dotnet run -- pipeline -d "SetTopic('microservices architecture') | UseRefinementLoop('2')"
 
-# The refinement loop automatically:
+# The refinement loop architecture works as follows:
 # 1. Creates an initial draft (if none exists)
-# 2. Critiques the draft to identify gaps and issues
-# 3. Improves the draft based on critique
-# 4. Repeats the critique-improve cycle for the specified iterations
+# 2. First iteration: Critiques the draft → produces first improvement
+# 3. Second iteration: Critiques the first improvement → produces second improvement
+# 4. Each iteration uses the most recent reasoning state (Draft or FinalSpec) as the baseline
+#    This creates true iterative refinement where each cycle builds on previous improvements
 
 # You can also run individual steps:
 dotnet run -- pipeline -d "SetTopic('AI Safety') | UseDraft | UseCritique | UseImprove"
 ```
+
+**Architecture Highlights:**
+- **Iterative State Chaining**: Each critique-improve cycle uses the most recent state as input
+- **Progressive Refinement**: Improvements compound across iterations rather than restarting from the original draft
+- **Monadic Error Handling**: Safe arrows (SafeCritiqueArrow, SafeImproveArrow) provide comprehensive error handling
+- **Event Sourcing**: Complete audit trail of all reasoning steps for replay and analysis
 
 ### MeTTa Symbolic Reasoning
 
