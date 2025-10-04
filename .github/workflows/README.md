@@ -15,17 +15,26 @@ Automatically builds, tests, and deploys MonadicPipeline to IONOS Cloud Kubernet
 - Manual trigger via GitHub Actions UI
 
 **Jobs**:
-1. **test**: Runs xUnit tests
-2. **build-and-push**: Builds Docker images and pushes to IONOS Container Registry
-3. **deploy**: Deploys to IONOS Kubernetes cluster
+1. **infrastructure**: Manages IONOS Cloud infrastructure via API (optional)
+2. **test**: Runs xUnit tests
+3. **build-and-push**: Builds Docker images and pushes to IONOS Container Registry
+4. **deploy**: Deploys to IONOS Kubernetes cluster
 
 **Required Secrets**:
 - `IONOS_REGISTRY_USERNAME`: IONOS Container Registry username
 - `IONOS_REGISTRY_PASSWORD`: IONOS Container Registry password
 - `IONOS_KUBECONFIG`: Base64-encoded kubeconfig file
 
+**Optional Secrets** (for infrastructure management):
+- `IONOS_ADMIN_USERNAME`: IONOS Cloud API username
+- `IONOS_ADMIN_PASSWORD`: IONOS Cloud API password
+- `IONOS_ADMIN_TOKEN`: IONOS Cloud API token (preferred over username/password)
+
 **Optional Variables**:
 - `IONOS_REGISTRY`: Registry URL (default: `adaptive-systems.cr.de-fra.ionos.com`)
+
+**API Specification**:
+- `ionos-api.yaml`: IONOS Cloud API v6 OpenAPI specification for infrastructure management
 
 See [IONOS Deployment Guide](../../docs/IONOS_DEPLOYMENT_GUIDE.md) for detailed setup instructions.
 
@@ -61,7 +70,11 @@ Previous Azure Kubernetes Service (AKS) deployment workflow. Kept for reference 
    - `IONOS_REGISTRY_PASSWORD`
    - `IONOS_KUBECONFIG`
 
-3. **Push to main branch** or manually trigger the workflow
+3. **Add optional infrastructure management secrets** (if managing infrastructure via API):
+   - `IONOS_ADMIN_USERNAME` and `IONOS_ADMIN_PASSWORD` (basic auth)
+   - OR `IONOS_ADMIN_TOKEN` (token auth, recommended)
+
+4. **Push to main branch** or manually trigger the workflow
 
 ### For Azure AKS (Legacy)
 
@@ -88,6 +101,22 @@ The Azure workflow is disabled by default. To use it:
 - New deployments use IONOS Cloud infrastructure
 - Azure workflow preserved for backward compatibility
 - Automated deployments now target IONOS Cloud
+
+---
+
+## API Specifications
+
+### IONOS Cloud API (`ionos-api.yaml`)
+
+OpenAPI 3.0.3 specification for IONOS Cloud API v6. This file documents the complete IONOS Cloud Infrastructure API and is referenced by the `ionos-deploy.yml` workflow for infrastructure management operations.
+
+**API Details**:
+- **Version**: 6.0
+- **Base URL**: https://api.ionos.com/cloudapi/v6
+- **Authentication**: Basic Auth or Token-based
+- **Capabilities**: Data centers, Kubernetes, networking, storage, and more
+
+The infrastructure management job in `ionos-deploy.yml` uses this API specification to verify connectivity and enable automated infrastructure provisioning when IONOS admin credentials are configured.
 
 ---
 
