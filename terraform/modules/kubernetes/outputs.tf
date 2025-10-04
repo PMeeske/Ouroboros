@@ -25,11 +25,11 @@ output "node_pool_name" {
 
 output "kubeconfig" {
   description = "Kubeconfig for the cluster"
-  value       = ionoscloud_k8s_cluster.main.kube_config
+  value       = data.ionoscloud_k8s_cluster.main.kube_config
   sensitive   = true
 }
 
 output "api_server" {
   description = "API server endpoint"
-  value       = ionoscloud_k8s_cluster.main.viable_node_pool_versions
+  value       = data.ionoscloud_k8s_cluster.main.config
 }

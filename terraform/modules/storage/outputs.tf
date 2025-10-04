@@ -5,10 +5,10 @@ output "volume_ids" {
 
 output "volumes" {
   description = "Map of volume details"
-  value       = { for k, v in ionoscloud_volume.volumes : k => {
+  value = { for k, v in ionoscloud_volume.volumes : k => {
     id   = v.id
     name = v.name
     size = v.size
     type = v.type
-  }}
+  } }
 }

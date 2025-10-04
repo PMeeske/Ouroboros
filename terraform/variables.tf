@@ -72,7 +72,7 @@ variable "cores_count" {
 variable "ram_size" {
   description = "RAM size in MB per node"
   type        = number
-  default     = 16384  # 16 GB
+  default     = 16384 # 16 GB
 }
 
 variable "storage_size" {
@@ -109,8 +109,8 @@ variable "registry_location" {
 variable "garbage_collection_schedule" {
   description = "Cron schedule for garbage collection"
   type = object({
-    days  = list(string)
-    time  = string
+    days = list(string)
+    time = string
   })
   default = {
     days = ["Sunday"]
@@ -132,11 +132,11 @@ variable "registry_features" {
 variable "volumes" {
   description = "List of volumes to create"
   type = list(object({
-    name          = string
-    size          = number
-    type          = string
-    licence_type  = string
-    image_alias   = optional(string)
+    name         = string
+    size         = number
+    type         = string
+    licence_type = string
+    image_alias  = optional(string)
   }))
   default = [
     {
@@ -179,8 +179,8 @@ variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
   default = {
-    Project     = "MonadicPipeline"
-    ManagedBy   = "Terraform"
-    Repository  = "PMeeske/MonadicPipeline"
+    Project    = "MonadicPipeline"
+    ManagedBy  = "Terraform"
+    Repository = "PMeeske/MonadicPipeline"
   }
 }
