@@ -63,6 +63,37 @@ output "lan_id" {
   value       = module.networking.lan_id
 }
 
+output "lan_name" {
+  description = "Name of the created LAN"
+  value       = module.networking.lan_name
+}
+
+output "lan_public" {
+  description = "Whether the LAN is public"
+  value       = module.networking.lan_public
+}
+
+# External Accessibility Outputs
+output "k8s_public_ips" {
+  description = "Public IPs of Kubernetes nodes for external access"
+  value       = module.kubernetes.public_ips
+}
+
+output "k8s_api_subnet_allow_list" {
+  description = "Allowed subnets for Kubernetes API access"
+  value       = module.kubernetes.api_subnet_allow_list
+}
+
+output "k8s_cluster_state" {
+  description = "Current state of the Kubernetes cluster"
+  value       = module.kubernetes.cluster_state
+}
+
+output "k8s_node_pool_state" {
+  description = "Current state of the node pool"
+  value       = module.kubernetes.node_pool_state
+}
+
 # Summary Output
 output "deployment_summary" {
   description = "Summary of deployed infrastructure"
@@ -74,5 +105,19 @@ output "deployment_summary" {
     node_count  = var.node_count
     registry    = module.registry.registry_hostname
     environment = var.environment
+  }
+}
+
+# External Access Information
+output "external_access_info" {
+  description = "Information about external accessibility of the infrastructure"
+  value = {
+    registry_hostname     = module.registry.registry_hostname
+    registry_location     = module.registry.registry_location
+    k8s_public_ips       = module.kubernetes.public_ips
+    k8s_api_access       = module.kubernetes.api_subnet_allow_list
+    lan_public           = module.networking.lan_public
+    cluster_state        = module.kubernetes.cluster_state
+    node_pool_state      = module.kubernetes.node_pool_state
   }
 }

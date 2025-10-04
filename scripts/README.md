@@ -90,6 +90,50 @@ See also:
 - [Terraform IaC Guide](../docs/IONOS_IAC_GUIDE.md)
 - [Terraform README](../terraform/README.md)
 
+#### `check-external-access.sh` - External Accessibility Validation (NEW)
+Checks and validates external accessibility of deployed IONOS infrastructure.
+
+```bash
+./scripts/check-external-access.sh [environment]
+```
+
+**What it checks:**
+- Terraform state and deployment status
+- Container registry accessibility and hostname
+- Kubernetes cluster state (ACTIVE/INACTIVE)
+- Node pool state and health
+- Public IP addresses assigned to nodes
+- Kubernetes API access configuration
+- Network (LAN) public/private status
+- Kubeconfig availability and cluster connectivity
+- Node count and status via kubectl
+
+**Examples:**
+```bash
+# Check development environment
+./scripts/check-external-access.sh dev
+
+# Check production infrastructure
+./scripts/check-external-access.sh production
+```
+
+**Output:**
+- ✓ Passed checks in green
+- ✗ Failed checks in red
+- ⚠ Warnings in yellow
+- Summary with recommendations
+
+**Use cases:**
+- Verify infrastructure is accessible after deployment
+- Troubleshoot external connectivity issues
+- Validate network configuration
+- Confirm infrastructure is ready for application deployment
+
+**Prerequisites:**
+- Terraform state must exist (infrastructure deployed)
+- Optional: kubectl for Kubernetes connectivity tests
+- Optional: curl for HTTP connectivity tests
+
 ### Local Development
 
 #### `deploy-local.sh`
@@ -260,6 +304,9 @@ Helper script to load pre-built images into different cluster types.
 
 | Scenario | Script | Command |
 |----------|--------|---------|
+| **Terraform Validation** | **`validate-terraform.sh`** | **`./scripts/validate-terraform.sh dev`** |
+| **Terraform Management** | **`manage-infrastructure.sh`** | **`./scripts/manage-infrastructure.sh apply dev`** |
+| **Check External Access** | **`check-external-access.sh`** | **`./scripts/check-external-access.sh dev`** |
 | Local Docker Compose | `deploy-docker.sh` | `./scripts/deploy-docker.sh production` |
 | Local Kubernetes | `deploy-k8s.sh` | `./scripts/deploy-k8s.sh` |
 | **Azure AKS + ACR** | **`deploy-aks.sh`** | **`./scripts/deploy-aks.sh myregistry`** |
