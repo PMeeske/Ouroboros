@@ -84,16 +84,6 @@ output "k8s_api_subnet_allow_list" {
   value       = module.kubernetes.api_subnet_allow_list
 }
 
-output "k8s_cluster_state" {
-  description = "Current state of the Kubernetes cluster"
-  value       = module.kubernetes.cluster_state
-}
-
-output "k8s_node_pool_state" {
-  description = "Current state of the node pool"
-  value       = module.kubernetes.node_pool_state
-}
-
 # Summary Output
 output "deployment_summary" {
   description = "Summary of deployed infrastructure"
@@ -112,12 +102,10 @@ output "deployment_summary" {
 output "external_access_info" {
   description = "Information about external accessibility of the infrastructure"
   value = {
-    registry_hostname     = module.registry.registry_hostname
-    registry_location     = module.registry.registry_location
-    k8s_public_ips       = module.kubernetes.public_ips
-    k8s_api_access       = module.kubernetes.api_subnet_allow_list
-    lan_public           = module.networking.lan_public
-    cluster_state        = module.kubernetes.cluster_state
-    node_pool_state      = module.kubernetes.node_pool_state
+    registry_hostname = module.registry.registry_hostname
+    registry_location = module.registry.registry_location
+    k8s_public_ips    = module.kubernetes.public_ips
+    k8s_api_access    = module.kubernetes.api_subnet_allow_list
+    lan_public        = module.networking.lan_public
   }
 }
