@@ -4,12 +4,12 @@ variable "cluster_name" {
 }
 
 variable "k8s_version" {
-  description = "Kubernetes version (must be 1.29+ for IONOS compatibility)"
+  description = "Kubernetes version (must be 1.30+ for IONOS compatibility)"
   type        = string
   
   validation {
-    condition     = can(regex("^1\\.(2[9-9]|3[0-9])(\\.\\d+)?$", var.k8s_version))
-    error_message = "Kubernetes version must be 1.29 or higher for IONOS Cloud. Supported versions: 1.29, 1.30, 1.31+"
+    condition     = can(regex("^1\\.(3[0-9]|[4-9][0-9])(\\.\\d+)?$", var.k8s_version))
+    error_message = "Kubernetes version must be 1.30 or higher for IONOS Cloud. Supported versions: 1.30, 1.31, 1.32, 1.33+"
   }
 }
 

@@ -2,9 +2,9 @@
 
 ## Current Configuration
 
-**Version**: 1.29 (Updated January 2025)
+**Version**: 1.30 (Updated January 2025)
 
-All environments now use Kubernetes 1.29:
+All environments now use Kubernetes 1.30:
 - Development: `terraform/environments/dev.tfvars`
 - Staging: `terraform/environments/staging.tfvars`
 - Production: `terraform/environments/production.tfvars`
@@ -13,6 +13,7 @@ All environments now use Kubernetes 1.29:
 
 | Date | Version | Reason |
 |------|---------|--------|
+| January 2025 | 1.30 | Upgraded from 1.29 as IONOS no longer supports 1.29 |
 | January 2025 | 1.29 | Upgraded from 1.28 for better IONOS support and security |
 | Pre-2025 | 1.28 | Initial configuration |
 
@@ -24,19 +25,20 @@ IONOS Cloud typically supports the last 3-4 minor Kubernetes versions:
 
 | Version | Release Date | IONOS Support | Recommendation |
 |---------|-------------|---------------|----------------|
+| 1.33 | Feb 2025 | ✅ Supported | ⚠️ Test in dev first |
 | 1.32 | Dec 2024 | ✅ Supported | ⚠️ Test in dev first |
 | 1.31 | Aug 2024 | ✅ Supported | ✅ Safe for all environments |
-| 1.30 | Apr 2024 | ✅ Supported | ✅ Safe for all environments |
-| **1.29** | Dec 2023 | ✅ Supported | ✅ **Current choice** |
-| 1.28 | Aug 2023 | ⚠️ Deprecated | ❌ Upgrade required |
+| **1.30** | Apr 2024 | ✅ Supported | ✅ **Current choice** |
+| 1.29 | Dec 2023 | ❌ No longer supported | ❌ Upgrade required |
+| 1.28 | Aug 2023 | ❌ Deprecated | ❌ Upgrade required |
 
 ## Version Selection Rationale
 
-### Why Kubernetes 1.29?
+### Why Kubernetes 1.30?
 
-1. **Stability**: Released December 2023, well-tested in production
+1. **Stability**: Released April 2024, well-tested in production
 2. **Support Window**: ~14 months of upstream support
-3. **IONOS Compatibility**: Fully supported by IONOS Cloud
+3. **IONOS Compatibility**: Fully supported by IONOS Cloud (1.29 no longer available)
 4. **Security**: Receives regular security patches
 5. **Feature Set**: Includes modern Kubernetes features without bleeding edge risk
 
@@ -58,12 +60,12 @@ The configuration includes built-in validation:
 
 ```hcl
 validation {
-  condition     = can(regex("^1\\.(2[9-9]|3[0-9])(\\.\\d+)?$", var.k8s_version))
-  error_message = "Kubernetes version must be 1.29 or higher..."
+  condition     = can(regex("^1\\.(3[0-9]|[4-9][0-9])(\\.\\d+)?$", var.k8s_version))
+  error_message = "Kubernetes version must be 1.30 or higher..."
 }
 ```
 
-This prevents accidental use of deprecated versions.
+This prevents accidental use of unsupported versions.
 
 ### Manifest API Versions
 
@@ -205,10 +207,10 @@ grep -h "apiVersion:" k8s/*.yaml | sort | uniq -c
 ### Issue: Terraform validation fails
 
 ```
-Error: Kubernetes version must be 1.29 or higher
+Error: Kubernetes version must be 1.30 or higher
 ```
 
-**Solution**: Update `k8s_version` in environment file to 1.29 or newer
+**Solution**: Update `k8s_version` in environment file to 1.30 or newer
 
 ### Issue: Cluster upgrade fails
 
@@ -221,7 +223,7 @@ Error: Kubernetes version must be 1.29 or higher
 
 **Solutions**:
 1. Check [IONOS supported versions](https://docs.ionos.com/cloud/managed-services/managed-kubernetes)
-2. Ensure version is valid format (e.g., "1.29", "1.29.5")
+2. Ensure version is valid format (e.g., "1.30", "1.30.14")
 3. Check cluster status in IONOS console
 4. Review Terraform state for conflicts
 
@@ -264,6 +266,13 @@ Error: Kubernetes version must be 1.29 or higher
 | Execute upgrade (production) | Annually | DevOps Team + Approval |
 
 ## Change Log
+
+### 2025-01-XX (Current Update)
+- **Action**: Upgraded from Kubernetes 1.29 to 1.30
+- **Reason**: IONOS Cloud no longer supports version 1.29. Available versions start from 1.30.2
+- **Environments**: All (dev, staging, production)
+- **Validation**: Updated Terraform validation for minimum version 1.30
+- **Testing**: Manifests validated for compatibility with 1.30+
 
 ### 2025-01-XX
 - **Action**: Upgraded from Kubernetes 1.28 to 1.29
