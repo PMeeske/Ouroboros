@@ -34,6 +34,10 @@ docker-compose down
 # Check status
 kubectl get all -n monadic-pipeline
 
+# Verify Web API
+kubectl get service monadic-pipeline-webapi-service -n monadic-pipeline
+kubectl get pods -n monadic-pipeline -l app=monadic-pipeline-webapi
+
 # View logs
 kubectl logs -f deployment/monadic-pipeline -n monadic-pipeline
 
@@ -60,6 +64,7 @@ sudo systemctl status monadic-pipeline
 
 | Service | Local | Docker | Kubernetes |
 |---------|-------|--------|------------|
+| Web API | http://localhost:8080 | http://localhost:8080 | Port-forward required |
 | Ollama | http://localhost:11434 | http://localhost:11434 | Port-forward required |
 | Qdrant | http://localhost:6333 | http://localhost:6333 | Port-forward required |
 | Jaeger UI | http://localhost:16686 | http://localhost:16686 | Port-forward required |
@@ -87,6 +92,7 @@ docker-compose down -v
 ### Kubernetes Commands
 ```bash
 # Port forwarding
+kubectl port-forward -n monadic-pipeline service/monadic-pipeline-webapi-service 8080:80
 kubectl port-forward -n monadic-pipeline service/jaeger-ui 16686:16686
 kubectl port-forward -n monadic-pipeline service/qdrant-service 6333:6333
 
@@ -170,6 +176,21 @@ docker-compose up -d
 # Kubernetes - check resource usage
 kubectl top pods -n monadic-pipeline
 kubectl describe pod <pod-name> -n monadic-pipeline
+```
+
+### Web API Service Issues
+```bash
+# Check Web API service
+kubectl get service monadic-pipeline-webapi-service -n monadic-pipeline
+
+# Check Ingress
+kubectl get ingress monadic-pipeline-webapi-ingress -n monadic-pipeline
+
+# Check Web API pods
+kubectl get pods -n monadic-pipeline -l app=monadic-pipeline-webapi
+
+# View Web API logs
+kubectl logs -f deployment/monadic-pipeline-webapi -n monadic-pipeline
 ```
 
 ### View Logs

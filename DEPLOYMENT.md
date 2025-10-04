@@ -382,11 +382,27 @@ kubectl get pods -n monadic-pipeline
 kubectl rollout status deployment/monadic-pipeline -n monadic-pipeline
 ```
 
+#### Step 6: Verify Web API Deployment
+
+```bash
+# Check if LoadBalancer has an external IP
+kubectl get service monadic-pipeline-webapi-service -n monadic-pipeline
+
+# Check Ingress configuration
+kubectl get ingress monadic-pipeline-webapi-ingress -n monadic-pipeline
+
+# Check pod status
+kubectl get pods -n monadic-pipeline -l app=monadic-pipeline-webapi
+```
+
 ### Accessing Services
 
 #### Port Forwarding
 
 ```bash
+# Web API
+kubectl port-forward -n monadic-pipeline service/monadic-pipeline-webapi-service 8080:80
+
 # Jaeger UI
 kubectl port-forward -n monadic-pipeline service/jaeger-ui 16686:16686
 
@@ -550,6 +566,28 @@ kubectl describe pod <pod-name> -n monadic-pipeline
 
 # Check resource limits
 kubectl top pods -n monadic-pipeline
+```
+
+#### Web API Service Issues
+
+If you cannot access the Web API service:
+
+```bash
+# Check if LoadBalancer has an external IP
+kubectl get service monadic-pipeline-webapi-service -n monadic-pipeline
+
+# Check Ingress configuration
+kubectl get ingress monadic-pipeline-webapi-ingress -n monadic-pipeline
+
+# Check pod status
+kubectl get pods -n monadic-pipeline -l app=monadic-pipeline-webapi
+
+# View Web API logs
+kubectl logs -f deployment/monadic-pipeline-webapi -n monadic-pipeline
+
+# Test from within cluster
+kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
+  curl http://monadic-pipeline-webapi-service.monadic-pipeline.svc.cluster.local/health
 ```
 
 ### Debug Mode
