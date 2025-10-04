@@ -59,7 +59,7 @@ jobs:
           IONOS_TOKEN: ${{ secrets.IONOS_ADMIN_TOKEN }}
         run: |
           echo "Verifying IONOS Cloud API connectivity..."
-          
+
           # Use token if available, otherwise use basic auth
           if [ -n "$IONOS_TOKEN" ]; then
             AUTH_HEADER="Authorization: Bearer $IONOS_TOKEN"
@@ -70,15 +70,15 @@ jobs:
             echo "Set IONOS_ADMIN_USERNAME/IONOS_ADMIN_PASSWORD or IONOS_ADMIN_TOKEN secrets to enable infrastructure management."
             exit 0
           fi
-          
+
           # Test API connectivity using IONOS Cloud API v6
           # Reference: .github/workflows/ionos-api.yaml (IONOS Cloud API OpenAPI Specification)
           response=$(curl -s -w "\n%{http_code}" -H "$AUTH_HEADER" \
             -H "Content-Type: application/json" \
             https://api.ionos.com/cloudapi/v6/ || echo "000")
-          
+
           http_code=$(echo "$response" | tail -n1)
-          
+
           if [ "$http_code" = "200" ]; then
             echo "✓ Successfully connected to IONOS Cloud API"
             echo "✓ API Specification: .github/workflows/ionos-api.yaml"
@@ -104,7 +104,7 @@ jobs:
             echo "⚠️  Skipping infrastructure management - no admin credentials configured"
             exit 0
           fi
-          
+
           echo "Infrastructure management capabilities enabled via IONOS Cloud API v6"
           echo "API Reference: .github/workflows/ionos-api.yaml"
           echo ""
@@ -233,22 +233,22 @@ jobs:
         run: |
           # Create temporary directory for processed manifests
           mkdir -p /tmp/k8s-manifests
-          
+
           # Copy and process cloud deployment manifests
           cp k8s/deployment.cloud.yaml /tmp/k8s-manifests/deployment.yaml
           cp k8s/webapi-deployment.cloud.yaml /tmp/k8s-manifests/webapi-deployment.yaml
           cp k8s/qdrant.yaml /tmp/k8s-manifests/qdrant.yaml
           cp k8s/ollama.yaml /tmp/k8s-manifests/ollama.yaml
-          
+
           # Replace REGISTRY_URL with actual IONOS registry URL
           REGISTRY_URL="${{ env.IONOS_REGISTRY }}"
           sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" /tmp/k8s-manifests/deployment.yaml
           sed -i "s|REGISTRY_URL|${REGISTRY_URL}|g" /tmp/k8s-manifests/webapi-deployment.yaml
-          
+
           # Update storage class for IONOS
           sed -i "s|storageClassName: managed-csi|storageClassName: ionos-enterprise-ssd|g" /tmp/k8s-manifests/qdrant.yaml
           sed -i "s|storageClassName: managed-csi|storageClassName: ionos-enterprise-ssd|g" /tmp/k8s-manifests/ollama.yaml
-          
+
           # Enable imagePullSecrets for IONOS registry
           sed -i 's|# imagePullSecrets:|imagePullSecrets:|g' /tmp/k8s-manifests/deployment.yaml
           sed -i 's|#   - name: ionos-registry-secret|  - name: ionos-registry-secret|g' /tmp/k8s-manifests/deployment.yaml
