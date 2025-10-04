@@ -91,6 +91,7 @@ else
             fi
         else
             print_error "Terraform initialization failed"
+            terraform init -backend=false
         fi
         cd ..
     fi
