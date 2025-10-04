@@ -661,6 +661,7 @@ export IONOS_PASSWORD="your-password"
 - **Quick Start**: [IONOS IaC Quick Start](docs/IONOS_IAC_QUICKSTART.md)
 - **Full Guide**: [IONOS IaC Guide](docs/IONOS_IAC_GUIDE.md)
 - **Terraform Docs**: [terraform/README.md](terraform/README.md)
+- **Incident Runbook**: [Infrastructure Runbook](docs/INFRASTRUCTURE_RUNBOOK.md) ⚡ NEW
 
 **Key Features**:
 - ✅ **Automated infrastructure provisioning** via Terraform
