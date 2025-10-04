@@ -1,0 +1,8 @@
+# Data Center Module
+# Creates and manages an IONOS Cloud data center
+
+resource "ionoscloud_datacenter" "main" {
+  name        = var.datacenter_name
+  location    = var.location
+  description = var.description
+}
