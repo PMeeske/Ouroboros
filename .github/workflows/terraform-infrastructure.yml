@@ -44,7 +44,7 @@ jobs:
     name: Terraform ${{ github.event.inputs.action || 'plan' }} - ${{ github.event.inputs.environment || 'dev' }}
     runs-on: ubuntu-latest
     environment: IONOS  # Use IONOS environment for secrets
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -78,7 +78,7 @@ jobs:
         run: |
           echo "Initializing Terraform..."
           terraform init
-          
+
       - name: Terraform Format Check
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform fmt -check -recursive || true
@@ -113,17 +113,17 @@ jobs:
         with:
           script: |
             const output = `#### Terraform Plan 📝 for \`${{ steps.env_file.outputs.environment }}\`
-            
+
             <details><summary>Show Plan</summary>
-            
+
             \`\`\`terraform
             ${{ steps.plan.outputs.stdout }}
             \`\`\`
-            
+
             </details>
-            
+
             *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -142,7 +142,7 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform apply -auto-approve tfplan
-          
+
       - name: Terraform Destroy
         if: github.event.inputs.action == 'destroy' && github.event.inputs.auto_approve == 'true'
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -188,7 +188,7 @@ jobs:
     needs: terraform
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
       - name: Notification
         run: |

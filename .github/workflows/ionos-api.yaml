@@ -5,7 +5,7 @@ info:
 
     IONOS Enterprise-grade Infrastructure as a Service (IaaS) solutions can be
     managed through the Cloud API, in addition or as an alternative to the "Data
-    Center Designer" (DCD) browser-based tool. 
+    Center Designer" (DCD) browser-based tool.
 
      Both methods employ consistent concepts and features, deliver similar power and flexibility, and can be used to perform a multitude of management tasks, including adding servers, volumes, configuring networks, and so on.
   version: '6.0'
@@ -42,7 +42,7 @@ tags:
 
 
       First, the Kubernetes cluster provides the control plane, although it is
-      not directly visible. 
+      not directly visible.
 
 
       Second, the node pools provide the worker nodes. While these are visible
@@ -673,13 +673,13 @@ paths:
       summary: Get Locations
       description: >-
         Retrieves the available physical locations where you can deploy cloud
-        resources in a VDC. 
+        resources in a VDC.
 
-         A location is identified by a combination of the following characters: 
+         A location is identified by a combination of the following characters:
 
-         * a two-character **regionId**, which represents a country (example: 'de') 
+         * a two-character **regionId**, which represents a country (example: 'de')
 
-         * a three-character **locationId**, which represents a city. The 'locationId' is typically based on the IATA code of the city's airport (example: 'txl'). 
+         * a three-character **locationId**, which represents a city. The 'locationId' is typically based on the IATA code of the city's airport (example: 'txl').
 
          >Note that 'locations' are read-only and cannot be changed.
       operationId: locationsGet
@@ -2004,13 +2004,13 @@ paths:
         - Servers
       summary: Attach a CD-ROM
       description: >-
-        Attachs a CD-ROM to an existing server specified by its ID. 
+        Attachs a CD-ROM to an existing server specified by its ID.
 
 
         CD-ROMs cannot be created stand-alone like volumes. They are either
         attached to a server or do not exist. They always have an ISO-Image
         associated; empty CD-ROMs can not be provisioned. It is possible to
-        attach up to two CD-ROMs to the same server. 
+        attach up to two CD-ROMs to the same server.
 
 
         Note that attaching a CD-ROM leads to a reset of the server.
@@ -2489,7 +2489,7 @@ paths:
         - Servers
       summary: Stop an Enterprise Server by ID
       description: >-
-        Stops the Enterprise Server specified by its ID. 
+        Stops the Enterprise Server specified by its ID.
 
 
         >Note that you cannot use this method to stop a Cube Server.
@@ -2589,7 +2589,7 @@ paths:
         - Servers
       summary: Suspend a Cube Server by ID
       description: >-
-        Suspends the specified Cubes instance within the data center. 
+        Suspends the specified Cubes instance within the data center.
 
 
         The instance is not deleted and allocated resources continue to be
@@ -22144,7 +22144,7 @@ paths:
       description: |-
         Retrieves all available templates.
 
-        Templates provide a pre-defined configuration for Cube servers. 
+        Templates provide a pre-defined configuration for Cube servers.
 
          >Templates are read-only and cannot be created, modified, or deleted by users.
       operationId: templatesGet
@@ -23362,7 +23362,7 @@ paths:
         - Security Groups
       summary: Attach a list of Security Groups to a Server
       description: >-
-        Updating the list of Security Groups attached to an existing server specified by its ID. 
+        Updating the list of Security Groups attached to an existing server specified by its ID.
         Security Groups should already exist as part of the datacenter.
       operationId: datacentersServersSecuritygroupsPut
       parameters:
@@ -23464,7 +23464,7 @@ paths:
         - Security Groups
       summary: Attach a list of Security Groups to a NIC
       description: >-
-        Updating the list of Security Groups attached to an existing NIC specified by its ID. 
+        Updating the list of Security Groups attached to an existing NIC specified by its ID.
         Security Groups should already exist as part of the datacenter.
       operationId: datacentersServersNicsSecuritygroupsPut
       parameters:
@@ -23785,7 +23785,7 @@ components:
           type: string
           description: >-
             Resource's Entity Tag as defined in
-            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11 
+            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11
             Entity Tag is also added as an 'ETag response header to requests
             which don't use 'depth' parameter.
           readOnly: true
@@ -23876,7 +23876,7 @@ components:
           type: string
           description: >-
             The resource entity tag as defined in
-            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11 
+            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11
             Entity tags are also added as 'ETag' response headers to requests
             that do not use the 'depth' parameter.
           readOnly: true
@@ -23918,7 +23918,7 @@ components:
           type: string
           description: >-
             Resource's Entity Tag as defined in
-            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11 
+            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11
             Entity Tag is also added as an 'ETag response header to requests
             which don't use 'depth' parameter.
           readOnly: true
@@ -23962,7 +23962,7 @@ components:
           type: string
           description: >-
             Resource's Entity Tag as defined in
-            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11 
+            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11
             Entity Tag is also added as an 'ETag response header to requests
             which don't use 'depth' parameter.
           readOnly: true
@@ -24881,7 +24881,7 @@ components:
           x-prerelease: true
         defaultSecurityGroupId:
           description: >-
-            This will become the default security group for the datacenter, replacing the old one if already exists. 
+            This will become the default security group for the datacenter, replacing the old one if already exists.
             This security group must already exists prior to this request.
             Provide this field only if the `createDefaultSecurityGroup` field is missing. You cannot provide both of them
           type: string
@@ -24892,7 +24892,7 @@ components:
           description: >-
             If this field is set on true and this datacenter has no default security group then a default security group,
             with predefined rules, will be created for this datacenter.
-            Default value is false. 
+            Default value is false.
             Provide this field only if the `defaultSecurityGroupId` field is missing. You cannot provide both of them
           example: true
           writeOnly: true
@@ -25862,9 +25862,9 @@ components:
         nicMultiQueue:
           type: boolean
           description: >-
-            Activate or deactivate the Multi Queue feature on all NICs of this server. This feature is beneficial to 
+            Activate or deactivate the Multi Queue feature on all NICs of this server. This feature is beneficial to
             enable when the NICs are experiencing performance issues (e.g. low throughput). Toggling this
-            feature will also initiate a restart of the server. If the specified value is `true`, the feature will 
+            feature will also initiate a restart of the server. If the specified value is `true`, the feature will
             be activated; if it is not specified or set to `false`, the feature will be deactivated.
             It is not allowed for servers of type Cube.
           example: true
@@ -26090,7 +26090,7 @@ components:
           type: string
           description: >-
             Resource's Entity Tag as defined in
-            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11 
+            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11
             Entity Tag is also added as an 'ETag response header to requests
             which don't use 'depth' parameter.
           readOnly: true
@@ -26908,7 +26908,7 @@ components:
           type: string
           description: >-
             Resource's Entity Tag as defined in
-            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11 
+            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11
             Entity Tag is also added as an 'ETag response header to requests
             which don't use 'depth' parameter.
           readOnly: true
@@ -26973,7 +26973,7 @@ components:
           type: string
           description: >-
             Resource's Entity Tag as defined in
-            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11 
+            http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.11
             Entity Tag is also added as an 'ETag response header to requests
             which don't use 'depth' parameter.
           readOnly: true
@@ -28257,7 +28257,7 @@ components:
           $ref: '#/components/schemas/KubernetesNodePoolServerType'
         cpuFamily:
           type: string
-          description: >- 
+          description: >-
             The CPU type for the nodes. If this field is null or omitted from the request,
             an available CPU architecture will be automatically selected.
             Supplying an empty string is not accepted.
@@ -29590,7 +29590,7 @@ components:
         statusCode:
           type: integer
           description: >-
-            The status code is for 'REDIRECT' and 'STATIC' actions only. 
+            The status code is for 'REDIRECT' and 'STATIC' actions only.
 
 
             If the HTTP rule is 'REDIRECT' the valid values are: 301, 302, 303,
@@ -30065,7 +30065,7 @@ components:
       description: >-
         If set to `true` will expose the serial id of the disk attached to the server. If
         set to `false` will not expose the serial id. Some operating systems or software
-        solutions require the serial id to be exposed to work properly. Exposing the serial 
+        solutions require the serial id to be exposed to work properly. Exposing the serial
         can influence licensed software (e.g. Windows) behavior
       example: true
       default: false
@@ -30286,7 +30286,7 @@ components:
       type: string
       example: MSSQL-2019-Standard
       description: >-
-        The type of application that is hosted on this resource. 
+        The type of application that is hosted on this resource.
         Only public images can have an Application type different than UNKNOWN.
       x-extensible-enum:
         - MSSQL-2019-Web
@@ -30388,7 +30388,7 @@ components:
           example: My GPU
         vendor:
           type: string
-          description: >- 
+          description: >-
             The vendor of the Graphics Processing Unit (GPU) card.
             The available options can be retrieved from the 'gpuArchitecture' field
             returned in the GET responses of the resources /datacenters and /locations.
@@ -30563,7 +30563,7 @@ components:
         You will need to base64 encode the string containing your credentials.
         <div style="padding: 15px; border: 1px solid #d1ecf1; background-color: #d1ecf1; color: #0c5460; margin-bottom: 15px;">
           <strong>Note:</strong><br/><br/>
-          From **March 15, 2024**, this option will only be accessible if your account **does not 
+          From **March 15, 2024**, this option will only be accessible if your account **does not
           have 2-Factor Authentication (2FA) enabled**.
         </div>
         Separate your username and password with a colon, i.e.,
