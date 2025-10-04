@@ -5,7 +5,7 @@ datacenter_name = "monadic-pipeline-dev"
 location        = "de/fra"
 
 cluster_name = "monadic-pipeline-dev"
-k8s_version  = "1.28"
+k8s_version  = "1.29"  # Updated from 1.28 for better IONOS support
 
 # Smaller node pool for development
 node_pool_name = "dev-pool"

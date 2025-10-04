@@ -29,7 +29,19 @@ variable "cluster_name" {
 variable "k8s_version" {
   description = "Kubernetes version"
   type        = string
-  default     = "1.28"
+  default     = "1.29"  # Updated from 1.28 - See docs/K8S_VERSION_COMPATIBILITY.md
+  
+  # Version Selection Guidelines:
+  # - Use 1.29+ for best IONOS support and security updates
+  # - Kubernetes 1.28 is approaching EOL (October 2024)
+  # - All manifests compatible with 1.28+ (tested with 1.29, 1.30, 1.31)
+  # - Supported versions: 1.29, 1.30, 1.31 (as of January 2025)
+  # - Update this version at least once per quarter
+  
+  validation {
+    condition     = can(regex("^1\\.(2[9-9]|3[0-9])(\\.\\d+)?$", var.k8s_version))
+    error_message = "Kubernetes version must be 1.29 or higher. Version 1.28 is deprecated. Use 1.29, 1.30, or 1.31 for IONOS compatibility."
+  }
 }
 
 variable "maintenance_day" {

@@ -7,6 +7,7 @@ This directory contains deployment scripts and configuration files for various d
 | Scenario | Script | Command |
 |----------|--------|---------| 
 | **Infrastructure Dependency Validation** | **`validate-infrastructure-dependencies.sh`** | **`./scripts/validate-infrastructure-dependencies.sh`** |
+| **Kubernetes Version Check** | **`check-k8s-version.sh`** | **`./scripts/check-k8s-version.sh`** |
 | **Terraform Validation** | **`validate-terraform.sh`** | **`./scripts/validate-terraform.sh dev`** |
 | **Terraform Management** | **`manage-infrastructure.sh`** | **`./scripts/manage-infrastructure.sh apply dev`** |
 | **Check External Access** | **`check-external-access.sh`** | **`./scripts/check-external-access.sh dev`** |
@@ -55,6 +56,37 @@ Validates that all infrastructure dependencies between C#, Kubernetes, and Terra
 - [Infrastructure Dependencies Guide](../docs/INFRASTRUCTURE_DEPENDENCIES.md)
 - [Terraform-K8s Integration Guide](../docs/TERRAFORM_K8S_INTEGRATION.md)
 - [Environment Infrastructure Mapping](../docs/ENVIRONMENT_INFRASTRUCTURE_MAPPING.md)
+
+#### `check-k8s-version.sh` - Kubernetes Version Compatibility Check (NEW)
+Validates Kubernetes version configuration for IONOS Cloud compatibility and security.
+
+```bash
+./scripts/check-k8s-version.sh
+```
+
+**What it checks:**
+- Kubernetes version in all environments (dev, staging, production)
+- Version validation rules in Terraform
+- Minimum version requirements (1.29+)
+- Deprecated API versions in Kubernetes manifests
+- Documentation completeness
+- Module configuration
+
+**Output:**
+- ✓ Passed checks in green
+- ✗ Failed checks in red (e.g., deprecated versions)
+- ⚠ Warnings in yellow
+- Summary with recommendations
+
+**Use case:**
+- Before deploying infrastructure to IONOS Cloud
+- When planning Kubernetes version upgrades
+- Validating version compatibility
+- Ensuring no deprecated API versions in manifests
+
+**See also:**
+- [Kubernetes Version Compatibility Guide](../docs/K8S_VERSION_COMPATIBILITY.md)
+- [IONOS IAC Guide](../docs/IONOS_IAC_GUIDE.md)
 
 #### `validate-terraform.sh` - Terraform Validation (NEW)
 Validates your Terraform infrastructure setup before provisioning.
