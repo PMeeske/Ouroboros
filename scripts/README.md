@@ -6,6 +6,38 @@ This directory contains deployment scripts and configuration files for various d
 
 ### Infrastructure Management
 
+#### `validate-terraform.sh` - Terraform Validation (NEW)
+Validates your Terraform infrastructure setup before provisioning.
+
+```bash
+./scripts/validate-terraform.sh [environment]
+```
+
+**What it checks:**
+- Terraform installation and version
+- IONOS Cloud credentials configuration
+- Terraform directory structure
+- Module completeness
+- Configuration formatting
+- Environment-specific settings
+- GitHub Actions workflow
+
+**Example:**
+```bash
+./scripts/validate-terraform.sh production
+```
+
+**Output:**
+- ✓ Passed checks in green
+- ✗ Failed checks in red
+- ⚠ Warnings in yellow
+- Summary with recommendations
+
+**Use case:**
+- Before first-time infrastructure provisioning
+- After modifying Terraform configuration
+- Troubleshooting setup issues
+
 #### `manage-infrastructure.sh` - Terraform Infrastructure Management (NEW)
 Manage IONOS Cloud infrastructure using Terraform with a simple command-line interface.
 
