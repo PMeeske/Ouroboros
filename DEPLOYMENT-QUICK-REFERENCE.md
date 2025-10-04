@@ -34,6 +34,10 @@ docker-compose down
 # Check status
 kubectl get all -n monadic-pipeline
 
+# Verify Web API
+kubectl get service monadic-pipeline-webapi-service -n monadic-pipeline
+kubectl get pods -n monadic-pipeline -l app=monadic-pipeline-webapi
+
 # View logs
 kubectl logs -f deployment/monadic-pipeline -n monadic-pipeline
 
@@ -172,6 +176,21 @@ docker-compose up -d
 # Kubernetes - check resource usage
 kubectl top pods -n monadic-pipeline
 kubectl describe pod <pod-name> -n monadic-pipeline
+```
+
+### Web API Service Issues
+```bash
+# Check Web API service
+kubectl get service monadic-pipeline-webapi-service -n monadic-pipeline
+
+# Check Ingress
+kubectl get ingress monadic-pipeline-webapi-ingress -n monadic-pipeline
+
+# Check Web API pods
+kubectl get pods -n monadic-pipeline -l app=monadic-pipeline-webapi
+
+# View Web API logs
+kubectl logs -f deployment/monadic-pipeline-webapi -n monadic-pipeline
 ```
 
 ### View Logs
