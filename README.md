@@ -744,6 +744,66 @@ For comprehensive deployment instructions including configuration management, mo
 - [**Troubleshooting Guide**](TROUBLESHOOTING.md) - Common issues and solutions
 - [**Scripts README**](scripts/README.md) - Deployment scripts documentation
 
+## 🏗️ Infrastructure & Dependencies
+
+MonadicPipeline has comprehensive infrastructure documentation covering the complete stack from C# application to Terraform provisioning:
+
+### Infrastructure Documentation
+
+- [**Infrastructure Dependencies**](docs/INFRASTRUCTURE_DEPENDENCIES.md) - Complete mapping of dependencies across C#, Kubernetes, and Terraform
+- [**Terraform-Kubernetes Integration**](docs/TERRAFORM_K8S_INTEGRATION.md) - Integration patterns, workflows, and automation
+- [**Environment Infrastructure Mapping**](docs/ENVIRONMENT_INFRASTRUCTURE_MAPPING.md) - Environment-specific configurations (dev, staging, production)
+- [**Deployment Topology**](docs/DEPLOYMENT_TOPOLOGY.md) - Visual topological representations of the complete infrastructure
+- [**Infrastructure Migration Guide**](docs/INFRASTRUCTURE_MIGRATION_GUIDE.md) - Safe migration and change management procedures
+
+### Infrastructure Validation
+
+Before deploying or making infrastructure changes, validate your setup:
+
+```bash
+# Comprehensive infrastructure validation
+./scripts/validate-infrastructure-dependencies.sh
+
+# Checks:
+# ✓ Terraform configuration
+# ✓ Kubernetes manifests
+# ✓ C# application configuration
+# ✓ Configuration consistency
+# ✓ Docker files
+# ✓ Resource requirements
+# ✓ Storage configuration
+# ✓ Network configuration
+# ✓ Security configuration
+# ✓ CI/CD workflows
+```
+
+### Key Infrastructure Dependencies
+
+The system has well-documented dependencies across layers:
+
+```
+C# Application (appsettings.json)
+    ↓ Configuration
+Kubernetes (ConfigMaps, Deployments, Services)
+    ↓ Orchestration
+Terraform (IONOS Cloud Infrastructure)
+    ↓ Provisioning
+IONOS Cloud (Data Center, K8s, Registry, Storage)
+```
+
+**Critical dependencies**:
+- C# → Ollama service (LLM inference): `http://ollama-service:11434`
+- C# → Qdrant service (vector storage): `http://qdrant-service:6333`
+- K8s → Container Registry: `adaptive-systems.cr.de-fra.ionos.com`
+- Terraform → K8s Cluster: Node sizing, storage volumes, networking
+
+See [Infrastructure Dependencies](docs/INFRASTRUCTURE_DEPENDENCIES.md) for complete mapping.
+
+### Infrastructure Summary
+
+For a high-level overview of all infrastructure work:
+- [**Infrastructure Refinement Summary**](INFRASTRUCTURE_REFINEMENT_SUMMARY.md) - Complete summary of infrastructure documentation and tools
+
 ## 🔧 Troubleshooting
 
 ### Kubernetes Image Pull Errors
