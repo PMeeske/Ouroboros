@@ -189,6 +189,9 @@ if command -v terraform &> /dev/null; then
             check_pass "Terraform initialized successfully"
         else
             check_warn "Terraform initialization had warnings"
+            echo ""
+            print_info "Initialization output:"
+            terraform init
         fi
     else
         check_pass "Terraform already initialized"
@@ -200,7 +203,8 @@ if command -v terraform &> /dev/null; then
     else
         check_fail "Terraform validation failed"
         echo ""
-        print_info "Run 'terraform validate' for details"
+        print_info "Validation errors:"
+        terraform validate
     fi
 else
     check_warn "Cannot validate (Terraform not installed)"
