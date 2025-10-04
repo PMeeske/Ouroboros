@@ -9,7 +9,7 @@ variable "location" {
 }
 
 variable "garbage_collection_schedule" {
-  description = "Schedule for garbage collection"
+  description = "Schedule for garbage collection (time format: HH:MM:SS+TZ, e.g., 02:00:00+00:00)"
   type = object({
     days = list(string)
     time = string
