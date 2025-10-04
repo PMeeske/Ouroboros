@@ -22,7 +22,7 @@ dotnet run
 
 The API will be available at `http://localhost:5000` (or as configured in `launchSettings.json`).
 
-Access Swagger UI at: `http://localhost:5000`
+Access Swagger UI at: `http://localhost:5000/swagger`
 
 ### Docker
 
@@ -251,8 +251,10 @@ curl -X POST http://localhost:5000/api/ask \
 
 Use the provided `launchSettings.json` profiles:
 
-- **Development** - Full Swagger UI, detailed logging
+- **Development** - Detailed logging and debugging
 - **Production** - Optimized for deployment
+
+**Note**: Swagger UI is now available in all environments at `/swagger`.
 
 ## Comparison: CLI vs Web API
 
