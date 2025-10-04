@@ -15,3 +15,4 @@ appsettings.*.local.json
 *.trx
 *.coverage
 *.coveragexml
+*.zip
