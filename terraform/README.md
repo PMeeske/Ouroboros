@@ -103,6 +103,84 @@ terraform output -raw k8s_kubeconfig > kubeconfig.yaml
 
 # Get registry hostname
 terraform output registry_hostname
+
+# Get external access information
+terraform output external_access_info
+```
+
+### 5. Validate External Accessibility (NEW)
+
+After deploying infrastructure, validate that it's accessible from outside:
+
+```bash
+# From the project root
+./scripts/check-external-access.sh dev
+
+# Or for production
+./scripts/check-external-access.sh production
+```
+
+This script checks:
+- Container registry accessibility
+- Kubernetes cluster state (ACTIVE/INACTIVE)
+- Public IP assignments
+- Network configuration
+- kubectl connectivity
+
+See [External Access Validation Guide](../docs/EXTERNAL_ACCESS_VALIDATION.md) for details.
+
+## Available Outputs
+
+After deploying infrastructure, Terraform provides the following outputs:
+
+### Core Infrastructure Outputs
+
+- **`datacenter_id`**: ID of the created data center
+- **`datacenter_name`**: Name of the data center
+- **`k8s_cluster_id`**: Kubernetes cluster ID
+- **`k8s_cluster_name`**: Kubernetes cluster name
+- **`k8s_kubeconfig`**: Kubeconfig for cluster access (sensitive)
+- **`k8s_node_pool_id`**: Node pool ID
+- **`registry_id`**: Container registry ID
+- **`registry_hostname`**: Registry hostname (e.g., `myregistry.cr.de-fra.ionos.com`)
+- **`registry_location`**: Registry location
+
+### External Accessibility Outputs (NEW)
+
+These outputs help verify and troubleshoot external accessibility:
+
+- **`k8s_public_ips`**: Public IP addresses assigned to Kubernetes nodes
+- **`k8s_api_subnet_allow_list`**: Allowed subnets for Kubernetes API access
+- **`k8s_cluster_state`**: Current cluster state (ACTIVE, PROVISIONING, etc.)
+- **`k8s_node_pool_state`**: Current node pool state (ACTIVE, PROVISIONING, etc.)
+- **`lan_id`**: LAN ID
+- **`lan_name`**: LAN name
+- **`lan_public`**: Whether LAN is public or private
+
+### Consolidated Outputs
+
+- **`deployment_summary`**: Summary of all deployed resources
+- **`external_access_info`**: Comprehensive external access information including:
+  - Registry hostname and location
+  - Kubernetes public IPs
+  - API access configuration
+  - LAN public status
+  - Cluster and node pool states
+
+**Example usage:**
+
+```bash
+# Get all outputs
+terraform output
+
+# Get external access information
+terraform output external_access_info
+
+# Get public IPs
+terraform output k8s_public_ips
+
+# Get kubeconfig
+terraform output -raw k8s_kubeconfig > kubeconfig.yaml
 ```
 
 ## Environment Configurations
