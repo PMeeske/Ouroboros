@@ -119,14 +119,14 @@ variable "registry_location" {
 }
 
 variable "garbage_collection_schedule" {
-  description = "Cron schedule for garbage collection"
+  description = "Cron schedule for garbage collection (time format: HH:MM:SS+TZ, e.g., 02:00:00+00:00)"
   type = object({
     days = list(string)
     time = string
   })
   default = {
     days = ["Sunday"]
-    time = "02:00:00"
+    time = "02:00:00+00:00"
   }
 }
 

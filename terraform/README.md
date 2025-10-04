@@ -670,7 +670,7 @@ Configure registry garbage collection to clean up unused images:
 ```hcl
 garbage_collection_schedule {
   days = ["Sunday"]
-  time = "02:00:00"
+  time = "02:00:00+00:00"  # Format: HH:MM:SS+TZ (timezone offset required)
 }
 ```
 
