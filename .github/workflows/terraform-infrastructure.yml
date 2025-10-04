@@ -43,6 +43,7 @@ jobs:
   terraform:
     name: Terraform ${{ github.event.inputs.action || 'plan' }} - ${{ github.event.inputs.environment || 'dev' }}
     runs-on: ubuntu-latest
+    environment: IONOS  # Use IONOS environment for secrets
     
     steps:
       - name: Checkout code
