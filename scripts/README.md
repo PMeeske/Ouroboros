@@ -4,6 +4,92 @@ This directory contains deployment scripts and configuration files for various d
 
 ## Scripts Overview
 
+### Infrastructure Management
+
+#### `validate-terraform.sh` - Terraform Validation (NEW)
+Validates your Terraform infrastructure setup before provisioning.
+
+```bash
+./scripts/validate-terraform.sh [environment]
+```
+
+**What it checks:**
+- Terraform installation and version
+- IONOS Cloud credentials configuration
+- Terraform directory structure
+- Module completeness
+- Configuration formatting
+- Environment-specific settings
+- GitHub Actions workflow
+
+**Example:**
+```bash
+./scripts/validate-terraform.sh production
+```
+
+**Output:**
+- ✓ Passed checks in green
+- ✗ Failed checks in red
+- ⚠ Warnings in yellow
+- Summary with recommendations
+
+**Use case:**
+- Before first-time infrastructure provisioning
+- After modifying Terraform configuration
+- Troubleshooting setup issues
+
+#### `manage-infrastructure.sh` - Terraform Infrastructure Management (NEW)
+Manage IONOS Cloud infrastructure using Terraform with a simple command-line interface.
+
+```bash
+./scripts/manage-infrastructure.sh [command] [environment]
+```
+
+**Commands:**
+- `init`: Initialize Terraform
+- `plan`: Preview infrastructure changes
+- `apply`: Apply infrastructure changes
+- `destroy`: Destroy infrastructure
+- `output`: Show Terraform outputs
+- `kubeconfig`: Save kubeconfig file
+
+**Environments:**
+- `dev`: Development (minimal resources, ~€50-80/month)
+- `staging`: Staging (medium resources, ~€100-150/month)
+- `production`: Production (full resources, ~€150-250/month)
+
+**Examples:**
+```bash
+# Initialize Terraform
+./scripts/manage-infrastructure.sh init
+
+# Preview changes for production
+./scripts/manage-infrastructure.sh plan production
+
+# Apply infrastructure for development
+./scripts/manage-infrastructure.sh apply dev
+
+# Get kubeconfig for production
+./scripts/manage-infrastructure.sh kubeconfig production
+
+# Destroy development infrastructure
+./scripts/manage-infrastructure.sh destroy dev
+```
+
+**Prerequisites:**
+- Terraform >= 1.5.0 installed
+- IONOS Cloud credentials (`IONOS_TOKEN` or `IONOS_USERNAME`/`IONOS_PASSWORD`)
+
+**Features:**
+- Color-coded output for easy reading
+- Safety checks for production destruction
+- Automatic prerequisite validation
+- Simplified Terraform workflow
+
+See also:
+- [Terraform IaC Guide](../docs/IONOS_IAC_GUIDE.md)
+- [Terraform README](../terraform/README.md)
+
 ### Local Development
 
 #### `deploy-local.sh`

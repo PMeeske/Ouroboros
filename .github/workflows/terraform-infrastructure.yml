@@ -1,0 +1,200 @@
+# Terraform Infrastructure Management Workflow
+# Manages IONOS Cloud infrastructure using Terraform
+
+name: Terraform Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to manage'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+      action:
+        description: 'Terraform action to perform'
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      auto_approve:
+        description: 'Auto-approve changes (apply/destroy only)'
+        required: false
+        type: boolean
+        default: false
+
+  push:
+    branches:
+      - main
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-infrastructure.yml'
+
+env:
+  TF_VERSION: '1.5.0'
+  TF_WORKING_DIR: terraform
+
+jobs:
+  terraform:
+    name: Terraform ${{ github.event.inputs.action || 'plan' }} - ${{ github.event.inputs.environment || 'dev' }}
+    runs-on: ubuntu-latest
+    environment: IONOS  # Use IONOS environment for secrets
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure IONOS credentials
+        env:
+          IONOS_TOKEN: ${{ secrets.IONOS_ADMIN_TOKEN }}
+          IONOS_USERNAME: ${{ secrets.IONOS_ADMIN_USERNAME }}
+          IONOS_PASSWORD: ${{ secrets.IONOS_ADMIN_PASSWORD }}
+        run: |
+          if [ -n "$IONOS_TOKEN" ]; then
+            echo "✓ Using IONOS API token for authentication"
+            echo "IONOS_TOKEN=$IONOS_TOKEN" >> $GITHUB_ENV
+          elif [ -n "$IONOS_USERNAME" ] && [ -n "$IONOS_PASSWORD" ]; then
+            echo "✓ Using IONOS username/password for authentication"
+            echo "IONOS_USERNAME=$IONOS_USERNAME" >> $GITHUB_ENV
+            echo "IONOS_PASSWORD=$IONOS_PASSWORD" >> $GITHUB_ENV
+          else
+            echo "❌ No IONOS credentials found"
+            echo "Please set IONOS_ADMIN_TOKEN or IONOS_ADMIN_USERNAME/IONOS_ADMIN_PASSWORD secrets"
+            exit 1
+          fi
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          echo "Initializing Terraform..."
+          terraform init
+          
+      - name: Terraform Format Check
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -recursive || true
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
+
+      - name: Determine environment file
+        id: env_file
+        run: |
+          ENV="${{ github.event.inputs.environment }}"
+          if [ -z "$ENV" ]; then
+            ENV="dev"
+          fi
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "var_file=environments/${ENV}.tfvars" >> $GITHUB_OUTPUT
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan \
+            -var-file=${{ steps.env_file.outputs.var_file }} \
+            -out=tfplan \
+            -no-color
+        continue-on-error: true
+
+      - name: Comment PR with Plan
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `#### Terraform Plan 📝 for \`${{ steps.env_file.outputs.environment }}\`
+            
+            <details><summary>Show Plan</summary>
+            
+            \`\`\`terraform
+            ${{ steps.plan.outputs.stdout }}
+            \`\`\`
+            
+            </details>
+            
+            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+      - name: Terraform Apply
+        if: |
+          github.event.inputs.action == 'apply' &&
+          (github.event.inputs.auto_approve == 'true' || github.event_name == 'push')
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform apply -auto-approve tfplan
+          
+      - name: Terraform Destroy
+        if: github.event.inputs.action == 'destroy' && github.event.inputs.auto_approve == 'true'
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform destroy \
+            -var-file=${{ steps.env_file.outputs.var_file }} \
+            -auto-approve
+
+      - name: Output Terraform Results
+        if: github.event.inputs.action == 'apply' || github.event_name == 'push'
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          echo "## Terraform Outputs"
+          terraform output -json > outputs.json
+          echo "Infrastructure deployment summary:"
+          terraform output deployment_summary
+
+      - name: Upload Terraform Outputs
+        if: github.event.inputs.action == 'apply' || github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-outputs-${{ steps.env_file.outputs.environment }}
+          path: ${{ env.TF_WORKING_DIR }}/outputs.json
+          retention-days: 30
+
+      - name: Save Kubeconfig
+        if: github.event.inputs.action == 'apply' || github.event_name == 'push'
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform output -raw k8s_kubeconfig > kubeconfig-${{ steps.env_file.outputs.environment }}.yaml
+          echo "::add-mask::$(cat kubeconfig-${{ steps.env_file.outputs.environment }}.yaml)"
+
+      - name: Upload Kubeconfig
+        if: github.event.inputs.action == 'apply' || github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubeconfig-${{ steps.env_file.outputs.environment }}
+          path: ${{ env.TF_WORKING_DIR }}/kubeconfig-${{ steps.env_file.outputs.environment }}.yaml
+          retention-days: 7
+
+  notify:
+    name: Notify on completion
+    needs: terraform
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Notification
+        run: |
+          if [ "${{ needs.terraform.result }}" == "success" ]; then
+            echo "✅ Terraform ${{ github.event.inputs.action || 'plan' }} completed successfully for ${{ github.event.inputs.environment || 'dev' }}"
+          else
+            echo "❌ Terraform ${{ github.event.inputs.action || 'plan' }} failed for ${{ github.event.inputs.environment || 'dev' }}"
+            exit 1
+          fi

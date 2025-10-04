@@ -114,8 +114,13 @@ jobs:
           echo "  - Network configuration"
           echo "  - Storage provisioning"
           echo ""
-          echo "Note: Infrastructure is assumed to be pre-provisioned."
-          echo "      For automated provisioning, extend this job with specific API calls."
+          echo "✅ Infrastructure as Code (IaC) available:"
+          echo "   - Terraform configurations: terraform/"
+          echo "   - Automated provisioning workflow: .github/workflows/terraform-infrastructure.yml"
+          echo "   - Environment configs: terraform/environments/"
+          echo ""
+          echo "To provision infrastructure automatically, run the 'Terraform Infrastructure' workflow"
+          echo "or use: cd terraform && terraform apply -var-file=environments/production.tfvars"
 
   test:
     name: Run Tests
