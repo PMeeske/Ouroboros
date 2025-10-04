@@ -11,7 +11,7 @@ k8s_version  = "1.28"
 node_pool_name = "staging-pool"
 node_count     = 2
 cores_count    = 4
-ram_size       = 16384  # 16 GB
+ram_size       = 16384 # 16 GB
 storage_size   = 100
 storage_type   = "SSD"
 

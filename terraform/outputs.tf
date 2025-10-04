@@ -50,10 +50,12 @@ output "registry_location" {
 }
 
 # Storage Outputs
-output "volume_ids" {
-  description = "IDs of created volumes"
-  value       = module.storage.volume_ids
-}
+# Commented out as storage module is disabled
+# For Kubernetes workloads, use PersistentVolumeClaims instead
+# output "volume_ids" {
+#   description = "IDs of created volumes"
+#   value       = module.storage.volume_ids
+# }
 
 # Networking Outputs
 output "lan_id" {
@@ -65,12 +67,12 @@ output "lan_id" {
 output "deployment_summary" {
   description = "Summary of deployed infrastructure"
   value = {
-    datacenter      = module.datacenter.datacenter_name
-    location        = var.location
-    k8s_cluster     = module.kubernetes.cluster_name
-    k8s_version     = var.k8s_version
-    node_count      = var.node_count
-    registry        = module.registry.registry_hostname
-    environment     = var.environment
+    datacenter  = module.datacenter.datacenter_name
+    location    = var.location
+    k8s_cluster = module.kubernetes.cluster_name
+    k8s_version = var.k8s_version
+    node_count  = var.node_count
+    registry    = module.registry.registry_hostname
+    environment = var.environment
   }
 }

@@ -11,9 +11,9 @@ k8s_version  = "1.28"
 node_pool_name = "dev-pool"
 node_count     = 2
 cores_count    = 2
-ram_size       = 8192  # 8 GB
+ram_size       = 8192 # 8 GB
 storage_size   = 50
-storage_type   = "HDD"  # Use HDD for cost savings
+storage_type   = "HDD" # Use HDD for cost savings
 
 # Container registry
 registry_name     = "monadic-dev"

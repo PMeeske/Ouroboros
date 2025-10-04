@@ -28,7 +28,7 @@ variable "api_subnet_allow_list" {
 
 variable "s3_buckets" {
   description = "S3 buckets for cluster backups"
-  type        = list(object({
+  type = list(object({
     name = string
   }))
   default = []
