@@ -630,6 +630,20 @@ docker-compose up -d
 ```
 
 **IONOS Cloud** (recommended by Adaptive Systems Inc.):
+
+**Infrastructure as Code (NEW)**:
+```bash
+# Provision infrastructure with Terraform
+./scripts/manage-infrastructure.sh apply production
+
+# Get kubeconfig
+./scripts/manage-infrastructure.sh kubeconfig production
+
+# Deploy application
+./scripts/deploy-ionos.sh monadic-pipeline
+```
+
+**Quick deployment** (assumes infrastructure exists):
 ```bash
 # Automated deployment to IONOS Cloud Kubernetes
 # Includes registry authentication, image push, and deployment
@@ -642,6 +656,18 @@ export IONOS_PASSWORD="your-password"
 
 # See docs/IONOS_DEPLOYMENT_GUIDE.md for detailed instructions
 ```
+
+**Infrastructure Management**:
+- **Quick Start**: [IONOS IaC Quick Start](docs/IONOS_IAC_QUICKSTART.md)
+- **Full Guide**: [IONOS IaC Guide](docs/IONOS_IAC_GUIDE.md)
+- **Terraform Docs**: [terraform/README.md](terraform/README.md)
+
+**Key Features**:
+- ✅ **Automated infrastructure provisioning** via Terraform
+- ✅ **Multi-environment support** (dev/staging/production)
+- ✅ **Infrastructure as Code** - version controlled and reproducible
+- ✅ **Cost optimization** - right-sized resources per environment
+- ✅ **Disaster recovery** - infrastructure can be recreated anytime
 
 **IONOS Cloud with GitHub Actions** (CI/CD):
 

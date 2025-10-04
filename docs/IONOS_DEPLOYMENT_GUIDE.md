@@ -66,7 +66,51 @@ Before deploying to IONOS Cloud, ensure you have:
 
 ## IONOS Cloud Setup
 
-### 1. Create Kubernetes Cluster
+### Option 1: Automated Setup with Infrastructure as Code (Recommended)
+
+**MonadicPipeline now supports fully automated infrastructure provisioning using Terraform!**
+
+This is the fastest and most reliable way to set up your infrastructure.
+
+**Quick Start** (5 minutes):
+```bash
+# Step 1: Set IONOS credentials
+export IONOS_TOKEN="your-api-token"
+
+# Step 2: Initialize and apply infrastructure
+./scripts/manage-infrastructure.sh init
+./scripts/manage-infrastructure.sh apply production
+
+# Step 3: Get kubeconfig
+./scripts/manage-infrastructure.sh kubeconfig production
+
+# Done! Your infrastructure is ready
+```
+
+**What gets created automatically**:
+- ✅ Virtual data center in Frankfurt (`de/fra`)
+- ✅ Kubernetes cluster with 3 nodes (4 cores, 16GB RAM each)
+- ✅ Container registry with vulnerability scanning
+- ✅ Persistent storage volumes (150GB SSD total)
+- ✅ Virtual network (LAN) for cluster networking
+
+**Resources**:
+- **Quick Start Guide**: [IONOS IaC Quick Start](IONOS_IAC_QUICKSTART.md)
+- **Full Documentation**: [IONOS IaC Guide](IONOS_IAC_GUIDE.md)
+- **Terraform Modules**: [terraform/README.md](../terraform/README.md)
+
+**Benefits**:
+- 🚀 **Zero manual setup** - fully automated
+- ♻️ **Reproducible** - infrastructure as code
+- 🌍 **Multi-environment** - dev, staging, production
+- 💰 **Cost-optimized** - right-sized per environment
+- 📝 **Version controlled** - all changes tracked in Git
+
+### Option 2: Manual Setup via IONOS Cloud Console
+
+If you prefer manual setup or need to understand the underlying resources:
+
+#### 1. Create Kubernetes Cluster
 
 Using [IONOS Cloud Console (DCD)](https://dcd.ionos.com):
 
@@ -94,7 +138,9 @@ ionosctl k8s cluster create \
   --location de/fra
 ```
 
-### 2. Download kubeconfig
+**Note**: Consider using the automated Terraform approach (Option 1) for better reproducibility and ease of management.
+
+#### 2. Download kubeconfig
 
 After cluster creation:
 
