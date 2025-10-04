@@ -5,7 +5,7 @@ datacenter_name = "monadic-pipeline-staging"
 location        = "de/fra"
 
 cluster_name = "monadic-pipeline-staging"
-k8s_version  = "1.29"  # Updated from 1.28 for better IONOS support
+k8s_version  = "1.30.14"  # Stable version for IONOS Cloud (1.29 no longer supported)
 
 # Medium node pool for staging
 node_pool_name = "staging-pool"

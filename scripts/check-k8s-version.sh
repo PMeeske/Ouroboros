@@ -40,7 +40,7 @@ check_warn() {
 validate_version() {
     local version=$1
     local min_major=1
-    local min_minor=29
+    local min_minor=30
     
     # Extract major and minor version
     if [[ $version =~ ^([0-9]+)\.([0-9]+) ]]; then
@@ -81,9 +81,9 @@ if [ -f "$VAR_FILE" ]; then
         echo "  Default version: $default_version"
         
         if validate_version "$default_version"; then
-            check_pass "Default version is 1.29+ (recommended)"
+            check_pass "Default version is 1.30+ (recommended)"
         else
-            check_fail "Default version is below 1.29 (deprecated)"
+            check_fail "Default version is below 1.30 (not supported by IONOS)"
         fi
     else
         check_warn "Could not extract default version"
@@ -121,9 +121,9 @@ for env in "${environments[@]}"; do
             echo "  Version: $env_version"
             
             if validate_version "$env_version"; then
-                check_pass "$env version is 1.29+ (recommended)"
+                check_pass "$env version is 1.30+ (recommended)"
             else
-                check_fail "$env version is below 1.29 (deprecated)"
+                check_fail "$env version is below 1.30 (not supported by IONOS)"
             fi
         else
             check_fail "Could not extract version from $env"
