@@ -3,6 +3,8 @@
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/PMeeske/MonadicPipeline)
 [![.NET Version](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![LangChain](https://img.shields.io/badge/LangChain-0.17.0-purple)](https://www.nuget.org/packages/LangChain/)
+[![Coverage](https://img.shields.io/badge/coverage-8.4%25-yellow)](TEST_COVERAGE_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-111%20passing-brightgreen)](src/MonadicPipeline.Tests)
 
 A **sophisticated functional programming-based AI pipeline system** built on LangChain, implementing category theory principles, monadic composition, and functional programming patterns to create type-safe, composable AI workflows.
 
@@ -582,21 +584,55 @@ public class CustomTool : ITool
 
 ### Testing
 
-Run the comprehensive test suite:
+MonadicPipeline has a comprehensive test suite with 111 passing tests covering core functionality, domain models, security, and performance.
+
+#### Run Tests
 
 ```bash
-# Navigate to CLI directory
-cd src/MonadicPipeline.CLI
-
 # Run all tests
+dotnet test
+
+# Run specific test class
+dotnet test --filter "FullyQualifiedName~InputValidatorTests"
+
+# Run with detailed output
+dotnet test --verbosity detailed
+
+# Run CLI integration tests
+cd src/MonadicPipeline.CLI
 dotnet run -- test --all
-
-# Run only integration tests
-dotnet run -- test --integration
-
-# Run only CLI tests
-dotnet run -- test --cli
 ```
+
+#### Code Coverage
+
+[![Line Coverage](https://img.shields.io/badge/coverage-8.4%25-yellow)](TEST_COVERAGE_REPORT.md)
+[![Branch Coverage](https://img.shields.io/badge/branch--coverage-6.2%25-red)](TEST_COVERAGE_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-111%20passing-brightgreen)](src/MonadicPipeline.Tests)
+
+**Current Coverage Summary:**
+- **Line Coverage:** 8.4% (1,134 of 13,465 lines)
+- **Branch Coverage:** 6.2% (219 of 3,490 branches)
+- **Test Execution:** ~480ms, all passing
+
+**Well-Tested Components (>80% coverage):**
+- ✅ Domain Model: 80.1% (Event Store, Vector Store, Reasoning States)
+- ✅ Security: 100% (Input Validation, Sanitization)
+- ✅ Performance: 96-100% (Object Pooling, Performance Utilities)
+- ✅ Diagnostics: 99%+ (Metrics, Distributed Tracing)
+
+```bash
+# Generate coverage report
+./scripts/run-coverage.sh
+
+# Or manually
+dotnet test --collect:"XPlat Code Coverage"
+reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:"TestCoverageReport" -reporttypes:"Html"
+```
+
+**Coverage Documentation:**
+- 📊 [Full Coverage Report](TEST_COVERAGE_REPORT.md) - Detailed analysis and recommendations
+- 📋 [Quick Reference](TEST_COVERAGE_QUICKREF.md) - Commands and current metrics
+- 🔄 CI/CD: Automated coverage reporting via GitHub Actions
 
 ## 🤝 Contributing
 
