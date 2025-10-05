@@ -50,11 +50,22 @@ terraform/
 │   ├── kubernetes/             # Kubernetes cluster module
 │   ├── registry/               # Container registry module
 │   ├── storage/                # Storage volumes module
-│   └── networking/             # Networking module
-└── environments/               # Environment-specific configurations
-    ├── dev.tfvars              # Development environment
-    ├── staging.tfvars          # Staging environment
-    └── production.tfvars       # Production environment
+│   ├── networking/             # Networking module
+│   └── app-config/             # Application configuration module
+├── environments/               # Environment-specific configurations
+│   ├── dev.tfvars              # Development environment
+│   ├── staging.tfvars          # Staging environment
+│   └── production.tfvars       # Production environment
+└── tests/                      # Terraform tests
+    ├── README.md               # Testing documentation
+    ├── run-tests.sh            # Test runner script
+    ├── datacenter_test.tftest.hcl
+    ├── kubernetes_test.tftest.hcl
+    ├── registry_test.tftest.hcl
+    ├── storage_test.tftest.hcl
+    ├── networking_test.tftest.hcl
+    ├── app_config_test.tftest.hcl
+    └── integration_test.tftest.hcl
 ```
 
 ## Quick Start
@@ -128,6 +139,59 @@ This script checks:
 - kubectl connectivity
 
 See [External Access Validation Guide](../docs/EXTERNAL_ACCESS_VALIDATION.md) for details.
+
+## Testing
+
+### Running Terraform Tests
+
+The repository includes a comprehensive test suite for all Terraform modules and configurations.
+
+```bash
+# Run all tests
+cd terraform/tests
+./run-tests.sh
+
+# Run specific test
+./run-tests.sh datacenter_test
+```
+
+### Test Coverage
+
+The test suite includes:
+
+- **Module Unit Tests**: Validate each module independently
+  - Data center configuration
+  - Kubernetes cluster setup
+  - Container registry configuration
+  - Storage volumes
+  - Networking setup
+  - Application configuration
+
+- **Integration Tests**: Validate complete infrastructure setup
+  - Development environment
+  - Production environment with HA requirements
+  - Resource dependencies
+
+- **Environment Tests**: Validate environment-specific configurations
+  - dev.tfvars validation
+  - staging.tfvars validation
+  - production.tfvars validation
+
+### Continuous Integration
+
+Tests run automatically via GitHub Actions:
+- On pull requests that modify Terraform files
+- On push to main branch
+- Can be triggered manually via workflow dispatch
+
+See `.github/workflows/terraform-tests.yml` for the CI configuration.
+
+### Test Requirements
+
+- Terraform >= 1.5.0 (for validation tests)
+- Terraform >= 1.6.0 (for native test execution)
+
+For detailed testing documentation, see [tests/README.md](tests/README.md).
 
 ## Available Outputs
 
