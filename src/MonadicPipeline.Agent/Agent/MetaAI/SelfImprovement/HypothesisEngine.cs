@@ -456,6 +456,10 @@ EVIDENCE: [supporting points]";
         if (!execution.Success)
             return false;
 
+        // Check if there are any step results to analyze
+        if (execution.StepResults.Count == 0)
+            return false;
+
         // Simple heuristic: if most steps succeeded, hypothesis is likely supported
         var successRate = execution.StepResults.Count(r => r.Success) / (double)execution.StepResults.Count;
         
@@ -464,6 +468,10 @@ EVIDENCE: [supporting points]";
 
     private double CalculateConfidenceAdjustment(ExecutionResult execution, bool supported)
     {
+        // Handle empty step results
+        if (execution.StepResults.Count == 0)
+            return supported ? 0.05 : -0.05;
+
         var successRate = execution.StepResults.Count(r => r.Success) / (double)execution.StepResults.Count;
         
         if (supported)
