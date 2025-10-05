@@ -9,7 +9,8 @@
 #   ./check-ionos-deployment.sh
 #   ./check-ionos-deployment.sh monadic-pipeline
 
-set -e
+# Note: We don't use 'set -e' here because we want to continue diagnostics even if some checks fail
+set -uo pipefail
 
 NAMESPACE="${1:-monadic-pipeline}"
 WEBAPI_DEPLOYMENT="monadic-pipeline-webapi"
@@ -273,6 +274,19 @@ echo ""
 
 echo "Secrets:"
 kubectl get secrets -n "$NAMESPACE" | grep -E "NAME|ionos-registry-secret|monadic" || echo "  No relevant secrets found"
+echo ""
+
+echo "Storage Classes:"
+kubectl get storageclass 2>&1 | head -10 || echo "  Unable to list storage classes"
+echo ""
+
+# Check IONOS storage class specifically
+if kubectl get storageclass ionos-enterprise-ssd &> /dev/null; then
+    echo "✅ IONOS storage class 'ionos-enterprise-ssd' is available"
+else
+    echo "⚠️  IONOS storage class 'ionos-enterprise-ssd' not found"
+    echo "This may cause PVC provisioning issues"
+fi
 echo ""
 
 echo "================================================"

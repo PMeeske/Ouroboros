@@ -15,6 +15,9 @@
 #   IONOS_USERNAME: Registry username
 #   IONOS_PASSWORD: Registry password
 #
+# Recommended: Run validation script first to check prerequisites
+#   ./scripts/validate-ionos-prerequisites.sh [namespace]
+#
 # Example: 
 #   ./deploy-ionos.sh monadic-pipeline
 
@@ -58,23 +61,63 @@ if ! kubectl cluster-info &> /dev/null; then
     exit 1
 fi
 
+# Validate IONOS-specific prerequisites
+echo "Validating IONOS Cloud prerequisites..."
+
+# Check for IONOS storage class
+if kubectl get storageclass ionos-enterprise-ssd &> /dev/null; then
+    echo "✓ IONOS storage class 'ionos-enterprise-ssd' found"
+else
+    echo "⚠️  Warning: IONOS storage class 'ionos-enterprise-ssd' not found"
+    echo ""
+    echo "Available storage classes:"
+    kubectl get storageclass 2>&1 || echo "  Unable to list storage classes"
+    echo ""
+    echo "This may cause PVC provisioning to fail. Options:"
+    echo "  1. Ensure you're connected to an IONOS Managed Kubernetes cluster"
+    echo "  2. Use a different storage class by modifying the manifests"
+    echo "  3. Continue anyway (PVCs will remain in Pending state)"
+    echo ""
+    read -p "Continue deployment without IONOS storage class? (y/N): " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
+
+# Check cluster resources
+echo "Checking cluster resources..."
+if command -v kubectl &> /dev/null; then
+    NODE_COUNT=$(kubectl get nodes --no-headers 2>/dev/null | wc -l)
+    if [ "$NODE_COUNT" -gt 0 ]; then
+        echo "✓ Cluster has $NODE_COUNT node(s)"
+    else
+        echo "⚠️  Warning: Unable to detect cluster nodes"
+    fi
+fi
+echo ""
+
 echo "Step 1: Authenticating with IONOS Container Registry..."
 
 # Check if credentials are provided via environment
 if [ -n "$IONOS_USERNAME" ] && [ -n "$IONOS_PASSWORD" ]; then
     echo "Using credentials from environment variables"
-    echo "$IONOS_PASSWORD" | docker login "$IONOS_REGISTRY" -u "$IONOS_USERNAME" --password-stdin
+    if ! echo "$IONOS_PASSWORD" | docker login "$IONOS_REGISTRY" -u "$IONOS_USERNAME" --password-stdin; then
+        echo "Error: Failed to authenticate with IONOS registry"
+        exit 1
+    fi
 elif docker login "$IONOS_REGISTRY" --help 2>&1 | grep -q "credential-helper"; then
     echo "Using Docker credential helper"
-    docker login "$IONOS_REGISTRY"
+    if ! docker login "$IONOS_REGISTRY"; then
+        echo "Error: Failed to authenticate with IONOS registry"
+        exit 1
+    fi
 else
     echo "Please enter your IONOS Container Registry credentials:"
-    docker login "$IONOS_REGISTRY"
-fi
-
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to authenticate with IONOS registry"
-    exit 1
+    if ! docker login "$IONOS_REGISTRY"; then
+        echo "Error: Failed to authenticate with IONOS registry"
+        exit 1
+    fi
 fi
 echo "✓ Authenticated with IONOS registry"
 echo ""
@@ -213,10 +256,30 @@ kubectl apply -f "$TEMP_DIR/webapi-deployment.yaml"
 echo ""
 echo "Step 6: Waiting for deployments to be ready..."
 echo "This may take a few minutes..."
-kubectl wait --for=condition=available --timeout=300s deployment/ollama -n "$NAMESPACE" || true
-kubectl wait --for=condition=available --timeout=300s deployment/qdrant -n "$NAMESPACE" || true
-kubectl wait --for=condition=available --timeout=300s deployment/monadic-pipeline -n "$NAMESPACE" || true
-kubectl wait --for=condition=available --timeout=300s deployment/monadic-pipeline-webapi -n "$NAMESPACE" || true
+
+# Function to wait for deployment with better feedback
+wait_for_deployment() {
+    local deployment=$1
+    local namespace=$2
+    local timeout=$3
+    
+    echo "Waiting for $deployment..."
+    if kubectl wait --for=condition=available --timeout="${timeout}s" "deployment/$deployment" -n "$namespace" 2>&1; then
+        echo "✓ $deployment is ready"
+        return 0
+    else
+        echo "⚠️  Warning: $deployment did not become ready within ${timeout}s"
+        echo "   Check status with: kubectl get deployment $deployment -n $namespace"
+        return 1
+    fi
+}
+
+# Wait for each deployment
+DEPLOYMENT_WARNINGS=0
+wait_for_deployment "ollama" "$NAMESPACE" 300 || ((DEPLOYMENT_WARNINGS++))
+wait_for_deployment "qdrant" "$NAMESPACE" 300 || ((DEPLOYMENT_WARNINGS++))
+wait_for_deployment "monadic-pipeline" "$NAMESPACE" 300 || ((DEPLOYMENT_WARNINGS++))
+wait_for_deployment "monadic-pipeline-webapi" "$NAMESPACE" 300 || ((DEPLOYMENT_WARNINGS++))
 
 echo ""
 echo "================================================"
@@ -229,6 +292,20 @@ echo "  - ${REGISTRY_URL}/monadic-pipeline-webapi:latest"
 echo ""
 echo "Storage class: ionos-enterprise-ssd"
 echo ""
+
+if [ "$DEPLOYMENT_WARNINGS" -gt 0 ]; then
+    echo "⚠️  Warning: $DEPLOYMENT_WARNINGS deployment(s) did not become ready within timeout"
+    echo ""
+    echo "Recommended next steps:"
+    echo "  1. Run diagnostics: ./scripts/check-ionos-deployment.sh $NAMESPACE"
+    echo "  2. Check pod status: kubectl get pods -n $NAMESPACE"
+    echo "  3. View events: kubectl get events -n $NAMESPACE --sort-by='.lastTimestamp'"
+    echo ""
+else
+    echo "✅ All deployments ready!"
+    echo ""
+fi
+
 echo "Check deployment status:"
 echo "  kubectl get all -n $NAMESPACE"
 echo "  kubectl get pvc -n $NAMESPACE"

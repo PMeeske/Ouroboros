@@ -192,12 +192,31 @@ export IONOS_PASSWORD="<your-password>"
 
 ## Kubernetes Deployment
 
-### Automated Deployment (Recommended)
+### Step 0: Validate Prerequisites (Recommended)
 
-Use the provided deployment script:
+Before deploying, validate that all prerequisites are met:
 
 ```bash
-# Set environment variables
+# Run the validation script
+./scripts/validate-ionos-prerequisites.sh monadic-pipeline
+```
+
+This script checks:
+- ✓ kubectl installation and version
+- ✓ Docker installation and daemon status
+- ✓ Kubernetes cluster connection
+- ✓ IONOS storage class availability
+- ✓ Registry credentials configuration
+- ✓ Network connectivity to IONOS API and registry
+
+**Fix any issues reported before proceeding with deployment.**
+
+### Automated Deployment (Recommended)
+
+Use the provided deployment script for a streamlined deployment:
+
+```bash
+# Set environment variables (optional)
 export IONOS_REGISTRY="adaptive-systems.cr.de-fra.ionos.com"
 export IONOS_USERNAME="<your-username>"
 export IONOS_PASSWORD="<your-password>"
@@ -207,13 +226,36 @@ export IONOS_PASSWORD="<your-password>"
 ```
 
 The script will:
-1. Authenticate with IONOS Container Registry
-2. Build Docker images
-3. Push images to IONOS registry
-4. Create Kubernetes namespace
-5. Configure registry pull secrets
-6. Deploy all components
-7. Wait for deployments to be ready
+1. **Validate** IONOS-specific prerequisites (storage class, cluster connection)
+2. **Authenticate** with IONOS Container Registry
+3. **Build** Docker images for CLI and WebAPI
+4. **Push** images to IONOS registry
+5. **Create** Kubernetes namespace
+6. **Configure** registry pull secrets
+7. **Deploy** all components (Ollama, Qdrant, Jaeger, Web API, CLI)
+8. **Wait** for deployments to be ready with detailed feedback
+
+After deployment, check the status:
+
+```bash
+# Run diagnostics
+./scripts/check-ionos-deployment.sh monadic-pipeline
+```
+
+### Recommended Deployment Workflow
+
+**Complete workflow** for IONOS Cloud deployment:
+
+```bash
+# Step 1: Validate prerequisites
+./scripts/validate-ionos-prerequisites.sh monadic-pipeline
+
+# Step 2: Deploy (if validation passed)
+./scripts/deploy-ionos.sh monadic-pipeline
+
+# Step 3: Verify deployment health
+./scripts/check-ionos-deployment.sh monadic-pipeline
+```
 
 ### Manual Deployment
 
@@ -596,7 +638,21 @@ This script automatically checks:
 - Common issues (ImagePullBackOff, CrashLoopBackOff, pending PVCs)
 - Container logs
 - Service and resource status
+- Storage class availability
 - Provides actionable troubleshooting steps
+
+### Pre-Deployment Validation
+
+Before deploying or when troubleshooting deployment failures, run the validation script:
+
+```bash
+./scripts/validate-ionos-prerequisites.sh [namespace]
+
+# Example
+./scripts/validate-ionos-prerequisites.sh monadic-pipeline
+```
+
+This helps identify configuration issues before deployment.
 
 ### Common Issues
 
