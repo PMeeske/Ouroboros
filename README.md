@@ -18,6 +18,10 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
 - **🎓 Self-Improving Agents**: Automatic skill extraction and learning from successful executions
 - **🧠 Enhanced Memory**: Persistent memory with consolidation and intelligent forgetting
 - **📈 Uncertainty Routing**: Confidence-aware task routing with fallback strategies
+- **🤖 Phase 2 Metacognition (NEW)**: Agent self-model, goal hierarchy, and autonomous self-evaluation
+  - **Capability Registry**: Agent understands its own capabilities and limitations
+  - **Goal Hierarchy**: Hierarchical goal decomposition with value alignment
+  - **Self-Evaluator**: Autonomous performance assessment and improvement planning
 - **✨ Convenience Layer**: Simplified one-liner methods for quick orchestrator setup
 - **🔮 MeTTa Symbolic Reasoning**: Hybrid neural-symbolic AI with MeTTa integration
 - **📊 Vector Database Support**: Built-in vector storage and retrieval capabilities
