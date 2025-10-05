@@ -1,0 +1,177 @@
+name: .NET Test Coverage
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - '**.csproj'
+      - '.github/workflows/dotnet-coverage.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - '**.csproj'
+  workflow_dispatch:
+
+jobs:
+  test-coverage:
+    name: Test Coverage Report
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+    
+    - name: Run tests with coverage
+      run: |
+        dotnet test \
+          --configuration Release \
+          --no-build \
+          --verbosity normal \
+          --collect:"XPlat Code Coverage" \
+          --results-directory ./TestResults \
+          --logger "trx;LogFileName=test-results.trx"
+    
+    - name: Install ReportGenerator
+      run: dotnet tool install -g dotnet-reportgenerator-globaltool
+    
+    - name: Generate coverage report
+      run: |
+        reportgenerator \
+          -reports:"TestResults/*/coverage.cobertura.xml" \
+          -targetdir:"CoverageReport" \
+          -reporttypes:"Html;MarkdownSummaryGithub;Cobertura;Badges" \
+          -assemblyfilters:"+MonadicPipeline.*;+LangChainPipeline.*"
+    
+    - name: Display coverage summary
+      if: always()
+      run: |
+        echo "## 📊 Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+        cat CoverageReport/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+    
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report
+        path: CoverageReport/
+        retention-days: 30
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: TestResults/*.trx
+        retention-days: 30
+    
+    - name: Publish test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: TestResults/**/*.trx
+        check_name: Test Results
+        comment_mode: off
+    
+    - name: Code Coverage Summary Report
+      uses: irongut/CodeCoverageSummary@v1.3.0
+      if: github.event_name == 'pull_request'
+      with:
+        filename: CoverageReport/Cobertura.xml
+        badge: true
+        fail_below_min: false
+        format: markdown
+        hide_branch_rate: false
+        hide_complexity: true
+        indicators: true
+        output: both
+        thresholds: '50 70'
+    
+    - name: Add Coverage PR Comment
+      uses: marocchino/sticky-pull-request-comment@v2
+      if: github.event_name == 'pull_request'
+      with:
+        recreate: true
+        path: code-coverage-results.md
+    
+    - name: Check coverage threshold
+      if: github.event_name == 'pull_request'
+      run: |
+        # Extract line coverage percentage
+        COVERAGE=$(grep -oP 'Line coverage: \K[0-9.]+' CoverageReport/SummaryGithub.md || echo "0")
+        echo "Current coverage: ${COVERAGE}%"
+        
+        # Warn if coverage is below 10%
+        if (( $(echo "$COVERAGE < 10.0" | bc -l) )); then
+          echo "⚠️ Warning: Coverage is below 10% threshold"
+          echo "::warning::Code coverage is ${COVERAGE}%, which is below the 10% threshold"
+        fi
+        
+        # Goal: Warn if coverage decreases
+        echo "Coverage check complete: ${COVERAGE}%"
+    
+    - name: Upload coverage to Codecov (optional)
+      uses: codecov/codecov-action@v4
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      continue-on-error: true
+      with:
+        files: CoverageReport/Cobertura.xml
+        flags: unittests
+        name: codecov-monadicpipeline
+        fail_ci_if_error: false
+        verbose: true
+
+  benchmark-tests:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Run benchmarks
+      run: |
+        if [ -d "src/MonadicPipeline.Benchmarks" ]; then
+          cd src/MonadicPipeline.Benchmarks
+          dotnet run -c Release --framework net8.0 --exporters json
+        else
+          echo "Benchmark project not found, skipping..."
+        fi
+    
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: benchmark-results
+        path: BenchmarkDotNet.Artifacts/
+        retention-days: 30

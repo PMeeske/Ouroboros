@@ -16,3 +16,8 @@ appsettings.*.local.json
 *.coverage
 *.coveragexml
 *.zip
+
+# Code Coverage Reports
+TestCoverageReport/
+coverage/
+**/coverage.cobertura.xml
