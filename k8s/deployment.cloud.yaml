@@ -51,7 +51,9 @@ spec:
           #   GCP GCR: gcr.io/my-project/monadic-pipeline:latest
           #   Docker Hub: yourusername/monadic-pipeline:latest
           image: REGISTRY_URL/monadic-pipeline:latest
-          imagePullPolicy: Always
+          # Use IfNotPresent for stable releases to reduce registry traffic
+          # Use Always only for :latest tags in development
+          imagePullPolicy: IfNotPresent
           env:
             - name: ASPNETCORE_ENVIRONMENT
               value: "Production"

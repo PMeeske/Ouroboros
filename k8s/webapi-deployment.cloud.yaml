@@ -53,7 +53,9 @@ spec:
           #   GCP GCR: gcr.io/my-project/monadic-pipeline-webapi:latest
           #   Docker Hub: yourusername/monadic-pipeline-webapi:latest
           image: REGISTRY_URL/monadic-pipeline-webapi:latest
-          imagePullPolicy: Always
+          # Use IfNotPresent for stable releases to reduce registry traffic
+          # Use Always only for :latest tags in development
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               name: http

@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Globalization;
 
 namespace LangChainPipeline.Tools;
 
@@ -28,7 +29,9 @@ public sealed class MathTool : ITool
         {
             var dataTable = new DataTable();
             var result = dataTable.Compute(input, string.Empty);
-            return Task.FromResult(Result<string, string>.Success(result?.ToString() ?? "null"));
+            // Use InvariantCulture to ensure consistent decimal separator (always '.')
+            var resultString = Convert.ToString(result, CultureInfo.InvariantCulture) ?? "null";
+            return Task.FromResult(Result<string, string>.Success(resultString));
         }
         catch (Exception ex)
         {
