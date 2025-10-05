@@ -4,6 +4,37 @@ This directory contains GitHub Actions workflows for automated CI/CD of MonadicP
 
 ## Active Workflows
 
+### Ollama Integration Tests (`ollama-integration-test.yml`)
+
+**Status**: ✅ Active (Continuous Integration)
+
+End-to-end integration tests with Ollama to validate the reverse engineering pipeline using real LLM models.
+
+**Triggers**:
+- Push to `main` branch (when source files change)
+- Pull requests to `main` (when source files change)
+- Manual trigger via GitHub Actions UI
+
+**Features**:
+- Sets up Ollama service on GitHub Actions runner
+- Pulls lightweight models (llama3:8b, nomic-embed-text)
+- Tests CLI commands (ask, pipeline DSL, reverse engineering)
+- Memory-efficient configuration for CI/CD constraints
+- 30-minute timeout with concurrent job cancellation
+
+**Test Cases**:
+1. Basic Ollama connectivity test
+2. Pipeline DSL execution
+3. Memory-efficient reverse engineering workflow
+4. RAG with embeddings
+
+**Resource Constraints**:
+- RAM: 7GB available on GitHub Actions
+- Model Size: llama3:8b (~4.7GB)
+- Timeout: 30 minutes
+
+---
+
 ### IONOS Cloud Deployment (`ionos-deploy.yml`)
 
 **Status**: ✅ Active (Primary deployment target)
@@ -37,6 +68,24 @@ Automatically builds, tests, and deploys MonadicPipeline to IONOS Cloud Kubernet
 - `ionos-api.yaml`: IONOS Cloud API v6 OpenAPI specification for infrastructure management
 
 See [IONOS Deployment Guide](../../docs/IONOS_DEPLOYMENT_GUIDE.md) for detailed setup instructions.
+
+---
+
+### .NET Test Coverage (`dotnet-coverage.yml`)
+
+**Status**: ✅ Active
+
+Runs unit tests with code coverage reporting.
+
+**Triggers**:
+- Push to `main` or `develop` branches
+- Pull requests
+- Manual trigger via GitHub Actions UI
+
+**Features**:
+- Runs 224 unit tests (mocked, without Ollama)
+- Generates code coverage reports
+- Publishes test results and coverage to PRs
 
 ---
 
