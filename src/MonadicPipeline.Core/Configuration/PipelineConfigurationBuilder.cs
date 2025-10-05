@@ -83,7 +83,9 @@ public class PipelineConfigurationBuilder
     /// </summary>
     public PipelineConfigurationBuilder AddUserSecrets<T>(bool optional = true) where T : class
     {
-        if (_environmentName == "Development" || _environmentName == "Local")
+        // Use EnvironmentDetector to check if we're in local development
+        // This is more robust than string comparison as it checks multiple indicators
+        if (EnvironmentDetector.IsLocalDevelopment())
         {
             _configurationBuilder.AddUserSecrets<T>(optional);
         }
