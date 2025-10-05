@@ -11,10 +11,12 @@ This directory contains deployment scripts and configuration files for various d
 | **Terraform Validation** | **`validate-terraform.sh`** | **`./scripts/validate-terraform.sh dev`** |
 | **Terraform Management** | **`manage-infrastructure.sh`** | **`./scripts/manage-infrastructure.sh apply dev`** |
 | **Check External Access** | **`check-external-access.sh`** | **`./scripts/check-external-access.sh dev`** |
+| **IONOS Prerequisites** | **`validate-ionos-prerequisites.sh`** | **`./scripts/validate-ionos-prerequisites.sh`** |
 | Local Docker Compose | `deploy-docker.sh` | `./scripts/deploy-docker.sh production` |
 | Local Kubernetes | `deploy-k8s.sh` | `./scripts/deploy-k8s.sh` |
 | **Azure AKS + ACR** | **`deploy-aks.sh`** | **`./scripts/deploy-aks.sh myregistry`** |
 | **IONOS Cloud** | **`deploy-ionos.sh`** | **`./scripts/deploy-ionos.sh monadic-pipeline`** |
+| **IONOS Diagnostics** | **`check-ionos-deployment.sh`** | **`./scripts/check-ionos-deployment.sh`** |
 
 ## Scripts Overview
 
@@ -289,6 +291,48 @@ Automated deployment to Azure Kubernetes Service with Azure Container Registry.
 - kubectl configured for your AKS cluster
 - ACR already created
 
+#### `validate-ionos-prerequisites.sh` - IONOS Prerequisites Validation (NEW)
+Comprehensive validation of all prerequisites before deploying to IONOS Cloud.
+
+```bash
+./scripts/validate-ionos-prerequisites.sh [namespace]
+```
+
+**What it checks:**
+- kubectl installation and version
+- Docker installation and daemon status
+- Kubernetes cluster connection
+- IONOS-specific cluster detection
+- Cluster resources (nodes, metrics)
+- IONOS storage class availability
+- Namespace existence and existing resources
+- Registry secret configuration
+- Environment variables (IONOS_USERNAME, IONOS_PASSWORD, IONOS_TOKEN)
+- Network connectivity to IONOS API and registry
+
+**Output includes:**
+- ✓ Passed checks in green
+- ✗ Failed checks in red  
+- ⚠ Warnings in yellow
+- Comprehensive validation summary
+- Actionable recommendations
+
+**Example:**
+```bash
+./scripts/validate-ionos-prerequisites.sh monadic-pipeline
+```
+
+**Use cases:**
+- Before first deployment to IONOS Cloud
+- After cluster configuration changes
+- When troubleshooting deployment issues
+- As part of pre-deployment checklist
+
+**Recommended workflow:**
+1. Run validation script first
+2. Address any failures or warnings
+3. Proceed with deployment
+
 #### `deploy-ionos.sh` - IONOS Cloud (NEW)
 Automated deployment to IONOS Cloud Kubernetes with IONOS Container Registry.
 
@@ -409,10 +453,13 @@ If you encounter `ImagePullBackOff` errors in Kubernetes:
 
 **On IONOS Cloud:**
 ```bash
-# Deploy to IONOS Cloud
+# Step 1: Validate prerequisites
+./scripts/validate-ionos-prerequisites.sh monadic-pipeline
+
+# Step 2: Deploy to IONOS Cloud
 ./scripts/deploy-ionos.sh monadic-pipeline
 
-# Check deployment status and diagnose issues
+# Step 3: Check deployment status and diagnose issues
 ./scripts/check-ionos-deployment.sh monadic-pipeline
 ```
 
