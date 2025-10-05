@@ -20,6 +20,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
     private readonly ISkillRegistry _skills;
     private readonly IUncertaintyRouter _router;
     private readonly ISafetyGuard _safety;
+    private readonly ISkillExtractor? _skillExtractor;
     private readonly ConcurrentDictionary<string, PerformanceMetrics> _metrics = new();
 
     public MetaAIPlannerOrchestrator(
@@ -28,7 +29,8 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
         IMemoryStore memory,
         ISkillRegistry skills,
         IUncertaintyRouter router,
-        ISafetyGuard safety)
+        ISafetyGuard safety,
+        ISkillExtractor? skillExtractor = null)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _tools = tools ?? throw new ArgumentNullException(nameof(tools));
@@ -36,6 +38,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _router = router ?? throw new ArgumentNullException(nameof(router));
         _safety = safety ?? throw new ArgumentNullException(nameof(safety));
+        _skillExtractor = skillExtractor ?? new SkillExtractor(llm, skills);
     }
 
     /// <summary>
@@ -229,11 +232,39 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
 
         _ = _memory.StoreExperienceAsync(experience);
 
-        // If execution was successful and high quality, consider extracting a skill
-        if (verification.Verified && verification.QualityScore > 0.8)
+        // If execution was successful and high quality, extract a skill
+        if (verification.Verified && verification.QualityScore > 0.8 && _skillExtractor != null)
         {
-            // Skill extraction would happen here
-            // For now, we record the success for future reference
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var shouldExtract = await _skillExtractor.ShouldExtractSkillAsync(verification);
+                    if (shouldExtract)
+                    {
+                        var skillResult = await _skillExtractor.ExtractSkillAsync(
+                            verification.Execution,
+                            verification);
+
+                        skillResult.Match(
+                            skill => 
+                            {
+                                RecordMetric("skill_extraction_success", 1.0, true);
+                                Console.WriteLine($"✓ Extracted skill: {skill.Name} (Quality: {skill.SuccessRate:P0})");
+                            },
+                            error => 
+                            {
+                                RecordMetric("skill_extraction_failure", 1.0, false);
+                                Console.WriteLine($"✗ Skill extraction failed: {error}");
+                            });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    RecordMetric("skill_extraction_error", 1.0, false);
+                    Console.WriteLine($"✗ Skill extraction error: {ex.Message}");
+                }
+            });
         }
 
         RecordMetric("learning", 1.0, true);

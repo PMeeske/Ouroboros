@@ -17,6 +17,7 @@ public sealed class MetaAIBuilder
     private ISkillRegistry? _skills;
     private IUncertaintyRouter? _router;
     private ISafetyGuard? _safety;
+    private ISkillExtractor? _skillExtractor;
     private IEmbeddingModel? _embedding;
     private TrackedVectorStore? _vectorStore;
     private double _confidenceThreshold = 0.7;
@@ -95,6 +96,15 @@ public sealed class MetaAIBuilder
     }
 
     /// <summary>
+    /// Sets custom skill extractor.
+    /// </summary>
+    public MetaAIBuilder WithSkillExtractor(ISkillExtractor skillExtractor)
+    {
+        _skillExtractor = skillExtractor;
+        return this;
+    }
+
+    /// <summary>
     /// Sets the minimum confidence threshold for routing.
     /// </summary>
     public MetaAIBuilder WithConfidenceThreshold(double threshold)
@@ -143,7 +153,7 @@ public sealed class MetaAIBuilder
             router = _router;
         }
 
-        return new MetaAIPlannerOrchestrator(_llm, tools, memory, skills, router, safety);
+        return new MetaAIPlannerOrchestrator(_llm, tools, memory, skills, router, safety, _skillExtractor);
     }
 
     /// <summary>

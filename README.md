@@ -15,6 +15,9 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
 - **🧠 Meta-AI Layer**: Pipeline steps exposed as tools - the LLM can invoke pipeline operations
 - **🎯 AI Orchestrator**: Performance-aware model selection based on use case classification
 - **🚀 Meta-AI Layer v2**: Planner/Executor/Verifier orchestrator with continual learning
+- **🎓 Self-Improving Agents**: Automatic skill extraction and learning from successful executions
+- **🧠 Enhanced Memory**: Persistent memory with consolidation and intelligent forgetting
+- **📈 Uncertainty Routing**: Confidence-aware task routing with fallback strategies
 - **✨ Convenience Layer**: Simplified one-liner methods for quick orchestrator setup
 - **🔮 MeTTa Symbolic Reasoning**: Hybrid neural-symbolic AI with MeTTa integration
 - **📊 Vector Database Support**: Built-in vector storage and retrieval capabilities
