@@ -369,16 +369,161 @@ foreach (var skill in skills.OrderByDescending(s => s.SuccessRate))
 }
 ```
 
+## Phase 2: Self-Model & Metacognition (Implemented ✓)
+
+### 4. Capability Registry
+
+The agent maintains a self-model of its own capabilities, success rates, and limitations.
+
+#### ICapabilityRegistry Interface
+
+```csharp
+public interface ICapabilityRegistry
+{
+    Task<List<AgentCapability>> GetCapabilitiesAsync(CancellationToken ct = default);
+    Task<bool> CanHandleAsync(string task, Dictionary<string, object>? context = null, CancellationToken ct = default);
+    AgentCapability? GetCapability(string name);
+    Task UpdateCapabilityAsync(string name, ExecutionResult result, CancellationToken ct = default);
+    void RegisterCapability(AgentCapability capability);
+    Task<List<string>> IdentifyCapabilityGapsAsync(string task, CancellationToken ct = default);
+    Task<List<string>> SuggestAlternativesAsync(string task, CancellationToken ct = default);
+}
+```
+
+#### Key Features
+
+- **Self-Awareness**: Agent knows what it can and cannot do
+- **Success Tracking**: Monitors success rates per capability over time
+- **Gap Analysis**: Identifies missing capabilities for given tasks
+- **Alternative Suggestions**: Proposes alternatives when unable to handle a task
+- **Dynamic Updates**: Capability metrics update with each execution
+
+#### Example
+
+```csharp
+var registry = new CapabilityRegistry(llm, tools);
+
+// Check if agent can handle a task
+var canHandle = await registry.CanHandleAsync("Build a machine learning model");
+if (!canHandle)
+{
+    // Get suggestions for alternatives
+    var alternatives = await registry.SuggestAlternativesAsync("Build a machine learning model");
+    // Result: ["Use pre-trained model", "Simplify to statistical analysis", ...]
+}
+
+// Get capability gaps
+var gaps = await registry.IdentifyCapabilityGapsAsync("Quantum computing simulation");
+// Result: ["Missing tools: quantum_simulator", "No experience with quantum algorithms"]
+```
+
+### 5. Goal Hierarchy
+
+Hierarchical goal decomposition with value alignment and conflict detection.
+
+#### IGoalHierarchy Interface
+
+```csharp
+public interface IGoalHierarchy
+{
+    void AddGoal(Goal goal);
+    Task<Result<Goal, string>> DecomposeGoalAsync(Goal goal, int maxDepth = 3, CancellationToken ct = default);
+    Task<List<GoalConflict>> DetectConflictsAsync(CancellationToken ct = default);
+    Task<Result<bool, string>> CheckValueAlignmentAsync(Goal goal, CancellationToken ct = default);
+    void CompleteGoal(Guid id, string reason);
+    Task<List<Goal>> PrioritizeGoalsAsync(CancellationToken ct = default);
+}
+```
+
+#### Goal Types
+
+- **Primary**: Main objectives
+- **Secondary**: Supporting objectives
+- **Instrumental**: Means to achieve other goals
+- **Safety**: Constraint/boundary conditions (cannot be overridden)
+
+#### Key Features
+
+- **Automatic Decomposition**: LLM-powered goal breakdown into subgoals
+- **Conflict Detection**: Identifies contradictory goals
+- **Value Alignment**: Ensures goals respect safety constraints
+- **Priority Management**: Dependency-aware goal ordering
+- **Safety Enforcement**: Safety goals are immutable
+
+#### Example
+
+```csharp
+var hierarchy = new GoalHierarchy(llm, safety);
+
+var mainGoal = new Goal("Build a recommendation system", GoalType.Primary, 0.9);
+
+// Decompose into subgoals
+var decomposed = await hierarchy.DecomposeGoalAsync(mainGoal);
+// Result: subgoals like "collect user data", "train model", "implement API", etc.
+
+// Check for conflicts
+var conflicts = await hierarchy.DetectConflictsAsync();
+// Identifies conflicting goals and suggests resolutions
+
+// Check value alignment
+var aligned = await hierarchy.CheckValueAlignmentAsync(mainGoal);
+// Ensures goal respects safety constraints
+```
+
+### 6. Self-Evaluator
+
+Metacognitive monitoring and autonomous performance assessment.
+
+#### ISelfEvaluator Interface
+
+```csharp
+public interface ISelfEvaluator
+{
+    Task<Result<SelfAssessment, string>> EvaluatePerformanceAsync(CancellationToken ct = default);
+    Task<List<Insight>> GenerateInsightsAsync(CancellationToken ct = default);
+    Task<Result<ImprovementPlan, string>> SuggestImprovementsAsync(CancellationToken ct = default);
+    Task<double> GetConfidenceCalibrationAsync(CancellationToken ct = default);
+    void RecordPrediction(double predictedConfidence, bool actualSuccess);
+    Task<List<(DateTime Time, double Value)>> GetPerformanceTrendAsync(string metric, TimeSpan timeWindow, CancellationToken ct = default);
+}
+```
+
+#### Key Features
+
+- **Performance Tracking**: Monitors success rates, calibration, skill acquisition
+- **Confidence Calibration**: Measures and improves prediction accuracy using Brier score
+- **Insight Generation**: Identifies patterns in successes and failures
+- **Improvement Planning**: Suggests actionable steps to enhance performance
+- **Trend Analysis**: Tracks performance evolution over time
+
+#### Example
+
+```csharp
+var evaluator = new SelfEvaluator(llm, capabilities, skills, memory, orchestrator);
+
+// Self-assessment
+var assessment = await evaluator.EvaluatePerformanceAsync();
+// Result: Overall performance, calibration, strengths, weaknesses, summary
+
+// Generate insights
+var insights = await evaluator.GenerateInsightsAsync();
+// Result: ["Success Pattern: High performance on structured data tasks", ...]
+
+// Create improvement plan
+var plan = await evaluator.SuggestImprovementsAsync();
+// Result: Goal, actions, expected improvements, duration
+
+// Check calibration
+var calibration = await evaluator.GetConfidenceCalibrationAsync();
+// Result: 0.85 (well-calibrated: 1.0 = perfect, 0.0 = worst)
+```
+
 ## Future Enhancements
 
 The following capabilities are planned for future releases:
 
-### Phase 2: Self-Model & Metacognition
-- **Capability Registry**: Agent understands its own capabilities and limitations
-- **Goal Hierarchy**: Hierarchical goal decomposition with priority management
-- **Self-Evaluation**: Autonomous performance assessment and improvement suggestions
-
 ### Phase 3: Emergent Intelligence
+- **Skill Composition**: Automatic combination of skills to solve novel problems
 - **Transfer Learning**: Apply learned skills across domains
 - **Hypothesis Generation**: Scientific reasoning and experimentation
 - **Curiosity-Driven Learning**: Autonomous exploration during idle time
@@ -405,9 +550,11 @@ Memory operations are bounded:
 ## References
 
 - **Architecture Spec**: See `IMPLEMENTATION_GUIDE.md` for technical details
-- **Examples**: `src/MonadicPipeline.Examples/Examples/SelfImprovingAgentExample.cs`
-- **Tests**: `src/MonadicPipeline.Tests/Tests/SkillExtractionTests.cs`
-- **Tests**: `src/MonadicPipeline.Tests/Tests/PersistentMemoryStoreTests.cs`
+- **Phase 1 Example**: `src/MonadicPipeline.Examples/Examples/SelfImprovingAgentExample.cs`
+- **Phase 2 Example**: `src/MonadicPipeline.Examples/Examples/Phase2MetacognitionExample.cs`
+- **Phase 1 Tests**: `src/MonadicPipeline.Tests/Tests/SkillExtractionTests.cs`
+- **Phase 1 Tests**: `src/MonadicPipeline.Tests/Tests/PersistentMemoryStoreTests.cs`
+- **Phase 2 Tests**: `src/MonadicPipeline.Tests/Tests/Phase2MetacognitionTests.cs`
 
 ## Contributing
 
