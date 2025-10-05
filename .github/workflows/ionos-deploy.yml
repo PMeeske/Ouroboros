@@ -216,6 +216,29 @@ jobs:
           kubectl cluster-info
           echo "KUBECONFIG=$(pwd)/kubeconfig.yaml" >> $GITHUB_ENV
 
+      - name: Validate IONOS prerequisites
+        run: |
+          echo "Validating IONOS Cloud prerequisites..."
+          
+          # Check storage class
+          if kubectl get storageclass ionos-enterprise-ssd &> /dev/null; then
+            echo "✓ IONOS storage class 'ionos-enterprise-ssd' found"
+          else
+            echo "⚠️  Warning: IONOS storage class 'ionos-enterprise-ssd' not found"
+            echo "Available storage classes:"
+            kubectl get storageclass
+            echo ""
+            echo "This may cause PVC provisioning issues during deployment"
+          fi
+          
+          # Check cluster nodes
+          NODE_COUNT=$(kubectl get nodes --no-headers 2>/dev/null | wc -l)
+          if [ "$NODE_COUNT" -gt 0 ]; then
+            echo "✓ Cluster has $NODE_COUNT node(s)"
+          else
+            echo "⚠️  Warning: Unable to detect cluster nodes"
+          fi
+
       - name: Create namespace
         run: |
           kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
@@ -275,10 +298,32 @@ jobs:
       - name: Wait for deployments
         run: |
           echo "Waiting for deployments to be ready..."
-          kubectl wait --for=condition=available --timeout=300s deployment/ollama -n ${{ env.NAMESPACE }} || true
-          kubectl wait --for=condition=available --timeout=300s deployment/qdrant -n ${{ env.NAMESPACE }} || true
-          kubectl wait --for=condition=available --timeout=300s deployment/monadic-pipeline -n ${{ env.NAMESPACE }} || true
-          kubectl wait --for=condition=available --timeout=300s deployment/monadic-pipeline-webapi -n ${{ env.NAMESPACE }} || true
+          
+          DEPLOYMENT_WARNINGS=0
+          
+          # Function to wait with better feedback
+          wait_for_deployment() {
+            local deployment=$1
+            echo "Waiting for $deployment..."
+            if kubectl wait --for=condition=available --timeout=300s "deployment/$deployment" -n ${{ env.NAMESPACE }} 2>&1; then
+              echo "✓ $deployment is ready"
+              return 0
+            else
+              echo "⚠️  Warning: $deployment did not become ready within timeout"
+              return 1
+            fi
+          }
+          
+          wait_for_deployment "ollama" || ((DEPLOYMENT_WARNINGS++))
+          wait_for_deployment "qdrant" || ((DEPLOYMENT_WARNINGS++))
+          wait_for_deployment "monadic-pipeline" || ((DEPLOYMENT_WARNINGS++))
+          wait_for_deployment "monadic-pipeline-webapi" || ((DEPLOYMENT_WARNINGS++))
+          
+          if [ "$DEPLOYMENT_WARNINGS" -gt 0 ]; then
+            echo ""
+            echo "⚠️  $DEPLOYMENT_WARNINGS deployment(s) did not become ready"
+            echo "Check pod status: kubectl get pods -n ${{ env.NAMESPACE }}"
+          fi
 
       - name: Deployment summary
         run: |
