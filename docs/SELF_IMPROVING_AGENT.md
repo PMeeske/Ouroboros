@@ -369,19 +369,336 @@ foreach (var skill in skills.OrderByDescending(s => s.SuccessRate))
 }
 ```
 
+## Phase 2: Self-Model & Metacognition (Implemented ✓)
+
+### 4. Capability Registry
+
+The agent maintains a self-model of its own capabilities, success rates, and limitations.
+
+#### ICapabilityRegistry Interface
+
+```csharp
+public interface ICapabilityRegistry
+{
+    Task<List<AgentCapability>> GetCapabilitiesAsync(CancellationToken ct = default);
+    Task<bool> CanHandleAsync(string task, Dictionary<string, object>? context = null, CancellationToken ct = default);
+    AgentCapability? GetCapability(string name);
+    Task UpdateCapabilityAsync(string name, ExecutionResult result, CancellationToken ct = default);
+    void RegisterCapability(AgentCapability capability);
+    Task<List<string>> IdentifyCapabilityGapsAsync(string task, CancellationToken ct = default);
+    Task<List<string>> SuggestAlternativesAsync(string task, CancellationToken ct = default);
+}
+```
+
+#### Key Features
+
+- **Self-Awareness**: Agent knows what it can and cannot do
+- **Success Tracking**: Monitors success rates per capability over time
+- **Gap Analysis**: Identifies missing capabilities for given tasks
+- **Alternative Suggestions**: Proposes alternatives when unable to handle a task
+- **Dynamic Updates**: Capability metrics update with each execution
+
+#### Example
+
+```csharp
+var registry = new CapabilityRegistry(llm, tools);
+
+// Check if agent can handle a task
+var canHandle = await registry.CanHandleAsync("Build a machine learning model");
+if (!canHandle)
+{
+    // Get suggestions for alternatives
+    var alternatives = await registry.SuggestAlternativesAsync("Build a machine learning model");
+    // Result: ["Use pre-trained model", "Simplify to statistical analysis", ...]
+}
+
+// Get capability gaps
+var gaps = await registry.IdentifyCapabilityGapsAsync("Quantum computing simulation");
+// Result: ["Missing tools: quantum_simulator", "No experience with quantum algorithms"]
+```
+
+### 5. Goal Hierarchy
+
+Hierarchical goal decomposition with value alignment and conflict detection.
+
+#### IGoalHierarchy Interface
+
+```csharp
+public interface IGoalHierarchy
+{
+    void AddGoal(Goal goal);
+    Task<Result<Goal, string>> DecomposeGoalAsync(Goal goal, int maxDepth = 3, CancellationToken ct = default);
+    Task<List<GoalConflict>> DetectConflictsAsync(CancellationToken ct = default);
+    Task<Result<bool, string>> CheckValueAlignmentAsync(Goal goal, CancellationToken ct = default);
+    void CompleteGoal(Guid id, string reason);
+    Task<List<Goal>> PrioritizeGoalsAsync(CancellationToken ct = default);
+}
+```
+
+#### Goal Types
+
+- **Primary**: Main objectives
+- **Secondary**: Supporting objectives
+- **Instrumental**: Means to achieve other goals
+- **Safety**: Constraint/boundary conditions (cannot be overridden)
+
+#### Key Features
+
+- **Automatic Decomposition**: LLM-powered goal breakdown into subgoals
+- **Conflict Detection**: Identifies contradictory goals
+- **Value Alignment**: Ensures goals respect safety constraints
+- **Priority Management**: Dependency-aware goal ordering
+- **Safety Enforcement**: Safety goals are immutable
+
+#### Example
+
+```csharp
+var hierarchy = new GoalHierarchy(llm, safety);
+
+var mainGoal = new Goal("Build a recommendation system", GoalType.Primary, 0.9);
+
+// Decompose into subgoals
+var decomposed = await hierarchy.DecomposeGoalAsync(mainGoal);
+// Result: subgoals like "collect user data", "train model", "implement API", etc.
+
+// Check for conflicts
+var conflicts = await hierarchy.DetectConflictsAsync();
+// Identifies conflicting goals and suggests resolutions
+
+// Check value alignment
+var aligned = await hierarchy.CheckValueAlignmentAsync(mainGoal);
+// Ensures goal respects safety constraints
+```
+
+### 6. Self-Evaluator
+
+Metacognitive monitoring and autonomous performance assessment.
+
+#### ISelfEvaluator Interface
+
+```csharp
+public interface ISelfEvaluator
+{
+    Task<Result<SelfAssessment, string>> EvaluatePerformanceAsync(CancellationToken ct = default);
+    Task<List<Insight>> GenerateInsightsAsync(CancellationToken ct = default);
+    Task<Result<ImprovementPlan, string>> SuggestImprovementsAsync(CancellationToken ct = default);
+    Task<double> GetConfidenceCalibrationAsync(CancellationToken ct = default);
+    void RecordPrediction(double predictedConfidence, bool actualSuccess);
+    Task<List<(DateTime Time, double Value)>> GetPerformanceTrendAsync(string metric, TimeSpan timeWindow, CancellationToken ct = default);
+}
+```
+
+#### Key Features
+
+- **Performance Tracking**: Monitors success rates, calibration, skill acquisition
+- **Confidence Calibration**: Measures and improves prediction accuracy using Brier score
+- **Insight Generation**: Identifies patterns in successes and failures
+- **Improvement Planning**: Suggests actionable steps to enhance performance
+- **Trend Analysis**: Tracks performance evolution over time
+
+#### Example
+
+```csharp
+var evaluator = new SelfEvaluator(llm, capabilities, skills, memory, orchestrator);
+
+// Self-assessment
+var assessment = await evaluator.EvaluatePerformanceAsync();
+// Result: Overall performance, calibration, strengths, weaknesses, summary
+
+// Generate insights
+var insights = await evaluator.GenerateInsightsAsync();
+// Result: ["Success Pattern: High performance on structured data tasks", ...]
+
+// Create improvement plan
+var plan = await evaluator.SuggestImprovementsAsync();
+// Result: Goal, actions, expected improvements, duration
+
+// Check calibration
+var calibration = await evaluator.GetConfidenceCalibrationAsync();
+// Result: 0.85 (well-calibrated: 1.0 = perfect, 0.0 = worst)
+```
+
+## Phase 3: Emergent Intelligence (Implemented ✓)
+
+### 7. Transfer Learning
+
+Cross-domain skill adaptation using analogical reasoning.
+
+#### ITransferLearner Interface
+
+```csharp
+public interface ITransferLearner
+{
+    Task<Result<TransferResult, string>> AdaptSkillToDomainAsync(
+        Skill sourceSkill, string targetDomain, TransferLearningConfig? config = null, CancellationToken ct = default);
+    
+    Task<double> EstimateTransferabilityAsync(Skill skill, string targetDomain, CancellationToken ct = default);
+    
+    Task<List<(string source, string target, double confidence)>> FindAnalogiesAsync(
+        string sourceDomain, string targetDomain, CancellationToken ct = default);
+    
+    List<TransferResult> GetTransferHistory(string skillName);
+    
+    void RecordTransferValidation(TransferResult transferResult, bool success);
+}
+```
+
+#### Key Features
+
+- **Domain Adaptation**: LLM-powered skill transformation for new domains
+- **Analogical Reasoning**: Finds conceptual mappings between domains
+- **Transferability Scoring**: Estimates transfer success probability
+- **Transfer History**: Tracks all adaptation attempts
+- **Validation Recording**: Updates transferability based on results
+
+#### Example
+
+```csharp
+var transferLearner = new TransferLearner(llm, skills, memory);
+
+// Estimate transferability
+var score = await transferLearner.EstimateTransferabilityAsync(
+    debuggingSkill,
+    "troubleshooting mechanical systems");
+// Result: 0.72 (reasonably transferable)
+
+// Find analogies
+var analogies = await transferLearner.FindAnalogiesAsync(
+    "software debugging",
+    "mechanical troubleshooting");
+// Result: [("error message", "symptom", 0.85), ("code location", "faulty component", 0.78), ...]
+
+// Adapt skill
+var result = await transferLearner.AdaptSkillToDomainAsync(debuggingSkill, "mechanical systems");
+// Result: Adapted skill with transformed steps
+```
+
+### 8. Hypothesis Engine
+
+Scientific reasoning with hypothesis generation and experimental testing.
+
+#### IHypothesisEngine Interface
+
+```csharp
+public interface IHypothesisEngine
+{
+    Task<Result<Hypothesis, string>> GenerateHypothesisAsync(
+        string observation, Dictionary<string, object>? context = null, CancellationToken ct = default);
+    
+    Task<Result<Experiment, string>> DesignExperimentAsync(Hypothesis hypothesis, CancellationToken ct = default);
+    
+    Task<Result<HypothesisTestResult, string>> TestHypothesisAsync(
+        Hypothesis hypothesis, Experiment experiment, CancellationToken ct = default);
+    
+    Task<Result<Hypothesis, string>> AbductiveReasoningAsync(
+        List<string> observations, CancellationToken ct = default);
+    
+    void UpdateHypothesis(Guid hypothesisId, string evidence, bool supports);
+}
+```
+
+#### Key Features
+
+- **Hypothesis Generation**: Forms testable hypotheses from observations
+- **Experiment Design**: Creates concrete tests for hypotheses
+- **Hypothesis Testing**: Executes experiments and evaluates results
+- **Abductive Reasoning**: Infers best explanation for multiple observations
+- **Confidence Tracking**: Adjusts hypothesis confidence based on evidence
+
+#### Example
+
+```csharp
+var hypothesisEngine = new HypothesisEngine(llm, orchestrator, memory);
+
+// Generate hypothesis
+var hypothesis = await hypothesisEngine.GenerateHypothesisAsync(
+    "Tasks with structured steps succeed more often");
+// Result: Hypothesis with confidence 0.7
+
+// Design experiment
+var experiment = await hypothesisEngine.DesignExperimentAsync(hypothesis.Value);
+// Result: Experiment with test steps and expected outcomes
+
+// Test hypothesis
+var testResult = await hypothesisEngine.TestHypothesisAsync(
+    hypothesis.Value, 
+    experiment.Value);
+// Result: Updated hypothesis with adjusted confidence
+
+// Abductive reasoning
+var best = await hypothesisEngine.AbductiveReasoningAsync(
+    new[] { "Observation 1", "Observation 2", "Observation 3" });
+// Result: Best explanation that accounts for all observations
+```
+
+### 9. Curiosity Engine
+
+Intrinsic motivation and autonomous exploration.
+
+#### ICuriosityEngine Interface
+
+```csharp
+public interface ICuriosityEngine
+{
+    Task<double> ComputeNoveltyAsync(Plan plan, CancellationToken ct = default);
+    
+    Task<Result<Plan, string>> GenerateExploratoryPlanAsync(CancellationToken ct = default);
+    
+    Task<bool> ShouldExploreAsync(string? currentGoal = null, CancellationToken ct = default);
+    
+    Task<List<ExplorationOpportunity>> IdentifyExplorationOpportunitiesAsync(
+        int maxOpportunities = 5, CancellationToken ct = default);
+    
+    Task<double> EstimateInformationGainAsync(string explorationDescription, CancellationToken ct = default);
+    
+    void RecordExploration(Plan plan, ExecutionResult execution, double actualNovelty);
+}
+```
+
+#### Key Features
+
+- **Novelty Detection**: Computes how different a plan is from past experiences
+- **Exploration Planning**: Generates plans for learning new areas
+- **Exploration/Exploitation Balance**: Decides when to explore vs exploit
+- **Opportunity Identification**: Finds unexplored areas with high learning potential
+- **Information Gain Estimation**: Predicts learning value of exploration
+
+#### Example
+
+```csharp
+var curiosityEngine = new CuriosityEngine(llm, memory, skills, safety);
+
+// Check novelty
+var novelty = await curiosityEngine.ComputeNoveltyAsync(plan);
+// Result: 0.85 (highly novel)
+
+// Decide whether to explore
+var shouldExplore = await curiosityEngine.ShouldExploreAsync();
+if (shouldExplore)
+{
+    // Generate exploratory plan
+    var expPlan = await curiosityEngine.GenerateExploratoryPlanAsync();
+    // Result: Safe, structured exploration plan
+}
+
+// Identify opportunities
+var opportunities = await curiosityEngine.IdentifyExplorationOpportunitiesAsync();
+// Result: List of areas with high novelty and information gain
+
+// Estimate information gain
+var gain = await curiosityEngine.EstimateInformationGainAsync("quantum computing");
+// Result: 0.9 (high potential learning)
+```
+
 ## Future Enhancements
 
 The following capabilities are planned for future releases:
 
-### Phase 2: Self-Model & Metacognition
-- **Capability Registry**: Agent understands its own capabilities and limitations
-- **Goal Hierarchy**: Hierarchical goal decomposition with priority management
-- **Self-Evaluation**: Autonomous performance assessment and improvement suggestions
-
-### Phase 3: Emergent Intelligence
-- **Transfer Learning**: Apply learned skills across domains
-- **Hypothesis Generation**: Scientific reasoning and experimentation
-- **Curiosity-Driven Learning**: Autonomous exploration during idle time
+### Phase 4: Advanced Capabilities
+- **Meta-Learning**: Learn how to learn more effectively
+- **Few-Shot Adaptation**: Quickly adapt to new tasks with minimal examples
+- **Causal Reasoning**: Understand cause-and-effect relationships
+- **Counterfactual Thinking**: Reason about "what if" scenarios
 
 ## Safety Considerations
 
@@ -405,9 +722,13 @@ Memory operations are bounded:
 ## References
 
 - **Architecture Spec**: See `IMPLEMENTATION_GUIDE.md` for technical details
-- **Examples**: `src/MonadicPipeline.Examples/Examples/SelfImprovingAgentExample.cs`
-- **Tests**: `src/MonadicPipeline.Tests/Tests/SkillExtractionTests.cs`
-- **Tests**: `src/MonadicPipeline.Tests/Tests/PersistentMemoryStoreTests.cs`
+- **Phase 1 Example**: `src/MonadicPipeline.Examples/Examples/SelfImprovingAgentExample.cs`
+- **Phase 2 Example**: `src/MonadicPipeline.Examples/Examples/Phase2MetacognitionExample.cs`
+- **Phase 3 Example**: `src/MonadicPipeline.Examples/Examples/Phase3EmergentIntelligenceExample.cs`
+- **Phase 1 Tests**: `src/MonadicPipeline.Tests/Tests/SkillExtractionTests.cs`
+- **Phase 1 Tests**: `src/MonadicPipeline.Tests/Tests/PersistentMemoryStoreTests.cs`
+- **Phase 2 Tests**: `src/MonadicPipeline.Tests/Tests/Phase2MetacognitionTests.cs`
+- **Phase 3 Tests**: `src/MonadicPipeline.Tests/Tests/Phase3EmergentIntelligenceTests.cs`
 
 ## Contributing
 
