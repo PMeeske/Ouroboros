@@ -32,3 +32,10 @@ terraform.rc
 kubeconfig*.yaml
 kubeconfig*.yml
 *.kubeconfig
+
+# Test artifacts
+tests/*.log
+tests/*.json
+tests/.terraform/
+tests/.terraform.lock.hcl
+tests/tfplan
