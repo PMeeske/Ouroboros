@@ -2,6 +2,11 @@
 
 This directory contains historical implementation summaries, incident reports, and task-specific documentation that provides context about past work but is not actively needed for current development.
 
+## 📌 Important
+
+**Follow-up work and issues extracted from these documents are tracked in:**
+- [**ISSUES_FROM_ARCHIVE.md**](../../ISSUES_FROM_ARCHIVE.md) - 24 issues extracted from archive documentation, categorized by priority and area
+
 ## Purpose
 
 These documents serve as:

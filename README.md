@@ -948,6 +948,7 @@ This script checks your cluster type and provides specific guidance.
 ### Developer Resources
 - [**GitHub Copilot Instructions**](.github/copilot-instructions.md) - Development guidelines for contributors
 - [**docs/ Directory**](docs/) - All technical documentation
+- [**Issues from Archive**](ISSUES_FROM_ARCHIVE.md) - Follow-up work and enhancements extracted from completed implementation summaries
 
 ## ⚖️ License
 
