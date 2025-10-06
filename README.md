@@ -864,7 +864,7 @@ See [Infrastructure Dependencies](docs/INFRASTRUCTURE_DEPENDENCIES.md) for compl
 ### Infrastructure Summary
 
 For a high-level overview of all infrastructure work:
-- [**Infrastructure Refinement Summary**](INFRASTRUCTURE_REFINEMENT_SUMMARY.md) - Complete summary of infrastructure documentation and tools
+- [**Infrastructure Refinement Summary**](docs/archive/INFRASTRUCTURE_REFINEMENT_SUMMARY.md) - Complete summary of infrastructure documentation and tools
 
 ## 🔧 Troubleshooting
 

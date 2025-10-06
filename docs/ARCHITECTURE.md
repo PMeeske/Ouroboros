@@ -855,6 +855,6 @@ The architecture is designed to evolve while maintaining backward compatibility 
 - [Category Theory Guide](CATEGORY_THEORY.md) (to be created)
 - [API Reference](API_REFERENCE.md) (to be created)
 - [Performance Guide](PERFORMANCE_GUIDE.md) (to be created)
-- [Contributing Guide](../CONTRIBUTING.md)
+- [Contributing Guide](CONTRIBUTING.md)
 
 **Questions?** Open a discussion on GitHub or reach out to the maintainers.

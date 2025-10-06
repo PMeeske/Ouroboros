@@ -48,6 +48,11 @@ This directory contains comprehensive technical documentation for MonadicPipelin
 - [**Test Coverage Report**](../TEST_COVERAGE_REPORT.md) - Detailed test coverage analysis
 - [**Test Coverage Quick Reference**](../TEST_COVERAGE_QUICKREF.md) - Testing commands and metrics
 
+### 👥 Contributing & Development
+
+- [**Contributing Guide**](CONTRIBUTING.md) - Guidelines for contributing to the project
+- [**Architecture Documentation**](ARCHITECTURE.md) - Detailed system architecture
+
 ### 📚 Historical Documentation
 
 The [archive/](archive/) directory contains historical implementation summaries, incident reports, and completed work documentation. These serve as reference material for understanding past decisions but may contain outdated information.

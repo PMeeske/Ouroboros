@@ -36,6 +36,16 @@ Post-mortem analyses of specific incidents:
 ### Sprint Summaries
 Historical sprint completion reports and task summaries.
 
+### Refinement Documentation
+Historical refinement planning and progress tracking:
+- REFINEMENT_PLAN.md - 16-week improvement roadmap
+- REFINEMENT_SUMMARY.md - Refinement analysis and goals
+- REFINEMENT_PROGRESS.md - Progress tracking
+- REFINEMENT_EXECUTION_SUMMARY.md - Execution report
+- FIXES_SUMMARY_2025-10-05.md - Quick fixes summary
+- QUICK_FIX_SUMMARY.md - Quick fix documentation
+- INFRASTRUCTURE_REFINEMENT_SUMMARY.md - Infrastructure documentation summary
+
 ---
 
 **Note**: These documents are kept for historical reference but may contain outdated information. Always refer to the current documentation in the main docs/ directory for up-to-date guidance.
