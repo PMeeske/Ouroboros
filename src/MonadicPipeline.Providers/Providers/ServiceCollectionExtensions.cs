@@ -44,9 +44,20 @@ public static class ServiceCollectionExtensions
 
             var provider = sp.GetRequiredService<OllamaProvider>();
             var chat = new OllamaChatModel(provider, model!);
-            if (string.Equals(model, "deepseek-coder:33b", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                chat.Settings = OllamaPresets.DeepSeekCoder33B;
+                var n = (model ?? string.Empty).ToLowerInvariant();
+                if (n.StartsWith("deepseek-coder:33b")) chat.Settings = OllamaPresets.DeepSeekCoder33B;
+                else if (n.StartsWith("llama3")) chat.Settings = OllamaPresets.Llama3General;
+                else if (n.StartsWith("deepseek-r1:32") || n.Contains("32b")) chat.Settings = OllamaPresets.DeepSeekR1_32B_Reason;
+                else if (n.StartsWith("deepseek-r1:14") || n.Contains("14b")) chat.Settings = OllamaPresets.DeepSeekR1_14B_Reason;
+                else if (n.Contains("mistral") && (n.Contains("7b") || !n.Contains("large"))) chat.Settings = OllamaPresets.Mistral7BGeneral;
+                else if (n.StartsWith("qwen2.5") || n.Contains("qwen")) chat.Settings = OllamaPresets.Qwen25_7B_General;
+                else if (n.StartsWith("phi3") || n.Contains("phi-3")) chat.Settings = OllamaPresets.Phi3MiniGeneral;
+            }
+            catch
+            {
+                // Best-effort mapping; if detection fails we keep provider defaults.
             }
             return new OllamaChatAdapter(chat);
         });

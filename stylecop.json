@@ -1,0 +1,64 @@
+{
+  "$schema": "https://raw.githubusercontent.com/DotNetAnalyzers/StyleCopAnalyzers/master/StyleCop.Analyzers/StyleCop.Analyzers/Settings/stylecop.schema.json",
+  "settings": {
+    "documentationRules": {
+      "documentExposedElements": true,
+      "documentInternalElements": false,
+      "documentPrivateElements": false,
+      "documentPrivateFields": false,
+      "documentInterfaces": true,
+      "documentationCulture": "en-US",
+      "companyName": "MonadicPipeline",
+      "copyrightText": "Copyright (c) {companyName}. All rights reserved.\nLicensed under the MIT license. See LICENSE file in the project root for full license information.",
+      "headerDecoration": "-----------------------------------------------------------------------",
+      "xmlHeader": true,
+      "fileNamingConvention": "stylecop"
+    },
+    "maintainabilityRules": {
+      "topLevelTypes": [
+        "class",
+        "interface",
+        "struct",
+        "enum",
+        "delegate"
+      ]
+    },
+    "namingRules": {
+      "allowCommonHungarianPrefixes": true,
+      "allowedHungarianPrefixes": [
+        "db",
+        "id",
+        "is",
+        "my",
+        "to",
+        "ui"
+      ],
+      "includeInferredTupleElementNames": false,
+      "tupleElementNameCasing": "camelCase"
+    },
+    "orderingRules": {
+      "elementOrder": [
+        "kind",
+        "accessibility",
+        "constant",
+        "static",
+        "readonly"
+      ],
+      "systemUsingDirectivesFirst": true,
+      "usingDirectivesPlacement": "outsideNamespace",
+      "blankLinesBetweenUsingGroups": "require"
+    },
+    "readabilityRules": {
+      "allowBuiltInTypeAliases": true
+    },
+    "layoutRules": {
+      "newlineAtEndOfFile": "require",
+      "allowConsecutiveUsings": true
+    },
+    "indentation": {
+      "indentationSize": 4,
+      "tabSize": 4,
+      "useTabs": false
+    }
+  }
+}

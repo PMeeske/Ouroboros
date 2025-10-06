@@ -11,8 +11,8 @@
     <Copyright>Copyright © 2025</Copyright>
     <Version>1.0.0</Version>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
-    
+    <WarningsNotAsErrors>CS1591;CS1570</WarningsNotAsErrors>
+
     <!-- Code Quality & Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
@@ -34,7 +34,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    
+
     <!-- Dependencies -->
     <PackageReference Include="LangChain" Version="0.17.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />

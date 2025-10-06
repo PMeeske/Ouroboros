@@ -101,7 +101,7 @@ public sealed class ToolRegistry
                 description = t.Description,
                 parameters = string.IsNullOrEmpty(t.JsonSchema) ? null : JsonSerializer.Deserialize<object>(t.JsonSchema!)
             });
-            
+
             string json = ToolJson.Serialize(schemas);
             return Result<string>.Success(json);
         }
@@ -185,11 +185,9 @@ public sealed class ToolRegistry
         return new ToolRegistry(_tools.Remove(name));
     }
 
-    /// <summary>
-    /// Legacy mutable registration methods for backward compatibility.
-    /// These will be removed in future versions.
-    /// </summary>
     #region Legacy Methods (Obsolete)
+    // Legacy mutable registration methods for backward compatibility.
+    // These will be removed in future versions.
 
     /// <summary>
     /// Legacy method for registering delegate tools.
