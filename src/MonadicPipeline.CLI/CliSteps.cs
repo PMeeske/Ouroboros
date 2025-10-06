@@ -38,7 +38,7 @@ public static class CliSteps
             }
             catch (Exception ex)
             {
-                s.Branch = s.Branch.WithIngestEvent($"ingest:error:{ex.GetType().Name}:{ex.Message.Replace('|',':')}", Array.Empty<string>());
+                s.Branch = s.Branch.WithIngestEvent($"ingest:error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
             }
             return s;
         };
@@ -59,9 +59,9 @@ public static class CliSteps
                 foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     if (part.StartsWith("root=", StringComparison.OrdinalIgnoreCase)) root = Path.GetFullPath(part.Substring(5));
-                    else if (part.StartsWith("ext=", StringComparison.OrdinalIgnoreCase)) exts.AddRange(part.Substring(4).Split(',', StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries));
-                    else if (part.StartsWith("exclude=", StringComparison.OrdinalIgnoreCase)) excludeDirs.AddRange(part.Substring(8).Split(',', StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries));
-                    else if (part.StartsWith("pattern=", StringComparison.OrdinalIgnoreCase)) patterns.AddRange(part.Substring(8).Split(';', StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries));
+                    else if (part.StartsWith("ext=", StringComparison.OrdinalIgnoreCase)) exts.AddRange(part.Substring(4).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                    else if (part.StartsWith("exclude=", StringComparison.OrdinalIgnoreCase)) excludeDirs.AddRange(part.Substring(8).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                    else if (part.StartsWith("pattern=", StringComparison.OrdinalIgnoreCase)) patterns.AddRange(part.Substring(8).Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
                     else if (part.StartsWith("max=", StringComparison.OrdinalIgnoreCase) && long.TryParse(part.AsSpan(4), out var m)) maxBytes = m;
                     else if (part.Equals("norec", StringComparison.OrdinalIgnoreCase)) recursive = false;
                 }
@@ -142,7 +142,102 @@ public static class CliSteps
             }
             catch (Exception ex)
             {
-                s.Branch = s.Branch.WithIngestEvent($"dir:error:{ex.GetType().Name}:{ex.Message.Replace('|',':')}", Array.Empty<string>());
+                s.Branch = s.Branch.WithIngestEvent($"dir:error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
+            }
+            return s;
+        };
+
+    [PipelineToken("UseDirBatched", "DirIngestBatched")] // Usage: UseDirBatched('root=src|ext=.cs,.md|exclude=bin,obj|max=500000|pattern=*.cs;*.md|norec|addEvery=256')
+    public static Step<CliPipelineState, CliPipelineState> UseDirBatched(string? args = null)
+        => async s =>
+        {
+            string root = s.Branch.Source.Value as string ?? Environment.CurrentDirectory;
+            bool recursive = true;
+            var exts = new List<string>();
+            var excludeDirs = new List<string>();
+            var patterns = new List<string>();
+            long maxBytes = 0;
+            int addEvery = 256; // number of vectors per AddAsync batch
+            var raw = ParseString(args);
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    if (part.StartsWith("root=", StringComparison.OrdinalIgnoreCase)) root = Path.GetFullPath(part.Substring(5));
+                    else if (part.StartsWith("ext=", StringComparison.OrdinalIgnoreCase)) exts.AddRange(part.Substring(4).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                    else if (part.StartsWith("exclude=", StringComparison.OrdinalIgnoreCase)) excludeDirs.AddRange(part.Substring(8).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                    else if (part.StartsWith("pattern=", StringComparison.OrdinalIgnoreCase)) patterns.AddRange(part.Substring(8).Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                    else if (part.StartsWith("max=", StringComparison.OrdinalIgnoreCase) && long.TryParse(part.AsSpan(4), out var m)) maxBytes = m;
+                    else if (part.Equals("norec", StringComparison.OrdinalIgnoreCase)) recursive = false;
+                    else if (part.StartsWith("addEvery=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(9), out var ae) && ae > 0) addEvery = ae;
+                }
+            }
+            if (!Directory.Exists(root))
+            {
+                s.Branch = s.Branch.WithIngestEvent($"dir:missing:{root}", Array.Empty<string>());
+                return s;
+            }
+            try
+            {
+                var options = new DirectoryIngestionOptions
+                {
+                    Recursive = recursive,
+                    Extensions = exts.Count == 0 ? null : exts.ToArray(),
+                    ExcludeDirectories = excludeDirs.Count == 0 ? null : excludeDirs.ToArray(),
+                    Patterns = patterns.Count == 0 ? new[] { "*" } : patterns.ToArray(),
+                    MaxFileBytes = maxBytes,
+                    ChunkSize = 1800,
+                    ChunkOverlap = 180
+                };
+                var loader = new DirectoryDocumentLoader<FileLoader>(options);
+                var stats = new DirectoryIngestionStats();
+                loader.AttachStats(stats);
+                var store = s.Branch.Store as TrackedVectorStore ?? new TrackedVectorStore();
+                var splitter = new RecursiveCharacterTextSplitter(chunkSize: options.ChunkSize, chunkOverlap: options.ChunkOverlap);
+                var docs = await loader.LoadAsync(DataSource.FromPath(root));
+                var buffer = new List<Vector>(capacity: addEvery);
+                int fileIndex = 0;
+                foreach (var doc in docs)
+                {
+                    if (string.IsNullOrWhiteSpace(doc.PageContent)) { fileIndex++; continue; }
+                    var chunks = splitter.SplitText(doc.PageContent);
+                    int chunkCount = chunks.Count;
+                    var baseMetadata = BuildDocumentMetadata(doc, root, fileIndex);
+                    int chunkIdx = 0;
+                    foreach (var chunk in chunks)
+                    {
+                        string vectorId = $"dir:{fileIndex}:{chunkIdx}";
+                        var chunkMetadata = BuildChunkMetadata(baseMetadata, chunkIdx, chunkCount, vectorId);
+                        try
+                        {
+                            var emb = await s.Embed.CreateEmbeddingsAsync(chunk);
+                            buffer.Add(new Vector { Id = vectorId, Text = chunk, Embedding = emb, Metadata = chunkMetadata });
+                        }
+                        catch
+                        {
+                            chunkMetadata["embedding"] = "fallback";
+                            buffer.Add(new Vector { Id = vectorId + ":fallback", Text = chunk, Embedding = new float[8], Metadata = chunkMetadata });
+                        }
+                        if (buffer.Count >= addEvery)
+                        {
+                            await store.AddAsync(buffer);
+                            buffer.Clear();
+                        }
+                        chunkIdx++;
+                    }
+                    fileIndex++;
+                }
+                if (buffer.Count > 0)
+                {
+                    await store.AddAsync(buffer);
+                    buffer.Clear();
+                }
+                s.Branch = s.Branch.WithIngestEvent($"dir:ingest-batched:{Path.GetFileName(root)}", Array.Empty<string>());
+                Console.WriteLine($"[dir-batched] {stats}");
+            }
+            catch (Exception ex)
+            {
+                s.Branch = s.Branch.WithIngestEvent($"dirbatched:error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
             }
             return s;
         };
@@ -175,7 +270,7 @@ public static class CliSteps
             }
             catch (Exception ex)
             {
-                s.Branch = s.Branch.WithIngestEvent($"solution:error:{ex.GetType().Name}:{ex.Message.Replace('|',':')}", Array.Empty<string>());
+                s.Branch = s.Branch.WithIngestEvent($"solution:error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
             }
             return s;
         };
@@ -284,7 +379,7 @@ public static class CliSteps
             return Task.FromResult(s);
         };
 
-    [PipelineToken("SetSource", "UseSource", "Source")] 
+    [PipelineToken("SetSource", "UseSource", "Source")]
     public static Step<CliPipelineState, CliPipelineState> SetSource(string? args = null)
         => s =>
         {
@@ -292,7 +387,7 @@ public static class CliSteps
             if (string.IsNullOrWhiteSpace(path)) return Task.FromResult(s);
             // Expand ~ and relative paths
             var expanded = path.StartsWith("~")
-                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path.TrimStart('~','/','\\'))
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path.TrimStart('~', '/', '\\'))
                 : path;
             var full = Path.GetFullPath(expanded);
             string finalPath = full;
@@ -398,9 +493,9 @@ public static class CliSteps
                     else if (mod.StartsWith("batch=", StringComparison.OrdinalIgnoreCase) && int.TryParse(mod.AsSpan(6), out var bs) && bs > 0)
                         batchSize = bs;
                     else if (mod.StartsWith("skip=", StringComparison.OrdinalIgnoreCase))
-                        skipKinds = [..mod.Substring(5).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(v => v.ToLowerInvariant())];
+                        skipKinds = [.. mod.Substring(5).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(v => v.ToLowerInvariant())];
                     else if (mod.StartsWith("only=", StringComparison.OrdinalIgnoreCase))
-                        onlyKinds = [..mod.Substring(5).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(v => v.ToLowerInvariant())];
+                        onlyKinds = [.. mod.Substring(5).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(v => v.ToLowerInvariant())];
                 }
             }
             if (string.IsNullOrWhiteSpace(path)) return s;
@@ -483,7 +578,7 @@ public static class CliSteps
             }
             catch (Exception ex)
             {
-                s.Branch = s.Branch.WithIngestEvent($"zip:error:{ex.GetType().Name}:{ex.Message.Replace('|',':')}", Array.Empty<string>());
+                s.Branch = s.Branch.WithIngestEvent($"zip:error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
             }
             return s;
         };
@@ -554,7 +649,7 @@ public static class CliSteps
             }
             catch (Exception ex)
             {
-                s.Branch = s.Branch.WithIngestEvent($"zipstream:error:{ex.GetType().Name}:{ex.Message.Replace('|',':')}", Array.Empty<string>());
+                s.Branch = s.Branch.WithIngestEvent($"zipstream:error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
             }
             return s;
         };
@@ -694,12 +789,12 @@ public static class CliSteps
                     var hits = await tvs.GetSimilarDocuments(s.Embed, query, amount);
                     s.Retrieved.Clear();
                     s.Retrieved.AddRange(hits.Select(h => h.PageContent));
-                    s.Branch = s.Branch.WithIngestEvent($"retrieve:{amount}:{query.Replace('|',':').Replace('\n',' ')}", Enumerable.Range(0, s.Retrieved.Count).Select(i => $"doc:{i}"));
+                    s.Branch = s.Branch.WithIngestEvent($"retrieve:{amount}:{query.Replace('|', ':').Replace('\n', ' ')}", Enumerable.Range(0, s.Retrieved.Count).Select(i => $"doc:{i}"));
                 }
             }
             catch (Exception ex)
             {
-                s.Branch = s.Branch.WithIngestEvent($"retrieve:error:{ex.GetType().Name}:{ex.Message.Replace('|',':')}", Array.Empty<string>());
+                s.Branch = s.Branch.WithIngestEvent($"retrieve:error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
             }
             return s;
         };
@@ -804,8 +899,323 @@ public static class CliSteps
             }
             catch (Exception ex)
             {
-                s.Branch = s.Branch.WithIngestEvent($"llm:error:{ex.GetType().Name}:{ex.Message.Replace('|',':')}", Array.Empty<string>());
+                s.Branch = s.Branch.WithIngestEvent($"llm:error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
             }
+            return s;
+        };
+
+    /// <summary>
+    /// Divide-and-Conquer RAG: retrieve K docs, split into groups, answer per group, then synthesize final.
+    /// Args: 'k=24|group=6|template=...|final=...|sep=\\n---\\n'
+    /// If s.Retrieved is empty, it will retrieve using current Query/Prompt.
+    /// </summary>
+    [PipelineToken("DivideAndConquerRAG", "DCRAG", "RAGMapReduce")]
+    public static Step<CliPipelineState, CliPipelineState> DivideAndConquerRag(string? args = null)
+        => async s =>
+        {
+            int k = Math.Max(4, s.RetrievalK);
+            int group = 6;
+            string sep = "\n---\n";
+            string? template = null;
+            string? finalTemplate = null;
+            bool streamPartials = false; // print intermediate outputs to console
+
+            var raw = ParseString(args);
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    if (part.StartsWith("k=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(2), out var kv) && kv > 0) k = kv;
+                    else if (part.StartsWith("group=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(6), out var gv) && gv > 0) group = gv;
+                    else if (part.StartsWith("sep=", StringComparison.OrdinalIgnoreCase)) sep = part.Substring(4).Replace("\\n", "\n");
+                    else if (part.StartsWith("template=", StringComparison.OrdinalIgnoreCase)) template = part.Substring(9);
+                    else if (part.StartsWith("final=", StringComparison.OrdinalIgnoreCase)) finalTemplate = part.Substring(6);
+                    else if (part.Equals("stream", StringComparison.OrdinalIgnoreCase)) streamPartials = true;
+                    else if (part.StartsWith("stream=", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var v = part.Substring(7);
+                        streamPartials = v.Equals("1") || v.Equals("true", StringComparison.OrdinalIgnoreCase) || v.Equals("on", StringComparison.OrdinalIgnoreCase) || v.Equals("yes", StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+            }
+
+            string question = string.IsNullOrWhiteSpace(s.Query) ? (string.IsNullOrWhiteSpace(s.Prompt) ? s.Topic : s.Prompt) : s.Query;
+            if (string.IsNullOrWhiteSpace(question)) return s;
+
+            // Ensure retrieved context
+            if (s.Retrieved.Count == 0)
+            {
+                try { s = await RetrieveSimilarDocuments($"amount={k}")(s); } catch { /* ignore */ }
+            }
+            if (s.Retrieved.Count == 0) return s;
+
+            // Defaults
+            template ??= "Use the following context to answer the question. Be precise and concise.\n{context}\n\nQuestion: {question}\nAnswer:";
+            finalTemplate ??= "You are to synthesize a final, precise answer from multiple partial answers.\nQuestion: {question}\n\nPartial Answers:\n{partials}\n\nFinal Answer:";
+
+            // Partition into groups
+            var docs = s.Retrieved.Where(static r => !string.IsNullOrWhiteSpace(r)).Take(k).ToList();
+            if (docs.Count == 0) return s;
+
+            var groups = new List<List<string>>();
+            for (int i = 0; i < docs.Count; i += group)
+            {
+                groups.Add(docs.Skip(i).Take(group).ToList());
+            }
+
+            var partials = new List<string>(groups.Count);
+            for (int gi = 0; gi < groups.Count; gi++)
+            {
+                var g = groups[gi];
+                var ctx = string.Join(sep, g);
+                var prompt = template!
+                    .Replace("{context}", ctx)
+                    .Replace("{question}", question)
+                    .Replace("{prompt}", s.Prompt ?? string.Empty)
+                    .Replace("{topic}", s.Topic ?? string.Empty);
+                try
+                {
+                    var (answer, toolCalls) = await s.Llm.GenerateWithToolsAsync(prompt);
+                    partials.Add(answer ?? string.Empty);
+                    // Record as reasoning step for traceability
+                    s.Branch = s.Branch.WithReasoning(new FinalSpec(answer ?? string.Empty), prompt, toolCalls);
+                    if (streamPartials || s.Trace)
+                    {
+                        Console.WriteLine($"\n>> [dcrag] partial {gi + 1}/{groups.Count} (docs={g.Count})");
+                        if (!string.IsNullOrWhiteSpace(answer))
+                        {
+                            Console.WriteLine(answer);
+                        }
+                        Console.Out.Flush();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    s.Branch = s.Branch.WithIngestEvent($"dcrag:part-error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
+                }
+            }
+
+            // Synthesize final
+            var partialText = string.Join("\n\n---\n\n", partials.Where(p => !string.IsNullOrWhiteSpace(p)));
+            var finalPrompt = finalTemplate!
+                .Replace("{partials}", partialText)
+                .Replace("{question}", question)
+                .Replace("{prompt}", s.Prompt ?? string.Empty)
+                .Replace("{topic}", s.Topic ?? string.Empty);
+
+            try
+            {
+                var (finalAnswer, finalToolCalls) = await s.Llm.GenerateWithToolsAsync(finalPrompt);
+                s.Output = finalAnswer ?? string.Empty;
+                s.Prompt = finalPrompt;
+                s.Branch = s.Branch.WithReasoning(new FinalSpec(s.Output), finalPrompt, finalToolCalls);
+                if (s.Trace) Console.WriteLine($"[trace] DCRAG final length={s.Output.Length}");
+                if (streamPartials)
+                {
+                    Console.WriteLine("\n=== DCRAG FINAL ===");
+                    Console.WriteLine(s.Output);
+                    Console.Out.Flush();
+                }
+            }
+            catch (Exception ex)
+            {
+                s.Branch = s.Branch.WithIngestEvent($"dcrag:final-error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
+            }
+            return s;
+        };
+
+    /// <summary>
+    /// Decompose-and-Aggregate RAG: decomposes the main question into sub-questions, answers each with retrieved context,
+    /// then synthesizes a final unified answer. Supports streaming of sub-answers and final aggregation.
+    /// Args: 'subs=4|per=6|k=24|sep=\n---\n|stream|decompose=...|template=...|final=...'
+    /// - subs: number of subquestions to generate (default 4)
+    /// - per: number of retrieved docs per subquestion (default 6)
+    /// - k: optional initial retrieval to warm cache or pre-fill (ignored if not needed)
+    /// - sep: separator for combining docs
+    /// - stream: print each sub-answer and the final result
+    /// - decompose: custom prompt template for subquestion generation; placeholders: {question}
+    /// - template: custom prompt for answering subquestions; placeholders: {context}, {subquestion}, {question}, {prompt}, {topic}
+    /// - final: custom prompt for the final synthesis; placeholders: {pairs}, {question}, {prompt}, {topic}
+    /// </summary>
+    [PipelineToken("DecomposeAndAggregateRAG", "DARAG", "SubQAggregate")]
+    public static Step<CliPipelineState, CliPipelineState> DecomposeAndAggregateRag(string? args = null)
+        => async s =>
+        {
+            // Defaults and args
+            int subs = 4;
+            int per = 6;
+            int k = Math.Max(4, s.RetrievalK);
+            string sep = "\n---\n";
+            bool stream = false;
+            string? decomposeTpl = null;
+            string? subTpl = null;
+            string? finalTpl = null;
+
+            var raw = ParseString(args);
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    if (part.StartsWith("subs=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(5), out var sv) && sv > 0) subs = sv;
+                    else if (part.StartsWith("per=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(4), out var pv) && pv > 0) per = pv;
+                    else if (part.StartsWith("k=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(2), out var kv) && kv > 0) k = kv;
+                    else if (part.StartsWith("sep=", StringComparison.OrdinalIgnoreCase)) sep = part.Substring(4).Replace("\\n", "\n");
+                    else if (part.Equals("stream", StringComparison.OrdinalIgnoreCase)) stream = true;
+                    else if (part.StartsWith("stream=", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var v = part.Substring(7);
+                        stream = v.Equals("1") || v.Equals("true", StringComparison.OrdinalIgnoreCase) || v.Equals("on", StringComparison.OrdinalIgnoreCase) || v.Equals("yes", StringComparison.OrdinalIgnoreCase);
+                    }
+                    else if (part.StartsWith("decompose=", StringComparison.OrdinalIgnoreCase)) decomposeTpl = part.Substring(10);
+                    else if (part.StartsWith("template=", StringComparison.OrdinalIgnoreCase)) subTpl = part.Substring(9);
+                    else if (part.StartsWith("final=", StringComparison.OrdinalIgnoreCase)) finalTpl = part.Substring(6);
+                }
+            }
+
+            string question = string.IsNullOrWhiteSpace(s.Query) ? (string.IsNullOrWhiteSpace(s.Prompt) ? s.Topic : s.Prompt) : s.Query;
+            if (string.IsNullOrWhiteSpace(question)) return s;
+
+            // Optional: warm retrieval cache using the main question
+            try { s = await RetrieveSimilarDocuments($"amount={k}|query={question.Replace("|", ":")}")(s); } catch { /* ignore */ }
+
+            // Default templates
+            decomposeTpl ??= "You are tasked with answering a complex question by breaking it down into distinct sub-questions that together fully address the original.\n" +
+                             "Main question: {question}\n\n" +
+                             "Return exactly {N} non-overlapping sub-questions as a numbered list (1., 2., ...), one per line, focused and specific.";
+
+            subTpl ??= "You are answering a sub-question as part of a larger task.\n" +
+                      "Main question: {question}\nSub-question: {subquestion}\n\n" +
+                      "Use the following context snippets to produce a precise, thorough answer. Cite facts from context; avoid speculation.\n" +
+                      "Context:\n{context}\n\n" +
+                      "Answer:";
+
+            finalTpl ??= "Synthesize a high-quality final answer to the main question by integrating the following detailed sub-answers.\n" +
+                       "Provide:\n- Executive summary (3-6 bullets)\n- Integrated comprehensive answer tying together all parts\n- If relevant: Considerations and Next steps\n\n" +
+                       "Main question: {question}\n\nSub-answers:\n{pairs}\n\nFinal Answer:";
+
+            // 1) Generate sub-questions
+            string decomposePrompt = decomposeTpl
+                .Replace("{question}", question)
+                .Replace("{N}", subs.ToString());
+
+            List<string> subQuestions = new();
+            try
+            {
+                var (subText, subCalls) = await s.Llm.GenerateWithToolsAsync(decomposePrompt);
+                s.Branch = s.Branch.WithReasoning(new FinalSpec(subText ?? string.Empty), decomposePrompt, subCalls);
+                if (!string.IsNullOrWhiteSpace(subText))
+                {
+                    foreach (var line in subText.Split('\n'))
+                    {
+                        var t = line.Trim();
+                        if (string.IsNullOrWhiteSpace(t)) continue;
+                        // Accept formats like: "1. ...", "1) ...", "- ..." or plain line
+                        t = Regex.Replace(t, @"^\s*(\d+\.|\d+\)|[-*])\s*", string.Empty);
+                        if (!string.IsNullOrWhiteSpace(t)) subQuestions.Add(t);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                s.Branch = s.Branch.WithIngestEvent($"darag:decompose-error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
+            }
+
+            if (subQuestions.Count == 0)
+            {
+                // Fallback: use the original question as a single sub-question
+                subQuestions.Add(question);
+            }
+            else if (subQuestions.Count > subs)
+            {
+                subQuestions = subQuestions.Take(subs).ToList();
+            }
+
+            // 2) Answer each sub-question with retrieval
+            var qaPairs = new List<(string q, string a)>(subQuestions.Count);
+            for (int i = 0; i < subQuestions.Count; i++)
+            {
+                string sq = subQuestions[i];
+                // Retrieve per sub-question
+                List<string> blocks = new();
+                try
+                {
+                    if (s.Branch.Store is TrackedVectorStore tvs)
+                    {
+                        var hits = await tvs.GetSimilarDocuments(s.Embed, sq, per);
+                        foreach (var doc in hits)
+                        {
+                            if (!string.IsNullOrWhiteSpace(doc.PageContent))
+                                blocks.Add(doc.PageContent);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    s.Branch = s.Branch.WithIngestEvent($"darag:retrieve-error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
+                }
+
+                string ctx = string.Join(sep, blocks);
+                string subPrompt = subTpl
+                    .Replace("{context}", ctx)
+                    .Replace("{subquestion}", sq)
+                    .Replace("{question}", question)
+                    .Replace("{prompt}", s.Prompt ?? string.Empty)
+                    .Replace("{topic}", s.Topic ?? string.Empty);
+                try
+                {
+                    var (ans, toolCalls) = await s.Llm.GenerateWithToolsAsync(subPrompt);
+                    string answer = ans ?? string.Empty;
+                    qaPairs.Add((sq, answer));
+                    s.Branch = s.Branch.WithReasoning(new FinalSpec(answer), subPrompt, toolCalls);
+                    if (stream || s.Trace)
+                    {
+                        Console.WriteLine($"\n>> [darag] sub {i + 1}/{subQuestions.Count}: {sq}");
+                        if (!string.IsNullOrWhiteSpace(answer)) Console.WriteLine(answer);
+                        Console.Out.Flush();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    s.Branch = s.Branch.WithIngestEvent($"darag:sub-error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
+                }
+            }
+
+            // 3) Final synthesis
+            var sbPairs = new StringBuilder();
+            for (int i = 0; i < qaPairs.Count; i++)
+            {
+                var (q, a) = qaPairs[i];
+                sbPairs.AppendLine($"Sub-question {i + 1}: {q}");
+                sbPairs.AppendLine("Answer:");
+                sbPairs.AppendLine(a);
+                sbPairs.AppendLine();
+            }
+
+            string finalPrompt = finalTpl
+                .Replace("{pairs}", sbPairs.ToString())
+                .Replace("{question}", question)
+                .Replace("{prompt}", s.Prompt ?? string.Empty)
+                .Replace("{topic}", s.Topic ?? string.Empty);
+
+            try
+            {
+                var (finalAnswer, finalCalls) = await s.Llm.GenerateWithToolsAsync(finalPrompt);
+                s.Output = finalAnswer ?? string.Empty;
+                s.Prompt = finalPrompt;
+                s.Branch = s.Branch.WithReasoning(new FinalSpec(s.Output), finalPrompt, finalCalls);
+                if (s.Trace) Console.WriteLine($"[trace] DARAG final length={s.Output.Length}");
+                if (stream)
+                {
+                    Console.WriteLine("\n=== DARAG FINAL ===");
+                    Console.WriteLine(s.Output);
+                    Console.Out.Flush();
+                }
+            }
+            catch (Exception ex)
+            {
+                s.Branch = s.Branch.WithIngestEvent($"darag:final-error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
+            }
+
             return s;
         };
 
@@ -947,7 +1357,7 @@ public static class CliSteps
                 }
                 catch (Exception ex)
                 {
-                    s.Branch = s.Branch.WithIngestEvent($"switchmodel:remote-fail:{ex.GetType().Name}:{ex.Message.Replace('|',':')}", Array.Empty<string>());
+                    s.Branch = s.Branch.WithIngestEvent($"switchmodel:remote-fail:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
                 }
             }
             if (model == null && !string.IsNullOrWhiteSpace(newModel))
@@ -974,7 +1384,7 @@ public static class CliSteps
                 }
                 catch (Exception ex)
                 {
-                    s.Branch = s.Branch.WithIngestEvent($"switchmodel:embed-error:{ex.GetType().Name}:{ex.Message.Replace('|',':')}", Array.Empty<string>());
+                    s.Branch = s.Branch.WithIngestEvent($"switchmodel:embed-error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
                 }
             }
             return s;
@@ -986,12 +1396,12 @@ public static class CliSteps
         {
             var raw = ParseString(args);
             if (string.IsNullOrWhiteSpace(raw)) return s;
-            string? name = null; string[] inKeys = Array.Empty<string>(); string[] outKeys = ["Output"]; bool trace=false;
+            string? name = null; string[] inKeys = Array.Empty<string>(); string[] outKeys = ["Output"]; bool trace = false;
             foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 if (part.StartsWith("name=", StringComparison.OrdinalIgnoreCase)) name = part.Substring(5);
-                else if (part.StartsWith("in=", StringComparison.OrdinalIgnoreCase)) inKeys = part.Substring(3).Split(',', StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries);
-                else if (part.StartsWith("out=", StringComparison.OrdinalIgnoreCase)) outKeys = part.Substring(4).Split(',', StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries);
+                else if (part.StartsWith("in=", StringComparison.OrdinalIgnoreCase)) inKeys = part.Substring(3).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                else if (part.StartsWith("out=", StringComparison.OrdinalIgnoreCase)) outKeys = part.Substring(4).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 else if (part.Equals("trace", StringComparison.OrdinalIgnoreCase)) trace = true;
             }
             if (string.IsNullOrWhiteSpace(name)) { s.Branch = s.Branch.WithIngestEvent("chain:error:no-name", Array.Empty<string>()); return s; }
@@ -1081,7 +1491,7 @@ public static class CliSteps
             }
             catch (Exception ex)
             {
-                s.Branch = s.Branch.WithIngestEvent($"chain:error:{name}:{ex.GetType().Name}:{ex.Message.Replace('|',':')}", Array.Empty<string>());
+                s.Branch = s.Branch.WithIngestEvent($"chain:error:{name}:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
             }
             return s;
         };
@@ -1463,21 +1873,21 @@ public static class CliSteps
             {
                 // Create embedding for the query
                 var queryEmbedding = await s.Embed.CreateEmbeddingsAsync(query);
-                
+
                 // Create search request
                 var request = new LangChain.Databases.VectorSearchRequest
                 {
                     Embeddings = new[] { queryEmbedding }
                 };
-                
+
                 var settings = new LangChain.Databases.VectorSearchSettings
                 {
                     NumberOfResults = amount
                 };
-                
+
                 // Search in vector store
                 var results = await vectorCollection.SearchAsync(request, settings);
-                
+
                 s.Retrieved.Clear();
                 foreach (var result in results.Items)
                 {
@@ -1486,7 +1896,7 @@ public static class CliSteps
                         s.Retrieved.Add(result.Text);
                     }
                 }
-                
+
                 if (s.Trace) Console.WriteLine($"[trace] LangChainRetrieve: retrieved {s.Retrieved.Count} documents");
             }
             catch (Exception ex)
@@ -1537,9 +1947,9 @@ public static class CliSteps
 
             var values = new StackableChainValues();
             values.Value[inputKey] = docs;
-            
+
             var result = await chain.CallAsync(values);
-            
+
             if (result.Value.TryGetValue(outputKey, out var context))
             {
                 s.Context = context?.ToString() ?? string.Empty;
@@ -1575,9 +1985,9 @@ public static class CliSteps
             values.Value["prompt"] = s.Prompt;
             values.Value["topic"] = s.Topic;
             values.Value["query"] = s.Query;
-            
+
             var result = await chain.CallAsync(values);
-            
+
             if (result.Value.TryGetValue("text", out var output))
             {
                 s.Prompt = output?.ToString() ?? string.Empty;
@@ -1630,9 +2040,9 @@ public static class CliSteps
 
             var values = new StackableChainValues();
             values.Value[inputKey] = s.Prompt;
-            
+
             var result = await chain.CallAsync(values);
-            
+
             if (result.Value.TryGetValue(outputKey, out var output))
             {
                 s.Output = output?.ToString() ?? string.Empty;
