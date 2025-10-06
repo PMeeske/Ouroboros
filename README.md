@@ -803,9 +803,7 @@ sudo systemctl start monadic-pipeline
 
 For comprehensive deployment instructions including configuration management, monitoring, security, and troubleshooting, see:
 - [**Deployment Guide**](DEPLOYMENT.md) - Complete deployment instructions
-- [**ImagePullBackOff Quick Fix**](IMAGEPULLBACKOFF-FIX.md) - Solve Kubernetes image issues
-- [**ImagePullBackOff Incident Response**](INCIDENT-RESPONSE-IMAGEPULLBACKOFF.md) - Real incident analysis and resolution
-- [**Troubleshooting Guide**](TROUBLESHOOTING.md) - Common issues and solutions
+- [**Troubleshooting Guide**](TROUBLESHOOTING.md) - Common issues and solutions (including ImagePullBackOff fixes)
 - [**Scripts README**](scripts/README.md) - Deployment scripts documentation
 
 ## 🏗️ Infrastructure & Dependencies
@@ -927,21 +925,29 @@ This script checks your cluster type and provides specific guidance.
    ./scripts/deploy-cloud.sh docker.io/myusername
    ```
 
-**Quick Fix Guide**: See [IMAGEPULLBACKOFF-FIX.md](IMAGEPULLBACKOFF-FIX.md) for step-by-step solutions.
+**Detailed Troubleshooting**: See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for comprehensive troubleshooting, including ImagePullBackOff solutions.
 
-**Incident Response**: See [INCIDENT-RESPONSE-IMAGEPULLBACKOFF.md](INCIDENT-RESPONSE-IMAGEPULLBACKOFF.md) for real incident analysis.
+**Historical Incident Reports**: See [docs/archive/](docs/archive/) for past incident post-mortems and resolutions.
 
-**Detailed Troubleshooting**: See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for comprehensive troubleshooting.
+## 📚 Documentation
 
-## 📚 Additional Documentation
+### Essential Guides
+- [**Deployment Guide**](DEPLOYMENT.md) - Comprehensive deployment instructions for all environments
+- [**Deployment Quick Reference**](DEPLOYMENT-QUICK-REFERENCE.md) - Common deployment commands
+- [**Troubleshooting Guide**](TROUBLESHOOTING.md) - Common issues and solutions
+- [**Configuration and Security**](CONFIGURATION_AND_SECURITY.md) - Security best practices and configuration
+- [**Test Coverage Report**](TEST_COVERAGE_REPORT.md) - Test coverage analysis
 
-- [**Deployment Guide**](DEPLOYMENT.md) - **Comprehensive deployment instructions for all environments**
-- [**IONOS Cloud Deployment Guide**](docs/IONOS_DEPLOYMENT_GUIDE.md) - **Detailed IONOS Cloud deployment instructions**
-- [**RecursiveChunking Guide**](docs/RECURSIVE_CHUNKING.md) - **Large context processing with adaptive chunking**
-- [Configuration and Security](CONFIGURATION_AND_SECURITY.md) - Security best practices and configuration guide
-- [Implementation Guide](IMPLEMENTATION_GUIDE.md) - Detailed implementation guidance
-- [Sprint Summary](SPRINT_3_4_SUMMARY.md) - Recent development progress
-- [GitHub Copilot Instructions](.github/copilot-instructions.md) - Development guidelines for contributors
+### Technical Documentation
+- [**Documentation Index**](docs/README.md) - Complete documentation catalog
+- [**Self-Improving Agent Architecture**](docs/SELF_IMPROVING_AGENT.md) - Agent capabilities and architecture
+- [**IONOS Cloud Deployment**](docs/IONOS_DEPLOYMENT_GUIDE.md) - IONOS-specific deployment guide
+- [**Infrastructure Dependencies**](docs/INFRASTRUCTURE_DEPENDENCIES.md) - Complete infrastructure dependency mapping
+- [**RecursiveChunking Guide**](docs/RECURSIVE_CHUNKING.md) - Large context processing
+
+### Developer Resources
+- [**GitHub Copilot Instructions**](.github/copilot-instructions.md) - Development guidelines for contributors
+- [**docs/ Directory**](docs/) - All technical documentation
 
 ## ⚖️ License
 

@@ -379,7 +379,7 @@ jobs:
 
 ## Test Coverage by Work Item
 
-Based on IMPLEMENTATION_GUIDE.md:
+Based on completed implementation work (see [docs/archive/](docs/archive/) for details):
 
 | Work Item | Component | Coverage | Test Count |
 |-----------|-----------|----------|------------|
