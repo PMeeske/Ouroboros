@@ -1,0 +1,33 @@
+---
+name: 🐛 Bug Report
+about: Report a bug or unexpected behavior
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+assignees: []
+---
+
+## 🐛 Bug Description
+A clear and concise description of the bug.
+
+## 📋 Steps to Reproduce
+1. Go to '...'
+2. Execute '...'
+3. See error
+
+## ✅ Expected Behavior
+What you expected to happen.
+
+## ❌ Actual Behavior
+What actually happened.
+
+## 🖥️ Environment
+- OS: [e.g., Windows 11, Ubuntu 22.04]
+- .NET Version: [e.g., 8.0]
+- MonadicPipeline Version: [e.g., 1.0.0]
+- LLM Provider: [e.g., Ollama, OpenAI]
+
+## 📸 Screenshots/Logs
+If applicable, add screenshots or log output to help explain the problem.
+
+## 🔍 Additional Context
+Add any other context about the problem here.

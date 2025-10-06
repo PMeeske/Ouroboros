@@ -1,0 +1,24 @@
+---
+name: 📚 Documentation Issue
+about: Report missing, unclear, or incorrect documentation
+title: "[DOCS] "
+labels: ["documentation", "needs-triage"]
+assignees: []
+---
+
+## 📚 Documentation Issue
+Describe the documentation issue.
+
+## 📍 Location
+Where is the documentation that needs improvement?
+- File/URL: 
+- Section: 
+
+## ❓ What's Wrong?
+What is missing, unclear, or incorrect?
+
+## ✅ Suggested Improvement
+How could the documentation be improved?
+
+## 🔍 Additional Context
+Add any other context or examples here.
