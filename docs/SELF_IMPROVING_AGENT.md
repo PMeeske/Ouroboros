@@ -721,7 +721,8 @@ Memory operations are bounded:
 
 ## References
 
-- **Architecture Spec**: See `IMPLEMENTATION_GUIDE.md` for technical details
+- **Documentation Index**: See [README.md](README.md) for complete documentation catalog
+- **Phase Implementations**: See [archive/](archive/) for detailed implementation summaries
 - **Phase 1 Example**: `src/MonadicPipeline.Examples/Examples/SelfImprovingAgentExample.cs`
 - **Phase 2 Example**: `src/MonadicPipeline.Examples/Examples/Phase2MetacognitionExample.cs`
 - **Phase 3 Example**: `src/MonadicPipeline.Examples/Examples/Phase3EmergentIntelligenceExample.cs`

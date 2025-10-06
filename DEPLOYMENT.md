@@ -650,8 +650,9 @@ spec:
 
 ## Additional Resources
 
-- [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md) - Implementation details
+- [Documentation Index](docs/README.md) - Complete documentation catalog
 - [CONFIGURATION_AND_SECURITY.md](CONFIGURATION_AND_SECURITY.md) - Configuration reference
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Troubleshooting guide
 - [README.md](README.md) - Project overview
 - [Docker Documentation](https://docs.docker.com/)
 - [Kubernetes Documentation](https://kubernetes.io/docs/)

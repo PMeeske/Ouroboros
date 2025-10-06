@@ -232,8 +232,8 @@ dotnet build --no-incremental
 
 - **Full Report**: [TEST_COVERAGE_REPORT.md](TEST_COVERAGE_REPORT.md)
 - **HTML Report**: `TestCoverageReport/index.html` (after generation)
-- **Implementation Guide**: [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)
-- **Terraform Tests**: [TERRAFORM_TESTS_SUMMARY.md](TERRAFORM_TESTS_SUMMARY.md)
+- **Documentation Index**: [docs/README.md](docs/README.md)
+- **Archived Implementation Summaries**: [docs/archive/](docs/archive/)
 
 ---
 
