@@ -119,6 +119,9 @@ jobs:
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          # Set dummy credentials for validation - these won't be used for actual deployment
+          IONOS_TOKEN: "dummy-token-for-validation"
         run: terraform init -backend=false
 
       - name: Terraform Plan (Dry Run)
