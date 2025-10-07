@@ -124,7 +124,6 @@ jobs:
               echo "The actual plan will be validated during infrastructure deployment"
               exit 0
             }
-        continue-on-error: true
 
   run-test-suite:
     name: Run Terraform Test Suite
