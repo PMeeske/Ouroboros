@@ -162,6 +162,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate registry credentials
+        env:
+          IONOS_REGISTRY_USERNAME: ${{ secrets.IONOS_REGISTRY_USERNAME }}
+          IONOS_REGISTRY_PASSWORD: ${{ secrets.IONOS_REGISTRY_PASSWORD }}
+        run: |
+          if [ -z "$IONOS_REGISTRY_USERNAME" ] || [ -z "$IONOS_REGISTRY_PASSWORD" ]; then
+            echo "❌ Error: IONOS Container Registry credentials not configured"
+            echo "Please set IONOS_REGISTRY_USERNAME and IONOS_REGISTRY_PASSWORD secrets"
+            exit 1
+          fi
+          echo "✓ Registry credentials are configured"
+
       - name: Login to IONOS Container Registry
         uses: docker/login-action@v3
         with:
@@ -203,6 +215,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Validate Kubernetes configuration
+        env:
+          IONOS_KUBECONFIG: ${{ secrets.IONOS_KUBECONFIG }}
+        run: |
+          if [ -z "$IONOS_KUBECONFIG" ]; then
+            echo "❌ Error: IONOS Kubernetes configuration not found"
+            echo "Please set IONOS_KUBECONFIG secret"
+            exit 1
+          fi
+          echo "✓ Kubernetes configuration is available"
 
       - name: Setup kubectl
         uses: azure/setup-kubectl@v3
