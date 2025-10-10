@@ -2,8 +2,10 @@ namespace LangChainPipeline.Providers;
 
 /// <summary>
 /// A chat model wrapper that can execute tools based on special tool invocation syntax in responses.
-/// Uses monadic Result<T,E> for consistent error handling throughout the pipeline.
+/// Uses monadic Result{T,E} for consistent error handling throughout the pipeline.
 /// </summary>
+/// <param name="llm">The underlying chat completion model.</param>
+/// <param name="registry">The tool registry for tool execution.</param>
 public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry registry)
 {
     /// <summary>
@@ -58,7 +60,7 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
     }
 
     /// <summary>
-    /// Monadic version that returns Result<T,E> for better error handling.
+    /// Monadic version that returns Result{T,E} for better error handling.
     /// </summary>
     /// <param name="prompt">The input prompt.</param>
     /// <param name="ct">Cancellation token.</param>

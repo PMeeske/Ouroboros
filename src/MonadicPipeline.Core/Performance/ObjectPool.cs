@@ -139,7 +139,7 @@ public static class CommonPools
         maxPoolSize: 100);
 
     /// <summary>
-    /// Pool for List<string> instances.
+    /// Pool for List{string} instances.
     /// </summary>
     public static readonly ObjectPool<List<string>> StringList = new(
         () => new List<string>(),
@@ -147,7 +147,7 @@ public static class CommonPools
         maxPoolSize: 50);
 
     /// <summary>
-    /// Pool for Dictionary<string, string> instances.
+    /// Pool for Dictionary{string, string} instances.
     /// </summary>
     public static readonly ObjectPool<Dictionary<string, string>> StringDictionary = new(
         () => new Dictionary<string, string>(),
@@ -184,8 +184,11 @@ public static class PooledHelpers
     }
 
     /// <summary>
-    /// Executes a function with a pooled List<string> and returns the result.
+    /// Executes a function with a pooled List{string} and returns the result.
     /// </summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <param name="func">The function to execute.</param>
+    /// <returns>The result of the function.</returns>
     public static TResult WithStringList<TResult>(Func<List<string>, TResult> func)
     {
         using var pooled = CommonPools.StringList.RentDisposable();
@@ -193,8 +196,11 @@ public static class PooledHelpers
     }
 
     /// <summary>
-    /// Executes a function with a pooled Dictionary<string, string> and returns the result.
+    /// Executes a function with a pooled Dictionary{string, string} and returns the result.
     /// </summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <param name="func">The function to execute.</param>
+    /// <returns>The result of the function.</returns>
     public static TResult WithStringDictionary<TResult>(Func<Dictionary<string, string>, TResult> func)
     {
         using var pooled = CommonPools.StringDictionary.RentDisposable();

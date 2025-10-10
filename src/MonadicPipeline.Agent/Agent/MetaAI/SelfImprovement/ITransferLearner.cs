@@ -80,6 +80,6 @@ public interface ITransferLearner
     /// Validates if a transferred skill works in the target domain.
     /// </summary>
     /// <param name="transferResult">The transfer result to validate</param>
-    /// <param name="testExecution">Test execution result</param>
+    /// <param name="success">Whether the validation was successful</param>
     void RecordTransferValidation(TransferResult transferResult, bool success);
 }

@@ -14,7 +14,7 @@ namespace LangChainPipeline.Examples;
 public static class ConvenienceLayerExamples
 {
     /// <summary>
-    /// Example 1: Quick Q&A with Simple Orchestrator
+    /// Example 1: Quick Question and Answer with Simple Orchestrator
     /// </summary>
     public static async Task QuickQuestionAnswering()
     {
