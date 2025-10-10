@@ -48,6 +48,10 @@ This directory contains comprehensive technical documentation for MonadicPipelin
 - [**Test Coverage Report**](../TEST_COVERAGE_REPORT.md) - Detailed test coverage analysis
 - [**Test Coverage Quick Reference**](../TEST_COVERAGE_QUICKREF.md) - Testing commands and metrics
 
+### 📊 Status & Baselines
+
+- [**Current State Baseline**](status/baseline.md) - Comprehensive baseline inventory for production-ready initiative (Epic #120)
+
 ### 👥 Contributing & Development
 
 - [**Contributing Guide**](CONTRIBUTING.md) - Guidelines for contributing to the project
@@ -75,6 +79,7 @@ Contains detailed technical documentation:
 - **Architecture**: Agent features, processing strategies
 - **Guides**: Platform-specific deployment guides (IONOS, etc.)
 - **Implementation**: Phase summaries and feature documentation
+- **Status**: Baseline assessments and progress tracking
 
 ### Archive Directory (`/docs/archive`)
 Contains historical documentation:
