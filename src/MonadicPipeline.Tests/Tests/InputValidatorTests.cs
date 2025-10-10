@@ -1,6 +1,6 @@
+using FluentAssertions;
 using LangChainPipeline.Core.Security;
 using Xunit;
-using FluentAssertions;
 
 namespace LangChainPipeline.Tests;
 

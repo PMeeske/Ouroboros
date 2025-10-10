@@ -113,7 +113,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
     public void RegisterAgent(AgentInfo agent)
     {
         ArgumentNullException.ThrowIfNull(agent);
-        
+
         if (_agents.Count >= _config.MaxAgents)
             throw new InvalidOperationException($"Maximum number of agents ({_config.MaxAgents}) reached");
 
@@ -169,11 +169,11 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
                 {
                     // Simulate step execution (in real implementation, would delegate to actual agent)
                     var result = await ExecuteStepOnAgentAsync(assignment, ct);
-                    
+
                     // Update assignment status
-                    _assignments[assignment.TaskId] = assignment with 
-                    { 
-                        Status = result.Success ? TaskAssignmentStatus.Completed : TaskAssignmentStatus.Failed 
+                    _assignments[assignment.TaskId] = assignment with
+                    {
+                        Status = result.Success ? TaskAssignmentStatus.Completed : TaskAssignmentStatus.Failed
                     };
 
                     return result;
@@ -186,7 +186,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
             });
 
             stepResults.AddRange(await Task.WhenAll(tasks));
-            
+
             overallSuccess = stepResults.All(r => r.Success);
             sw.Stop();
 
@@ -290,7 +290,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
     private async Task<StepResult> ExecuteStepOnAgentAsync(TaskAssignment assignment, CancellationToken ct)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        
+
         try
         {
             // Apply safety checks

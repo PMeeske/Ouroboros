@@ -48,19 +48,19 @@ public class AuthenticationPrincipal
     /// <summary>
     /// Checks if the principal has any of the specified roles.
     /// </summary>
-    public bool HasAnyRole(params string[] roles) => 
+    public bool HasAnyRole(params string[] roles) =>
         roles.Any(r => HasRole(r));
 
     /// <summary>
     /// Checks if the principal has all of the specified roles.
     /// </summary>
-    public bool HasAllRoles(params string[] roles) => 
+    public bool HasAllRoles(params string[] roles) =>
         roles.All(r => HasRole(r));
 
     /// <summary>
     /// Gets a claim value.
     /// </summary>
-    public string? GetClaim(string key) => 
+    public string? GetClaim(string key) =>
         Claims.TryGetValue(key, out var value) ? value : null;
 }
 
@@ -176,7 +176,7 @@ public class InMemoryAuthenticationProvider : IAuthenticationProvider
 
             // Generate a simple token (in production, use JWT)
             var token = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
-            
+
             return Task.FromResult(AuthenticationResult.Success(user.Principal, token));
         }
     }

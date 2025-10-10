@@ -95,7 +95,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
     public UseCase ClassifyUseCase(string prompt)
     {
         var lowerPrompt = prompt.ToLowerInvariant();
-        
+
         // Code generation patterns
         if (Regex.IsMatch(lowerPrompt, @"\b(code|implement|function|class|method|debug|fix|refactor)\b"))
         {
@@ -244,7 +244,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
 
         // Capability matching
         var capabilityScore = useCase.RequiredCapabilities
-            .Count(req => capability.Strengths.Any(s => 
+            .Count(req => capability.Strengths.Any(s =>
                 s.Contains(req, StringComparison.OrdinalIgnoreCase)))
             / (double)Math.Max(1, useCase.RequiredCapabilities.Length);
         score += capabilityScore * 0.3;
@@ -252,7 +252,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         // Performance metrics
         if (_metrics.TryGetValue(capability.ModelName, out var metrics))
         {
-            var performanceScore = metrics.SuccessRate * 
+            var performanceScore = metrics.SuccessRate *
                 (1.0 - Math.Min(metrics.AverageLatencyMs / 10000.0, 0.9));
             score += performanceScore * useCase.PerformanceWeight * 0.3;
         }

@@ -103,7 +103,7 @@ public static class RecursiveChunkingExample
         {
             await Task.Delay(50);
             attemptCount++;
-            
+
             // Simulate occasional failures with very large chunks
             if (chunk.Length > 3000 && new Random().NextDouble() < 0.2)
             {

@@ -1,4 +1,4 @@
-﻿namespace LangChainPipeline.Tools;
+namespace LangChainPipeline.Tools;
 
 /// <summary>
 /// A tool implementation that wraps delegate functions for easy tool creation.
@@ -9,10 +9,10 @@ public sealed class DelegateTool : ITool
 
     /// <inheritdoc />
     public string Name { get; }
-    
+
     /// <inheritdoc />
     public string Description { get; }
-    
+
     /// <inheritdoc />
     public string? JsonSchema { get; }
 
@@ -38,18 +38,19 @@ public sealed class DelegateTool : ITool
     /// <param name="description">The description of the tool.</param>
     /// <param name="executor">The async executor function.</param>
     public DelegateTool(string name, string description, Func<string, Task<string>> executor)
-        : this(name, description, async (s, _) => 
+        : this(name, description, async (s, _) =>
         {
-            try 
-            { 
+            try
+            {
                 var result = await executor(s);
                 return Result<string, string>.Success(result);
             }
-            catch (Exception ex) 
-            { 
+            catch (Exception ex)
+            {
                 return Result<string, string>.Failure(ex.Message);
             }
-        }) { }
+        })
+    { }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DelegateTool"/> class with a synchronous function.
@@ -58,18 +59,19 @@ public sealed class DelegateTool : ITool
     /// <param name="description">The description of the tool.</param>
     /// <param name="executor">The synchronous executor function.</param>
     public DelegateTool(string name, string description, Func<string, string> executor)
-        : this(name, description, (s, _) => 
+        : this(name, description, (s, _) =>
         {
-            try 
-            { 
+            try
+            {
                 var result = executor(s);
                 return Task.FromResult(Result<string, string>.Success(result));
             }
-            catch (Exception ex) 
-            { 
+            catch (Exception ex)
+            {
                 return Task.FromResult(Result<string, string>.Failure(ex.Message));
             }
-        }) { }
+        })
+    { }
 
     /// <summary>
     /// Creates a delegate tool from a strongly-typed JSON function.
@@ -84,20 +86,20 @@ public sealed class DelegateTool : ITool
         string schema = SchemaGenerator.GenerateSchema(typeof(T));
         return new DelegateTool(name, description, async (raw, _) =>
         {
-            try 
-            { 
-                T args = ToolJson.Deserialize<T>(raw); 
+            try
+            {
+                T args = ToolJson.Deserialize<T>(raw);
                 var result = await function(args);
                 return Result<string, string>.Success(result);
             }
-            catch (Exception ex) 
-            { 
-                return Result<string, string>.Failure($"JSON parse failed: {ex.Message}"); 
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure($"JSON parse failed: {ex.Message}");
             }
         }, schema);
     }
 
     /// <inheritdoc />
-    public Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default) 
+    public Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
         => _executor(input, ct);
 }

@@ -121,7 +121,7 @@ public static class Arrow
         };
 
     #region Result Arrow Factories
-    
+
     /// <summary>
     /// Creates an arrow that always succeeds with the given value.
     /// </summary>
@@ -147,7 +147,7 @@ public static class Arrow
     #endregion
 
     #region Option Arrow Factories
-    
+
     /// <summary>
     /// Creates an arrow that always returns Some with the given value.
     /// </summary>
@@ -170,7 +170,7 @@ public static class Arrow
     #endregion
 
     #region Composition Combinators
-    
+
     /// <summary>
     /// Creates a KleisliCompose function that implements standard Kleisli composition.
     /// This enables functional composition patterns and partial application.

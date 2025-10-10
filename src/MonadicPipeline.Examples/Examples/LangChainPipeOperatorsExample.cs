@@ -24,7 +24,7 @@ public static class LangChainPipeOperatorsExample
     {
         Console.WriteLine("=== LANGCHAIN PIPE OPERATORS EXAMPLE ===");
         Console.WriteLine("Demonstrates the enhanced CLI steps using LangChain operators\n");
-        
+
         Console.WriteLine("Available LangChain-style pipe operators:");
         Console.WriteLine("  - Set(value): Sets a value in the pipeline (like Chain.Set())");
         Console.WriteLine("  - RetrieveSimilarDocuments(amount): Retrieves docs from vector store");
@@ -32,7 +32,7 @@ public static class LangChainPipeOperatorsExample
         Console.WriteLine("  - Template(template): Applies a prompt template");
         Console.WriteLine("  - LLM(): Sends to the language model");
         Console.WriteLine();
-        
+
         Console.WriteLine("CLI Token equivalents:");
         Console.WriteLine("  - LangChainSet / ChainSet");
         Console.WriteLine("  - LangChainRetrieve / ChainRetrieve");
@@ -41,15 +41,15 @@ public static class LangChainPipeOperatorsExample
         Console.WriteLine("  - LangChainLLM / ChainLLM");
         Console.WriteLine("  - LangChainRAG / ChainRAG (complete pipeline)");
         Console.WriteLine();
-        
+
         Console.WriteLine("Example DSL usage:");
         Console.WriteLine("  pipeline --dsl \"Set('What is AI?') | LangChainRetrieve('amount=5') | LangChainCombine() | LangChainTemplate('...') | LangChainLLM()\"");
         Console.WriteLine();
-        
+
         Console.WriteLine("Or use the complete RAG pipeline:");
         Console.WriteLine("  pipeline --dsl \"LangChainRAG('question=What is AI?|k=5')\"");
         Console.WriteLine();
-        
+
         Console.WriteLine("Comparison with original LangChain syntax:");
         Console.WriteLine();
         Console.WriteLine("Original LangChain:");
@@ -60,7 +60,7 @@ public static class LangChainPipeOperatorsExample
         Console.WriteLine("      | Template(promptTemplate)");
         Console.WriteLine("      | LLM(llm);");
         Console.WriteLine();
-        
+
         Console.WriteLine("MonadicPipeline equivalent (CLI DSL):");
         Console.WriteLine("  SetQuery('Who was drinking unicorn blood?')");
         Console.WriteLine("  | LangChainRetrieve('amount=5')");
@@ -68,7 +68,7 @@ public static class LangChainPipeOperatorsExample
         Console.WriteLine("  | LangChainTemplate('Use the context: {context}...')");
         Console.WriteLine("  | LangChainLLM()");
         Console.WriteLine();
-        
+
         Console.WriteLine("MonadicPipeline equivalent (Code using static imports):");
         Console.WriteLine("  using static LangChainPipeline.CLI.Interop.Pipe;");
         Console.WriteLine();
@@ -78,11 +78,11 @@ public static class LangChainPipeOperatorsExample
         Console.WriteLine("      .Bind(Template(promptTemplate))");
         Console.WriteLine("      .Bind(LLM());");
         Console.WriteLine();
-        
+
         Console.WriteLine("✓ LangChain pipe operators successfully integrated into MonadicPipeline");
         Console.WriteLine("✓ Both CLI DSL and code-based composition are supported");
         Console.WriteLine("✓ Maintains functional programming principles while leveraging LangChain operators");
-        
+
         return Task.CompletedTask;
     }
 
@@ -92,7 +92,7 @@ public static class LangChainPipeOperatorsExample
     public static void ExplainArchitecturalBenefit()
     {
         Console.WriteLine("\n=== ARCHITECTURAL BENEFITS ===\n");
-        
+
         Console.WriteLine("The integration provides:");
         Console.WriteLine("  ✓ LangChain's familiar pipe operator syntax");
         Console.WriteLine("  ✓ MonadicPipeline's type-safe composition");
@@ -100,7 +100,7 @@ public static class LangChainPipeOperatorsExample
         Console.WriteLine("  ✓ Immutable state and event sourcing");
         Console.WriteLine("  ✓ Testable and mathematically sound pipelines");
         Console.WriteLine();
-        
+
         Console.WriteLine("Best of both worlds:");
         Console.WriteLine("  - LangChain's operator convenience (Set | Retrieve | Template | LLM)");
         Console.WriteLine("  - MonadicPipeline's safety guarantees (Kleisli composition, monadic laws)");

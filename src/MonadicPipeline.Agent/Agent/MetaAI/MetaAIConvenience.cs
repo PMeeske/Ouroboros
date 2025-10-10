@@ -24,7 +24,7 @@ public static class MetaAIConvenience
                 .WithLLM(llm)
                 .WithConfidenceThreshold(0.5)
                 .Build();
-            
+
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
         catch (Exception ex)
@@ -45,7 +45,7 @@ public static class MetaAIConvenience
         try
         {
             var vectorStore = new TrackedVectorStore();
-            
+
             var orchestrator = MetaAIBuilder.CreateDefault()
                 .WithLLM(llm)
                 .WithTools(tools)
@@ -54,7 +54,7 @@ public static class MetaAIConvenience
                 .WithConfidenceThreshold(0.7)
                 .WithDefaultPermissionLevel(PermissionLevel.Isolated)
                 .Build();
-            
+
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
         catch (Exception ex)
@@ -82,7 +82,7 @@ public static class MetaAIConvenience
                 .WithConfidenceThreshold(confidenceThreshold)
                 .WithDefaultPermissionLevel(PermissionLevel.ReadOnly)
                 .Build();
-            
+
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
         catch (Exception ex)
@@ -123,7 +123,7 @@ public static class MetaAIConvenience
         string analysisGoal = "Analyze the following text")
     {
         var context = new Dictionary<string, object> { ["text"] = text };
-        
+
         // Plan
         var planResult = await orchestrator.PlanAsync(analysisGoal, context);
         if (!planResult.IsSuccess)
@@ -141,7 +141,7 @@ public static class MetaAIConvenience
 
         var output = execResult.Value.FinalOutput ?? "No analysis generated";
         var quality = verifyResult.Value.QualityScore;
-        
+
         return Result<(string, double), string>.Success((output, quality));
     }
 
@@ -232,7 +232,7 @@ public static class MetaAIConvenience
                 .WithConfidenceThreshold(0.75)
                 .WithDefaultPermissionLevel(PermissionLevel.ReadOnly)
                 .Build();
-            
+
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
         catch (Exception ex)
@@ -256,7 +256,7 @@ public static class MetaAIConvenience
                 .WithConfidenceThreshold(0.8)
                 .WithDefaultPermissionLevel(PermissionLevel.Isolated)
                 .Build();
-            
+
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
         catch (Exception ex)
@@ -274,14 +274,14 @@ public static class MetaAIConvenience
         try
         {
             var tools = new ToolRegistry();
-            
+
             var orchestrator = MetaAIBuilder.CreateDefault()
                 .WithLLM(llm)
                 .WithTools(tools)
                 .WithConfidenceThreshold(0.6)
                 .WithDefaultPermissionLevel(PermissionLevel.Isolated)
                 .Build();
-            
+
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
         catch (Exception ex)

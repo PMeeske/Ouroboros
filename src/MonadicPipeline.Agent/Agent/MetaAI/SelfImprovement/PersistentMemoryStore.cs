@@ -15,7 +15,7 @@ public enum MemoryType
 {
     /// <summary>Specific execution instances (recent experiences)</summary>
     Episodic,
-    
+
     /// <summary>Generalized knowledge and patterns (consolidated)</summary>
     Semantic
 }
@@ -118,13 +118,13 @@ public sealed class PersistentMemoryStore : IMemoryStore
     public Task<MemoryStatistics> GetStatisticsAsync()
     {
         var experiences = _experiences.Values.Select(v => v.experience).ToList();
-        
+
         var stats = new MemoryStatistics(
             TotalExperiences: experiences.Count,
             SuccessfulExecutions: experiences.Count(e => e.Verification.Verified),
             FailedExecutions: experiences.Count(e => !e.Verification.Verified),
-            AverageQualityScore: experiences.Any() 
-                ? experiences.Average(e => e.Verification.QualityScore) 
+            AverageQualityScore: experiences.Any()
+                ? experiences.Average(e => e.Verification.QualityScore)
                 : 0.0,
             GoalCounts: experiences
                 .GroupBy(e => e.Goal)
@@ -139,7 +139,7 @@ public sealed class PersistentMemoryStore : IMemoryStore
     public async Task ClearAsync(CancellationToken ct = default)
     {
         _experiences.Clear();
-        
+
         if (_vectorStore != null)
         {
             // Note: TrackedVectorStore doesn't have a Clear method
@@ -186,7 +186,7 @@ public sealed class PersistentMemoryStore : IMemoryStore
 
         // Combined importance (weighted average)
         var importance = (qualityScore * 0.5) + (recencyBonus * 0.3) + successBonus;
-        
+
         return Math.Clamp(importance, 0.0, 1.0);
     }
 
@@ -300,7 +300,7 @@ public sealed class PersistentMemoryStore : IMemoryStore
         try
         {
             var queryEmbedding = await _embedding.CreateEmbeddingsAsync(query.Goal, ct);
-            
+
             var searchResults = await _vectorStore.GetSimilarDocuments(
                 _embedding,
                 query.Goal,
@@ -310,7 +310,7 @@ public sealed class PersistentMemoryStore : IMemoryStore
             foreach (var doc in searchResults)
             {
                 if (doc.Metadata?.TryGetValue("id", out var idObj) == true &&
-                    Guid.TryParse(idObj?.ToString(), out var id) && 
+                    Guid.TryParse(idObj?.ToString(), out var id) &&
                     _experiences.TryGetValue(id, out var entry))
                 {
                     experiences.Add(entry.experience);

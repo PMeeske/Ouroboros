@@ -22,22 +22,22 @@ public enum FallbackStrategy
     /// Use default general-purpose model.
     /// </summary>
     UseDefault,
-    
+
     /// <summary>
     /// Ask for human clarification.
     /// </summary>
     RequestClarification,
-    
+
     /// <summary>
     /// Use ensemble of multiple models.
     /// </summary>
     UseEnsemble,
-    
+
     /// <summary>
     /// Decompose into simpler sub-tasks.
     /// </summary>
     DecomposeTask,
-    
+
     /// <summary>
     /// Retrieve more context before deciding.
     /// </summary>
@@ -78,7 +78,7 @@ public interface IUncertaintyRouter
     /// <param name="context">Optional context</param>
     /// <returns>Confidence score between 0 and 1</returns>
     Task<double> CalculateConfidenceAsync(
-        string task, 
+        string task,
         string route,
         Dictionary<string, object>? context = null);
 

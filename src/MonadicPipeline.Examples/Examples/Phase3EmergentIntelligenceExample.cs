@@ -76,7 +76,7 @@ public static class Phase3EmergentIntelligenceExample
         // Estimate transferability to a different domain
         var targetDomain = "troubleshooting mechanical systems";
         var transferability = await transferLearner.EstimateTransferabilityAsync(codingSkill, targetDomain);
-        
+
         Console.WriteLine($"Transferability Analysis:");
         Console.WriteLine($"  Source Domain: Software debugging");
         Console.WriteLine($"  Target Domain: {targetDomain}");
@@ -124,7 +124,7 @@ public static class Phase3EmergentIntelligenceExample
 
         // Observe a pattern
         var observation = "Tasks involving systematic step-by-step procedures have consistently higher success rates across all domains";
-        
+
         Console.WriteLine($"Observation: {observation}\n");
 
         // Generate hypothesis
@@ -133,7 +133,7 @@ public static class Phase3EmergentIntelligenceExample
         if (hypothesisResult.IsSuccess)
         {
             var hypothesis = hypothesisResult.Value;
-            
+
             Console.WriteLine("Generated Hypothesis:");
             Console.WriteLine($"  Statement: {hypothesis.Statement}");
             Console.WriteLine($"  Domain: {hypothesis.Domain}");
@@ -155,7 +155,7 @@ public static class Phase3EmergentIntelligenceExample
             if (experimentResult.IsSuccess)
             {
                 var experiment = experimentResult.Value;
-                
+
                 Console.WriteLine("Designed Experiment:");
                 Console.WriteLine($"  Description: {experiment.Description}");
                 Console.WriteLine($"  Steps: {experiment.Steps.Count}\n");
@@ -242,7 +242,7 @@ public static class Phase3EmergentIntelligenceExample
 
             // Identify exploration opportunities
             var opportunities = await curiosityEngine.IdentifyExplorationOpportunitiesAsync(5);
-            
+
             Console.WriteLine($"Exploration Opportunities Identified: {opportunities.Count}\n");
 
             foreach (var opp in opportunities.Take(3))
@@ -260,22 +260,22 @@ public static class Phase3EmergentIntelligenceExample
             if (exploratoryPlanResult.IsSuccess)
             {
                 var expPlan = exploratoryPlanResult.Value;
-                
+
                 Console.WriteLine("Generated Exploratory Plan:");
                 Console.WriteLine($"  Goal: {expPlan.Goal}");
                 Console.WriteLine($"  Type: Curiosity-driven exploration");
-                
+
                 if (expPlan.ConfidenceScores.TryGetValue("novelty", out var noveltyScore))
                 {
                     Console.WriteLine($"  Novelty: {noveltyScore:P0}");
                 }
-                
+
                 Console.WriteLine($"\n  Steps ({expPlan.Steps.Count}):");
                 for (int i = 0; i < expPlan.Steps.Count; i++)
                 {
                     var step = expPlan.Steps[i];
                     Console.WriteLine($"  {i + 1}. {step.Action}");
-                    
+
                     if (step.Parameters.TryGetValue("expected_learning", out var learning))
                     {
                         Console.WriteLine($"     Expected Learning: {learning}");
@@ -296,7 +296,7 @@ public static class Phase3EmergentIntelligenceExample
 
         // Estimate information gain for specific areas
         var areas = new[] { "neural networks", "optimization algorithms", "data visualization" };
-        
+
         Console.WriteLine("Information Gain Estimates:");
         foreach (var area in areas)
         {
@@ -315,7 +315,7 @@ public static class Phase3EmergentIntelligenceExample
 
         // === Summary ===
         Console.WriteLine("\n\n=== Phase 3 Demonstration Complete ===\n");
-        
+
         Console.WriteLine("Capabilities Demonstrated:");
         Console.WriteLine("  ✓ Transfer Learning");
         Console.WriteLine("    - Cross-domain skill adaptation");
@@ -334,14 +334,14 @@ public static class Phase3EmergentIntelligenceExample
         Console.WriteLine("    - Autonomous learning opportunities");
         Console.WriteLine("    - Information gain estimation");
         Console.WriteLine();
-        
+
         Console.WriteLine("These capabilities enable:");
         Console.WriteLine("  • Applying knowledge across different domains");
         Console.WriteLine("  • Scientific reasoning about patterns and behaviors");
         Console.WriteLine("  • Autonomous exploration during idle time");
         Console.WriteLine("  • Compositional generalization");
         Console.WriteLine();
-        
+
         Console.WriteLine("The agent is now capable of emergent intelligent behavior!");
     }
 }

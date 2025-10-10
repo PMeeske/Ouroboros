@@ -1,7 +1,7 @@
-using LangChain.Chains.StackableChains.Context; // StackableChainValues
 using LangChain.Abstractions.Schema;            // IChainValues
 // BaseStackableChain (namespace assumption)
 using LangChain.Chains.HelperChains;            // StackChain (optional)
+using LangChain.Chains.StackableChains.Context; // StackableChainValues
 using LangChainPipeline.Core.Steps;
 
 namespace LangChainPipeline.CLI.Interop;
@@ -13,20 +13,20 @@ public static class ChainAdapters
 {
     private static readonly Dictionary<string, Action<CliPipelineState, StackableChainValues>> Export = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Prompt"]  = (s, v) => v.Value["Prompt"] = s.Prompt,
-        ["Query"]   = (s, v) => v.Value["Query"] = s.Query,
-        ["Topic"]   = (s, v) => v.Value["Topic"] = s.Topic,
+        ["Prompt"] = (s, v) => v.Value["Prompt"] = s.Prompt,
+        ["Query"] = (s, v) => v.Value["Query"] = s.Query,
+        ["Topic"] = (s, v) => v.Value["Topic"] = s.Topic,
         ["Context"] = (s, v) => v.Value["Context"] = s.Context,
-        ["Output"]  = (s, v) => v.Value["Output"] = s.Output
+        ["Output"] = (s, v) => v.Value["Output"] = s.Output
     };
 
     private static readonly Dictionary<string, Action<StackableChainValues, CliPipelineState>> Import = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Prompt"]  = (v, s) => s.Prompt  = v.Value.TryGetValue("Prompt", out var o) ? o?.ToString() ?? string.Empty : s.Prompt,
-        ["Query"]   = (v, s) => s.Query   = v.Value.TryGetValue("Query", out var o) ? o?.ToString() ?? string.Empty : s.Query,
-        ["Topic"]   = (v, s) => s.Topic   = v.Value.TryGetValue("Topic", out var o) ? o?.ToString() ?? string.Empty : s.Topic,
+        ["Prompt"] = (v, s) => s.Prompt = v.Value.TryGetValue("Prompt", out var o) ? o?.ToString() ?? string.Empty : s.Prompt,
+        ["Query"] = (v, s) => s.Query = v.Value.TryGetValue("Query", out var o) ? o?.ToString() ?? string.Empty : s.Query,
+        ["Topic"] = (v, s) => s.Topic = v.Value.TryGetValue("Topic", out var o) ? o?.ToString() ?? string.Empty : s.Topic,
         ["Context"] = (v, s) => s.Context = v.Value.TryGetValue("Context", out var o) ? o?.ToString() ?? string.Empty : s.Context,
-        ["Output"]  = (v, s) => s.Output  = v.Value.TryGetValue("Output", out var o) ? o?.ToString() ?? string.Empty : s.Output
+        ["Output"] = (v, s) => s.Output = v.Value.TryGetValue("Output", out var o) ? o?.ToString() ?? string.Empty : s.Output
     };
 
     /// <summary>

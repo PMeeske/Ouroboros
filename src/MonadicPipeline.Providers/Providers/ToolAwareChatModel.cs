@@ -14,13 +14,13 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
     /// <returns>A tuple containing the final text and list of tool executions.</returns>
     public async Task<(string Text, List<ToolExecution> Tools)> GenerateWithToolsAsync(string prompt, CancellationToken ct = default)
     {
-    string result = await llm.GenerateTextAsync(prompt, ct);
-    List<ToolExecution> toolCalls = [];
-        
+        string result = await llm.GenerateTextAsync(prompt, ct);
+        List<ToolExecution> toolCalls = [];
+
         foreach (string rawLine in result.Split('\n'))
         {
             string line = rawLine.Trim();
-            if (!line.StartsWith("[TOOL:", StringComparison.Ordinal)) 
+            if (!line.StartsWith("[TOOL:", StringComparison.Ordinal))
                 continue;
 
             // Parse tool invocation: [TOOL:name args]
@@ -37,17 +37,17 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
             }
 
             string output;
-            try 
-            { 
+            try
+            {
                 var toolResult = await tool.InvokeAsync(args, ct);
                 output = toolResult.Match(
                     success => success,
                     error => $"error: {error}"
                 );
             }
-            catch (Exception ex) 
-            { 
-                output = $"error: {ex.Message}"; 
+            catch (Exception ex)
+            {
+                output = $"error: {ex.Message}";
             }
 
             toolCalls.Add(new ToolExecution(name, args, output, DateTime.UtcNow));

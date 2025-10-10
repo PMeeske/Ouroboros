@@ -15,26 +15,26 @@ public class ConversationMemory
 {
     private readonly ConcurrentQueue<ConversationTurn> _turns = new();
     private readonly int _maxTurns;
-    
+
     public ConversationMemory(int maxTurns = 10)
     {
         _maxTurns = maxTurns;
     }
-    
+
     /// <summary>
     /// Add a turn to the conversation memory
     /// </summary>
     public void AddTurn(string humanInput, string aiResponse)
     {
         _turns.Enqueue(new ConversationTurn(humanInput, aiResponse, DateTime.UtcNow));
-        
+
         // Maintain max turns limit
         while (_turns.Count > _maxTurns)
         {
             _turns.TryDequeue(out _);
         }
     }
-    
+
     /// <summary>
     /// Get the conversation history formatted for prompts
     /// </summary>
@@ -42,16 +42,16 @@ public class ConversationMemory
     {
         var turns = _turns.ToArray();
         if (turns.Length == 0) return string.Empty;
-        
-        return string.Join("\n", turns.Select(turn => 
+
+        return string.Join("\n", turns.Select(turn =>
             $"{humanPrefix}: {turn.HumanInput}\n{aiPrefix}: {turn.AiResponse}"));
     }
-    
+
     /// <summary>
     /// Get all conversation turns
     /// </summary>
     public IReadOnlyList<ConversationTurn> GetTurns() => _turns.ToArray();
-    
+
     /// <summary>
     /// Clear all memory
     /// </summary>
@@ -62,8 +62,8 @@ public class ConversationMemory
 /// Represents a single turn in a conversation
 /// </summary>
 public record ConversationTurn(
-    string HumanInput, 
-    string AiResponse, 
+    string HumanInput,
+    string AiResponse,
     DateTime Timestamp);
 
 /// <summary>
@@ -76,13 +76,13 @@ public record MemoryContext<T>(
     Dictionary<string, object>? Properties = null)
 {
     public Dictionary<string, object> Properties { get; } = Properties ?? new();
-    
+
     /// <summary>
     /// Create a new context with updated data
     /// </summary>
-    public MemoryContext<TNew> WithData<TNew>(TNew newData) 
+    public MemoryContext<TNew> WithData<TNew>(TNew newData)
         => new(newData, Memory, Properties);
-        
+
     /// <summary>
     /// Set a property value
     /// </summary>
@@ -94,13 +94,13 @@ public record MemoryContext<T>(
         };
         return new MemoryContext<T>(Data, Memory, newProperties);
     }
-    
+
     /// <summary>
     /// Get a property value
     /// </summary>
     public TValue? GetProperty<TValue>(string key)
-        => Properties.TryGetValue(key, out var value) && value is TValue typed 
-            ? typed 
+        => Properties.TryGetValue(key, out var value) && value is TValue typed
+            ? typed
             : default;
 }
 
@@ -123,7 +123,7 @@ public static class MemoryArrows
             return Task.FromResult(context.SetProperty(outputKey, history));
         };
     }
-    
+
     /// <summary>
     /// Create a memory-aware arrow that updates memory with new conversation turn
     /// </summary>
@@ -135,16 +135,16 @@ public static class MemoryArrows
         {
             var input = context.GetProperty<string>(inputKey) ?? string.Empty;
             var response = context.GetProperty<string>(responseKey) ?? string.Empty;
-            
+
             if (!string.IsNullOrWhiteSpace(input) && !string.IsNullOrWhiteSpace(response))
             {
                 context.Memory.AddTurn(input, response);
             }
-            
+
             return Task.FromResult(context);
         };
     }
-    
+
     /// <summary>
     /// Create a template processing arrow for conversation prompts
     /// </summary>
@@ -153,7 +153,7 @@ public static class MemoryArrows
         return context =>
         {
             var processedTemplate = template;
-            
+
             // Replace template variables with values from properties
             foreach (var prop in context.Properties)
             {
@@ -163,11 +163,11 @@ public static class MemoryArrows
                     processedTemplate = processedTemplate.Replace(placeholder, prop.Value?.ToString() ?? string.Empty);
                 }
             }
-            
+
             return Task.FromResult(context.WithData(processedTemplate));
         };
     }
-    
+
     /// <summary>
     /// Create a template processing arrow for conversation prompts (generic version)
     /// </summary>
@@ -176,7 +176,7 @@ public static class MemoryArrows
         return context =>
         {
             var processedTemplate = template;
-            
+
             // Replace template variables with values from properties
             foreach (var prop in context.Properties)
             {
@@ -186,11 +186,11 @@ public static class MemoryArrows
                     processedTemplate = processedTemplate.Replace(placeholder, prop.Value?.ToString() ?? string.Empty);
                 }
             }
-            
+
             return Task.FromResult(context.WithData<object>(processedTemplate));
         };
     }
-    
+
     /// <summary>
     /// Set a value in the memory context
     /// </summary>
@@ -198,7 +198,7 @@ public static class MemoryArrows
     {
         return context => Task.FromResult(context.SetProperty(key, value));
     }
-    
+
     /// <summary>
     /// Create a mock LLM step for demonstration purposes
     /// </summary>
@@ -208,15 +208,15 @@ public static class MemoryArrows
         {
             var prompt = context.Data;
             var response = $"{mockPrefix} Processing prompt with {prompt.Length} characters - {DateTime.Now:HH:mm:ss}";
-            
+
             var result = context
                 .WithData(response)
                 .SetProperty("text", response);
-                
+
             return Task.FromResult(result);
         };
     }
-    
+
     /// <summary>
     /// Create a mock LLM step for demonstration purposes (generic version)
     /// </summary>
@@ -226,15 +226,15 @@ public static class MemoryArrows
         {
             var prompt = context.Data?.ToString() ?? string.Empty;
             var response = $"{mockPrefix} Processing prompt with {prompt.Length} characters - {DateTime.Now:HH:mm:ss}";
-            
+
             var result = context
                 .WithData<object>(response)
                 .SetProperty("text", response);
-                
+
             return Task.FromResult(result);
         };
     }
-    
+
     /// <summary>
     /// Extract a property value as the main data
     /// </summary>

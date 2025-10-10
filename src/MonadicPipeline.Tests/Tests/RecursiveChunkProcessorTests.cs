@@ -1,7 +1,7 @@
+using FluentAssertions;
 using LangChainPipeline.Core.Monads;
 using LangChainPipeline.Core.Processing;
 using Xunit;
-using FluentAssertions;
 
 namespace LangChainPipeline.Tests;
 
@@ -15,7 +15,7 @@ public class RecursiveChunkProcessorTests
     {
         // Arrange
         var processedChunks = new List<string>();
-        
+
         Func<string, Task<Result<string>>> processFunc = async chunk =>
         {
             await Task.Delay(10); // Simulate processing
@@ -49,7 +49,7 @@ public class RecursiveChunkProcessorTests
     {
         // Arrange
         var processedChunks = new List<string>();
-        
+
         Func<string, Task<Result<string>>> processFunc = async chunk =>
         {
             await Task.Delay(10);
@@ -65,7 +65,7 @@ public class RecursiveChunkProcessorTests
         };
 
         var processor = new RecursiveChunkProcessor(processFunc, combineFunc);
-        
+
         // Create a large context (approximately 2000 tokens worth of text)
         var largeInput = string.Join(" ", Enumerable.Repeat("This is a test sentence.", 500));
 
@@ -85,7 +85,7 @@ public class RecursiveChunkProcessorTests
     {
         // Arrange
         var chunkSizes = new List<int>();
-        
+
         Func<string, Task<Result<string>>> processFunc = async chunk =>
         {
             await Task.Delay(5);
@@ -113,7 +113,7 @@ public class RecursiveChunkProcessorTests
         chunkSizes.Should().NotBeEmpty();
         // All chunks should be similar in size (allowing for boundary conditions)
         var avgSize = chunkSizes.Average();
-        chunkSizes.Should().AllSatisfy(size => 
+        chunkSizes.Should().AllSatisfy(size =>
             Math.Abs(size - avgSize).Should().BeLessThan(avgSize * 0.5));
     }
 
@@ -122,7 +122,7 @@ public class RecursiveChunkProcessorTests
     {
         // Arrange
         var callCount = 0;
-        
+
         Func<string, Task<Result<string>>> processFunc = async chunk =>
         {
             await Task.Delay(5);
@@ -162,7 +162,7 @@ public class RecursiveChunkProcessorTests
     {
         // Arrange
         var failOnSecondChunk = 0;
-        
+
         Func<string, Task<Result<string>>> processFunc = async chunk =>
         {
             await Task.Delay(5);
@@ -229,7 +229,7 @@ public class RecursiveChunkProcessorTests
     {
         // Arrange
         var cts = new CancellationTokenSource();
-        
+
         Func<string, Task<Result<string>>> processFunc = async chunk =>
         {
             await Task.Delay(100); // Longer delay to allow cancellation

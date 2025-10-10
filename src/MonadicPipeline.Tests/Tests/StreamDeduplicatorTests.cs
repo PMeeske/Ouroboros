@@ -1,7 +1,7 @@
+using System.Runtime.CompilerServices;
+using FluentAssertions;
 using LangChainPipeline.Infrastructure.FeatureEngineering;
 using Xunit;
-using FluentAssertions;
-using System.Runtime.CompilerServices;
 
 namespace LangChainPipeline.Tests;
 

@@ -4,8 +4,8 @@
 // with continual learning and self-improvement
 // ==========================================================
 
-using LangChain.Providers.Ollama;
 using LangChain.DocumentLoaders;
+using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
 
@@ -186,7 +186,7 @@ public static class MetaAIv2Example
             Console.WriteLine($"TASK 1: {goal1}");
 
             var result1 = await ExecuteFullCycle(orchestrator, goal1);
-            
+
             if (result1 != null && result1.Verified && result1.QualityScore > 0.8)
             {
                 // Extract skill

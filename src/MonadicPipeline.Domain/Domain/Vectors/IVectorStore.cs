@@ -24,8 +24,8 @@ public interface IVectorStore
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A collection of similar documents.</returns>
     Task<IReadOnlyCollection<Document>> GetSimilarDocumentsAsync(
-        float[] embedding, 
-        int amount = 5, 
+        float[] embedding,
+        int amount = 5,
         CancellationToken cancellationToken = default);
 
     /// <summary>

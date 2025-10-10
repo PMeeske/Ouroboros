@@ -81,7 +81,9 @@ public readonly struct SyncStep<TIn, TOut> : IEquatable<SyncStep<TIn, TOut>>
     /// Equality (by delegate reference)
     /// </summary>
     public bool Equals(SyncStep<TIn, TOut> other) => ReferenceEquals(_f, other._f);
+    /// <inheritdoc/>
     public override bool Equals(object? obj) => obj is SyncStep<TIn, TOut> o && Equals(o);
+    /// <inheritdoc/>
     public override int GetHashCode() => _f?.GetHashCode() ?? 0;
 
     /// <summary>

@@ -40,7 +40,7 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
             };
 
             _process = Process.Start(startInfo);
-            
+
             if (_process != null)
             {
                 _stdin = _process.StandardInput;
@@ -76,7 +76,7 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
             cts.CancelAfter(TimeSpan.FromSeconds(10));
 
             var response = await _stdout.ReadLineAsync();
-            
+
             if (string.IsNullOrEmpty(response))
             {
                 return Result<string, string>.Failure("No response from MeTTa engine");
@@ -145,8 +145,8 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
             cts.CancelAfter(TimeSpan.FromSeconds(10));
 
             var response = await _stdout.ReadLineAsync();
-            
-            return !string.IsNullOrEmpty(response) 
+
+            return !string.IsNullOrEmpty(response)
                 ? Result<string, string>.Success(response)
                 : Result<string, string>.Failure("No response from rule application");
         }
@@ -172,7 +172,7 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
         var result = await ExecuteQueryAsync(query, ct);
 
         return result.Match(
-            success => success.Contains("True") || success.Contains("true") 
+            success => success.Contains("True") || success.Contains("true")
                 ? Result<bool, string>.Success(true)
                 : Result<bool, string>.Success(false),
             error => Result<bool, string>.Failure(error)
@@ -218,13 +218,13 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
             _stdin?.Close();
             _stdout?.Close();
             _stderr?.Close();
-            
+
             if (_process != null && !_process.HasExited)
             {
                 _process.Kill();
                 _process.WaitForExit(1000);
             }
-            
+
             _process?.Dispose();
             _disposed = true;
         }

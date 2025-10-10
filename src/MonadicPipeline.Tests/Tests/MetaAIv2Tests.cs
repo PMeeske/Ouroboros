@@ -38,7 +38,7 @@ public static class MetaAIv2Tests
         }
 
         Console.WriteLine("✓ Meta-AI v2 orchestrator created successfully");
-        
+
         var metrics = orchestrator.GetMetrics();
         Console.WriteLine($"✓ Metrics initialized: {metrics.Count} components tracked");
         Console.WriteLine("✓ Test passed!\n");
@@ -327,7 +327,7 @@ public static class MetaAIv2Tests
                 result => result.Verified);
 
             var metrics = await harness.EvaluateTestCaseAsync(testCase);
-            
+
             Console.WriteLine($"✓ Test case evaluated: {metrics.TestCase}");
             Console.WriteLine($"  Success: {metrics.Success}");
             Console.WriteLine($"  Quality: {metrics.QualityScore:P0}");

@@ -1,4 +1,4 @@
-﻿namespace LangChainPipeline.Tools;
+namespace LangChainPipeline.Tools;
 
 /// <summary>
 /// Defines the contract for tools that can be invoked within the pipeline system.
@@ -9,18 +9,18 @@ public interface ITool
     /// Gets the unique name of the tool.
     /// </summary>
     string Name { get; }
-    
+
     /// <summary>
     /// Gets a human-readable description of what the tool does.
     /// </summary>
     string Description { get; }
-    
+
     /// <summary>
     /// Gets the JSON Schema for the tool's input arguments.
     /// If null, the tool accepts free-form text input.
     /// </summary>
     string? JsonSchema { get; }
-    
+
     /// <summary>
     /// Invokes the tool with the specified input.
     /// </summary>

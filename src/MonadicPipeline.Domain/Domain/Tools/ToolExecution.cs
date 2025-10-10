@@ -1,4 +1,4 @@
-﻿namespace LangChainPipeline.Domain;
+namespace LangChainPipeline.Domain;
 
 public sealed record ToolExecution(
     string ToolName,

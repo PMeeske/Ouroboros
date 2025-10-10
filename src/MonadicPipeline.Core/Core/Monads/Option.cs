@@ -14,12 +14,12 @@ public readonly struct Option<T>
     /// Gets the underlying value if present.
     /// </summary>
     public T? Value => _value;
-    
+
     /// <summary>
     /// Gets a value indicating whether this instance contains a value.
     /// </summary>
     public bool HasValue => _hasValue;
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Option{T}"/> struct.
     /// </summary>

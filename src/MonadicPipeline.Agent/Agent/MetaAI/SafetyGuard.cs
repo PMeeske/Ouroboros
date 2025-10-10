@@ -76,7 +76,7 @@ public sealed class SafetyGuard : ISafetyGuard
             return false;
 
         var requiredLevel = GetRequiredPermission(toolName);
-        
+
         if (currentLevel < requiredLevel)
             return false;
 
@@ -104,7 +104,7 @@ public sealed class SafetyGuard : ISafetyGuard
 
         // Create sandboxed version with restricted parameters
         var sandboxedParams = new Dictionary<string, object>();
-        
+
         foreach (var param in step.Parameters)
         {
             if (param.Value is string strValue)
@@ -238,7 +238,7 @@ public sealed class SafetyGuard : ISafetyGuard
             "onload=", "onerror="
         };
 
-        return injectionPatterns.Any(pattern => 
+        return injectionPatterns.Any(pattern =>
             value.Contains(pattern, StringComparison.OrdinalIgnoreCase));
     }
 

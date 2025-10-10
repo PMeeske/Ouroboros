@@ -24,7 +24,7 @@ public static class SkillExtractionTests
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var skillRegistry = new SkillRegistry();
-        
+
         var extractor = new SkillExtractor(chatModel, skillRegistry);
 
         // Create a mock successful execution
@@ -70,7 +70,7 @@ public static class SkillExtractionTests
 
         // Test skill extraction
         var result = await extractor.ExtractSkillAsync(execution, verification);
-        
+
         result.Match(
             skill =>
             {
@@ -78,7 +78,7 @@ public static class SkillExtractionTests
                 Console.WriteLine($"  Description: {skill.Description}");
                 Console.WriteLine($"  Steps: {skill.Steps.Count}");
                 Console.WriteLine($"  Success rate: {skill.SuccessRate:P0}");
-                
+
                 if (skill.SuccessRate != verification.QualityScore)
                 {
                     throw new Exception("Skill success rate should match verification quality score");
@@ -180,14 +180,14 @@ public static class SkillExtractionTests
             RevisedPlan: null);
 
         var result = await extractor.ExtractSkillAsync(execution, verification, config);
-        
+
         result.Match(
             skill =>
             {
                 Console.WriteLine($"✓ Skill extracted with custom config");
                 Console.WriteLine($"  Min quality threshold: {config.MinQualityThreshold}");
                 Console.WriteLine($"  Extracted steps: {skill.Steps.Count}");
-                
+
                 if (skill.Steps.Count > config.MaxStepsPerSkill)
                 {
                     throw new Exception($"Skill has too many steps (max: {config.MaxStepsPerSkill})");
@@ -230,25 +230,25 @@ public static class SkillExtractionTests
         try
         {
             var skillName = await extractor.GenerateSkillNameAsync(execution);
-            
+
             Console.WriteLine($"✓ Generated skill name: {skillName}");
-            
+
             // Check naming conventions
             if (string.IsNullOrWhiteSpace(skillName))
             {
                 throw new Exception("Skill name should not be empty");
             }
-            
+
             if (skillName.Contains(' '))
             {
                 throw new Exception("Skill name should not contain spaces");
             }
-            
+
             if (skillName != skillName.ToLowerInvariant())
             {
                 throw new Exception("Skill name should be lowercase");
             }
-            
+
             Console.WriteLine("✓ Skill name follows conventions (lowercase, no spaces)");
         }
         catch (Exception ex)
@@ -301,7 +301,7 @@ public static class SkillExtractionTests
             RevisedPlan: null);
 
         var result = await extractor.ExtractSkillAsync(execution, verification);
-        
+
         result.Match(
             skill =>
             {
@@ -310,13 +310,13 @@ public static class SkillExtractionTests
                 {
                     throw new Exception("Skill should be registered in registry");
                 }
-                
+
                 var registeredSkill = skillRegistry.GetSkill(skill.Name);
                 if (registeredSkill == null)
                 {
                     throw new Exception("Skill should be retrievable by name");
                 }
-                
+
                 Console.WriteLine($"✓ Skill '{skill.Name}' registered successfully");
                 Console.WriteLine($"✓ Registry now contains {finalSkillCount} skills");
             },

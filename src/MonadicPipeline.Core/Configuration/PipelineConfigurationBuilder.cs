@@ -55,10 +55,10 @@ public class PipelineConfigurationBuilder
     {
         // Add base appsettings.json
         _configurationBuilder.AddJsonFile("appsettings.json", optional: true, reloadOnChange: reloadOnChange);
-        
+
         // Add environment-specific appsettings
         _configurationBuilder.AddJsonFile($"appsettings.{_environmentName}.json", optional: optional, reloadOnChange: reloadOnChange);
-        
+
         return this;
     }
 
@@ -99,10 +99,10 @@ public class PipelineConfigurationBuilder
     {
         var configuration = _configurationBuilder.Build();
         var pipelineConfig = new PipelineConfiguration();
-        
+
         // Bind the configuration section to our settings object
         configuration.GetSection(PipelineConfiguration.SectionName).Bind(pipelineConfig);
-        
+
         return pipelineConfig;
     }
 
@@ -119,8 +119,8 @@ public class PipelineConfigurationBuilder
     /// </summary>
     public static PipelineConfigurationBuilder CreateDefault(string? basePath = null, string? environmentName = null)
     {
-        var environment = environmentName ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
-                         ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") 
+        var environment = environmentName ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                         ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
                          ?? "Production";
 
         var builder = new PipelineConfigurationBuilder()

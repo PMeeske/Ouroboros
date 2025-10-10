@@ -8,7 +8,7 @@ namespace LangChainPipeline.Core.Kleisli;
 public static class KleisliExtensions
 {
     #region Core Composition Operations
-    
+
     /// <summary>
     /// Kleisli composition: (f >=> g)(a) = f(a) >>= g
     /// This is the fundamental operation for chaining monadic computations.
@@ -153,7 +153,7 @@ public static class KleisliExtensions
     #endregion
 
     #region KleisliResult Operations
-    
+
     /// <summary>
     /// Composes KleisliResult arrows with proper error handling.
     /// If the first computation fails, the error is propagated without executing the second.
@@ -200,7 +200,7 @@ public static class KleisliExtensions
     #endregion
 
     #region KleisliOption Operations
-    
+
     /// <summary>
     /// Composes KleisliOption arrows with proper None handling.
     /// If the first computation returns None, the second is not executed.
@@ -212,7 +212,7 @@ public static class KleisliExtensions
         {
             var firstResult = await first(input);
             return firstResult.HasValue && firstResult.Value is not null
-                ? await second(firstResult.Value) 
+                ? await second(firstResult.Value)
                 : Option<TC>.None();
         };
 
@@ -233,7 +233,7 @@ public static class KleisliExtensions
     #endregion
 
     #region Conversion Operations
-    
+
     /// <summary>
     /// Converts a KleisliOption to a KleisliResult.
     /// None becomes a Failure with the provided error.
@@ -252,7 +252,7 @@ public static class KleisliExtensions
     #endregion
 
     #region Higher-Order Composition Operations
-    
+
     /// <summary>
     /// Applies a KleisliCompose function to compose two Kleisli arrows.
     /// This enables functional composition patterns using higher-order functions.

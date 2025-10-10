@@ -20,7 +20,7 @@ public static class BranchOps
         {
             (PipelineBranch a, PipelineBranch b, string query) = input;
             TrackedVectorStore mergedStore = new TrackedVectorStore();
-            
+
             var combinedEvents = a.Events.Concat(b.Events);
             PipelineBranch merged = PipelineBranch.WithEvents($"{a.Name}+{b.Name}", mergedStore, DataSource.FromPath(Environment.CurrentDirectory), combinedEvents);
 

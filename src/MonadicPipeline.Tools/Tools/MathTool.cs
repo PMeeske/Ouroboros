@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Globalization;
 
 namespace LangChainPipeline.Tools;
@@ -10,13 +10,13 @@ public sealed class MathTool : ITool
 {
     /// <inheritdoc />
     public string Name => "math";
-    
+
     /// <inheritdoc />
     public string Description => "Evaluates simple arithmetic expressions like '2+2*5' or '(10-5)/2'";
-    
+
     /// <inheritdoc />
     public string? JsonSchema => null; // Accepts free-form string expressions
-    
+
     /// <inheritdoc />
     public Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
     {

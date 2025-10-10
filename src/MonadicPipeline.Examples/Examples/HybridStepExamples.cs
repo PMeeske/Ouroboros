@@ -19,8 +19,8 @@ public static class HybridStepExamples
         public static readonly SyncStep<string, int> GetLength = new((string s) => s.Length);
         public static readonly SyncStep<int, string> ToStringStep = new((int i) => i.ToString());
         public static readonly SyncStep<string, int> ParseInt = new((string s) => int.Parse(s));
-        
-        public static readonly SyncStep<int, string> FormatNumber = 
+
+        public static readonly SyncStep<int, string> FormatNumber =
             new((int n) => n > 100 ? $"Large: {n}" : $"Small: {n}");
     }
 
@@ -54,7 +54,7 @@ public static class HybridStepExamples
     public static void DemonstrateSyncComposition()
     {
         Console.WriteLine("=== Sync Step Composition ===");
-        
+
         // Pure sync composition
         var syncPipeline = SyncSteps.ToUpper
             .Pipe(SyncSteps.GetLength)
@@ -62,17 +62,17 @@ public static class HybridStepExamples
 
         var result = syncPipeline.Invoke("hello world");
         Console.WriteLine($"Sync result: {result}");
-        
+
         // Map operation
         var mappedPipeline = SyncSteps.GetLength.Map(n => n * 2);
         var mappedResult = mappedPipeline.Invoke("test");
         Console.WriteLine($"Mapped result: {mappedResult}");
-        
+
         // Error handling with TrySync
         var safeParse = SyncSteps.ParseInt.TrySync();
         var parseResult1 = safeParse.Invoke("42");
         var parseResult2 = safeParse.Invoke("not-a-number");
-        
+
         Console.WriteLine($"Safe parse '42': {parseResult1}");
         Console.WriteLine($"Safe parse 'not-a-number': {parseResult2}");
     }
@@ -83,23 +83,23 @@ public static class HybridStepExamples
     public static async Task DemonstrateHybridComposition()
     {
         Console.WriteLine("\n=== Hybrid Sync/Async Composition ===");
-        
+
         // Sync step followed by async step
         var hybridPipeline1 = SyncSteps.ToUpper.Then(AsyncSteps.NetworkCall);
         var result1 = await hybridPipeline1("hello hybrid");
         Console.WriteLine($"Sync->Async: {result1}");
-        
+
         // Async step followed by sync step
         var hybridPipeline2 = AsyncSteps.AsyncToUpper.Then(SyncSteps.GetLength);
         var result2 = await hybridPipeline2("async to sync");
         Console.WriteLine($"Async->Sync: {result2}");
-        
+
         // Complex hybrid composition
         var complexPipeline = SyncSteps.ToUpper
             .Then(AsyncSteps.NetworkCall)
             .Then(SyncSteps.GetLength)
             .Then(AsyncSteps.AsyncFormat);
-        
+
         var complexResult = await complexPipeline("complex pipeline");
         Console.WriteLine($"Complex hybrid: {complexResult}");
     }
@@ -110,17 +110,17 @@ public static class HybridStepExamples
     public static async Task DemonstrateConversions()
     {
         Console.WriteLine("\n=== Sync/Async Conversions ===");
-        
+
         // Sync to async conversion
         var syncAsAsync = SyncSteps.ToUpper.ToAsync();
         var asyncResult = await syncAsAsync("converted to async");
         Console.WriteLine($"Sync->Async conversion: {asyncResult}");
-        
+
         // Implicit conversion in composition
         Step<string, int> implicitPipeline = SyncSteps.ToUpper  // Implicitly converted
             .Then(AsyncSteps.NetworkCall)
             .Then(SyncSteps.GetLength);  // Composed with sync step
-        
+
         var implicitResult = await implicitPipeline("implicit conversions");
         Console.WriteLine($"Implicit conversion: {implicitResult}");
     }
@@ -131,26 +131,26 @@ public static class HybridStepExamples
     public static void DemonstrateMonadicSync()
     {
         Console.WriteLine("\n=== Monadic Sync Operations ===");
-        
+
         // Option-based sync operations
         var optionPipeline = SyncSteps.ParseInt.TryOption(n => n > 0);
-        
+
         var optionResult1 = optionPipeline.Invoke("42");
         var optionResult2 = optionPipeline.Invoke("-5");
         var optionResult3 = optionPipeline.Invoke("not-a-number");
-        
+
         Console.WriteLine($"Option parse '42': {optionResult1}");
         Console.WriteLine($"Option parse '-5': {optionResult2}");
         Console.WriteLine($"Option parse 'not-a-number': {optionResult3}");
-        
+
         // Result-based error handling
         var safeParseAndFormat = SyncSteps.ParseInt
             .TrySync()
             .Map(result => result.Map(n => $"Parsed: {n}"));
-        
+
         var safeResult1 = safeParseAndFormat.Invoke("123");
         var safeResult2 = safeParseAndFormat.Invoke("invalid");
-        
+
         Console.WriteLine($"Safe result '123': {safeResult1}");
         Console.WriteLine($"Safe result 'invalid': {safeResult2}");
     }
@@ -161,21 +161,21 @@ public static class HybridStepExamples
     public static async Task DemonstrateContextualIntegration()
     {
         Console.WriteLine("\n=== Contextual Step Integration ===");
-        
+
         // Create a context
         var context = new { Prefix = "Context", Multiplier = 3 };
-        
+
         // Sync step that uses context
         var contextualSync = ContextualStep.LiftPure<string, string, object>(
-            s => $"{context.Prefix}: {s}", 
+            s => $"{context.Prefix}: {s}",
             "Applied context prefix");
-        
+
         // Mixed contextual pipeline
         var contextualPipeline = contextualSync
             .Then(ContextualStep.FromPure<string, string, object>(AsyncSteps.NetworkCall, "Network call"));
-        
+
         var (contextualResult, logs) = await contextualPipeline("contextual input", context);
-        
+
         Console.WriteLine($"Contextual result: {contextualResult}");
         Console.WriteLine($"Logs: [{string.Join(", ", logs)}]");
     }
@@ -190,7 +190,7 @@ public static class HybridStepExamples
         await DemonstrateConversions();
         DemonstrateMonadicSync();
         await DemonstrateContextualIntegration();
-        
+
         Console.WriteLine("\n=== All Hybrid Step Demonstrations Complete ===");
     }
 }

@@ -165,7 +165,7 @@ public static class ContextualDef
     /// Create from pure function
     /// </summary>
     public static ContextualStepDefinition<TIn, TOut, TContext> LiftPure<TIn, TOut, TContext>(
-        Func<TIn, TOut> func, 
+        Func<TIn, TOut> func,
         string? log = null)
         => ContextualStepDefinition<TIn, TOut, TContext>.LiftPure(func, log);
 
@@ -173,7 +173,7 @@ public static class ContextualDef
     /// Create from pure Step
     /// </summary>
     public static ContextualStepDefinition<TIn, TOut, TContext> FromPure<TIn, TOut, TContext>(
-        Step<TIn, TOut> step, 
+        Step<TIn, TOut> step,
         string? log = null)
         => ContextualStepDefinition<TIn, TOut, TContext>.FromPure(step, log);
 

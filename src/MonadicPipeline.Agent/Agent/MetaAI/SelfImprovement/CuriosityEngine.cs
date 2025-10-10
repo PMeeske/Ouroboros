@@ -145,10 +145,10 @@ STEP 2: ...";
             var plan = new Plan(
                 $"Explore: {bestOpportunity.Description}",
                 steps,
-                new Dictionary<string, double> 
-                { 
+                new Dictionary<string, double>
+                {
                     ["exploratory"] = 1.0,
-                    ["novelty"] = bestOpportunity.NoveltyScore 
+                    ["novelty"] = bestOpportunity.NoveltyScore
                 },
                 DateTime.UtcNow);
 
@@ -354,7 +354,7 @@ INFO_GAIN: [0-1]
 
         stats["total_explorations"] = _totalExplorations;
         stats["session_explorations"] = _sessionExplorations;
-        
+
         var recent = _explorationHistory
             .Where(e => e.when > DateTime.UtcNow.AddDays(-7))
             .ToList();

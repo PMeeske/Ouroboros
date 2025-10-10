@@ -156,8 +156,8 @@ public readonly struct Result<TValue, TError>
     public bool Equals(Result<TValue, TError> other)
     {
         if (IsSuccess != other.IsSuccess) return false;
-        
-        return IsSuccess 
+
+        return IsSuccess
             ? EqualityComparer<TValue>.Default.Equals(_value, other._value)
             : EqualityComparer<TError>.Default.Equals(_error, other._error);
     }
@@ -175,7 +175,7 @@ public readonly struct Result<TValue, TError>
     /// </summary>
     public override int GetHashCode()
     {
-        return IsSuccess 
+        return IsSuccess
             ? HashCode.Combine(_isSuccess, _value)
             : HashCode.Combine(_isSuccess, _error);
     }

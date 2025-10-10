@@ -87,7 +87,7 @@ public class MetaAIOrchestratorMagicTest
             Console.WriteLine($"   {status} {result.Step.Action}: {result.Output.Substring(0, Math.Min(50, result.Output.Length))}...");
         }
 
-        execution.StepResults.Should().Contain(r => r.Success, 
+        execution.StepResults.Should().Contain(r => r.Success,
             "At least one step should execute successfully");
 
         // PHASE 3: 🔍 VERIFICATION - AI assesses quality & correctness
@@ -102,7 +102,7 @@ public class MetaAIOrchestratorMagicTest
         Console.WriteLine($"   Issues Found: {verification.Issues.Count}");
         Console.WriteLine($"   Improvements Suggested: {verification.Improvements.Count}");
 
-        verification.QualityScore.Should().BeGreaterThanOrEqualTo(0.0, 
+        verification.QualityScore.Should().BeGreaterThanOrEqualTo(0.0,
             "Quality score should be calculated");
 
         // PHASE 4: 📚 LEARNING - Experience is stored for future use

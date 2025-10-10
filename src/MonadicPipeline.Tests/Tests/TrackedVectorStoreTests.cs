@@ -1,6 +1,6 @@
+using FluentAssertions;
 using LangChain.Databases;
 using Xunit;
-using FluentAssertions;
 
 namespace LangChainPipeline.Tests;
 
@@ -25,7 +25,7 @@ public class TrackedVectorStoreTests
             },
             new()
             {
-                Id = "test2", 
+                Id = "test2",
                 Text = "Another test document",
                 Embedding = [0f, 1f, 0f],
                 Metadata = new Dictionary<string, object> { ["type"] = "test" }
@@ -35,7 +35,7 @@ public class TrackedVectorStoreTests
         // Act
         await store.AddAsync(vectors);
         var allVectors = store.GetAll().ToList();
-        
+
         // Assert
         allVectors.Should().HaveCount(2);
         allVectors.Should().Contain(v => v.Id == "test1");
@@ -66,11 +66,11 @@ public class TrackedVectorStoreTests
         };
 
         await store.AddAsync(vectors);
-        
+
         // Act
         var queryEmbedding = new[] { 0.9f, 0.4f, 0.1f };
         var results = await store.GetSimilarDocumentsAsync(queryEmbedding, amount: 1);
-        
+
         // Assert
         results.Should().HaveCount(1);
         results.First().PageContent.Should().Contain("Machine learning");
@@ -89,14 +89,14 @@ public class TrackedVectorStoreTests
         };
 
         await store.AddAsync(new[] { vector });
-        
+
         // Verify it was added
         var beforeClear = store.GetAll().ToList();
         beforeClear.Should().HaveCount(1);
-        
+
         // Act
         await store.ClearAsync();
-        
+
         // Assert
         var afterClear = store.GetAll().ToList();
         afterClear.Should().BeEmpty();
@@ -107,10 +107,10 @@ public class TrackedVectorStoreTests
     {
         // Arrange
         var store = new TrackedVectorStore();
-        
+
         // Act
         var initialVectors = store.GetAll().ToList();
-        
+
         // Assert
         initialVectors.Should().BeEmpty();
     }

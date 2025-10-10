@@ -1,7 +1,7 @@
 // LangChain-integrated conversation pipeline builder
 
-using LangChain.Providers;
 using LangChain.Prompts.Base;
+using LangChain.Providers;
 
 namespace LangChainPipeline.Core.LangChain;
 

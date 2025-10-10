@@ -15,10 +15,10 @@ public sealed class PipelineStepTool : ITool
 
     /// <inheritdoc />
     public string Name { get; }
-    
+
     /// <inheritdoc />
     public string Description { get; }
-    
+
     /// <inheritdoc />
     public string? JsonSchema { get; }
 
@@ -32,10 +32,10 @@ public sealed class PipelineStepTool : ITool
     {
         _stepName = stepName ?? throw new ArgumentNullException(nameof(stepName));
         _stepFactory = stepFactory ?? throw new ArgumentNullException(nameof(stepFactory));
-        
+
         Name = $"run_{stepName.ToLowerInvariant()}";
         Description = description;
-        
+
         // Simple schema for pipeline steps - they can accept optional string arguments
         JsonSchema = """
         {
@@ -92,7 +92,7 @@ public sealed class PipelineStepTool : ITool
             // Execute the pipeline step
             var step = _stepFactory(args);
             var newState = await step(_pipelineState);
-            
+
             // Update the pipeline state reference
             _pipelineState.Branch = newState.Branch;
             _pipelineState.Output = newState.Output;

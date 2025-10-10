@@ -51,7 +51,7 @@ public sealed class TransferLearner : ITransferLearner
         {
             // Estimate transferability first
             var transferability = await EstimateTransferabilityAsync(sourceSkill, targetDomain, ct);
-            
+
             if (transferability < config.MinTransferabilityThreshold)
             {
                 return Result<TransferResult, string>.Failure(
@@ -144,7 +144,7 @@ Provide a transferability score from 0.0 (cannot transfer) to 1.0 (perfect trans
 Respond with just the number.";
 
             var response = await _llm.GenerateTextAsync(prompt, ct);
-            
+
             // Extract numeric score
             var scoreMatch = System.Text.RegularExpressions.Regex.Match(response, @"0?\.\d+|1\.0");
             if (scoreMatch.Success && double.TryParse(scoreMatch.Value, out var score))
@@ -268,7 +268,7 @@ database_query -> library_search (confidence: 0.8)
         // Extract domain hints from skill name and description
         var words = skill.Name.Split('_', StringSplitOptions.RemoveEmptyEntries);
         var domainHints = words.Take(2);
-        
+
         return string.Join(" ", domainHints);
     }
 

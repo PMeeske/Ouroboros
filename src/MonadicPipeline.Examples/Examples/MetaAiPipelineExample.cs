@@ -4,8 +4,8 @@
 // LLM can invoke pipeline steps as tools to build upon itself
 // ==========================================================
 
-using LangChain.Providers.Ollama;
 using LangChain.DocumentLoaders;
+using LangChain.Providers.Ollama;
 using LangChainPipeline.CLI;
 
 namespace LangChainPipeline.Examples;
@@ -29,11 +29,11 @@ public static class MetaAiPipelineExample
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
-        
+
         var tools = new ToolRegistry();
         var store = new TrackedVectorStore();
         var branch = new PipelineBranch("meta-ai", store, DataSource.FromPath(Environment.CurrentDirectory));
-        
+
         var state = new CliPipelineState
         {
             Branch = branch,
@@ -43,17 +43,17 @@ public static class MetaAiPipelineExample
             RetrievalK = 8,
             Trace = true
         };
-        
+
         // Register pipeline steps as tools - this enables meta-AI capabilities
         Console.WriteLine("Registering pipeline steps as tools...");
         tools = tools.WithPipelineSteps(state);
         Console.WriteLine($"✓ Registered {tools.Count} tools\n");
-        
+
         // Create LLM with tool awareness
         var llm = new ToolAwareChatModel(chatModel, tools);
         state.Llm = llm;
         state.Tools = tools;
-        
+
         // List some available pipeline tools
         Console.WriteLine("Available pipeline tools:");
         var pipelineTools = tools.All.Where(t => t.Name.StartsWith("run_")).Take(10);
@@ -62,7 +62,7 @@ public static class MetaAiPipelineExample
             Console.WriteLine($"  - {tool.Name}: {tool.Description}");
         }
         Console.WriteLine();
-        
+
         // Create a meta-AI prompt
         var prompt = @"You are a self-aware AI pipeline with access to your own execution tools.
 
@@ -84,15 +84,15 @@ Think step-by-step:
 3. How would you use them?";
 
         Console.WriteLine("Executing meta-AI pipeline...\n");
-        
+
         try
         {
             var (response, toolCalls) = await llm.GenerateWithToolsAsync(prompt);
-            
+
             Console.WriteLine("=== LLM Response ===");
             Console.WriteLine(response);
             Console.WriteLine();
-            
+
             if (toolCalls.Any())
             {
                 Console.WriteLine($"✓ The LLM invoked {toolCalls.Count} pipeline tools:");
@@ -121,7 +121,7 @@ Think step-by-step:
                 throw;
             }
         }
-        
+
         Console.WriteLine("\n=== Example Complete ===");
     }
 
@@ -137,11 +137,11 @@ Think step-by-step:
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
-        
+
         var tools = new ToolRegistry();
         var store = new TrackedVectorStore();
         var branch = new PipelineBranch("selective-meta-ai", store, DataSource.FromPath(Environment.CurrentDirectory));
-        
+
         var state = new CliPipelineState
         {
             Branch = branch,
@@ -151,17 +151,17 @@ Think step-by-step:
             RetrievalK = 8,
             Trace = false
         };
-        
+
         // Register only specific pipeline steps as tools
         var allowedSteps = new[] { "UseDraft", "UseCritique", "UseImprove" };
         Console.WriteLine($"Registering only specific tools: {string.Join(", ", allowedSteps)}");
         tools = tools.WithPipelineSteps(state, allowedSteps);
         Console.WriteLine($"✓ Registered {tools.Count} tools (limited set)\n");
-        
+
         var llm = new ToolAwareChatModel(chatModel, tools);
         state.Llm = llm;
         state.Tools = tools;
-        
+
         var prompt = @"You have access to a limited set of pipeline refinement tools:
 - run_usedraft: Create initial draft
 - run_usecritique: Analyze and critique
@@ -170,14 +170,14 @@ Think step-by-step:
 Explain how you would use these tools to create a high-quality response to: 'What is functional programming?'";
 
         Console.WriteLine("Executing selective meta-AI pipeline...\n");
-        
+
         try
         {
             var (response, toolCalls) = await llm.GenerateWithToolsAsync(prompt);
-            
+
             Console.WriteLine("=== Response ===");
             Console.WriteLine(response);
-            
+
             if (toolCalls.Any())
             {
                 Console.WriteLine($"\n✓ Invoked {toolCalls.Count} tools from the allowed set");
@@ -194,7 +194,7 @@ Explain how you would use these tools to create a high-quality response to: 'Wha
                 throw;
             }
         }
-        
+
         Console.WriteLine("\n=== Example Complete ===");
     }
 
@@ -206,7 +206,7 @@ Explain how you would use these tools to create a high-quality response to: 'Wha
         Console.WriteLine("\n=== DSL with Meta-AI Example ===\n");
         Console.WriteLine("The pipeline DSL can be used with meta-AI capabilities enabled.");
         Console.WriteLine("Pipeline steps are automatically registered as tools.\n");
-        
+
         Console.WriteLine("Example DSL commands that work with meta-AI:");
         Console.WriteLine();
         Console.WriteLine("  # Simple pipeline with tool awareness");

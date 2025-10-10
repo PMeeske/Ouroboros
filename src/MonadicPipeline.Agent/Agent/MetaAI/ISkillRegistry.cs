@@ -36,7 +36,7 @@ public interface ISkillRegistry
     /// <param name="context">Optional context information</param>
     /// <returns>List of matching skills sorted by relevance</returns>
     Task<List<Skill>> FindMatchingSkillsAsync(
-        string goal, 
+        string goal,
         Dictionary<string, object>? context = null);
 
     /// <summary>
@@ -66,7 +66,7 @@ public interface ISkillRegistry
     /// <param name="skillName">The name for the new skill</param>
     /// <param name="description">Description of what the skill does</param>
     Task<Result<Skill, string>> ExtractSkillAsync(
-        ExecutionResult execution, 
-        string skillName, 
+        ExecutionResult execution,
+        string skillName,
         string description);
 }

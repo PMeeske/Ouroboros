@@ -316,20 +316,6 @@ public class ToolRegistryTests
         result.Value.Should().Contain("[]");
     }
 
-    [Fact]
-    public void Register_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var registry = new ToolRegistry();
-        var tool = new TestTool("test-tool");
-
-        // Act & Assert
-        #pragma warning disable CS0618 // Type or member is obsolete
-        var exception = Assert.Throws<InvalidOperationException>(() => registry.Register(tool));
-        #pragma warning restore CS0618
-        exception.Message.Should().Contain("WithTool");
-    }
-
     [Theory]
     [InlineData("tool-1")]
     [InlineData("TOOL-1")]

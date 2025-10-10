@@ -1,6 +1,6 @@
-using Xunit;
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Core.Monads;
+using Xunit;
 
 namespace LangChainPipeline.Tests.Agent;
 
@@ -93,7 +93,7 @@ public class EpicBranchOrchestratorTests
         Assert.True(result.IsSuccess);
         var assignments = orchestrator.GetSubIssueAssignments(1);
         Assert.Equal(3, assignments.Count);
-        
+
         foreach (var assignment in assignments)
         {
             Assert.NotNull(assignment.AssignedAgentId);
@@ -300,7 +300,7 @@ public class EpicBranchOrchestratorTests
 
         // Assert
         Assert.True(result.IsSuccess);
-        
+
         var updatedAssignment = orchestrator.GetSubIssueAssignment(1, 1);
         Assert.NotNull(updatedAssignment);
         Assert.Equal(SubIssueStatus.Completed, updatedAssignment.Status);
@@ -326,7 +326,7 @@ public class EpicBranchOrchestratorTests
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Contains("Work failed", result.Error);
-        
+
         var updatedAssignment = orchestrator.GetSubIssueAssignment(1, 1);
         Assert.NotNull(updatedAssignment);
         Assert.Equal(SubIssueStatus.Failed, updatedAssignment.Status);
@@ -352,7 +352,7 @@ public class EpicBranchOrchestratorTests
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Contains("Test exception", result.Error);
-        
+
         var updatedAssignment = orchestrator.GetSubIssueAssignment(1, 1);
         Assert.NotNull(updatedAssignment);
         Assert.Equal(SubIssueStatus.Failed, updatedAssignment.Status);
@@ -459,7 +459,7 @@ public class EpicBranchOrchestratorTests
         // Assert
         Assert.Equal(5, results.Length);
         Assert.All(results, r => Assert.True(r.IsSuccess));
-        
+
         var assignments = orchestrator.GetSubIssueAssignments(1);
         Assert.All(assignments, a => Assert.Equal(SubIssueStatus.Completed, a.Status));
     }

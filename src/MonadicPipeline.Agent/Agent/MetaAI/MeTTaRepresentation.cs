@@ -3,8 +3,8 @@
 // Translates orchestrator concepts to MeTTa symbolic atoms
 // ==========================================================
 
-using LangChainPipeline.Tools.MeTTa;
 using System.Text;
+using LangChainPipeline.Tools.MeTTa;
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -40,7 +40,7 @@ public sealed class MeTTaRepresentation
             {
                 var step = plan.Steps[i];
                 var stepId = $"step_{i}";
-                
+
                 sb.AppendLine($"(step {planId} {stepId} {i} \"{EscapeMeTTa(step.Action)}\")");
                 sb.AppendLine($"(expected {stepId} \"{EscapeMeTTa(step.ExpectedOutcome)}\")");
                 sb.AppendLine($"(confidence {stepId} {step.ConfidenceScore:F2})");
@@ -55,7 +55,7 @@ public sealed class MeTTaRepresentation
                 // Add ordering constraint
                 if (i > 0)
                 {
-                    sb.AppendLine($"(before step_{i-1} {stepId})");
+                    sb.AppendLine($"(before step_{i - 1} {stepId})");
                 }
             }
 
@@ -97,7 +97,7 @@ public sealed class MeTTaRepresentation
                 var resultId = $"result_{i}";
 
                 sb.AppendLine($"(step-result {execId} {resultId} {(stepResult.Success ? "success" : "failure")})");
-                
+
                 if (!string.IsNullOrEmpty(stepResult.Error))
                 {
                     sb.AppendLine($"(error {resultId} \"{EscapeMeTTa(stepResult.Error)}\")");
@@ -222,7 +222,7 @@ public sealed class MeTTaRepresentation
             $tool)";
 
         var result = await _engine.ExecuteQueryAsync(query, ct);
-        
+
         return result.Match(
             success => Result<List<string>, string>.Success(ParseToolList(success)),
             error => Result<List<string>, string>.Failure($"Tool query failed: {error}")
@@ -232,16 +232,16 @@ public sealed class MeTTaRepresentation
     private List<NextNodeCandidate> ParseNextNodeCandidates(string mettaOutput)
     {
         var candidates = new List<NextNodeCandidate>();
-        
+
         // Parse MeTTa output format: (cons step_id action)
         var lines = mettaOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         foreach (var line in lines)
         {
             var match = System.Text.RegularExpressions.Regex.Match(
-                line, 
+                line,
                 @"\(cons\s+(\S+)\s+""?([^""]+)""?\)"
             );
-            
+
             if (match.Success)
             {
                 candidates.Add(new NextNodeCandidate(
@@ -259,7 +259,7 @@ public sealed class MeTTaRepresentation
     {
         var tools = new List<string>();
         var lines = mettaOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        
+
         foreach (var line in lines)
         {
             var trimmed = line.Trim();

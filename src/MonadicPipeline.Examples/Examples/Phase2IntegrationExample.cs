@@ -26,11 +26,11 @@ public static class Phase2IntegrationExample
 
         // === Setup ===
         Console.WriteLine("1. SETUP: Initializing Phase 2 components...\n");
-        
+
         var provider = new OllamaProvider();
         var llm = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
 
-        var (orchestrator, capabilities, goals, evaluator) = 
+        var (orchestrator, capabilities, goals, evaluator) =
             Phase2OrchestratorBuilder.CreateDefault(llm);
 
         Console.WriteLine("✓ Orchestrator with Phase 2 capabilities initialized\n");
@@ -40,7 +40,7 @@ public static class Phase2IntegrationExample
 
         // === Step 1: Task Assessment ===
         Console.WriteLine("\n2. TASK ASSESSMENT: Evaluating agent capabilities...\n");
-        
+
         var task = "Research and summarize recent advances in AI safety";
         Console.WriteLine($"Incoming task: \"{task}\"\n");
 
@@ -95,7 +95,7 @@ public static class Phase2IntegrationExample
                 var subgoal = decomposed.Subgoals[i];
                 Console.WriteLine($"  {i + 1}. {subgoal.Description}");
                 Console.WriteLine($"     Priority: {subgoal.Priority:F2}, Type: {subgoal.Type}");
-                
+
                 if (subgoal.Subgoals.Any())
                 {
                     Console.WriteLine($"     Breakdown:");
@@ -129,8 +129,8 @@ public static class Phase2IntegrationExample
         foreach (var goal in prioritized.Take(5))
         {
             var index = prioritized.IndexOf(goal) + 1;
-            var desc = goal.Description.Length > 50 
-                ? goal.Description.Substring(0, 50) + "..." 
+            var desc = goal.Description.Length > 50
+                ? goal.Description.Substring(0, 50) + "..."
                 : goal.Description;
             Console.WriteLine($"  {index}. [{goal.Type}] {desc}");
         }
@@ -147,7 +147,7 @@ public static class Phase2IntegrationExample
 
             // Plan and execute
             var planResult = await orchestrator.PlanAsync(firstSubgoal.Description);
-            
+
             if (planResult.IsSuccess)
             {
                 var plan = planResult.Value;
@@ -155,7 +155,7 @@ public static class Phase2IntegrationExample
                 Console.WriteLine($"  Confidence: {plan.ConfidenceScores.GetValueOrDefault("overall", 0.5):P0}\n");
 
                 var execResult = await orchestrator.ExecuteAsync(plan);
-                
+
                 if (execResult.IsSuccess)
                 {
                     var execution = execResult.Value;
@@ -165,7 +165,7 @@ public static class Phase2IntegrationExample
 
                     // Verify results
                     var verifyResult = await orchestrator.VerifyAsync(execution);
-                    
+
                     if (verifyResult.IsSuccess)
                     {
                         var verification = verifyResult.Value;
@@ -191,11 +191,11 @@ public static class Phase2IntegrationExample
         Console.WriteLine("\n5. SELF-EVALUATION: Analyzing performance...\n");
 
         var assessmentResult = await evaluator.EvaluatePerformanceAsync();
-        
+
         if (assessmentResult.IsSuccess)
         {
             var assessment = assessmentResult.Value;
-            
+
             Console.WriteLine("=== PERFORMANCE SELF-ASSESSMENT ===\n");
             Console.WriteLine($"Overall Performance:      {assessment.OverallPerformance:P0}");
             Console.WriteLine($"Confidence Calibration:   {assessment.ConfidenceCalibration:P0}");
@@ -226,9 +226,9 @@ public static class Phase2IntegrationExample
 
         // Generate insights
         Console.WriteLine("\n6. INSIGHT GENERATION: Identifying patterns...\n");
-        
+
         var insights = await evaluator.GenerateInsightsAsync();
-        
+
         if (insights.Any())
         {
             Console.WriteLine($"Generated {insights.Count} insights:\n");
@@ -248,11 +248,11 @@ public static class Phase2IntegrationExample
         Console.WriteLine("\n7. IMPROVEMENT PLANNING: Creating action plan...\n");
 
         var improvementResult = await evaluator.SuggestImprovementsAsync();
-        
+
         if (improvementResult.IsSuccess)
         {
             var plan = improvementResult.Value;
-            
+
             Console.WriteLine("=== SELF-IMPROVEMENT PLAN ===\n");
             Console.WriteLine($"Goal: {plan.Goal}");
             Console.WriteLine($"Priority: {plan.Priority:F2}");
@@ -278,7 +278,7 @@ public static class Phase2IntegrationExample
 
         // === Summary ===
         Console.WriteLine("\n8. SUMMARY: Phase 2 Metacognitive Capabilities Demonstrated\n");
-        
+
         var allCapabilities = await capabilities.GetCapabilitiesAsync();
         var activeGoals = goals.GetActiveGoals();
         var metrics = orchestrator.GetMetrics();

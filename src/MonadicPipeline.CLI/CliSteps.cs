@@ -1,16 +1,16 @@
+using System.Reflection; // for BindingFlags
 using System.Text;
 using System.Text.RegularExpressions;
-using LangChain.DocumentLoaders;
-using LangChain.Providers.Ollama;
-using LangChainPipeline.Pipeline.Ingestion.Zip;
+using LangChain.Chains.StackableChains.Context; // for StackableChainValues
 using LangChain.Databases; // for Vector, IVectorCollection
+using LangChain.DocumentLoaders;
+using LangChain.Providers; // for IChatModel
+using LangChain.Providers.Ollama;
 // for TrackedVectorStore
 using LangChain.Splitters.Text;
-using LangChainPipeline.Interop.LangChain; // for ExternalChainRegistry (reflection-based chain integration)
 using LangChainPipeline.CLI.Interop; // for ChainAdapters
-using System.Reflection; // for BindingFlags
-using LangChain.Chains.StackableChains.Context; // for StackableChainValues
-using LangChain.Providers; // for IChatModel
+using LangChainPipeline.Interop.LangChain; // for ExternalChainRegistry (reflection-based chain integration)
+using LangChainPipeline.Pipeline.Ingestion.Zip;
 
 namespace LangChainPipeline.CLI;
 

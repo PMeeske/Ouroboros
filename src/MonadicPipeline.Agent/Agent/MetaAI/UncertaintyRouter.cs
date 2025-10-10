@@ -15,6 +15,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
     private readonly IModelOrchestrator _orchestrator;
     private readonly ConcurrentDictionary<string, List<(RoutingDecision decision, bool success)>> _routingHistory = new();
 
+    /// <inheritdoc/>
     public double MinimumConfidenceThreshold { get; }
 
     public UncertaintyRouter(IModelOrchestrator orchestrator, double minConfidenceThreshold = 0.7)
@@ -43,7 +44,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
                 decision =>
                 {
                     var confidence = decision.ConfidenceScore;
-                    
+
                     // If confidence is below threshold, apply fallback strategy
                     if (confidence < MinimumConfidenceThreshold)
                     {
@@ -93,8 +94,8 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
         // Very low confidence - need more information
         if (confidence < 0.3)
         {
-            return task.Length < 50 
-                ? FallbackStrategy.RequestClarification 
+            return task.Length < 50
+                ? FallbackStrategy.RequestClarification
                 : FallbackStrategy.GatherMoreContext;
         }
 
@@ -129,7 +130,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
 
         // Get historical performance for this route
         var history = GetRouteHistory(route);
-        var baseConfidence = history.Any() 
+        var baseConfidence = history.Any()
             ? history.Count(h => h.success) / (double)history.Count
             : 0.5;
 
@@ -164,8 +165,8 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
 
     private List<(RoutingDecision decision, bool success)> GetRouteHistory(string route)
     {
-        return _routingHistory.TryGetValue(route, out var history) 
-            ? history 
+        return _routingHistory.TryGetValue(route, out var history)
+            ? history
             : new List<(RoutingDecision, bool)>();
     }
 

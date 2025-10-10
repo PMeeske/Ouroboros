@@ -3,9 +3,9 @@
 // Uses MeTTa to determine valid next nodes in execution
 // ==========================================================
 
+using System.Text.Json;
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Tools.MeTTa;
-using System.Text.Json;
 
 namespace LangChainPipeline.Tools;
 
@@ -23,7 +23,7 @@ public sealed class NextNodeTool : ITool
     public string Name => "next_node";
 
     /// <inheritdoc />
-    public string Description => 
+    public string Description =>
         "Enumerate valid next execution nodes (steps/tools/subplans) using symbolic reasoning. " +
         "Translates current plan and state into MeTTa facts, queries for valid successors, " +
         "and returns candidates with confidence scores.";
@@ -85,8 +85,8 @@ public sealed class NextNodeTool : ITool
 
             // Query for next nodes
             var nextNodes = await _representation.QueryNextNodesAsync(
-                req.CurrentStepId, 
-                req.Context ?? new Dictionary<string, object>(), 
+                req.CurrentStepId,
+                req.Context ?? new Dictionary<string, object>(),
                 ct
             );
 

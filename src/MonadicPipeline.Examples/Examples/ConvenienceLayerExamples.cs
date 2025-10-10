@@ -25,7 +25,7 @@ public static class ConvenienceLayerExamples
 
         // Create simple orchestrator
         var orchestratorResult = MetaAIConvenience.CreateSimple(chatModel);
-        
+
         if (!orchestratorResult.IsSuccess)
         {
             Console.WriteLine($"Failed to create orchestrator: {orchestratorResult.Error}");
@@ -45,9 +45,9 @@ public static class ConvenienceLayerExamples
         foreach (var question in questions)
         {
             Console.WriteLine($"Q: {question}");
-            
+
             var answer = await orchestrator.AskQuestion(question);
-            
+
             answer.Match(
                 result => Console.WriteLine($"A: {result.Substring(0, Math.Min(150, result.Length))}...\n"),
                 error => Console.WriteLine($"Error: {error}\n"));
@@ -67,7 +67,7 @@ public static class ConvenienceLayerExamples
 
         // Create code assistant
         var orchestratorResult = MetaAIConvenience.CreateCodeAssistant(chatModel, tools);
-        
+
         if (!orchestratorResult.IsSuccess)
         {
             Console.WriteLine($"Failed to create orchestrator: {orchestratorResult.Error}");
@@ -82,7 +82,7 @@ public static class ConvenienceLayerExamples
             language: "C#");
 
         codeResult.Match(
-            code => 
+            code =>
             {
                 Console.WriteLine("Generated Code:");
                 Console.WriteLine(code);
@@ -104,7 +104,7 @@ public static class ConvenienceLayerExamples
 
         // Create research assistant
         var orchestratorResult = MetaAIConvenience.CreateResearchAssistant(chatModel, tools, embedModel);
-        
+
         if (!orchestratorResult.IsSuccess)
         {
             Console.WriteLine($"Failed to create orchestrator: {orchestratorResult.Error}");
@@ -127,7 +127,7 @@ public static class ConvenienceLayerExamples
             analysisGoal: "Extract key concepts and explain their relationships");
 
         analysisResult.Match(
-            result => 
+            result =>
             {
                 Console.WriteLine($"Analysis (Quality: {result.quality:P0}):");
                 Console.WriteLine(result.analysis);
@@ -149,7 +149,7 @@ public static class ConvenienceLayerExamples
 
         // Create advanced orchestrator
         var orchestratorResult = MetaAIConvenience.CreateAdvanced(chatModel, tools, embedModel);
-        
+
         if (!orchestratorResult.IsSuccess)
         {
             Console.WriteLine($"Failed to create orchestrator: {orchestratorResult.Error}");
@@ -170,12 +170,12 @@ public static class ConvenienceLayerExamples
             autoLearn: true); // Enable automatic learning
 
         workflowResult.Match(
-            verification => 
+            verification =>
             {
                 Console.WriteLine($"Workflow Completed!");
                 Console.WriteLine($"Verified: {verification.Verified}");
                 Console.WriteLine($"Quality Score: {verification.QualityScore:P0}");
-                
+
                 if (verification.Verified && verification.QualityScore > 0.8)
                 {
                     Console.WriteLine("\n✓ High-quality solution generated and learned!");
@@ -197,10 +197,10 @@ public static class ConvenienceLayerExamples
 
         // Create standard orchestrator
         var orchestratorResult = MetaAIConvenience.CreateStandard(
-            chatModel, 
-            tools, 
+            chatModel,
+            tools,
             new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text")));
-        
+
         if (!orchestratorResult.IsSuccess)
         {
             Console.WriteLine($"Failed to create orchestrator: {orchestratorResult.Error}");
@@ -230,7 +230,7 @@ public static class ConvenienceLayerExamples
         for (int i = 0; i < tasks.Length; i++)
         {
             Console.WriteLine($"Task {i + 1}: {tasks[i]}");
-            
+
             results[i].Match(
                 output => Console.WriteLine($"✓ {output.Substring(0, Math.Min(100, output.Length))}...\n"),
                 error => Console.WriteLine($"✗ Error: {error}\n"));
@@ -249,7 +249,7 @@ public static class ConvenienceLayerExamples
 
         // Create chat assistant
         var orchestratorResult = MetaAIConvenience.CreateChatAssistant(chatModel);
-        
+
         if (!orchestratorResult.IsSuccess)
         {
             Console.WriteLine($"Failed to create orchestrator: {orchestratorResult.Error}");
@@ -271,9 +271,9 @@ public static class ConvenienceLayerExamples
         foreach (var userInput in interactions)
         {
             Console.WriteLine($"You: {userInput}");
-            
+
             var response = await orchestrator.AskQuestion(userInput);
-            
+
             response.Match(
                 answer => Console.WriteLine($"Assistant: {answer.Substring(0, Math.Min(120, answer.Length))}...\n"),
                 error => Console.WriteLine($"Error: {error}\n"));
@@ -341,22 +341,22 @@ public static class ConvenienceLayerExamples
         {
             await QuickQuestionAnswering();
             Console.WriteLine();
-            
+
             await CodeGenerationAssistant();
             Console.WriteLine();
-            
+
             await ResearchAnalysis();
             Console.WriteLine();
-            
+
             await CompleteWorkflowWithLearning();
             Console.WriteLine();
-            
+
             await BatchProcessing();
             Console.WriteLine();
-            
+
             await InteractiveChatSession();
             Console.WriteLine();
-            
+
             await ComparePresets();
         }
         catch (Exception ex)

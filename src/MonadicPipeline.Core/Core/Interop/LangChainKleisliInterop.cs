@@ -47,17 +47,20 @@ public interface ICompatNode<TIn, TOut>
 public sealed class LambdaNode<TIn, TOut> : ICompatNode<TIn, TOut>
 {
     private readonly Func<TIn, CancellationToken, Task<TOut>> _fn;
-    
+
+    /// <inheritdoc/>
     public string Name { get; }
-    
+
     public LambdaNode(string name, Func<TIn, CancellationToken, Task<TOut>> fn)
-    { 
-        Name = name; 
-        _fn = fn; 
+    {
+        Name = name;
+        _fn = fn;
     }
-    
+
+    /// <inheritdoc/>
     public Task<TOut> InvokeAsync(TIn input, CancellationToken ct = default) => _fn(input, ct);
-    
+
+    /// <inheritdoc/>
     public override string ToString() => Name;
 }
 
@@ -67,10 +70,10 @@ public sealed class LambdaNode<TIn, TOut> : ICompatNode<TIn, TOut>
 public readonly struct PipeNode<TIn, TOut>
 {
     public readonly ICompatNode<TIn, TOut> Node;
-    
-    public PipeNode(ICompatNode<TIn, TOut> node) 
-    { 
-        Node = node; 
+
+    public PipeNode(ICompatNode<TIn, TOut> node)
+    {
+        Node = node;
     }
 
     /// <summary>
@@ -130,6 +133,7 @@ public readonly struct PipeNode<TIn, TOut>
         };
     }
 
+    /// <inheritdoc/>
     public override string ToString() => Node?.Name ?? "EmptyPipeNode";
 }
 
@@ -154,7 +158,7 @@ public static class CompatInterop
     /// Convert KleisliResult to compatible node
     /// </summary>
     public static PipeNode<TIn, Result<TOut, TError>> ToCompatNode<TIn, TOut, TError>(
-        this KleisliResult<TIn, TOut, TError> kleisliResult, 
+        this KleisliResult<TIn, TOut, TError> kleisliResult,
         string? name = null)
         => new(new LambdaNode<TIn, Result<TOut, TError>>(
             name ?? $"KleisliResult[{typeof(TIn).Name}->{typeof(TOut).Name}]",
@@ -164,7 +168,7 @@ public static class CompatInterop
     /// Convert KleisliOption to compatible node
     /// </summary>
     public static PipeNode<TIn, Option<TOut>> ToCompatNode<TIn, TOut>(
-        this KleisliOption<TIn, TOut> kleisliOption, 
+        this KleisliOption<TIn, TOut> kleisliOption,
         string? name = null)
         => new(new LambdaNode<TIn, Option<TOut>>(
             name ?? $"KleisliOption[{typeof(TIn).Name}->{typeof(TOut).Name}]",
@@ -203,26 +207,26 @@ public static class CompatInterop
 public class PipelineBuilder<TIn>
 {
     private readonly string _name;
-    
+
     public PipelineBuilder(string name)
     {
         _name = name;
     }
-    
+
     /// <summary>
     /// Add a Step to the pipeline
     /// </summary>
     public PipelineBuilder<TIn, TOut> AddStep<TOut>(Step<TIn, TOut> step, string? stepName = null)
         => new(_name, step.ToCompatNode(stepName));
-    
+
     /// <summary>
     /// Add a KleisliResult to the pipeline
     /// </summary>
     public PipelineBuilder<TIn, Result<TOut, TError>> AddResultStep<TOut, TError>(
-        KleisliResult<TIn, TOut, TError> kleisliResult, 
+        KleisliResult<TIn, TOut, TError> kleisliResult,
         string? stepName = null)
         => new(_name, kleisliResult.ToCompatNode(stepName));
-    
+
     /// <summary>
     /// Add a function to the pipeline
     /// </summary>
@@ -237,30 +241,30 @@ public class PipelineBuilder<TIn, TCurrent>
 {
     private readonly string _name;
     private readonly PipeNode<TIn, TCurrent> _currentPipeline;
-    
+
     public PipelineBuilder(string name, PipeNode<TIn, TCurrent> pipeline)
     {
         _name = name;
         _currentPipeline = pipeline;
     }
-    
+
     /// <summary>
     /// Add another step to the pipeline
     /// </summary>
     public PipelineBuilder<TIn, TOut> Then<TOut>(Step<TCurrent, TOut> step, string? stepName = null)
         => new(_name, _currentPipeline.Pipe(step.ToCompatNode(stepName)));
-    
+
     /// <summary>
     /// Add a function step to the pipeline
     /// </summary>
     public PipelineBuilder<TIn, TOut> Then<TOut>(Func<TCurrent, TOut> func, string? stepName = null)
         => new(_name, _currentPipeline.Pipe(func.ToCompatNode(stepName)));
-    
+
     /// <summary>
     /// Build the final pipeline
     /// </summary>
     public PipeNode<TIn, TCurrent> Build() => _currentPipeline;
-    
+
     /// <summary>
     /// Build and execute the pipeline
     /// </summary>
@@ -310,7 +314,7 @@ public static class EnhancedSteps
     public static readonly KleisliResult<string, int, string> SafeParse = async s =>
     {
         await Task.Yield();
-        return int.TryParse(s, out var result) 
+        return int.TryParse(s, out var result)
             ? Result<int, string>.Success(result)
             : Result<int, string>.Failure($"Cannot parse '{s}' as integer");
     };
@@ -336,25 +340,25 @@ public static class EnhancedDemo
     public static async Task RunEnhancedKleisli()
     {
         Console.WriteLine("=== Enhanced Kleisli Composition ===");
-        
+
         var pipeline = EnhancedSteps.Upper
             .Then(EnhancedSteps.Length)
             .Then(EnhancedSteps.Show);
 
         var result = await pipeline("hello enhanced kleisli");
         Console.WriteLine($"Result: {result}"); // length=22
-        
+
         // With error handling
         var safePipeline = EnhancedSteps.SafeParse
             .Then(EnhancedSteps.OnlyPositive.ToResult("Number must be positive"))
             .Map(n => $"Valid positive number: {n}");
-            
+
         var safeResult1 = await safePipeline("42");
         var safeResult2 = await safePipeline("-5");
         var safeResult3 = await safePipeline("not-a-number");
-        
+
         Console.WriteLine($"Safe parse '42': {safeResult1}");
-        Console.WriteLine($"Safe parse '-5': {safeResult2}"); 
+        Console.WriteLine($"Safe parse '-5': {safeResult2}");
         Console.WriteLine($"Safe parse 'not-a-number': {safeResult3}");
     }
 
@@ -364,7 +368,7 @@ public static class EnhancedDemo
     public static async Task RunEnhancedCompatPipe()
     {
         Console.WriteLine("=== Enhanced Compatibility Pipe ===");
-        
+
         var n1 = EnhancedSteps.Upper.ToCompatNode("Upper");
         var n2 = EnhancedSteps.Length.ToCompatNode("Length");
         var n3 = EnhancedSteps.Show.ToCompatNode("Show");
@@ -373,7 +377,7 @@ public static class EnhancedDemo
         var pipeline = n1.Pipe(n2).Pipe(n3);
         var result = await ("enhanced compat pipe" | pipeline);
         Console.WriteLine($"Compat pipe result: {result}");
-        
+
         // Using fluent pipeline builder
         var fluentResult = await CompatInterop
             .StartPipeline<string>("FluentDemo")
@@ -381,13 +385,13 @@ public static class EnhancedDemo
             .Then(EnhancedSteps.Length, "GetLength")
             .Then(EnhancedSteps.Show, "Format")
             .ExecuteAsync("fluent pipeline demo");
-            
+
         Console.WriteLine($"Fluent pipeline result: {fluentResult}");
-        
+
         // With monadic error handling
         var monadicPipeline = EnhancedSteps.SafeParse.ToCompatNode("SafeParse");
         var monadicResult = await ("456" | monadicPipeline);
-        
+
         monadicResult.Match(
             success => Console.WriteLine($"Monadic compat success: {success}"),
             error => Console.WriteLine($"Monadic compat error: {error}")
@@ -401,7 +405,7 @@ public static class EnhancedDemo
     {
         await RunEnhancedKleisli();
         await RunEnhancedCompatPipe();
-        
+
         Console.WriteLine("=== All Enhanced Interop Demonstrations Complete ===");
     }
 }

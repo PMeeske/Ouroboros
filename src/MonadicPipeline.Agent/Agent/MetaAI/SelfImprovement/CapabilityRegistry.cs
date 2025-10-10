@@ -62,14 +62,14 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
 
         // Check against known capabilities
         var relevantCapabilities = await FindRelevantCapabilitiesAsync(task, ct);
-        
+
         if (relevantCapabilities.Any())
         {
             // If we have capabilities with good success rates, we can handle it
             var reliableCapabilities = relevantCapabilities
-                .Where(c => c.SuccessRate >= _config.MinSuccessRateThreshold 
+                .Where(c => c.SuccessRate >= _config.MinSuccessRateThreshold
                          || c.UsageCount < _config.MinUsageCountForReliability);
-            
+
             if (reliableCapabilities.Any())
                 return true;
         }
@@ -77,7 +77,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         // Check if we have the required tools
         var requiredTools = await AnalyzeRequiredToolsAsync(task, ct);
         var availableTools = _tools.All.Select(t => t.Name).ToHashSet();
-        
+
         return requiredTools.All(t => availableTools.Contains(t));
     }
 
@@ -158,9 +158,9 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         else
         {
             var lowPerformingCapabilities = relevantCapabilities
-                .Where(c => c.SuccessRate < _config.MinSuccessRateThreshold 
+                .Where(c => c.SuccessRate < _config.MinSuccessRateThreshold
                          && c.UsageCount >= _config.MinUsageCountForReliability);
-            
+
             if (lowPerformingCapabilities.Any())
             {
                 gaps.Add($"Low success rate in: {string.Join(", ", lowPerformingCapabilities.Select(c => c.Name))}");
@@ -181,7 +181,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
 
         // Identify what's missing
         var gaps = await IdentifyCapabilityGapsAsync(task, ct);
-        
+
         if (gaps.Any())
         {
             // Use LLM to generate alternative approaches
@@ -197,7 +197,7 @@ Suggest 3-5 alternative approaches to accomplish this task or similar outcomes w
 Format each suggestion on a new line starting with '- '";
 
             var response = await _llm.GenerateTextAsync(prompt, ct);
-            
+
             // Parse suggestions
             var lines = response.Split('\n')
                 .Select(l => l.Trim())
@@ -222,7 +222,7 @@ Format each suggestion on a new line starting with '- '";
         var keywords = taskLower.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         var relevant = _capabilities.Values
-            .Where(c => keywords.Any(k => 
+            .Where(c => keywords.Any(k =>
                 c.Name.Contains(k, StringComparison.OrdinalIgnoreCase) ||
                 c.Description.Contains(k, StringComparison.OrdinalIgnoreCase)))
             .ToList();
@@ -237,7 +237,7 @@ Format each suggestion on a new line starting with '- '";
     {
         // Use LLM to analyze what tools are needed
         var availableTools = string.Join("\n", _tools.All.Select(t => $"- {t.Name}: {t.Description}"));
-        
+
         var prompt = $@"Analyze this task and identify which tools would be needed:
 
 Task: {task}

@@ -159,7 +159,7 @@ public sealed class SelfEvaluator : ISelfEvaluator
                     successfulExperiences,
                     "success",
                     ct);
-                
+
                 if (!string.IsNullOrWhiteSpace(successPattern))
                 {
                     insights.Add(new Insight(
@@ -177,7 +177,7 @@ public sealed class SelfEvaluator : ISelfEvaluator
                     failedExperiences,
                     "failure",
                     ct);
-                
+
                 if (!string.IsNullOrWhiteSpace(failurePattern))
                 {
                     insights.Add(new Insight(
@@ -454,7 +454,7 @@ What patterns do you observe? Provide one concise insight.";
         foreach (var line in lines)
         {
             var trimmed = line.Trim();
-            
+
             if (trimmed.StartsWith("GOAL:"))
             {
                 goal = trimmed.Substring("GOAL:".Length).Trim();

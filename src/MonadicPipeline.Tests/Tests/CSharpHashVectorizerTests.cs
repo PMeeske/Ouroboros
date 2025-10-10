@@ -1,6 +1,6 @@
+using FluentAssertions;
 using LangChainPipeline.Infrastructure.FeatureEngineering;
 using Xunit;
-using FluentAssertions;
 
 namespace LangChainPipeline.Tests;
 
@@ -255,7 +255,7 @@ public class CSharpHashVectorizerTests
         // Arrange
         var vectorizer = new CSharpHashVectorizer(4096);
         var tempFiles = new List<string>();
-        
+
         for (int i = 0; i < 3; i++)
         {
             var tempFile = Path.GetTempFileName();
@@ -372,7 +372,7 @@ public class CSharpHashVectorizerTests
         // Arrange
         var vectorizer = new CSharpHashVectorizer(4096);
         var tempFiles = new List<string>();
-        
+
         for (int i = 0; i < 2; i++)
         {
             var tempFile = Path.GetTempFileName();

@@ -17,6 +17,7 @@ public interface IPipelineService
 /// </summary>
 public sealed class PipelineService : IPipelineService
 {
+    /// <inheritdoc/>
     public async Task<string> AskAsync(AskRequest request, CancellationToken cancellationToken = default)
     {
         var modelName = request.Model ?? "llama3";
@@ -116,6 +117,7 @@ public sealed class PipelineService : IPipelineService
         }
     }
 
+    /// <inheritdoc/>
     public async Task<string> ExecutePipelineAsync(PipelineRequest request, CancellationToken cancellationToken = default)
     {
         var modelName = request.Model ?? "llama3";

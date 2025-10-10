@@ -3,9 +3,9 @@
 // Integrates symbolic reasoning with neural planning
 // ==========================================================
 
-using LangChainPipeline.Tools.MeTTa;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using LangChainPipeline.Tools.MeTTa;
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -138,8 +138,8 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                 {
                     // Use MeTTa to validate this is a valid next step
                     var nextNodes = await _representation.QueryNextNodesAsync(
-                        $"step_{i-1}", 
-                        context, 
+                        $"step_{i - 1}",
+                        context,
                         ct
                     );
 
@@ -212,8 +212,8 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 
             if (mettaVerification.IsSuccess)
             {
-                verification = verification with 
-                { 
+                verification = verification with
+                {
                     Improvements = verification.Improvements
                         .Append($"MeTTa verification: {(mettaVerification.Value ? "PASSED" : "FAILED")}")
                         .ToList()
@@ -255,6 +255,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         RecordMetric("learner", 1.0, verification.Verified);
     }
 
+    /// <inheritdoc/>
     public IReadOnlyDictionary<string, PerformanceMetrics> GetMetrics()
     {
         return _metrics;
@@ -273,8 +274,8 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             if (!toolOption.HasValue)
             {
                 return new StepResult(
-                    step, false, string.Empty, 
-                    $"Tool '{step.Action}' not found", 
+                    step, false, string.Empty,
+                    $"Tool '{step.Action}' not found",
                     sw.Elapsed, observedState);
             }
 
@@ -300,7 +301,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         List<Skill> matchingSkills)
     {
         var prompt = $"Create a detailed plan to accomplish: {goal}\n\n";
-        
+
         if (context?.Any() == true)
         {
             prompt += "Context:\n";
@@ -351,8 +352,8 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                 {
                     var action = element.GetProperty("action").GetString() ?? "";
                     var expected = element.GetProperty("expected_outcome").GetString() ?? "";
-                    var confidence = element.TryGetProperty("confidence", out var conf) 
-                        ? conf.GetDouble() 
+                    var confidence = element.TryGetProperty("confidence", out var conf)
+                        ? conf.GetDouble()
                         : 0.5;
 
                     var parameters = new Dictionary<string, object>();
@@ -387,7 +388,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         var prompt = $"Verify the execution of plan: {execution.Plan.Goal}\n\n";
         prompt += $"Success: {execution.Success}\n";
         prompt += $"Duration: {execution.Duration.TotalSeconds:F2}s\n\n";
-        
+
         prompt += "Steps executed:\n";
         foreach (var result in execution.StepResults)
         {
@@ -438,11 +439,11 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         catch
         {
             return new VerificationResult(
-                execution, 
-                execution.Success, 
-                execution.Success ? 0.7 : 0.3, 
-                new List<string>(), 
-                new List<string>(), 
+                execution,
+                execution.Success,
+                execution.Success ? 0.7 : 0.3,
+                new List<string>(),
+                new List<string>(),
                 null);
         }
     }

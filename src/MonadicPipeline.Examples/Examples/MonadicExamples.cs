@@ -87,8 +87,8 @@ public static class MonadicExamples
         Console.WriteLine($"Failure.Map(x => x / 2): {mappedFailure}");
 
         // Monadic bind operation
-        var boundSuccess = success.Bind(x => 
-            x > 50 ? Result<string, string>.Success($"Large number: {x}") 
+        var boundSuccess = success.Bind(x =>
+            x > 50 ? Result<string, string>.Success($"Large number: {x}")
                    : Result<string, string>.Failure("Number too small"));
         var boundFailure = failure.Bind(x => Result<string, string>.Success($"Value: {x}"));
 
@@ -162,7 +162,7 @@ public static class MonadicExamples
         KleisliResult<string, int, string> safeParseNumber = async input =>
         {
             await Task.Delay(10);
-            return int.TryParse(input, out var result) 
+            return int.TryParse(input, out var result)
                 ? Result<int, string>.Success(result)
                 : Result<int, string>.Failure($"Cannot parse '{input}' as number");
         };
@@ -170,7 +170,7 @@ public static class MonadicExamples
         KleisliResult<int, string, string> checkPositive = async input =>
         {
             await Task.Delay(10);
-            return input > 0 
+            return input > 0
                 ? Result<string, string>.Success($"Positive: {input}")
                 : Result<string, string>.Failure($"Number {input} is not positive");
         };
@@ -206,15 +206,15 @@ public static class MonadicExamples
         KleisliOption<string, int> tryParseNumber = async input =>
         {
             await Task.Delay(10);
-            return int.TryParse(input, out var result) 
-                ? Option<int>.Some(result) 
+            return int.TryParse(input, out var result)
+                ? Option<int>.Some(result)
                 : Option<int>.None();
         };
 
         KleisliOption<int, string> formatIfLarge = async input =>
         {
             await Task.Delay(10);
-            return input > 100 
+            return input > 100
                 ? Option<string>.Some($"Large number: {input}")
                 : Option<string>.None();
         };
@@ -300,7 +300,7 @@ public static class MonadicExamples
         // Associativity Law will be complex to demonstrate here, but the structure supports it
 
         Console.WriteLine();
-        
+
         return Task.CompletedTask;
     }
 

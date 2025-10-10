@@ -24,7 +24,7 @@ public static class MetaAIv2EnhancementTests
         Console.WriteLine("=== Test: Parallel Execution ===");
 
         var safety = new SafetyGuard(PermissionLevel.Isolated);
-        
+
         // Create a plan with independent steps
         var plan = new Plan(
             "Test parallel execution",
@@ -55,10 +55,10 @@ public static class MetaAIv2EnhancementTests
         Console.WriteLine($"✓ Estimated speedup: {speedup:F2}x");
 
         var (results, success, output) = await executor.ExecuteParallelAsync(plan);
-        
+
         if (results.Count != 3)
             throw new Exception($"Expected 3 results, got {results.Count}");
-        
+
         if (!success)
             throw new Exception("Parallel execution should succeed");
 
@@ -131,7 +131,7 @@ public static class MetaAIv2EnhancementTests
 
         var memory = new MemoryStore();
         var skills = new SkillRegistry();
-        
+
         try
         {
             var provider = new OllamaProvider();
@@ -380,7 +380,7 @@ public static class MetaAIv2EnhancementTests
                 mockModel);
 
             var uncertaintyRouter = new UncertaintyRouter(baseOrchestrator, 0.7);
-            
+
             var orchestrator = MetaAIBuilder.CreateDefault()
                 .WithLLM(chatModel)
                 .WithTools(tools)
@@ -447,7 +447,7 @@ public static class MetaAIv2EnhancementTests
 
             // Create a mock feedback provider that auto-approves
             var mockProvider = new MockFeedbackProvider();
-            
+
             var hitlOrchestrator = new HumanInTheLoopOrchestrator(orchestrator, mockProvider);
 
             var plan = new Plan(
@@ -519,7 +519,7 @@ public static class MetaAIv2EnhancementTests
     }
 
     // Helper methods
-    
+
     private static Experience CreateTestExperience(string goal, double quality)
     {
         var plan = new Plan(

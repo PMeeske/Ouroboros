@@ -341,14 +341,14 @@ public static class MetaAIv2EnhancementsExample
         var tools = ToolRegistry.CreateDefault();
 
         var baseOrchestrator = new SmartModelOrchestrator(tools, "default");
-        
+
         // Register a real model
         baseOrchestrator.RegisterModel(
             new ModelCapability("llama3", new[] { "general" }, 2048, 1.0, 500, ModelType.General),
             chatModel);
 
         var uncertaintyRouter = new UncertaintyRouter(baseOrchestrator, 0.7);
-        
+
         var orchestrator = MetaAIBuilder.CreateDefault()
             .WithLLM(chatModel)
             .WithTools(tools)

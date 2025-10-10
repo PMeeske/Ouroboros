@@ -23,7 +23,7 @@ public static class ReasoningArrows
             .Select(e => e.State)
             .Where(s => s is Draft or FinalSpec)
             .ToList();
-        
+
         // Return the most recent state (last in the list)
         return reasoningStates.LastOrDefault();
     }
@@ -115,7 +115,7 @@ public static class ReasoningArrows
             try
             {
                 ReasoningState? currentState = GetMostRecentReasoningState(branch);
-                if (currentState is null) 
+                if (currentState is null)
                     return Result<PipelineBranch, string>.Failure("No draft or previous improvement found to critique");
 
                 IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
@@ -179,10 +179,10 @@ public static class ReasoningArrows
             {
                 ReasoningState? currentState = GetMostRecentReasoningState(branch);
                 Critique? critique = branch.Events.OfType<ReasoningStep>().Select(e => e.State).OfType<Critique>().LastOrDefault();
-                
-                if (currentState is null) 
+
+                if (currentState is null)
                     return Result<PipelineBranch, string>.Failure("No draft or previous improvement found for improvement");
-                if (critique is null) 
+                if (critique is null)
                     return Result<PipelineBranch, string>.Failure("No critique found for improvement");
 
                 IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);

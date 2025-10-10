@@ -25,13 +25,14 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
     {
         _recursive = options.Recursive;
         _fileGlobs = (options.Patterns is { Length: > 0 }) ? options.Patterns : ["*"];
-        _allowedExtensions = options.Extensions?.Length > 0 ? [..options.Extensions.Select(e => e.StartsWith('.') ? e.ToLowerInvariant() : "." + e.ToLowerInvariant())] : null;
-        _excludeDirs = options.ExcludeDirectories?.Length > 0 ? [..options.ExcludeDirectories.Select(d => d.ToLowerInvariant())] : null;
+        _allowedExtensions = options.Extensions?.Length > 0 ? [.. options.Extensions.Select(e => e.StartsWith('.') ? e.ToLowerInvariant() : "." + e.ToLowerInvariant())] : null;
+        _excludeDirs = options.ExcludeDirectories?.Length > 0 ? [.. options.ExcludeDirectories.Select(d => d.ToLowerInvariant())] : null;
         _maxFileBytes = options.MaxFileBytes > 0 ? options.MaxFileBytes : null;
         _useCache = !options.DisableCache;
         _cache = _useCache ? new DirectoryIngestionCache(options.CacheFilePath) : null;
     }
 
+    /// <inheritdoc/>
     public async Task<IReadOnlyCollection<Document>> LoadAsync(
         DataSource source,
         DocumentLoaderSettings? settings = null,
@@ -49,7 +50,7 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
         if (!Directory.Exists(path))
             throw new DirectoryNotFoundException($"Directory '{path}' not found");
 
-    var docs = new List<Document>();
+        var docs = new List<Document>();
         var debug = Environment.GetEnvironmentVariable("MONADIC_DEBUG") == "1";
         var start = DateTime.UtcNow;
         var dirEnumOption = _recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
@@ -160,13 +161,14 @@ public sealed class DirectoryIngestionStats
     public int Errors { get; set; }
     public int VectorsProduced { get; set; }
     public TimeSpan Elapsed { get; set; }
+    /// <inheritdoc/>
     public override string ToString() => $"files={FilesLoaded} skipped={SkippedUnchanged} errors={Errors} vectors={VectorsProduced} elapsed={Elapsed.TotalMilliseconds:F0}ms";
 }
 
 internal sealed class DirectoryIngestionCache
 {
     private readonly string _path;
-    private readonly Dictionary<string,string> _hashes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _hashes = new(StringComparer.OrdinalIgnoreCase);
     private bool _dirty;
     public DirectoryIngestionCache(string path)
     {
@@ -176,7 +178,7 @@ internal sealed class DirectoryIngestionCache
             if (File.Exists(_path))
             {
                 var json = File.ReadAllText(_path);
-                var loaded = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string,string>>(json);
+                var loaded = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
                 if (loaded is not null)
                 {
                     foreach (var kv in loaded) _hashes[kv.Key] = kv.Value;

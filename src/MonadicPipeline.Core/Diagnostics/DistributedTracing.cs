@@ -26,7 +26,7 @@ public static class DistributedTracing
         Dictionary<string, object?>? tags = null)
     {
         var activity = ActivitySource.StartActivity(name, kind);
-        
+
         if (activity != null && tags != null)
         {
             foreach (var (key, value) in tags)
@@ -271,7 +271,7 @@ public static class TracingConfiguration
             },
             onActivityStopped: activity =>
             {
-                var status = activity.Status == ActivityStatusCode.Ok ? "✓" : 
+                var status = activity.Status == ActivityStatusCode.Ok ? "✓" :
                             activity.Status == ActivityStatusCode.Error ? "✗" : "?";
                 Console.WriteLine($"[TRACE END  ] {status} {activity.OperationName} - Duration: {activity.Duration.TotalMilliseconds:F2}ms");
             });
