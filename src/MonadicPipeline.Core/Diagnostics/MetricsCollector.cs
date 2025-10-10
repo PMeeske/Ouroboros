@@ -8,9 +8,24 @@ namespace LangChainPipeline.Diagnostics;
 /// </summary>
 public enum MetricType
 {
+    /// <summary>
+    /// Counter metric that only increases.
+    /// </summary>
     Counter,
+    
+    /// <summary>
+    /// Gauge metric that can increase or decrease.
+    /// </summary>
     Gauge,
+    
+    /// <summary>
+    /// Histogram metric for value distributions.
+    /// </summary>
     Histogram,
+    
+    /// <summary>
+    /// Summary metric for statistical observations.
+    /// </summary>
     Summary
 }
 
@@ -19,10 +34,29 @@ public enum MetricType
 /// </summary>
 public class Metric
 {
+    /// <summary>
+    /// Gets or initializes the metric name.
+    /// </summary>
     public string Name { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Gets or initializes the metric type.
+    /// </summary>
     public MetricType Type { get; init; }
+    
+    /// <summary>
+    /// Gets or initializes the metric value.
+    /// </summary>
     public double Value { get; init; }
+    
+    /// <summary>
+    /// Gets or initializes the metric labels for dimensional data.
+    /// </summary>
     public Dictionary<string, string> Labels { get; init; } = new();
+    
+    /// <summary>
+    /// Gets or initializes the timestamp when the metric was collected.
+    /// </summary>
     public DateTime Timestamp { get; init; } = DateTime.UtcNow;
 }
 
@@ -31,7 +65,14 @@ public class Metric
 /// </summary>
 public class HistogramBucket
 {
+    /// <summary>
+    /// Gets or initializes the upper bound of the bucket.
+    /// </summary>
     public double UpperBound { get; init; }
+    
+    /// <summary>
+    /// Gets or sets the count of values in this bucket.
+    /// </summary>
     public long Count { get; set; }
 }
 

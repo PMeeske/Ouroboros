@@ -2,7 +2,7 @@ namespace LangChainPipeline.Core.Kleisli;
 
 /// <summary>
 /// Unified extension methods for Kleisli arrows.
-/// Since Step<T,U> and Kleisli<T,U> are conceptually identical (both are Task monad arrows),
+/// Since Step{T,U} and Kleisli{T,U} are conceptually identical (both are Task monad arrows),
 /// this provides a single, elegant set of operations for both.
 /// </summary>
 public static class KleisliExtensions
@@ -13,7 +13,7 @@ public static class KleisliExtensions
     /// Kleisli composition: (f >=> g)(a) = f(a) >>= g
     /// This is the fundamental operation for chaining monadic computations.
     /// Maintains associativity law for proper category theory compliance.
-    /// Works with both Step<T,U> and Kleisli<T,U>.
+    /// Works with both Step{T,U} and Kleisli{T,U}.
     /// </summary>
     /// <typeparam name="TA">The input type of the first arrow.</typeparam>
     /// <typeparam name="TB">The intermediate type between the two arrows.</typeparam>
@@ -27,8 +27,14 @@ public static class KleisliExtensions
         => async input => await g(await f(input).ConfigureAwait(false)).ConfigureAwait(false);
 
     /// <summary>
-    /// Kleisli composition for pure Kleisli<T,U> delegates.
+    /// Kleisli composition for pure Kleisli{T,U} delegates.
     /// </summary>
+    /// <typeparam name="TA">The input type of the first arrow.</typeparam>
+    /// <typeparam name="TB">The intermediate type between the two arrows.</typeparam>
+    /// <typeparam name="TC">The output type of the second arrow.</typeparam>
+    /// <param name="f">The first arrow to apply.</param>
+    /// <param name="g">The second arrow to apply to the result of f.</param>
+    /// <returns>A new arrow representing the composition.</returns>
     public static Kleisli<TA, TC> Then<TA, TB, TC>(
         this Kleisli<TA, TB> f,
         Kleisli<TB, TC> g)

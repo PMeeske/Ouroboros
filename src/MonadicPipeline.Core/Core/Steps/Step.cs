@@ -1,7 +1,7 @@
 namespace LangChainPipeline.Core.Steps;
 
 /// <summary>
-/// Step<TA,TB> is unified with Kleisli<TA,TB> - they represent the same concept.
+/// Step{TA,TB} is unified with Kleisli{TA,TB} - they represent the same concept.
 /// This delegates to the proper Kleisli arrow for conceptual clarity.
 /// All functionality is provided through KleisliExtensions.
 /// </summary>

@@ -43,8 +43,10 @@ public struct ContextualStepDefinition<TIn, TOut, TContext>
     }
 
     /// <summary>
-    /// Constructor: from pure Step<TIn,TOut>
+    /// Constructor: from pure Step{TIn,TOut}
     /// </summary>
+    /// <param name="pure">The pure step to lift.</param>
+    /// <param name="log">Optional logging string.</param>
     public ContextualStepDefinition(Step<TIn, TOut> pure, string? log = null)
     {
         this._compiled = ContextualStep.FromPure<TIn, TOut, TContext>(pure, log);
