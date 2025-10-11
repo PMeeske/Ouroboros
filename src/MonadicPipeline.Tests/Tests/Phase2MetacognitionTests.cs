@@ -3,8 +3,8 @@
 // Tests for CapabilityRegistry, GoalHierarchy, and SelfEvaluator
 // ==========================================================
 
-using LangChain.Providers.Ollama;
 using LangChain.Databases;
+using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
 
 namespace LangChainPipeline.Tests;
@@ -128,7 +128,7 @@ public static class Phase2MetacognitionTests
 
         // Test goal decomposition
         var decomposedResult = await goalHierarchy.DecomposeGoalAsync(primaryGoal, maxDepth: 2);
-        
+
         if (decomposedResult.IsSuccess)
         {
             var decomposed = decomposedResult.Value;
@@ -397,7 +397,7 @@ public static class Phase2MetacognitionTests
 
         // Scenario: Agent evaluates whether it can handle a task
         var task = "Create a data visualization dashboard";
-        
+
         // 1. Check capabilities
         var canHandle = await capabilityRegistry.CanHandleAsync(task);
         Console.WriteLine($"\n1. Capability Check: Can handle '{task}'? {canHandle}");
@@ -411,7 +411,7 @@ public static class Phase2MetacognitionTests
         // 2. Create and decompose goal
         var mainGoal = new Goal(task, GoalType.Primary, 0.9);
         goalHierarchy.AddGoal(mainGoal);
-        
+
         var decomposedResult = await goalHierarchy.DecomposeGoalAsync(mainGoal);
         if (decomposedResult.IsSuccess)
         {
@@ -446,14 +446,14 @@ public static class Phase2MetacognitionTests
     public static async Task RunAllTests()
     {
         Console.WriteLine("=== Phase 2: Self-Model & Metacognition Tests ===");
-        
+
         try
         {
             await TestCapabilityRegistry();
             await TestGoalHierarchy();
             await TestSelfEvaluator();
             await TestPhase2Integration();
-            
+
             Console.WriteLine("\n=== All Phase 2 Tests Completed ===");
         }
         catch (Exception ex)

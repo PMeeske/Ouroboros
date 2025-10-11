@@ -129,7 +129,7 @@ public static class OrchestratorToolExtensions
             async (input, ct) =>
             {
                 Result<string, string> lastResult = Result<string, string>.Failure("Not executed");
-                
+
                 for (int i = 0; i < maxRetries; i++)
                 {
                     if (ct.IsCancellationRequested)
@@ -138,7 +138,7 @@ public static class OrchestratorToolExtensions
                     }
 
                     lastResult = await tool.InvokeAsync(input, ct);
-                    
+
                     if (lastResult.IsSuccess)
                     {
                         return lastResult;
@@ -170,7 +170,7 @@ public static class OrchestratorToolExtensions
             async (input, ct) =>
             {
                 var now = DateTime.UtcNow;
-                
+
                 // Check cache
                 if (cache.TryGetValue(input, out var cached))
                 {
@@ -239,7 +239,7 @@ public static class OrchestratorToolExtensions
             async (input, ct) =>
             {
                 var result = await primary.InvokeAsync(input, ct);
-                
+
                 if (result.IsSuccess)
                 {
                     return result;

@@ -1,6 +1,6 @@
-using Xunit;
 using System.Text;
 using LangChainPipeline.Core.Performance;
+using Xunit;
 
 namespace LangChainPipeline.Tests;
 
@@ -11,10 +11,10 @@ public class ObjectPoolTests
     {
         // Arrange
         var pool = new ObjectPool<StringBuilder>(() => new StringBuilder());
-        
+
         // Act
         var obj = pool.Rent();
-        
+
         // Assert
         Assert.NotNull(obj);
     }
@@ -25,10 +25,10 @@ public class ObjectPoolTests
         // Arrange
         var pool = new ObjectPool<StringBuilder>(() => new StringBuilder());
         var obj = pool.Rent();
-        
+
         // Act
         pool.Return(obj);
-        
+
         // Assert
         Assert.Equal(1, pool.Count);
     }
@@ -40,10 +40,10 @@ public class ObjectPoolTests
         var pool = new ObjectPool<StringBuilder>(() => new StringBuilder());
         var obj1 = pool.Rent();
         pool.Return(obj1);
-        
+
         // Act
         var obj2 = pool.Rent();
-        
+
         // Assert
         Assert.Same(obj1, obj2);
         Assert.Equal(0, pool.Count);
@@ -58,10 +58,10 @@ public class ObjectPoolTests
             () => new StringBuilder(),
             sb => resetCalled = true);
         var obj = pool.Rent();
-        
+
         // Act
         pool.Return(obj);
-        
+
         // Assert
         Assert.True(resetCalled);
     }
@@ -73,7 +73,7 @@ public class ObjectPoolTests
         var pool = new ObjectPool<StringBuilder>(
             () => new StringBuilder(),
             maxPoolSize: 2);
-        
+
         // Act
         var obj1 = pool.Rent();
         var obj2 = pool.Rent();
@@ -81,7 +81,7 @@ public class ObjectPoolTests
         pool.Return(obj1);
         pool.Return(obj2);
         pool.Return(obj3);
-        
+
         // Assert
         Assert.True(pool.Count <= 2);
     }
@@ -93,10 +93,10 @@ public class ObjectPoolTests
         var pool = new ObjectPool<StringBuilder>(() => new StringBuilder());
         pool.Return(pool.Rent());
         pool.Return(pool.Rent());
-        
+
         // Act
         pool.Clear();
-        
+
         // Assert
         Assert.Equal(0, pool.Count);
     }
@@ -106,14 +106,14 @@ public class ObjectPoolTests
     {
         // Arrange
         var pool = new ObjectPool<StringBuilder>(() => new StringBuilder());
-        
+
         // Act
         using (var pooled = pool.RentDisposable())
         {
             Assert.NotNull(pooled.Object);
             Assert.Equal(0, pool.Count);
         }
-        
+
         // Assert
         Assert.Equal(1, pool.Count);
     }
@@ -123,11 +123,11 @@ public class ObjectPoolTests
     {
         // Arrange
         var pool = new ObjectPool<StringBuilder>(() => new StringBuilder());
-        
+
         // Act
         using var pooled = pool.RentDisposable();
         pooled.Object.Append("test");
-        
+
         // Assert
         Assert.Equal("test", pooled.Object.ToString());
     }
@@ -142,7 +142,7 @@ public class ObjectPoolTests
             pooled.Object.Append("test");
             sb = pooled.Object;
         }
-        
+
         // Assert - get the same object back
         using (var pooled = CommonPools.StringBuilder.RentDisposable())
         {
@@ -163,7 +163,7 @@ public class ObjectPoolTests
             pooled.Object.Add("test");
             list = pooled.Object;
         }
-        
+
         // Assert - get the same object back
         using (var pooled = CommonPools.StringList.RentDisposable())
         {
@@ -184,7 +184,7 @@ public class ObjectPoolTests
             sb.Append(" ");
             sb.Append("World");
         });
-        
+
         // Assert
         Assert.Equal("Hello World", result);
     }
@@ -200,7 +200,7 @@ public class ObjectPoolTests
             list.Add("three");
             return string.Join(", ", list);
         });
-        
+
         // Assert
         Assert.Equal("one, two, three", result);
     }
@@ -215,7 +215,7 @@ public class ObjectPoolTests
             dict["key2"] = "value2";
             return dict.Count;
         });
-        
+
         // Assert
         Assert.Equal(2, result);
     }
@@ -231,7 +231,7 @@ public class ObjectPoolTests
             writer.Flush();
             return ms.Length;
         });
-        
+
         // Assert
         Assert.True(result > 0);
     }
@@ -243,7 +243,7 @@ public class ObjectPoolTests
         var pool = new ObjectPool<StringBuilder>(() => new StringBuilder(), maxPoolSize: 10);
         var tasks = new List<Task>();
         const int iterations = 100;
-        
+
         // Act
         for (int i = 0; i < 10; i++)
         {
@@ -257,9 +257,9 @@ public class ObjectPoolTests
                 }
             }));
         }
-        
+
         await Task.WhenAll(tasks);
-        
+
         // Assert - no exceptions thrown, pool is still functional
         var obj = pool.Rent();
         Assert.NotNull(obj);

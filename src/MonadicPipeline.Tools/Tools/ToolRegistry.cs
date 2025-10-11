@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Text.Json;
 
 namespace LangChainPipeline.Tools;
@@ -37,19 +37,6 @@ public sealed class ToolRegistry
     {
         ArgumentNullException.ThrowIfNull(tool);
         return new ToolRegistry(_tools.SetItem(tool.Name, tool));
-    }
-
-    /// <summary>
-    /// Legacy mutable method for registering tools. Throws an exception to encourage functional style.
-    /// Use WithTool() for functional updates.
-    /// </summary>
-    /// <param name="tool">The tool to register.</param>
-    /// <exception cref="InvalidOperationException">Always thrown - use WithTool() instead.</exception>
-    [Obsolete("Use WithTool() for immutable updates. This method will be removed in a future version.")]
-    public void Register(ITool tool)
-    {
-        throw new InvalidOperationException(
-            "Register() is obsolete. Use WithTool() to get a new immutable registry instance.");
     }
 
     /// <summary>

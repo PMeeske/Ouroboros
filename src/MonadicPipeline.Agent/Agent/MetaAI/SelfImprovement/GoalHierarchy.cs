@@ -19,8 +19,8 @@ public sealed record GoalHierarchyConfig(
     public GoalHierarchyConfig() : this(
         3,
         5,
-        new List<string> 
-        { 
+        new List<string>
+        {
             "Do not harm users",
             "Respect user privacy",
             "Operate within permissions",
@@ -272,10 +272,10 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
     {
         if (_goals.TryGetValue(id, out var goal))
         {
-            var completed = goal with 
-            { 
-                IsComplete = true, 
-                CompletionReason = reason 
+            var completed = goal with
+            {
+                IsComplete = true,
+                CompletionReason = reason
             };
             _goals[id] = completed;
         }
@@ -299,7 +299,7 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
     public async Task<List<Goal>> PrioritizeGoalsAsync(CancellationToken ct = default)
     {
         var activeGoals = GetActiveGoals();
-        
+
         // Use topological sort to respect dependencies
         var prioritized = new List<Goal>();
         var visited = new HashSet<Guid>();
@@ -334,7 +334,7 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
         }
 
         // Then secondary and instrumental
-        foreach (var otherGoal in activeGoals.Where(g => 
+        foreach (var otherGoal in activeGoals.Where(g =>
             g.Type != GoalType.Safety && g.Type != GoalType.Primary))
         {
             Visit(otherGoal);
@@ -350,7 +350,7 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
     {
         var subgoals = new List<Goal>();
         var lines = response.Split('\n');
-        
+
         string? description = null;
         GoalType type = GoalType.Instrumental;
         double priority = 0.5;
@@ -358,7 +358,7 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
         foreach (var line in lines)
         {
             var trimmed = line.Trim();
-            
+
             if (trimmed.StartsWith("SUBGOAL"))
             {
                 if (description != null)
@@ -376,7 +376,7 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
                         null);
                     subgoals.Add(subgoal);
                 }
-                
+
                 description = trimmed.Split(':').Skip(1).FirstOrDefault()?.Trim() ?? "";
                 type = GoalType.Instrumental;
                 priority = 0.5;
@@ -384,8 +384,8 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
             else if (trimmed.StartsWith("TYPE:"))
             {
                 var typeStr = trimmed.Substring("TYPE:".Length).Trim();
-                type = Enum.TryParse<GoalType>(typeStr, true, out var parsed) 
-                    ? parsed 
+                type = Enum.TryParse<GoalType>(typeStr, true, out var parsed)
+                    ? parsed
                     : GoalType.Instrumental;
             }
             else if (trimmed.StartsWith("PRIORITY:"))
@@ -441,7 +441,7 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
     private bool HasResourceConflict(Goal goal1, Goal goal2)
     {
         // Simple heuristic: high-priority goals may compete
-        return goal1.Priority > 0.8 && goal2.Priority > 0.8 && 
+        return goal1.Priority > 0.8 && goal2.Priority > 0.8 &&
                goal1.Type == goal2.Type;
     }
 
@@ -460,7 +460,7 @@ Do they conflict? Answer 'YES' or 'NO' and explain why.";
         try
         {
             var response = await _llm.GenerateTextAsync(prompt, ct);
-            
+
             if (response.Contains("YES", StringComparison.OrdinalIgnoreCase))
             {
                 return new GoalConflict(

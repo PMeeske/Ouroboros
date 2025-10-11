@@ -104,6 +104,7 @@ public interface IHumanInTheLoopOrchestrator
 /// </summary>
 public sealed class ConsoleFeedbackProvider : IHumanFeedbackProvider
 {
+    /// <inheritdoc/>
     public async Task<HumanFeedbackResponse> RequestFeedbackAsync(
         HumanFeedbackRequest request,
         CancellationToken ct = default)
@@ -111,7 +112,7 @@ public sealed class ConsoleFeedbackProvider : IHumanFeedbackProvider
         Console.WriteLine($"\n=== Human Feedback Required ===");
         Console.WriteLine($"Context: {request.Context}");
         Console.WriteLine($"Question: {request.Question}");
-        
+
         if (request.Options != null && request.Options.Any())
         {
             Console.WriteLine("Options:");
@@ -131,6 +132,7 @@ public sealed class ConsoleFeedbackProvider : IHumanFeedbackProvider
             DateTime.UtcNow);
     }
 
+    /// <inheritdoc/>
     public async Task<ApprovalResponse> RequestApprovalAsync(
         ApprovalRequest request,
         CancellationToken ct = default)
@@ -206,11 +208,11 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                 if (config.RequireApprovalForCriticalSteps && IsCriticalStep(step, config))
                 {
                     var approval = await RequestStepApprovalAsync(step, i, ct);
-                    
+
                     if (!approval.Approved)
                     {
                         approvalHistory.Add($"Step {i} rejected: {approval.Reason}");
-                        
+
                         stepResults.Add(new StepResult(
                             step,
                             false,
@@ -218,7 +220,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                             $"Human rejected: {approval.Reason}",
                             TimeSpan.Zero,
                             new Dictionary<string, object> { ["human_rejected"] = true }));
-                        
+
                         continue;
                     }
 
@@ -328,7 +330,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
 
                 var stepFeedback = await _feedbackProvider.RequestFeedbackAsync(stepRequest, ct);
                 var newStep = ParseStepFromFeedback(stepFeedback.Response);
-                
+
                 plan.Steps.Add(newStep);
                 return Result<Plan, string>.Success(plan);
             }
@@ -350,8 +352,8 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
     private bool IsCriticalStep(PlanStep step, HumanInTheLoopConfig config)
     {
         var actionLower = step.Action.ToLowerInvariant();
-        
-        return config.CriticalActionPatterns.Any(pattern => 
+
+        return config.CriticalActionPatterns.Any(pattern =>
             actionLower.Contains(pattern.ToLowerInvariant()));
     }
 
@@ -373,7 +375,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
     private PlanStep ApplyModifications(PlanStep step, Dictionary<string, object> modifications)
     {
         var newParams = new Dictionary<string, object>(step.Parameters);
-        
+
         foreach (var (key, value) in modifications)
         {
             newParams[key] = value;
@@ -386,7 +388,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
     {
         // Simple parsing - in production use more sophisticated approach
         var parts = feedback.Split('|');
-        
+
         return new PlanStep(
             parts.Length > 0 ? parts[0].Trim() : "custom_step",
             parts.Length > 1 ? new Dictionary<string, object> { ["input"] = parts[1].Trim() } : new(),

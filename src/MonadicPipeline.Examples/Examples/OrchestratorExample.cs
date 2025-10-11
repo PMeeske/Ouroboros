@@ -4,10 +4,10 @@
 // on use case analysis and performance metrics
 // ==========================================================
 
-using LangChain.Providers.Ollama;
 using LangChain.DocumentLoaders;
-using LangChainPipeline.CLI;
+using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
+using LangChainPipeline.CLI;
 
 namespace LangChainPipeline.Examples;
 
@@ -33,7 +33,7 @@ public static class OrchestratorExample
 
         // Setup tools
         var tools = ToolRegistry.CreateDefault();
-        
+
         // Build orchestrator with multiple models
         var orchestrator = new OrchestratorBuilder(tools, "general")
             .WithModel(
@@ -250,7 +250,7 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
         {
             // Add retry logic
             var reliableMath = mathTool.WithRetry(maxRetries: 3, delayMs: 100);
-            
+
             // Add performance tracking
             var trackedMath = reliableMath.WithPerformanceTracking(
                 (name, latency, success) =>

@@ -25,6 +25,7 @@ public sealed class OllamaChatAdapter : IChatCompletionModel
         _model = model ?? throw new ArgumentNullException(nameof(model));
     }
 
+    /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
         try
@@ -129,6 +130,7 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
         _settings = settings ?? new ChatRuntimeSettings();
     }
 
+    /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
         try
@@ -180,6 +182,7 @@ public sealed class OllamaCloudChatModel : IChatCompletionModel
         _settings = settings ?? new ChatRuntimeSettings();
     }
 
+    /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
         try
@@ -199,7 +202,7 @@ public sealed class OllamaCloudChatModel : IChatCompletionModel
 
             using var response = await _client.PostAsync("/api/generate", payload, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            
+
             var json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
             if (json is not null && json.TryGetValue("response", out var responseText) && responseText is string s)
             {
@@ -236,6 +239,7 @@ public sealed class MultiModelRouter : IChatCompletionModel
         _fallbackKey = fallbackKey;
     }
 
+    /// <inheritdoc/>
     public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
         IChatCompletionModel target = SelectModel(prompt);
@@ -262,6 +266,7 @@ public sealed class MultiModelRouter : IChatCompletionModel
 /// </summary>
 public sealed class DeterministicEmbeddingModel : IEmbeddingModel
 {
+    /// <inheritdoc/>
     public Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
     {
         if (input is null) input = string.Empty;
@@ -291,6 +296,7 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
         _model = model ?? throw new ArgumentNullException(nameof(model));
     }
 
+    /// <inheritdoc/>
     public async Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
     {
         try
@@ -404,6 +410,7 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
         _model = model;
     }
 
+    /// <inheritdoc/>
     public async Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
     {
         try
@@ -417,7 +424,7 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
 
             using var response = await _client.PostAsync("/api/embeddings", payload, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            
+
             var json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
             if (json is not null && json.TryGetValue("embedding", out var embeddingValue))
             {

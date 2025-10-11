@@ -40,12 +40,12 @@ public sealed class SkillRegistry : ISkillRegistry
             return new List<Skill>();
 
         var allSkills = _skills.Values.ToList();
-        
+
         if (_embedding != null)
         {
             // Use semantic similarity if embedding model available
             var goalEmbedding = await _embedding.CreateEmbeddingsAsync(goal);
-            
+
             var skillScores = new List<(Skill skill, double score)>();
             foreach (var skill in allSkills)
             {
@@ -53,7 +53,7 @@ public sealed class SkillRegistry : ISkillRegistry
                 var similarity = CosineSimilarity(goalEmbedding, skillEmbedding);
                 skillScores.Add((skill, similarity));
             }
-            
+
             return skillScores
                 .OrderByDescending(x => x.score)
                 .Select(x => x.skill)
@@ -99,7 +99,7 @@ public sealed class SkillRegistry : ISkillRegistry
             {
                 var newCount = existing.UsageCount + 1;
                 var newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
-                
+
                 return existing with
                 {
                     UsageCount = newCount,

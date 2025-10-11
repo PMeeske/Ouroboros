@@ -30,8 +30,8 @@ public class LangChainConversationContext
     /// </summary>
     public TValue? GetProperty<TValue>(string key)
     {
-        return _properties.TryGetValue(key, out var value) && value is TValue typedValue 
-            ? typedValue 
+        return _properties.TryGetValue(key, out var value) && value is TValue typedValue
+            ? typedValue
             : default;
     }
 

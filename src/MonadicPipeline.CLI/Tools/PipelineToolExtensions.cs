@@ -22,7 +22,7 @@ public static class PipelineToolExtensions
         ArgumentNullException.ThrowIfNull(pipelineState);
 
         var newRegistry = registry;
-        
+
         // Get all token groups from the StepRegistry
         foreach (var (method, names) in StepRegistry.GetTokenGroups())
         {
@@ -89,10 +89,10 @@ public static class PipelineToolExtensions
     {
         var methodName = method.Name;
         var aliases = names.Count > 1 ? $" (aliases: {string.Join(", ", names.Skip(1))})" : "";
-        
+
         // Try to extract summary from XML documentation if available
         var summary = method.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description;
-        
+
         if (!string.IsNullOrWhiteSpace(summary))
         {
             return $"{summary}{aliases}";

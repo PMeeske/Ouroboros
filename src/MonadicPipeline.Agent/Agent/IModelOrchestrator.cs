@@ -89,7 +89,7 @@ public interface IModelOrchestrator
     /// <param name="ct">Cancellation token</param>
     /// <returns>Orchestrator decision with selected model and tools</returns>
     Task<Result<OrchestratorDecision, string>> SelectModelAsync(
-        string prompt, 
+        string prompt,
         Dictionary<string, object>? context = null,
         CancellationToken ct = default);
 

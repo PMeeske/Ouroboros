@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text.Json.Serialization;
 
 namespace LangChainPipeline.Tools;
@@ -41,29 +41,29 @@ public static class SchemaGenerator
 
     private static string MapType(Type type)
     {
-        if (type == typeof(string)) 
+        if (type == typeof(string))
             return "string";
-        
-        if (type == typeof(int) || type == typeof(long)) 
+
+        if (type == typeof(int) || type == typeof(long))
             return "integer";
-        
-        if (type == typeof(float) || type == typeof(double) || type == typeof(decimal)) 
+
+        if (type == typeof(float) || type == typeof(double) || type == typeof(decimal))
             return "number";
-        
-        if (type == typeof(bool)) 
+
+        if (type == typeof(bool))
             return "boolean";
-        
+
         if (type.IsArray || (typeof(System.Collections.IEnumerable).IsAssignableFrom(type) && type != typeof(string)))
             return "array";
-        
+
         return "object";
     }
 
     private static bool IsNullable(Type type)
     {
-        if (!type.IsValueType) 
+        if (!type.IsValueType)
             return true;
-        
+
         return Nullable.GetUnderlyingType(type) != null;
     }
 }

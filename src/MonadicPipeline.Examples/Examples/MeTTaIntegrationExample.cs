@@ -1,8 +1,8 @@
-using LangChainPipeline.Tools;
-using LangChainPipeline.Tools.MeTTa;
+using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Providers;
-using LangChain.Providers.Ollama;
+using LangChainPipeline.Tools;
+using LangChainPipeline.Tools.MeTTa;
 
 namespace LangChainPipeline.Examples;
 
@@ -215,7 +215,7 @@ public static class MeTTaIntegrationExample
             var planResult = await orchestrator.PlanAsync(goal);
 
             planResult.Match(
-                plan => 
+                plan =>
                 {
                     Console.WriteLine($"\n✓ Plan created with {plan.Steps.Count} steps");
                     Console.WriteLine("  (Plan can be verified using metta_verify_plan tool)");
@@ -254,7 +254,7 @@ public static class MeTTaIntegrationExample
             // Setup components
             var provider = new OllamaProvider();
             var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
-            
+
             var memory = new MemoryStore(embedModel);
             var engine = new SubprocessMeTTaEngine();
 

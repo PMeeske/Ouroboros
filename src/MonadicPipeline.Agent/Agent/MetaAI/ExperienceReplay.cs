@@ -157,7 +157,7 @@ public sealed class ExperienceReplay : IExperienceReplay
             {
                 // Find common successful patterns
                 var successfulExperiences = group.Where(e => e.Verification.Verified).ToList();
-                
+
                 if (successfulExperiences.Count > 0)
                 {
                     var commonActions = FindCommonActions(successfulExperiences);
@@ -173,7 +173,7 @@ public sealed class ExperienceReplay : IExperienceReplay
             {
                 var patternPrompt = BuildPatternAnalysisPrompt(experiences);
                 var analysis = await _llm.GenerateTextAsync(patternPrompt, ct);
-                
+
                 // Extract insights from LLM analysis
                 var insights = ExtractInsights(analysis);
                 patterns.AddRange(insights);
@@ -195,7 +195,7 @@ public sealed class ExperienceReplay : IExperienceReplay
         CancellationToken ct = default)
     {
         var stats = await _memory.GetStatisticsAsync();
-        
+
         // Get all experiences and filter
         var query = new MemoryQuery(
             Goal: "",
@@ -235,7 +235,7 @@ public sealed class ExperienceReplay : IExperienceReplay
     {
         // Simple categorization - in production use more sophisticated NLP
         var goalLower = goal.ToLowerInvariant();
-        
+
         if (goalLower.Contains("calculate") || goalLower.Contains("compute"))
             return "calculation";
         if (goalLower.Contains("analyze") || goalLower.Contains("examine"))
@@ -244,7 +244,7 @@ public sealed class ExperienceReplay : IExperienceReplay
             return "creation";
         if (goalLower.Contains("explain") || goalLower.Contains("describe"))
             return "explanation";
-        
+
         return "general";
     }
 
@@ -271,7 +271,7 @@ public sealed class ExperienceReplay : IExperienceReplay
     private string BuildPatternAnalysisPrompt(List<Experience> experiences)
     {
         var prompt = "Analyze the following successful experiences and identify common patterns:\n\n";
-        
+
         foreach (var exp in experiences.Take(5))
         {
             prompt += $"Goal: {exp.Goal}\n";
@@ -280,7 +280,7 @@ public sealed class ExperienceReplay : IExperienceReplay
         }
 
         prompt += "What are the common successful patterns? List them briefly.";
-        
+
         return prompt;
     }
 
@@ -289,7 +289,7 @@ public sealed class ExperienceReplay : IExperienceReplay
         // Simple extraction - in production use more sophisticated parsing
         var insights = new List<string>();
         var lines = analysis.Split('\n');
-        
+
         foreach (var line in lines)
         {
             if (line.Trim().StartsWith("-") || line.Trim().StartsWith("•"))
@@ -297,7 +297,7 @@ public sealed class ExperienceReplay : IExperienceReplay
                 insights.Add(line.Trim().TrimStart('-', '•').Trim());
             }
         }
-        
+
         return insights;
     }
 }

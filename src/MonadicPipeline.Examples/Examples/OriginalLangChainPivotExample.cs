@@ -39,7 +39,7 @@ public static class OriginalLangChainPivotExample
     {
         Console.WriteLine("=== ORIGINAL LANGCHAIN PIVOT IMPLEMENTATION ===");
         Console.WriteLine("This demonstrates the traditional LangChain approach\n");
-        
+
         /*
         // NOTE: Uncomment this section after installing required packages:
         // - LangChain.Databases.Sqlite
@@ -112,7 +112,7 @@ Helpful Answer:";
         Console.WriteLine($"Embedding model usage: {embeddingModel.Usage}");
         
         */
-        
+
         Console.WriteLine("⚠️  This example is disabled by default.");
         Console.WriteLine("To enable it, install the required packages:");
         Console.WriteLine("  - LangChain.Databases.Sqlite");
@@ -120,7 +120,7 @@ Helpful Answer:";
         Console.WriteLine("  - LangChain.Providers.OpenAI");
         Console.WriteLine("\nThen uncomment the code in this method.");
         Console.WriteLine("\n✓ Pivot implementation reference provided for comparison");
-        
+
         return Task.CompletedTask;
     }
 
@@ -130,7 +130,7 @@ Helpful Answer:";
     public static void CompareApproaches()
     {
         Console.WriteLine("\n=== ORIGINAL LANGCHAIN vs MONADICPIPELINE ===\n");
-        
+
         Console.WriteLine("ORIGINAL LANGCHAIN (Imperative/Chains):");
         Console.WriteLine("  ✓ Direct async/await calls");
         Console.WriteLine("  ✓ Chain syntax with pipe operators");
@@ -138,7 +138,7 @@ Helpful Answer:";
         Console.WriteLine("  ✗ Limited error handling");
         Console.WriteLine("  ✗ No type-safe composition guarantees");
         Console.WriteLine("  ✗ Difficult to test and reason about");
-        
+
         Console.WriteLine("\nMONADICPIPELINE (Functional/Monadic):");
         Console.WriteLine("  ✓ Result<T> monad for safe error handling");
         Console.WriteLine("  ✓ Kleisli arrows for composable operations");
@@ -146,7 +146,7 @@ Helpful Answer:";
         Console.WriteLine("  ✓ Immutable state and event sourcing");
         Console.WriteLine("  ✓ Testable and mathematically sound");
         Console.WriteLine("  ✓ Category theory principles");
-        
+
         Console.WriteLine("\nThe MonadicPipeline approach builds on LangChain's foundations");
         Console.WriteLine("while adding functional programming guarantees and safety.\n");
     }

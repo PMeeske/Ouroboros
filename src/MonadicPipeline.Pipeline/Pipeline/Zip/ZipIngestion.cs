@@ -1,6 +1,6 @@
+using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
-using System.IO.Compression;
 
 namespace LangChainPipeline.Pipeline.Ingestion.Zip;
 
@@ -123,11 +123,11 @@ public static class ZipIngestion
                 // Last resort: preserve kind intent
                 parsed = item.Kind switch
                 {
-                    ZipContentKind.Csv => new Dictionary<string, object>{{"type","csv"},{"table", new CsvTable(Array.Empty<string>(), [])},{"error", ex.Message}},
-                    ZipContentKind.Xml => new Dictionary<string, object>{{"type","xml"},{"root", string.Empty},{"textPreview", string.Empty},{"error", ex.Message}},
-                    ZipContentKind.Text => new Dictionary<string, object>{{"type","text"},{"preview", string.Empty},{"truncated", true},{"error", ex.Message}},
-                    ZipContentKind.Binary => new Dictionary<string, object>{{"type","binary"},{"size", 0L},{"sha256", string.Empty},{"error", ex.Message}},
-                    _ => new Dictionary<string, object>{{"type","error"},{"message", ex.Message}}
+                    ZipContentKind.Csv => new Dictionary<string, object> { { "type", "csv" }, { "table", new CsvTable(Array.Empty<string>(), []) }, { "error", ex.Message } },
+                    ZipContentKind.Xml => new Dictionary<string, object> { { "type", "xml" }, { "root", string.Empty }, { "textPreview", string.Empty }, { "error", ex.Message } },
+                    ZipContentKind.Text => new Dictionary<string, object> { { "type", "text" }, { "preview", string.Empty }, { "truncated", true }, { "error", ex.Message } },
+                    ZipContentKind.Binary => new Dictionary<string, object> { { "type", "binary" }, { "size", 0L }, { "sha256", string.Empty }, { "error", ex.Message } },
+                    _ => new Dictionary<string, object> { { "type", "error" }, { "message", ex.Message } }
                 };
             }
             list.Add(item with { Parsed = parsed });
@@ -262,7 +262,7 @@ public static class ZipIngestion
             ["elementCount"] = elementCount,
             ["attributeCount"] = attributeCount,
             ["maxDepth"] = maxDepth,
-            ["topChildren"] = topChildren?.Select(tc => new Dictionary<string, object>{{"name", tc.Name},{"count", tc.Count}}).ToList() ?? [],
+            ["topChildren"] = topChildren?.Select(tc => new Dictionary<string, object> { { "name", tc.Name }, { "count", tc.Count } }).ToList() ?? [],
             ["doc"] = new XmlDoc(doc),
             ["textPreview"] = includeText ? (doc.Root?.Value ?? string.Empty) : string.Empty
         };
@@ -394,7 +394,7 @@ internal static class ZipIngestionStreamingHelpers
 
 public static class DeferredZipTextCache
 {
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string,string> Map = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> Map = new();
     public static void Store(string id, string text) => Map[id] = text;
     public static bool TryTake(string id, out string text)
     {

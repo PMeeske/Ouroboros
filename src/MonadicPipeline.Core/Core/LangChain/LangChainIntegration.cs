@@ -2,9 +2,9 @@
 
 using LangChain.Chains.HelperChains;
 using LangChain.Chains.LLM;
+using LangChain.Prompts.Base;
 using LangChain.Providers;
 using LangChain.Schema;
-using LangChain.Prompts.Base;
 
 namespace LangChainPipeline.Core.LangChain;
 
@@ -97,7 +97,7 @@ public static class LangChainIntegration
     /// Creates a LangChain LLMChain wrapped as a monadic KleisliResult
     /// </summary>
     public static KleisliResult<Dictionary<string, object>, Dictionary<string, object>, string> CreateLlmKleisli(
-        IChatModel llm, 
+        IChatModel llm,
         BasePromptTemplate prompt,
         string outputKey = "text")
     {
@@ -105,7 +105,7 @@ public static class LangChainIntegration
         {
             OutputKey = outputKey
         });
-        
+
         return llmChain.ToMonadicKleisli();
     }
 
@@ -123,7 +123,7 @@ public static class LangChainIntegration
     /// Creates a LangChain LLMChain wrapped as a Step
     /// </summary>
     public static Step<Dictionary<string, object>, Dictionary<string, object>> CreateLlmStep(
-        IChatModel llm, 
+        IChatModel llm,
         BasePromptTemplate prompt,
         string outputKey = "text")
     {
@@ -131,7 +131,7 @@ public static class LangChainIntegration
         {
             OutputKey = outputKey
         });
-        
+
         return llmChain.ToStep();
     }
 }
@@ -162,10 +162,10 @@ public static class LangChainConversationIntegration
 
                 // Convert context properties to chain input
                 var chainInput = new ChainValues(context.GetProperties());
-                
+
                 // Execute LangChain
                 var result = await llmChain.CallAsync(chainInput);
-                
+
                 // Update context with results
                 foreach (var kvp in result.Value)
                 {
@@ -197,13 +197,13 @@ public static class LangChainConversationIntegration
             {
                 // Create SetChain
                 var setChain = new SetChain(value, outputKey);
-                
+
                 // Convert context to chain input
                 var chainInput = new ChainValues(context.GetProperties());
-                
+
                 // Execute chain
                 var result = await setChain.CallAsync(chainInput);
-                
+
                 // Update context
                 foreach (var kvp in result.Value)
                 {
@@ -233,10 +233,10 @@ public static class LangChainConversationIntegration
             {
                 // Convert context to chain input
                 var chainInput = new ChainValues(context.GetProperties());
-                
+
                 // Execute chain
                 var result = await chain.CallAsync(chainInput);
-                
+
                 // Update context
                 foreach (var kvp in result.Value)
                 {

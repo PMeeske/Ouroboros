@@ -16,7 +16,7 @@ public sealed class PromptTemplate(string template)
     public string Format(Dictionary<string, string> vars)
     {
         ArgumentNullException.ThrowIfNull(vars);
-        
+
         string result = _template;
         foreach (KeyValuePair<string, string> kv in vars)
             result = result.Replace("{" + kv.Key + "}", kv.Value ?? string.Empty);
@@ -39,14 +39,14 @@ public sealed class PromptTemplate(string template)
             // Find all placeholders in the template
             var placeholders = ExtractPlaceholders(_template);
             var missing = placeholders.Where(p => !vars.ContainsKey(p)).ToList();
-            
+
             if (missing.Any())
                 return Result<string>.Failure($"Missing required variables: {string.Join(", ", missing)}");
 
             string result = _template;
             foreach (KeyValuePair<string, string> kv in vars)
                 result = result.Replace("{" + kv.Key + "}", kv.Value ?? string.Empty);
-            
+
             return Result<string>.Success(result);
         }
         catch (Exception ex)
@@ -64,22 +64,22 @@ public sealed class PromptTemplate(string template)
     {
         var placeholders = new List<string>();
         int start = 0;
-        
+
         while (true)
         {
             int openBrace = template.IndexOf('{', start);
             if (openBrace == -1) break;
-            
+
             int closeBrace = template.IndexOf('}', openBrace);
             if (closeBrace == -1) break;
-            
+
             string placeholder = template.Substring(openBrace + 1, closeBrace - openBrace - 1);
             if (!string.IsNullOrWhiteSpace(placeholder) && !placeholders.Contains(placeholder))
                 placeholders.Add(placeholder);
-            
+
             start = closeBrace + 1;
         }
-        
+
         return placeholders;
     }
 

@@ -187,7 +187,7 @@ public sealed class Phase2OrchestratorBuilder
         ISelfEvaluator SelfEvaluator) CreateDefault(IChatCompletionModel llm)
     {
         var tools = ToolRegistry.CreateDefault();
-        
+
         return new Phase2OrchestratorBuilder()
             .WithLLM(llm)
             .WithTools(tools)

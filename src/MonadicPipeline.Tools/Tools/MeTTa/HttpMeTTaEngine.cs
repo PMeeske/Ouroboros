@@ -46,7 +46,7 @@ public sealed class HttpMeTTaEngine : IMeTTaEngine
             }
 
             var result = await response.Content.ReadFromJsonAsync<QueryResponse>(cancellationToken: ct);
-            
+
             return result?.Result != null
                 ? Result<string, string>.Success(result.Result)
                 : Result<string, string>.Failure("Invalid response from server");
@@ -100,7 +100,7 @@ public sealed class HttpMeTTaEngine : IMeTTaEngine
             }
 
             var result = await response.Content.ReadFromJsonAsync<QueryResponse>(cancellationToken: ct);
-            
+
             return result?.Result != null
                 ? Result<string, string>.Success(result.Result)
                 : Result<string, string>.Failure("Invalid response from server");
@@ -129,7 +129,7 @@ public sealed class HttpMeTTaEngine : IMeTTaEngine
             }
 
             var result = await response.Content.ReadFromJsonAsync<VerifyResponse>(cancellationToken: ct);
-            
+
             return result != null
                 ? Result<bool, string>.Success(result.IsValid)
                 : Result<bool, string>.Failure("Invalid response from server");

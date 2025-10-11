@@ -14,12 +14,12 @@ public static class ProperLangChainIntegrationExamples
     public static async Task RunAllExamples()
     {
         Console.WriteLine("=== PROPER LANGCHAIN INTEGRATION EXAMPLES ===\n");
-        
+
         await DemonstrateStackableChainIntegration();
         await DemonstrateLlmChainIntegration();
         await DemonstrateMonadicLangChainPipeline();
         await DemonstrateConversationalLangChain();
-        
+
         Console.WriteLine("=== ALL LANGCHAIN INTEGRATION EXAMPLES COMPLETE ===\n");
     }
 
@@ -29,21 +29,21 @@ public static class ProperLangChainIntegrationExamples
     public static async Task DemonstrateStackableChainIntegration()
     {
         Console.WriteLine("=== Stackable Chain Integration Example ===");
-        
+
         // Create LangChain SetChain (stackable)
         var setInputChain = new SetChain("Hello LangChain Integration!", "input");
         var setProcessChain = new SetChain("processed", "status");
-        
+
         // Compose LangChain chains using the pipe operator
         var langchainPipeline = setInputChain | setProcessChain;
-        
+
         // Convert to monadic KleisliResult for error handling
         var monadicChain = langchainPipeline.ToMonadicKleisli();
-        
+
         // Execute with proper error handling
         var initialContext = new Dictionary<string, object>();
         var result = await monadicChain(initialContext);
-        
+
         result.Match(
             success =>
             {
@@ -55,7 +55,7 @@ public static class ProperLangChainIntegrationExamples
             },
             error => Console.WriteLine($"✗ Error: {error}")
         );
-        
+
         Console.WriteLine();
     }
 
@@ -65,7 +65,7 @@ public static class ProperLangChainIntegrationExamples
     public static Task DemonstrateLlmChainIntegration()
     {
         Console.WriteLine("=== LLM Chain Integration Example ===");
-        
+
         try
         {
             Console.WriteLine("✓ LangChain LlmChain integration is properly set up");
@@ -79,7 +79,7 @@ public static class ProperLangChainIntegrationExamples
         {
             Console.WriteLine($"✗ Example Error: {ex.Message}");
         }
-        
+
         Console.WriteLine();
         return Task.CompletedTask;
     }
@@ -90,7 +90,7 @@ public static class ProperLangChainIntegrationExamples
     public static Task DemonstrateMonadicLangChainPipeline()
     {
         Console.WriteLine("=== Monadic LangChain Pipeline Example ===");
-        
+
         try
         {
             Console.WriteLine("✓ Monadic pipeline integration demonstrates:");
@@ -104,7 +104,7 @@ public static class ProperLangChainIntegrationExamples
         {
             Console.WriteLine($"✗ Example Error: {ex.Message}");
         }
-        
+
         Console.WriteLine();
         return Task.CompletedTask;
     }
@@ -115,7 +115,7 @@ public static class ProperLangChainIntegrationExamples
     public static Task DemonstrateConversationalLangChain()
     {
         Console.WriteLine("=== Conversational LangChain Pipeline Example ===");
-        
+
         try
         {
             Console.WriteLine("✓ Conversational LangChain integration provides:");
@@ -125,18 +125,18 @@ public static class ProperLangChainIntegrationExamples
             Console.WriteLine("  - AddLangChainStep() for generic BaseStackableChain support");
             Console.WriteLine("  - Full conversation history management with LangChain patterns");
             Console.WriteLine("  - Error handling through the monadic pipeline system");
-            
+
             // Demonstrate context creation
             var context = "Tell me about dependency injection".WithLangChainMemory(maxTurns: 3);
             context.AddTurn("What is DI?", "Dependency Injection is a design pattern...");
-            
+
             Console.WriteLine($"  - Context created with history length: {context.GetConversationHistory().Length}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"✗ Conversational Error: {ex.Message}");
         }
-        
+
         Console.WriteLine();
         return Task.CompletedTask;
     }

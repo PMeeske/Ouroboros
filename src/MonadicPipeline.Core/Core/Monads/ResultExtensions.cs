@@ -92,8 +92,8 @@ public static class ResultExtensions
         this Result<TValue, TError> result,
         Func<TValue, bool> predicate,
         TError errorOnFalse)
-        => result.Bind(value => predicate(value) 
-            ? Result<TValue, TError>.Success(value) 
+        => result.Bind(value => predicate(value)
+            ? Result<TValue, TError>.Success(value)
             : Result<TValue, TError>.Failure(errorOnFalse));
 
     /// <summary>
@@ -164,8 +164,8 @@ public static class ResultExtensions
     /// <returns>A Result with string error</returns>
     public static Result<TValue> ToStringError<TValue>(
         this Result<TValue, Exception> result)
-        => result.IsSuccess 
-            ? Result<TValue>.Success(result.Value) 
+        => result.IsSuccess
+            ? Result<TValue>.Success(result.Value)
             : Result<TValue>.Failure(result.Error.Message);
 
     /// <summary>

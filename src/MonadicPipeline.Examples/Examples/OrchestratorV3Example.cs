@@ -33,7 +33,7 @@ public static class OrchestratorV3Example
             // Create tool registry with MeTTa tools (including NextNode)
             var tools = ToolRegistry.CreateDefault()
                 .WithMeTTaTools(mettaEngine);
-            
+
             Console.WriteLine($"✓ Tool registry created with {tools.Count} tools");
             Console.WriteLine($"  - Including MeTTa symbolic reasoning tools");
             Console.WriteLine($"  - Including NextNode tool for symbolic next-step enumeration\n");
@@ -53,8 +53,8 @@ public static class OrchestratorV3Example
                 {
                     new PlanStep(
                         Action: "search_documents",
-                        Parameters: new Dictionary<string, object> 
-                        { 
+                        Parameters: new Dictionary<string, object>
+                        {
                             ["query"] = "functional programming",
                             ["max_results"] = 5
                         },
@@ -63,8 +63,8 @@ public static class OrchestratorV3Example
                     ),
                     new PlanStep(
                         Action: "analyze_content",
-                        Parameters: new Dictionary<string, object> 
-                        { 
+                        Parameters: new Dictionary<string, object>
+                        {
                             ["documents"] = "{{previous_output}}"
                         },
                         ExpectedOutcome: "Key concepts and themes",
@@ -72,16 +72,16 @@ public static class OrchestratorV3Example
                     ),
                     new PlanStep(
                         Action: "synthesize_summary",
-                        Parameters: new Dictionary<string, object> 
-                        { 
+                        Parameters: new Dictionary<string, object>
+                        {
                             ["concepts"] = "{{previous_output}}"
                         },
                         ExpectedOutcome: "Comprehensive summary",
                         ConfidenceScore: 0.85
                     )
                 },
-                ConfidenceScores: new Dictionary<string, double> 
-                { 
+                ConfidenceScores: new Dictionary<string, double>
+                {
                     ["overall"] = 0.85,
                     ["coherence"] = 0.9,
                     ["feasibility"] = 0.8
@@ -101,7 +101,7 @@ public static class OrchestratorV3Example
             // Translate plan to MeTTa representation
             Console.WriteLine("Translating plan to MeTTa atoms...");
             var planResult = await representation.TranslatePlanAsync(plan);
-            
+
             planResult.Match(
                 _ => Console.WriteLine("✓ Plan translated to MeTTa symbolic representation"),
                 error => Console.WriteLine($"⚠ Plan translation warning: {error}")
@@ -111,7 +111,7 @@ public static class OrchestratorV3Example
             // Translate tools to MeTTa
             Console.WriteLine("Translating tools to MeTTa atoms...");
             var toolsResult = await representation.TranslateToolsAsync(tools);
-            
+
             toolsResult.Match(
                 _ => Console.WriteLine("✓ Tools translated to MeTTa symbolic representation"),
                 error => Console.WriteLine($"⚠ Tools translation warning: {error}")
@@ -120,7 +120,7 @@ public static class OrchestratorV3Example
 
             // Add domain-specific constraints
             Console.WriteLine("Adding domain constraints to MeTTa knowledge base...");
-            
+
             var constraints = new[]
             {
                 "(requires analyze_content search_documents)",
@@ -142,7 +142,7 @@ public static class OrchestratorV3Example
 
             // Use NextNode tool to query valid next steps
             Console.WriteLine("Using NextNode tool to enumerate valid next steps...");
-            
+
             var nextNodeTool = tools.GetTool("next_node");
             if (nextNodeTool.HasValue)
             {
@@ -157,7 +157,7 @@ public static class OrchestratorV3Example
                 }";
 
                 var nextNodeResult = await nextNodeTool.Value!.InvokeAsync(nextNodeInput);
-                
+
                 nextNodeResult.Match(
                     output =>
                     {
@@ -176,7 +176,7 @@ public static class OrchestratorV3Example
             // Query MeTTa for tool recommendations
             Console.WriteLine("Querying MeTTa for tool recommendations...");
             var toolRecommendations = await representation.QueryToolsForGoalAsync(goal);
-            
+
             toolRecommendations.Match(
                 recommendedTools =>
                 {
@@ -194,7 +194,7 @@ public static class OrchestratorV3Example
             Console.WriteLine("Using MeTTa for symbolic plan verification...");
             var planMetta = $"(plan {string.Join(" ", plan.Steps.Select((s, i) => $"(step {i} {s.Action})"))})";
             var verificationResult = await mettaEngine.VerifyPlanAsync(planMetta);
-            
+
             verificationResult.Match(
                 verified => Console.WriteLine($"✓ Symbolic verification: {(verified ? "PASSED" : "FAILED")}"),
                 error => Console.WriteLine($"⚠ Verification note: {error}")
@@ -202,7 +202,7 @@ public static class OrchestratorV3Example
             Console.WriteLine();
 
             mettaEngine.Dispose();
-            
+
             Console.WriteLine("╔═══════════════════════════════════════════════════════╗");
             Console.WriteLine("║  Orchestrator v3.0 example completed successfully!    ║");
             Console.WriteLine("╚═══════════════════════════════════════════════════════╝\n");
@@ -238,13 +238,13 @@ public static class OrchestratorV3Example
         // Create tool registry with MeTTa tools
         var tools = ToolRegistry.CreateDefault()
             .WithMeTTaTools(mettaEngine);
-        
+
         Console.WriteLine($"✓ Tool registry created with {tools.Count} tools");
-        
-        var mettaTools = tools.All.Where(t => 
+
+        var mettaTools = tools.All.Where(t =>
             t.Name.StartsWith("metta_") || t.Name == "next_node"
         ).ToList();
-        
+
         Console.WriteLine($"  MeTTa symbolic reasoning tools ({mettaTools.Count}):");
         foreach (var tool in mettaTools)
         {
@@ -357,8 +357,8 @@ internal sealed class MockMeTTaEngine : IMeTTaEngine
 
     public Task<Result<string, string>> ExecuteQueryAsync(string query, CancellationToken ct = default)
     {
-        var result = query.Contains("match") 
-            ? "[Mock query result]" 
+        var result = query.Contains("match")
+            ? "[Mock query result]"
             : "3";
         return Task.FromResult(Result<string, string>.Success(result));
     }

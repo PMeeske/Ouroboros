@@ -75,7 +75,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
         {
             // Create top-level plan
             var topLevelResult = await _orchestrator.PlanAsync(goal, context, ct);
-            
+
             if (!topLevelResult.IsSuccess)
             {
                 return Result<HierarchicalPlan, string>.Failure(topLevelResult.Error);
@@ -122,9 +122,9 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
         {
             // Execute top-level plan, replacing complex steps with sub-plan execution
             var expandedPlan = await ExpandPlanAsync(plan, ct);
-            
+
             var executionResult = await _orchestrator.ExecuteAsync(expandedPlan, ct);
-            
+
             return executionResult;
         }
         catch (Exception ex)
@@ -150,9 +150,9 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
             if (IsComplexStep(step, config))
             {
                 var subGoal = $"Execute: {step.Action} with {System.Text.Json.JsonSerializer.Serialize(step.Parameters)}";
-                
+
                 var subPlanResult = await _orchestrator.PlanAsync(subGoal, context, ct);
-                
+
                 if (subPlanResult.IsSuccess)
                 {
                     var subPlan = subPlanResult.Value;
@@ -204,7 +204,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
             expandedSteps,
             hierarchicalPlan.TopLevelPlan.ConfidenceScores,
             DateTime.UtcNow);
-        
+
         return Task.FromResult(result);
     }
 }

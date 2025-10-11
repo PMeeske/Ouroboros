@@ -109,13 +109,13 @@ public static class Phase2MetacognitionExample
         {
             var decomposed = decomposedResult.Value;
             Console.WriteLine($"✓ Decomposed into {decomposed.Subgoals.Count} subgoals:\n");
-            
+
             int subgoalNum = 1;
             foreach (var subgoal in decomposed.Subgoals)
             {
                 Console.WriteLine($"{subgoalNum}. {subgoal.Description}");
                 Console.WriteLine($"   Type: {subgoal.Type}, Priority: {subgoal.Priority:F2}");
-                
+
                 if (subgoal.Subgoals.Any())
                 {
                     Console.WriteLine($"   Sub-subgoals:");
@@ -156,7 +156,7 @@ public static class Phase2MetacognitionExample
         if (assessmentResult.IsSuccess)
         {
             var assessment = assessmentResult.Value;
-            
+
             Console.WriteLine("=== SELF-ASSESSMENT REPORT ===\n");
             Console.WriteLine($"Overall Performance: {assessment.OverallPerformance:P0}");
             Console.WriteLine($"Confidence Calibration: {assessment.ConfidenceCalibration:P0}");
@@ -182,7 +182,7 @@ public static class Phase2MetacognitionExample
         // Generate insights
         Console.WriteLine("Generating insights from recent experiences...\n");
         var insights = await evaluator.GenerateInsightsAsync();
-        
+
         Console.WriteLine($"=== INSIGHTS ({insights.Count}) ===\n");
         foreach (var insight in insights.Take(5))
         {
@@ -202,7 +202,7 @@ public static class Phase2MetacognitionExample
         if (improvementResult.IsSuccess)
         {
             var plan = improvementResult.Value;
-            
+
             Console.WriteLine("=== IMPROVEMENT PLAN ===\n");
             Console.WriteLine($"Goal: {plan.Goal}");
             Console.WriteLine($"Priority: {plan.Priority:F2}");
@@ -370,7 +370,7 @@ public static class Phase2MetacognitionExample
         hierarchy.AddGoal(qualityGoal);
 
         var conflicts = await hierarchy.DetectConflictsAsync();
-        
+
         if (conflicts.Any())
         {
             Console.WriteLine($"Detected {conflicts.Count} goal conflicts:\n");

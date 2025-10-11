@@ -181,7 +181,7 @@ CRITERIA: [how to measure success]";
             };
 
             _hypotheses[hypothesis.Id] = updatedHypothesis;
-            
+
             // Track confidence trend
             if (_confidenceTrends.TryGetValue(hypothesis.Id, out var trend))
             {
@@ -279,15 +279,15 @@ ALTERNATIVES: [other possibilities]";
 
         var updatedHypothesis = supports
             ? hypothesis with
-              {
-                  SupportingEvidence = new List<string>(hypothesis.SupportingEvidence) { evidence },
-                  Confidence = Math.Min(hypothesis.Confidence + 0.1, 1.0)
-              }
+            {
+                SupportingEvidence = new List<string>(hypothesis.SupportingEvidence) { evidence },
+                Confidence = Math.Min(hypothesis.Confidence + 0.1, 1.0)
+            }
             : hypothesis with
-              {
-                  CounterEvidence = new List<string>(hypothesis.CounterEvidence) { evidence },
-                  Confidence = Math.Max(hypothesis.Confidence - 0.15, 0.0)
-              };
+            {
+                CounterEvidence = new List<string>(hypothesis.CounterEvidence) { evidence },
+                Confidence = Math.Max(hypothesis.Confidence - 0.15, 0.0)
+            };
 
         _hypotheses[hypothesisId] = updatedHypothesis;
 
@@ -343,7 +343,7 @@ EVIDENCE: [supporting points]";
     private Hypothesis ParseHypothesis(string response, string observation, Dictionary<string, object>? context)
     {
         var lines = response.Split('\n');
-        
+
         string statement = observation;
         double confidence = 0.5;
         string domain = "general";
@@ -462,7 +462,7 @@ EVIDENCE: [supporting points]";
 
         // Simple heuristic: if most steps succeeded, hypothesis is likely supported
         var successRate = execution.StepResults.Count(r => r.Success) / (double)execution.StepResults.Count;
-        
+
         return successRate >= 0.7;
     }
 
@@ -473,7 +473,7 @@ EVIDENCE: [supporting points]";
             return supported ? 0.05 : -0.05;
 
         var successRate = execution.StepResults.Count(r => r.Success) / (double)execution.StepResults.Count;
-        
+
         if (supported)
         {
             // Increase confidence based on how clean the success was

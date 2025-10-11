@@ -2,8 +2,10 @@ namespace LangChainPipeline.Providers;
 
 /// <summary>
 /// A chat model wrapper that can execute tools based on special tool invocation syntax in responses.
-/// Uses monadic Result<T,E> for consistent error handling throughout the pipeline.
+/// Uses monadic Result{T,E} for consistent error handling throughout the pipeline.
 /// </summary>
+/// <param name="llm">The underlying chat completion model.</param>
+/// <param name="registry">The tool registry for tool execution.</param>
 public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry registry)
 {
     /// <summary>
@@ -14,13 +16,13 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
     /// <returns>A tuple containing the final text and list of tool executions.</returns>
     public async Task<(string Text, List<ToolExecution> Tools)> GenerateWithToolsAsync(string prompt, CancellationToken ct = default)
     {
-    string result = await llm.GenerateTextAsync(prompt, ct);
-    List<ToolExecution> toolCalls = [];
-        
+        string result = await llm.GenerateTextAsync(prompt, ct);
+        List<ToolExecution> toolCalls = [];
+
         foreach (string rawLine in result.Split('\n'))
         {
             string line = rawLine.Trim();
-            if (!line.StartsWith("[TOOL:", StringComparison.Ordinal)) 
+            if (!line.StartsWith("[TOOL:", StringComparison.Ordinal))
                 continue;
 
             // Parse tool invocation: [TOOL:name args]
@@ -37,17 +39,17 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
             }
 
             string output;
-            try 
-            { 
+            try
+            {
                 var toolResult = await tool.InvokeAsync(args, ct);
                 output = toolResult.Match(
                     success => success,
                     error => $"error: {error}"
                 );
             }
-            catch (Exception ex) 
-            { 
-                output = $"error: {ex.Message}"; 
+            catch (Exception ex)
+            {
+                output = $"error: {ex.Message}";
             }
 
             toolCalls.Add(new ToolExecution(name, args, output, DateTime.UtcNow));
@@ -58,7 +60,7 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
     }
 
     /// <summary>
-    /// Monadic version that returns Result<T,E> for better error handling.
+    /// Monadic version that returns Result{T,E} for better error handling.
     /// </summary>
     /// <param name="prompt">The input prompt.</param>
     /// <param name="ct">Cancellation token.</param>

@@ -10,22 +10,22 @@ namespace LangChainPipeline.Pipeline.Branches;
 public sealed record PipelineBranch
 {
     private readonly ImmutableList<PipelineEvent> _events;
-    
+
     /// <summary>
     /// The name of this branch.
     /// </summary>
     public string Name { get; }
-    
+
     /// <summary>
     /// The vector store associated with this branch.
     /// </summary>
     public TrackedVectorStore Store { get; }
-    
+
     /// <summary>
     /// The data source for this branch.
     /// </summary>
     public DataSource Source { get; }
-    
+
     /// <summary>
     /// Immutable list of events in this branch.
     /// </summary>
@@ -75,7 +75,7 @@ public sealed record PipelineBranch
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(prompt);
-        
+
         var newEvent = new ReasoningStep(Guid.NewGuid(), state.Kind, state, DateTime.UtcNow, prompt, tools);
         return new PipelineBranch(Name, Store, Source, _events.Add(newEvent));
     }
@@ -90,7 +90,7 @@ public sealed record PipelineBranch
     {
         ArgumentNullException.ThrowIfNull(sourceString);
         ArgumentNullException.ThrowIfNull(ids);
-        
+
         var newEvent = new IngestBatch(Guid.NewGuid(), sourceString, ids.ToList(), DateTime.UtcNow);
         return new PipelineBranch(Name, Store, Source, _events.Add(newEvent));
     }
@@ -117,33 +117,7 @@ public sealed record PipelineBranch
     {
         ArgumentNullException.ThrowIfNull(newName);
         ArgumentNullException.ThrowIfNull(newStore);
-        
+
         return new PipelineBranch(newName, newStore, Source, _events);
-    }
-
-    /// <summary>
-    /// Legacy compatibility method for existing code that expects void AddReasoning.
-    /// This method mutates the current instance and should be avoided in new code.
-    /// Use WithReasoning() for functional style.
-    /// </summary>
-    [Obsolete("Use WithReasoning() for immutable updates. This method will be removed in a future version.")]
-    public void AddReasoning(ReasoningState state, string prompt, List<ToolExecution>? tools = null)
-    {
-        // This is intentionally not implemented to force migration to functional style
-        throw new InvalidOperationException(
-            "AddReasoning is obsolete. Use WithReasoning() to get a new immutable instance instead of mutating state.");
-    }
-
-    /// <summary>
-    /// Legacy compatibility method for existing code that expects void AddIngestEvent.
-    /// This method mutates the current instance and should be avoided in new code.
-    /// Use WithIngestEvent() for functional style.
-    /// </summary>
-    [Obsolete("Use WithIngestEvent() for immutable updates. This method will be removed in a future version.")]
-    public void AddIngestEvent(string sourceString, IEnumerable<string> ids)
-    {
-        // This is intentionally not implemented to force migration to functional style
-        throw new InvalidOperationException(
-            "AddIngestEvent is obsolete. Use WithIngestEvent() to get a new immutable instance instead of mutating state.");
     }
 }

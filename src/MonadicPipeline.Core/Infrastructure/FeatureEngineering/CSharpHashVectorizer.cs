@@ -220,10 +220,10 @@ public sealed class CSharpHashVectorizer
         {
             var hash = ComputeHash(token);
             var index = (int)(hash % (uint)_dimension);
-            
+
             // Use signed hashing for better distribution
             var sign = (hash & 0x80000000) == 0 ? 1f : -1f;
-            
+
             // Accumulate with TF weighting
             vector[index] += sign * count;
         }

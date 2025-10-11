@@ -36,8 +36,8 @@ public static class ChatConfig
     }
 
     public static (string? Endpoint, string? ApiKey, ChatEndpointType EndpointType) ResolveWithOverrides(
-        string? endpointOverride = null, 
-        string? apiKeyOverride = null, 
+        string? endpointOverride = null,
+        string? apiKeyOverride = null,
         string? endpointTypeOverride = null)
     {
         string? endpoint = endpointOverride ?? Environment.GetEnvironmentVariable(EndpointEnv);
@@ -45,17 +45,17 @@ public static class ChatConfig
         string? endpointTypeStr = endpointTypeOverride ?? Environment.GetEnvironmentVariable(EndpointTypeEnv);
 
         var endpointType = ChatEndpointType.Auto;
-        if (!string.IsNullOrWhiteSpace(endpointTypeStr) && 
+        if (!string.IsNullOrWhiteSpace(endpointTypeStr) &&
             Enum.TryParse<ChatEndpointType>(endpointTypeStr, true, out var parsedType))
         {
             endpointType = parsedType;
         }
-        else if (!string.IsNullOrWhiteSpace(endpointTypeStr) && 
+        else if (!string.IsNullOrWhiteSpace(endpointTypeStr) &&
                  endpointTypeStr.Equals("openai", StringComparison.OrdinalIgnoreCase))
         {
             endpointType = ChatEndpointType.OpenAiCompatible;
         }
-        else if (!string.IsNullOrWhiteSpace(endpointTypeStr) && 
+        else if (!string.IsNullOrWhiteSpace(endpointTypeStr) &&
                  endpointTypeStr.Equals("ollama-cloud", StringComparison.OrdinalIgnoreCase))
         {
             endpointType = ChatEndpointType.OllamaCloud;
@@ -64,7 +64,7 @@ public static class ChatConfig
         // Auto-detect Ollama Cloud based on endpoint URL if type is Auto
         if (endpointType == ChatEndpointType.Auto && !string.IsNullOrWhiteSpace(endpoint))
         {
-            if (endpoint.Contains("api.ollama.com", StringComparison.OrdinalIgnoreCase) || 
+            if (endpoint.Contains("api.ollama.com", StringComparison.OrdinalIgnoreCase) ||
                 endpoint.Contains("ollama.cloud", StringComparison.OrdinalIgnoreCase))
             {
                 endpointType = ChatEndpointType.OllamaCloud;

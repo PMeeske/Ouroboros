@@ -48,7 +48,7 @@ public static class MetaAIConvenienceTests
                 throw;
             }
         }
-        
+
         await Task.CompletedTask;
     }
 
@@ -89,7 +89,7 @@ public static class MetaAIConvenienceTests
                 throw;
             }
         }
-        
+
         await Task.CompletedTask;
     }
 
@@ -106,7 +106,7 @@ public static class MetaAIConvenienceTests
             var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
 
             var orchestratorResult = MetaAIConvenience.CreateSimple(chatModel);
-            
+
             if (!orchestratorResult.IsSuccess)
             {
                 Console.WriteLine($"✗ Failed to create orchestrator: {orchestratorResult.Error}");
@@ -184,7 +184,7 @@ public static class MetaAIConvenienceTests
                 throw;
             }
         }
-        
+
         await Task.CompletedTask;
     }
 
@@ -202,7 +202,7 @@ public static class MetaAIConvenienceTests
             var tools = ToolRegistry.CreateDefault();
 
             var orchestratorResult = MetaAIConvenience.CreateCodeAssistant(chatModel, tools);
-            
+
             if (!orchestratorResult.IsSuccess)
             {
                 Console.WriteLine($"✗ Failed to create orchestrator: {orchestratorResult.Error}");

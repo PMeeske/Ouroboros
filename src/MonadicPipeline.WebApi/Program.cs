@@ -67,7 +67,7 @@ app.MapGet("/", () => Results.Ok(new
     service = "MonadicPipeline Web API",
     version = "1.0.0",
     status = "running",
-    environment = new 
+    environment = new
     {
         name = LangChainPipeline.Core.EnvironmentDetector.GetEnvironmentName() ?? "Unknown",
         isLocalDevelopment = LangChainPipeline.Core.EnvironmentDetector.IsLocalDevelopment(),

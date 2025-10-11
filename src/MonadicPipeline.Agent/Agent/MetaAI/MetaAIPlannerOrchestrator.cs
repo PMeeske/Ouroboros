@@ -105,11 +105,11 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             return Result<ExecutionResult, string>.Failure("Plan cannot be null");
 
         var stopwatch = Stopwatch.StartNew();
-        
+
         // Check if parallel execution is beneficial
         var parallelExecutor = new ParallelExecutor(_safety, ExecuteStepAsync);
         var estimatedSpeedup = parallelExecutor.EstimateSpeedup(plan);
-        
+
         List<StepResult> stepResults;
         bool overallSuccess;
         string finalOutput;
@@ -247,12 +247,12 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
                             verification);
 
                         skillResult.Match(
-                            skill => 
+                            skill =>
                             {
                                 RecordMetric("skill_extraction_success", 1.0, true);
                                 Console.WriteLine($"✓ Extracted skill: {skill.Name} (Quality: {skill.SuccessRate:P0})");
                             },
-                            error => 
+                            error =>
                             {
                                 RecordMetric("skill_extraction_failure", 1.0, false);
                                 Console.WriteLine($"✗ Skill extraction failed: {error}");
@@ -281,7 +281,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
     private async Task<StepResult> ExecuteStepAsync(PlanStep step, CancellationToken ct)
     {
         var stopwatch = Stopwatch.StartNew();
-        
+
         try
         {
             // Check if this is a tool invocation
@@ -290,9 +290,9 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             {
                 var args = System.Text.Json.JsonSerializer.Serialize(step.Parameters);
                 var toolResult = await tool.InvokeAsync(args);
-                
+
                 stopwatch.Stop();
-                
+
                 return toolResult.Match(
                     output => new StepResult(
                         step,
@@ -321,9 +321,9 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             // If not a tool, try to execute as LLM task
             var prompt = $"Execute the following task: {step.Action}\nParameters: {System.Text.Json.JsonSerializer.Serialize(step.Parameters)}";
             var output = await _llm.GenerateTextAsync(prompt, ct);
-            
+
             stopwatch.Stop();
-            
+
             return new StepResult(
                 step,
                 true,
@@ -424,14 +424,14 @@ STEP 2: ...
         foreach (var line in lines)
         {
             var trimmed = line.Trim();
-            
+
             if (trimmed.StartsWith("STEP"))
             {
                 if (currentAction != null)
                 {
                     steps.Add(new PlanStep(currentAction, currentParams ?? new(), currentExpected ?? "", currentConfidence));
                 }
-                
+
                 currentAction = trimmed.Split(':').Skip(1).FirstOrDefault()?.Trim() ?? "";
                 currentParams = new();
                 currentExpected = "";
@@ -493,7 +493,7 @@ PLAN:
 {string.Join("\n", execution.Plan.Steps.Select((s, i) => $"{i + 1}. {s.Action}"))}
 
 EXECUTION RESULTS:
-{string.Join("\n", execution.StepResults.Select((r, i) => 
+{string.Join("\n", execution.StepResults.Select((r, i) =>
     $"{i + 1}. {(r.Success ? "✓" : "✗")} {r.Output.Substring(0, Math.Min(100, r.Output.Length))}"))}
 
 FINAL OUTPUT:
@@ -516,11 +516,11 @@ Provide:
     private VerificationResult ParseVerification(ExecutionResult execution, string verificationText)
     {
         var verified = verificationText.Contains("VERIFIED: yes", StringComparison.OrdinalIgnoreCase);
-        
+
         // Extract quality score
         var qualityScore = 0.7;
         var qualityMatch = System.Text.RegularExpressions.Regex.Match(
-            verificationText, 
+            verificationText,
             @"QUALITY_SCORE:\s*([0-9.]+)");
         if (qualityMatch.Success && double.TryParse(qualityMatch.Groups[1].Value, out var score))
         {

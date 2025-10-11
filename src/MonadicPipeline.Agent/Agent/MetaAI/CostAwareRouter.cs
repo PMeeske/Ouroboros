@@ -110,7 +110,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
         {
             // Get uncertainty-based routing
             var routingResult = await _uncertaintyRouter.RouteAsync(task, context, ct);
-            
+
             if (!routingResult.IsSuccess)
             {
                 return Result<CostBenefitAnalysis, string>.Failure(routingResult.Error);
@@ -120,7 +120,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
 
             // Get cost info for the route
             var costInfo = GetCostInfoForRoute(decision.Route);
-            
+
             // Estimate cost and quality
             var estimatedCost = CalculateEstimatedCost(task, costInfo);
             var estimatedQuality = decision.Confidence * costInfo.EstimatedQuality;
@@ -177,10 +177,10 @@ public sealed class CostAwareRouter : ICostAwareRouter
         foreach (var step in plan.Steps)
         {
             var costInfo = GetCostInfoForRoute(step.Action);
-            
+
             // Estimate tokens (simplified)
             var estimatedTokens = EstimateTokenCount(step);
-            
+
             totalCost += costInfo.CostPerRequest;
             totalCost += costInfo.CostPerToken * estimatedTokens;
         }
@@ -199,7 +199,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
         try
         {
             var currentCost = await EstimatePlanCostAsync(plan, ct);
-            
+
             if (currentCost <= config.MaxCostPerPlan)
             {
                 // Already within budget
@@ -208,7 +208,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
 
             // Try to optimize steps
             var optimizedSteps = new List<PlanStep>();
-            
+
             foreach (var step in plan.Steps)
             {
                 // Check if we can use a cheaper alternative
@@ -220,8 +220,8 @@ public sealed class CostAwareRouter : ICostAwareRouter
                 if (cheaperInfo != null)
                 {
                     // Replace with cheaper alternative
-                    optimizedSteps.Add(step with 
-                    { 
+                    optimizedSteps.Add(step with
+                    {
                         Action = cheaperInfo.ResourceId,
                         ConfidenceScore = step.ConfidenceScore * 0.9 // Slight confidence reduction
                     });
@@ -239,7 +239,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
                 DateTime.UtcNow);
 
             var newCost = await EstimatePlanCostAsync(optimizedPlan, ct);
-            
+
             if (newCost > config.MaxCostPerPlan)
             {
                 return Result<Plan, string>.Failure(
@@ -275,8 +275,8 @@ public sealed class CostAwareRouter : ICostAwareRouter
 
     private CostInfo GetCostInfoForRoute(string route)
     {
-        return _costRegistry.TryGetValue(route, out var info) 
-            ? info 
+        return _costRegistry.TryGetValue(route, out var info)
+            ? info
             : _costRegistry["default"];
     }
 

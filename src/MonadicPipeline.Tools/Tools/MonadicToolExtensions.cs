@@ -45,8 +45,8 @@ public static class MonadicToolExtensions
         return async input =>
         {
             var firstResult = await first.InvokeAsync(input);
-            return firstResult.IsSuccess 
-                ? firstResult 
+            return firstResult.IsSuccess
+                ? firstResult
                 : await fallback.InvokeAsync(input);
         };
     }
@@ -67,7 +67,7 @@ public static class MonadicToolExtensions
     /// Execute tool with contextual step integration
     /// </summary>
     public static ContextualStep<string, Result<string, string>, TContext> ToContextual<TContext>(
-        this ITool tool, 
+        this ITool tool,
         string? logMessage = null)
     {
         return async (input, context) =>
@@ -92,7 +92,7 @@ public static class ToolBuilder
         return new DelegateTool(name, description, async (input, ct) =>
         {
             var result = Result<string, string>.Success(input);
-            
+
             foreach (var tool in tools)
             {
                 if (ct.IsCancellationRequested)
@@ -135,7 +135,7 @@ public static class ToolBuilder
     /// <summary>
     /// Create a conditional tool that selects based on input
     /// </summary>
-    public static ITool Conditional(string name, string description, 
+    public static ITool Conditional(string name, string description,
         Func<string, ITool> selector)
     {
         return new DelegateTool(name, description, async (input, ct) =>

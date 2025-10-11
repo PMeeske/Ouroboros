@@ -69,13 +69,13 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
         try
         {
             // Determine optimal chunk size
-            var chunkSize = strategy == ChunkingStrategy.Adaptive 
-                ? GetAdaptiveChunkSize(maxChunkSize) 
+            var chunkSize = strategy == ChunkingStrategy.Adaptive
+                ? GetAdaptiveChunkSize(maxChunkSize)
                 : maxChunkSize;
 
             // Split context into chunks
             var chunks = SplitIntoChunks(textContext, chunkSize);
-            
+
             if (chunks.Count == 0)
             {
                 return Result<TOutput>.Failure("Failed to split context into chunks");
@@ -93,7 +93,7 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
                 {
                     UpdatePerformanceMetrics(chunkSize, false);
                 }
-                
+
                 return Result<TOutput>.Failure(
                     $"Failed to process {failures.Count} out of {chunkResults.Count} chunks");
             }
@@ -140,7 +140,7 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
     private List<string> SplitIntoChunks(string text, int chunkSize)
     {
         var chunks = new List<string>();
-        
+
         if (string.IsNullOrWhiteSpace(text))
         {
             return chunks;
@@ -159,7 +159,7 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
 
             // Try to break at sentence boundaries
             var chunk = text.Substring(position, currentChunkSize);
-            
+
             // If not at the end, try to find a good break point
             if (position + currentChunkSize < text.Length)
             {
@@ -175,10 +175,10 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
             }
 
             chunks.Add(chunk.Trim());
-            
+
             // Move position forward with overlap
             position += currentChunkSize - overlapCharSize;
-            
+
             // Ensure we make progress even with overlap
             if (position <= 0 || position >= text.Length - overlapCharSize)
             {
@@ -237,7 +237,7 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
                 catch
                 {
                     stopwatch.Stop();
-                    
+
                     var metadata = new ChunkMetadata(
                         Index: index,
                         TotalChunks: chunks.Count,
@@ -317,7 +317,7 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
         _chunkSizePerformance.AddOrUpdate(
             chunkSize,
             _ => success ? (1, 0) : (0, 1),
-            (_, current) => success 
+            (_, current) => success
                 ? (current.successCount + 1, current.failureCount)
                 : (current.successCount, current.failureCount + 1)
         );

@@ -1,8 +1,8 @@
+using FluentAssertions;
 using LangChainPipeline.Domain.Events;
 using LangChainPipeline.Domain.Persistence;
 using LangChainPipeline.Domain.States;
 using Xunit;
-using FluentAssertions;
 
 namespace LangChainPipeline.Tests;
 
@@ -221,7 +221,7 @@ public class EventStoreTests
         // Arrange
         var store = new InMemoryEventStore();
         var branchId = "test-branch";
-        
+
         // Act
         var tasks = Enumerable.Range(0, 10)
             .Select(_ => Task.Run(async () =>
@@ -234,7 +234,7 @@ public class EventStoreTests
         // Assert
         var events = await store.GetEventsAsync(branchId);
         events.Should().HaveCount(10);
-        
+
         var version = await store.GetVersionAsync(branchId);
         version.Should().Be(9); // 10 events: versions 0-9
     }

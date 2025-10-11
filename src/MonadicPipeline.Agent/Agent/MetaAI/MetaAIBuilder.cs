@@ -136,10 +136,10 @@ public sealed class MetaAIBuilder
         var tools = _tools ?? ToolRegistry.CreateDefault();
         var memory = _memory ?? new MemoryStore(_embedding, _vectorStore);
         var skills = _skills ?? new SkillRegistry(_embedding);
-        
+
         // Safety guard is required first for router
         var safety = _safety ?? new SafetyGuard(_defaultPermissionLevel);
-        
+
         // Router needs orchestrator - create a simple one if not provided
         IUncertaintyRouter router;
         if (_router == null)

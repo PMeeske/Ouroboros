@@ -1,5 +1,5 @@
-using Xunit;
 using LangChainPipeline.Core;
+using Xunit;
 
 namespace LangChainPipeline.Tests.Tests;
 
@@ -16,10 +16,10 @@ public class EnvironmentDetectorTests
         try
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-            
+
             // Act
             var result = EnvironmentDetector.IsLocalDevelopment();
-            
+
             // Assert
             Assert.True(result);
         }
@@ -28,7 +28,7 @@ public class EnvironmentDetectorTests
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalEnv);
         }
     }
-    
+
     [Fact]
     public void IsLocalDevelopment_WithLocalEnvironment_ReturnsTrue()
     {
@@ -37,10 +37,10 @@ public class EnvironmentDetectorTests
         try
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Local");
-            
+
             // Act
             var result = EnvironmentDetector.IsLocalDevelopment();
-            
+
             // Assert
             Assert.True(result);
         }
@@ -49,7 +49,7 @@ public class EnvironmentDetectorTests
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalEnv);
         }
     }
-    
+
     [Fact]
     public void IsLocalDevelopment_WithProductionEnvironment_ReturnsFalse()
     {
@@ -58,10 +58,10 @@ public class EnvironmentDetectorTests
         try
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Production");
-            
+
             // Act
             var result = EnvironmentDetector.IsLocalDevelopment();
-            
+
             // Assert
             Assert.False(result);
         }
@@ -70,7 +70,7 @@ public class EnvironmentDetectorTests
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalEnv);
         }
     }
-    
+
     [Fact]
     public void IsLocalDevelopment_WithStagingEnvironment_ReturnsFalse()
     {
@@ -79,10 +79,10 @@ public class EnvironmentDetectorTests
         try
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Staging");
-            
+
             // Act
             var result = EnvironmentDetector.IsLocalDevelopment();
-            
+
             // Assert
             Assert.False(result);
         }
@@ -91,7 +91,7 @@ public class EnvironmentDetectorTests
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalEnv);
         }
     }
-    
+
     [Fact]
     public void IsLocalDevelopment_WithLocalhostOllamaEndpoint_ReturnsTrue()
     {
@@ -102,10 +102,10 @@ public class EnvironmentDetectorTests
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null);
             Environment.SetEnvironmentVariable("PIPELINE__LlmProvider__OllamaEndpoint", "http://localhost:11434");
-            
+
             // Act
             var result = EnvironmentDetector.IsLocalDevelopment();
-            
+
             // Assert
             Assert.True(result);
         }
@@ -115,7 +115,7 @@ public class EnvironmentDetectorTests
             Environment.SetEnvironmentVariable("PIPELINE__LlmProvider__OllamaEndpoint", originalEndpoint);
         }
     }
-    
+
     [Fact]
     public void GetEnvironmentName_ReturnsEnvironmentVariable()
     {
@@ -124,10 +124,10 @@ public class EnvironmentDetectorTests
         try
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-            
+
             // Act
             var result = EnvironmentDetector.GetEnvironmentName();
-            
+
             // Assert
             Assert.Equal("Development", result);
         }
@@ -136,7 +136,7 @@ public class EnvironmentDetectorTests
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalEnv);
         }
     }
-    
+
     [Fact]
     public void IsProduction_WithProductionEnvironment_ReturnsTrue()
     {
@@ -145,10 +145,10 @@ public class EnvironmentDetectorTests
         try
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Production");
-            
+
             // Act
             var result = EnvironmentDetector.IsProduction();
-            
+
             // Assert
             Assert.True(result);
         }
@@ -157,7 +157,7 @@ public class EnvironmentDetectorTests
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalEnv);
         }
     }
-    
+
     [Fact]
     public void IsProduction_WithDevelopmentEnvironment_ReturnsFalse()
     {
@@ -166,10 +166,10 @@ public class EnvironmentDetectorTests
         try
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-            
+
             // Act
             var result = EnvironmentDetector.IsProduction();
-            
+
             // Assert
             Assert.False(result);
         }
@@ -178,7 +178,7 @@ public class EnvironmentDetectorTests
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalEnv);
         }
     }
-    
+
     [Fact]
     public void IsStaging_WithStagingEnvironment_ReturnsTrue()
     {
@@ -187,10 +187,10 @@ public class EnvironmentDetectorTests
         try
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Staging");
-            
+
             // Act
             var result = EnvironmentDetector.IsStaging();
-            
+
             // Assert
             Assert.True(result);
         }
@@ -199,7 +199,7 @@ public class EnvironmentDetectorTests
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalEnv);
         }
     }
-    
+
     [Fact]
     public void IsStaging_WithProductionEnvironment_ReturnsFalse()
     {
@@ -208,10 +208,10 @@ public class EnvironmentDetectorTests
         try
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Production");
-            
+
             // Act
             var result = EnvironmentDetector.IsStaging();
-            
+
             // Assert
             Assert.False(result);
         }
@@ -220,18 +220,18 @@ public class EnvironmentDetectorTests
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalEnv);
         }
     }
-    
+
     [Fact]
     public void IsRunningInKubernetes_WithoutKubernetesEnvironment_ReturnsFalse()
     {
         // Act
         var result = EnvironmentDetector.IsRunningInKubernetes();
-        
+
         // Assert
         // In a test environment without Kubernetes, this should return false
         Assert.False(result);
     }
-    
+
     [Fact]
     public void IsRunningInKubernetes_WithKubernetesServiceHost_ReturnsTrue()
     {
@@ -240,10 +240,10 @@ public class EnvironmentDetectorTests
         try
         {
             Environment.SetEnvironmentVariable("KUBERNETES_SERVICE_HOST", "10.96.0.1");
-            
+
             // Act
             var result = EnvironmentDetector.IsRunningInKubernetes();
-            
+
             // Assert
             Assert.True(result);
         }

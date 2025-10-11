@@ -19,7 +19,7 @@ public static class ContextualStep
     /// Lift a pure function into a contextual step
     /// </summary>
     public static ContextualStep<TIn, TOut, TContext> LiftPure<TIn, TOut, TContext>(
-        Func<TIn, TOut> func, 
+        Func<TIn, TOut> func,
         string? log = null)
         => async (input, context) =>
         {
@@ -33,7 +33,7 @@ public static class ContextualStep
     /// Create from pure Step
     /// </summary>
     public static ContextualStep<TIn, TOut, TContext> FromPure<TIn, TOut, TContext>(
-        Step<TIn, TOut> step, 
+        Step<TIn, TOut> step,
         string? log = null)
         => async (input, context) =>
         {
@@ -76,11 +76,11 @@ public static class ContextualStepExtensions
         {
             var (midResult, firstLogs) = await first(input, context);
             var (finalResult, secondLogs) = await second(midResult, context);
-            
+
             var combinedLogs = new List<string>();
             combinedLogs.AddRange(firstLogs);
             combinedLogs.AddRange(secondLogs);
-            
+
             return (finalResult, combinedLogs);
         };
 
@@ -95,10 +95,10 @@ public static class ContextualStepExtensions
         {
             var (midResult, logs) = await step(input, context);
             var finalResult = mapper(midResult);
-            
+
             if (log != null)
                 logs.Add(log);
-            
+
             return (finalResult, logs);
         };
 

@@ -68,7 +68,7 @@ public sealed class EvaluationHarness
         {
             // Plan
             var planResult = await _orchestrator.PlanAsync(testCase.Goal, testCase.Context, ct);
-            
+
             Plan? plan = null;
             planResult.Match(
                 p => plan = p,
@@ -79,7 +79,7 @@ public sealed class EvaluationHarness
 
             // Execute
             var execResult = await _orchestrator.ExecuteAsync(plan, ct);
-            
+
             ExecutionResult? execution = null;
             execResult.Match(
                 e => execution = e,
@@ -90,7 +90,7 @@ public sealed class EvaluationHarness
 
             // Verify
             var verifyResult = await _orchestrator.VerifyAsync(execution, ct);
-            
+
             VerificationResult? verification = null;
             verifyResult.Match(
                 v => verification = v,
@@ -230,10 +230,10 @@ public sealed class EvaluationHarness
         var total = results.Count;
         var successful = results.Count(r => r.Success);
         var failed = total - successful;
-        
+
         var avgQuality = results.Any() ? results.Average(r => r.QualityScore) : 0.0;
         var avgConfidence = results.Any() ? results.Average(r => r.ConfidenceScore) : 0.0;
-        var avgTime = results.Any() 
+        var avgTime = results.Any()
             ? TimeSpan.FromMilliseconds(results.Average(r => r.ExecutionTime.TotalMilliseconds))
             : TimeSpan.Zero;
 
@@ -253,7 +253,7 @@ public sealed class EvaluationHarness
             var values = results
                 .Where(r => r.CustomMetrics.ContainsKey(metricKey))
                 .Select(r => r.CustomMetrics[metricKey]);
-            
+
             if (values.Any())
             {
                 aggregated[$"avg_{metricKey}"] = values.Average();

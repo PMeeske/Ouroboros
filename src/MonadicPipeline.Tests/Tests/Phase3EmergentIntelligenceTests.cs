@@ -3,8 +3,8 @@
 // Tests for TransferLearner, HypothesisEngine, and CuriosityEngine
 // ==========================================================
 
-using LangChain.Providers.Ollama;
 using LangChain.Databases;
+using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
 
 namespace LangChainPipeline.Tests;
@@ -352,7 +352,7 @@ public static class Phase3EmergentIntelligenceTests
         Console.WriteLine("\n2. Hypothesis Generation:");
         var observation = "Exploratory tasks reveal new capabilities";
         var hypothesis = await hypothesisEngine.GenerateHypothesisAsync(observation);
-        
+
         if (hypothesis.IsSuccess)
         {
             Console.WriteLine($"   Hypothesis: {hypothesis.Value.Statement}");
@@ -361,7 +361,7 @@ public static class Phase3EmergentIntelligenceTests
 
         // 3. Transfer learning
         Console.WriteLine("\n3. Transfer Learning:");
-        
+
         // Create a skill from successful exploration
         var explorationSkill = new Skill(
             "explore_new_domain",
@@ -402,14 +402,14 @@ public static class Phase3EmergentIntelligenceTests
     public static async Task RunAllTests()
     {
         Console.WriteLine("=== Phase 3: Emergent Intelligence Tests ===");
-        
+
         try
         {
             await TestTransferLearner();
             await TestHypothesisEngine();
             await TestCuriosityEngine();
             await TestPhase3Integration();
-            
+
             Console.WriteLine("\n=== All Phase 3 Tests Completed ===");
         }
         catch (Exception ex)

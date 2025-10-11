@@ -31,7 +31,7 @@ public static class SolutionIngestion
         bool metaOnly = false;
         bool includeProjectMeta = true;
         bool includeSolutionMeta = true;
-        List<string> exts = [..DefaultCodeExtensions];
+        List<string> exts = [.. DefaultCodeExtensions];
         if (!string.IsNullOrWhiteSpace(raw))
         {
             foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -151,7 +151,7 @@ public static class SolutionIngestion
                         {
                             Id = file + "#chunk" + ci,
                             Text = chunk,
-                            Metadata = (IDictionary<string, object>) (object) meta,
+                            Metadata = (IDictionary<string, object>)(object)meta,
                             Embedding = embResp
                         });
                         ci++;
@@ -180,7 +180,7 @@ public static class SolutionIngestion
             {
                 Id = id,
                 Text = content,
-                Metadata = (IDictionary<string, object>) (object) meta,
+                Metadata = (IDictionary<string, object>)(object)meta,
                 Embedding = emb
             });
         }
@@ -195,7 +195,7 @@ public static class SolutionIngestion
             {
                 Id = id,
                 Text = content,
-                Metadata = (IDictionary<string, object>) (object) meta,
+                Metadata = (IDictionary<string, object>)(object)meta,
                 Embedding = arr
             });
         }

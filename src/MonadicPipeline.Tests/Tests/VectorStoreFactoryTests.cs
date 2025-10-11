@@ -1,7 +1,7 @@
+using FluentAssertions;
 using LangChainPipeline.Core.Configuration;
 using LangChainPipeline.Domain.Vectors;
 using Xunit;
-using FluentAssertions;
 
 namespace LangChainPipeline.Tests;
 
@@ -167,7 +167,7 @@ public class VectorStoreFactoryTests
     {
         // Arrange, Act & Assert
         Action act = () => new VectorStoreFactory(null!);
-        
+
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("config");
     }

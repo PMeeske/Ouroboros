@@ -115,7 +115,7 @@ public sealed class SkillComposer : ISkillComposer
 
             // Create composite skill with special prerequisite marker and component list
             var prerequisites = new List<string>(componentSkillNames) { "__composite__" };
-            
+
             var compositeSkill = new Skill(
                 compositeName,
                 description,
@@ -163,7 +163,7 @@ public sealed class SkillComposer : ISkillComposer
             foreach (var exp in experiences.Where(e => e.Verification.Verified))
             {
                 var usedSkills = ExtractUsedSkills(exp);
-                
+
                 if (usedSkills.Count >= 2)
                 {
                     var combo = string.Join("|", usedSkills.OrderBy(s => s));
@@ -211,7 +211,7 @@ public sealed class SkillComposer : ISkillComposer
         // Component names are in prerequisites (excluding the marker)
         var componentNames = skill.Prerequisites.Where(p => p != "__composite__").ToList();
         var components = new List<Skill>();
-        
+
         foreach (var componentName in componentNames)
         {
             var component = _skills.GetSkill(componentName);
@@ -230,7 +230,7 @@ public sealed class SkillComposer : ISkillComposer
 
         // Check which registered skills were used in the plan
         var allSkills = _skills.GetAllSkills();
-        
+
         foreach (var skill in allSkills)
         {
             var skillActions = skill.Steps.Select(s => s.Action).ToHashSet();

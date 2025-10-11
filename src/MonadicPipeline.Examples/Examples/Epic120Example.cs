@@ -105,22 +105,22 @@ public static class Epic120Example
             async assignment =>
             {
                 Console.WriteLine($"  🔨 Agent {assignment.AssignedAgentId} working on branch {assignment.BranchName}...");
-                
+
                 // Simulate work
                 await Task.Delay(1000);
-                
+
                 // Update the branch with reasoning
                 if (assignment.Branch != null)
                 {
                     var updatedBranch = assignment.Branch.WithIngestEvent(
                         "baseline-inventory",
                         new[] { "doc1", "doc2", "doc3" });
-                    
+
                     var updatedAssignment = assignment with { Branch = updatedBranch };
                     Console.WriteLine($"  ✅ Work completed! Branch now has {updatedBranch.Events.Count} events.");
                     return Result<SubIssueAssignment, string>.Success(updatedAssignment);
                 }
-                
+
                 return Result<SubIssueAssignment, string>.Success(assignment);
             });
 
@@ -217,9 +217,9 @@ public static class Epic120Example
         try
         {
             await RunEpic120WorkflowAsync();
-            
+
             Console.WriteLine("\n" + new string('=', 60) + "\n");
-            
+
             await RunParallelSubIssuesAsync();
         }
         catch (Exception ex)

@@ -26,14 +26,14 @@ public static class SelfImprovingAgentExample
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var tools = ToolRegistry.CreateDefault();
-        
+
         // Create enhanced memory store with consolidation
         var memoryConfig = new PersistentMemoryConfig(
             ShortTermCapacity: 50,
             LongTermCapacity: 500,
             ConsolidationThreshold: 0.8,
             EnableForgetting: true);
-        
+
         var memory = new PersistentMemoryStore(config: memoryConfig);
         var skillRegistry = new SkillRegistry();
         var skillExtractor = new SkillExtractor(chatModel, skillRegistry);
@@ -170,7 +170,7 @@ public static class SelfImprovingAgentExample
             var quality = i % 3 == 0 ? 0.3 : (i % 3 == 1 ? 0.75 : 0.95);
             var experience = CreateExperience($"Task {i}", quality);
             await memory.StoreExperienceAsync(experience);
-            
+
             if (i % 5 == 0)
             {
                 Console.Write(".");
@@ -263,7 +263,7 @@ public static class SelfImprovingAgentExample
     private static void DisplayLearnedSkills(ISkillRegistry skillRegistry)
     {
         var skills = skillRegistry.GetAllSkills();
-        
+
         if (skills.Count == 0)
         {
             Console.WriteLine("No skills learned yet.");

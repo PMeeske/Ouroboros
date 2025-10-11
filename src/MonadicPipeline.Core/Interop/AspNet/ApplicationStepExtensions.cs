@@ -12,8 +12,8 @@ namespace LangChainPipeline.Interop.AspNet;
 /// <summary>
 /// ASP.NET Core helpers to wrap middleware/configuration into Step-based composition.
 /// This matches the requested API:
-/// - Use(Func<RequestDelegate, RequestDelegate>)
-/// - Use(Func<IApplicationBuilder, IApplicationBuilder>)
+/// - Use(Func{RequestDelegate, RequestDelegate})
+/// - Use(Func{IApplicationBuilder, IApplicationBuilder})
 /// and lets you compose via StepDefinition with the | operator when TOut is preserved.
 /// </summary>
 public static class ApplicationStepExtensions

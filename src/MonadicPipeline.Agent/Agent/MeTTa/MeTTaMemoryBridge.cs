@@ -155,8 +155,8 @@ public static class MemoryStoreMeTTaExtensions
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Number of facts synchronized.</returns>
     public static async Task<Result<int, string>> SyncToMeTTaAsync(
-        this MemoryStore memory, 
-        IMeTTaEngine engine, 
+        this MemoryStore memory,
+        IMeTTaEngine engine,
         CancellationToken ct = default)
     {
         var bridge = memory.CreateMeTTaBridge(engine);

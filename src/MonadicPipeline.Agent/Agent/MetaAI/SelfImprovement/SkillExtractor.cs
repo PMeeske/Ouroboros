@@ -147,10 +147,10 @@ Skill name:";
 
             var skillName = await _llm.GenerateTextAsync(prompt, ct);
             skillName = skillName?.Trim() ?? "extracted_skill";
-            
+
             // Sanitize the name
             skillName = SanitizeSkillName(skillName);
-            
+
             return skillName;
         }
         catch
@@ -182,7 +182,7 @@ Write a 1-2 sentence description of this skill's capability:";
 
             var description = await _llm.GenerateTextAsync(prompt, ct);
             description = description?.Trim() ?? $"Skill for: {execution.Plan.Goal}";
-            
+
             return description;
         }
         catch
@@ -222,7 +222,7 @@ Write a 1-2 sentence description of this skill's capability:";
         foreach (var step in steps)
         {
             var newParams = new Dictionary<string, object>();
-            
+
             // Keep parameters but mark those that could be parameterized
             foreach (var param in step.Parameters)
             {
@@ -262,7 +262,7 @@ Write a 1-2 sentence description of this skill's capability:";
         {
             // Calculate updated success rate (weighted average)
             var totalUsages = existingSkill.UsageCount + 1;
-            var updatedSuccessRate = 
+            var updatedSuccessRate =
                 (existingSkill.SuccessRate * existingSkill.UsageCount + verification.QualityScore) / totalUsages;
 
             // Create updated skill
@@ -291,23 +291,23 @@ Write a 1-2 sentence description of this skill's capability:";
     {
         // Remove quotes and extra whitespace
         name = name.Trim('"', '\'', ' ', '\n', '\r');
-        
+
         // Convert to lowercase
         name = name.ToLowerInvariant();
-        
+
         // Replace spaces and special chars with underscores
         name = System.Text.RegularExpressions.Regex.Replace(name, @"[^a-z0-9_]", "_");
-        
+
         // Remove duplicate underscores
         name = System.Text.RegularExpressions.Regex.Replace(name, @"_+", "_");
-        
+
         // Remove leading/trailing underscores
         name = name.Trim('_');
-        
+
         // Ensure it's not empty
         if (string.IsNullOrWhiteSpace(name))
             name = "extracted_skill";
-        
+
         return name;
     }
 
@@ -319,10 +319,10 @@ Write a 1-2 sentence description of this skill's capability:";
         // Extract first action as basis for name
         var firstAction = execution.Plan.Steps.FirstOrDefault()?.Action ?? "skill";
         var sanitized = SanitizeSkillName(firstAction);
-        
+
         // Add timestamp to ensure uniqueness
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
-        
+
         return $"{sanitized}_{timestamp}";
     }
 }

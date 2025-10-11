@@ -70,7 +70,7 @@ public interface IMetaAIPlannerOrchestrator
     /// <param name="ct">Cancellation token</param>
     /// <returns>A plan with steps and confidence scores</returns>
     Task<Result<Plan, string>> PlanAsync(
-        string goal, 
+        string goal,
         Dictionary<string, object>? context = null,
         CancellationToken ct = default);
 

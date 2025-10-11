@@ -1,7 +1,7 @@
 namespace LangChainPipeline.Core.Steps;
 
 /// <summary>
-/// Step<TA,TB> is unified with Kleisli<TA,TB> - they represent the same concept.
+/// Step{TA,TB} is unified with Kleisli{TA,TB} - they represent the same concept.
 /// This delegates to the proper Kleisli arrow for conceptual clarity.
 /// All functionality is provided through KleisliExtensions.
 /// </summary>
@@ -81,7 +81,9 @@ public readonly struct SyncStep<TIn, TOut> : IEquatable<SyncStep<TIn, TOut>>
     /// Equality (by delegate reference)
     /// </summary>
     public bool Equals(SyncStep<TIn, TOut> other) => ReferenceEquals(_f, other._f);
+    /// <inheritdoc/>
     public override bool Equals(object? obj) => obj is SyncStep<TIn, TOut> o && Equals(o);
+    /// <inheritdoc/>
     public override int GetHashCode() => _f?.GetHashCode() ?? 0;
 
     /// <summary>

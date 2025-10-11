@@ -21,7 +21,7 @@ public static class LangChainStyleExample
     {
         Console.WriteLine("=== LANGCHAIN STYLE CONVERSATION WITH KLEISLI PIPES ===");
         Console.WriteLine("This mirrors the exact example from the problem statement!\n");
-        
+
         // Create a simple prompt template for the conversation to help the AI
         // This is exactly the same template from the LangChain example
         var template = @"
@@ -56,7 +56,7 @@ AI: ";
         var conversationInputs = new[]
         {
             "Hello! My name is Alice. What's your name?",
-            "What did I tell you my name was?", 
+            "What did I tell you my name was?",
             "Can you tell me a joke?",
             "Do you remember my name from earlier?",
             "exit"
@@ -66,13 +66,13 @@ AI: ";
         {
             Console.WriteLine();
             Console.Write("Human: ");
-            
+
             if (input == "exit")
             {
                 Console.WriteLine(input);
                 break;
             }
-            
+
             Console.WriteLine(input);
 
             // Build a new chain by prepending the user's input to the original chain
@@ -86,11 +86,11 @@ AI: ";
 
             Console.Write("AI: ");
             Console.WriteLine(response ?? "I couldn't generate a response.");
-            
+
             // Brief delay to simulate processing time
             await Task.Delay(1000);
         }
-        
+
         Console.WriteLine("\nConversation ended!");
         Console.WriteLine("\n=== Final Memory State ===");
         Console.WriteLine($"Total conversation turns: {memory.GetTurns().Count}");
@@ -108,11 +108,11 @@ AI: ";
     {
         // For demo purposes, we'll show different strategies
         // In the real LangChain example, this would prompt the user for choice
-        
+
         var strategies = new[]
         {
             "ConversationBufferMemory",
-            "ConversationWindowBufferMemory", 
+            "ConversationWindowBufferMemory",
             "ConversationSummaryMemory",
             "ConversationSummaryBufferMemory"
         };
@@ -122,7 +122,7 @@ AI: ";
         {
             Console.WriteLine($"    {i + 1}: {strategies[i]}");
         }
-        
+
         // For this demo, we'll simulate selecting ConversationWindowBufferMemory
         var selectedStrategy = "ConversationWindowBufferMemory";
         Console.WriteLine($"\nAuto-selected: '{selectedStrategy}' (keeps last 3 turns)\n");
@@ -209,7 +209,7 @@ AI: ";
 
         // Demonstrate the actual execution
         var testInput = "How does memory work in this system?";
-        
+
         Console.WriteLine($"Test input: \"{testInput}\"");
         Console.WriteLine("Executing Kleisli pipeline...\n");
 
@@ -222,7 +222,7 @@ AI: ";
             .UpdateMemory(inputKey: "input", responseKey: "text");
 
         var result = await chain.RunAsync<string>("text");
-        
+
         Console.WriteLine($"AI Response: {result}");
         Console.WriteLine($"Memory now contains: {memory.GetTurns().Count} turns");
         Console.WriteLine($"History: {memory.GetFormattedHistory()}");

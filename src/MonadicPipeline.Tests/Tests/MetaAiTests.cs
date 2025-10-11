@@ -1,6 +1,6 @@
-using LangChain.Providers.Ollama;
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
+using LangChain.Providers.Ollama;
 using LangChainPipeline.CLI;
 
 namespace LangChainPipeline.Tests;
@@ -17,14 +17,14 @@ public static class MetaAiTests
     public static void TestPipelineStepsRegisteredAsTools()
     {
         Console.WriteLine("=== Testing Pipeline Steps as Tools ===");
-        
+
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
-        
+
         var tools = new ToolRegistry();
         var branch = new PipelineBranch("test", new TrackedVectorStore(), DataSource.FromPath("/tmp"));
-        
+
         var state = new CliPipelineState
         {
             Branch = branch,
@@ -34,12 +34,12 @@ public static class MetaAiTests
             RetrievalK = 8,
             Trace = false
         };
-        
+
         // Register pipeline steps as tools
         tools = tools.WithPipelineSteps(state);
-        
+
         Console.WriteLine($"✓ Registered {tools.Count} tools (including pipeline steps)");
-        
+
         // List some of the registered pipeline step tools
         var pipelineTools = tools.All.Where(t => t.Name.StartsWith("run_")).Take(10).ToList();
         Console.WriteLine($"✓ Found {pipelineTools.Count} pipeline step tools:");
@@ -47,7 +47,7 @@ public static class MetaAiTests
         {
             Console.WriteLine($"  - {tool.Name}: {tool.Description}");
         }
-        
+
         // Verify specific expected tools are registered
         var expectedTools = new[] { "run_useingest", "run_usedraft", "run_usecritique", "run_usefinal", "run_llm" };
         foreach (var expectedTool in expectedTools)
@@ -64,7 +64,7 @@ public static class MetaAiTests
             }
             Console.WriteLine($"✓ Verified tool '{expectedTool}' is registered");
         }
-        
+
         Console.WriteLine("✓ All pipeline steps successfully registered as tools!");
     }
 
@@ -74,14 +74,14 @@ public static class MetaAiTests
     public static void TestSelectivePipelineStepRegistration()
     {
         Console.WriteLine("\n=== Testing Selective Pipeline Step Registration ===");
-        
+
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
-        
+
         var tools = new ToolRegistry();
         var branch = new PipelineBranch("test", new TrackedVectorStore(), DataSource.FromPath("/tmp"));
-        
+
         var state = new CliPipelineState
         {
             Branch = branch,
@@ -91,13 +91,13 @@ public static class MetaAiTests
             RetrievalK = 8,
             Trace = false
         };
-        
+
         // Register only specific pipeline steps
         var selectedSteps = new[] { "UseDraft", "UseCritique", "UseImprove" };
         tools = tools.WithPipelineSteps(state, selectedSteps);
-        
+
         Console.WriteLine($"✓ Selectively registered {tools.Count} tools");
-        
+
         // Verify only selected tools are registered
         foreach (var step in selectedSteps)
         {
@@ -109,7 +109,7 @@ public static class MetaAiTests
             }
             Console.WriteLine($"✓ Verified selected tool '{toolName}' is registered");
         }
-        
+
         Console.WriteLine("✓ Selective pipeline step registration works correctly!");
     }
 
@@ -119,14 +119,14 @@ public static class MetaAiTests
     public static void TestPipelineStepToolSchemas()
     {
         Console.WriteLine("\n=== Testing Pipeline Step Tool Schemas ===");
-        
+
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
-        
+
         var tools = new ToolRegistry();
         var branch = new PipelineBranch("test", new TrackedVectorStore(), DataSource.FromPath("/tmp"));
-        
+
         var state = new CliPipelineState
         {
             Branch = branch,
@@ -136,26 +136,26 @@ public static class MetaAiTests
             RetrievalK = 8,
             Trace = false
         };
-        
+
         // Register a few pipeline steps
         tools = tools.WithPipelineSteps(state, "UseDraft", "LLM", "SetPrompt");
-        
+
         // Export schemas
         var schemas = tools.ExportSchemas();
-        
+
         if (string.IsNullOrWhiteSpace(schemas))
         {
             throw new Exception("Tool schemas should not be empty!");
         }
-        
+
         Console.WriteLine($"✓ Exported tool schemas (length: {schemas.Length})");
-        
+
         // Verify schema contains pipeline step tools
         if (!schemas.Contains("run_usedraft") && !schemas.Contains("run_llm"))
         {
             throw new Exception("Exported schemas should contain pipeline step tools!");
         }
-        
+
         Console.WriteLine("✓ Tool schemas include pipeline steps correctly!");
         Console.WriteLine($"Sample schemas:\n{schemas.Substring(0, Math.Min(500, schemas.Length))}...");
     }
@@ -167,14 +167,14 @@ public static class MetaAiTests
     {
         Console.WriteLine("\n=== Testing Meta-AI Integration ===");
         Console.WriteLine("This test demonstrates how the LLM can use pipeline step tools to build upon itself.");
-        
+
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
-        
+
         var tools = new ToolRegistry();
         var branch = new PipelineBranch("meta-ai-test", new TrackedVectorStore(), DataSource.FromPath("/tmp"));
-        
+
         var state = new CliPipelineState
         {
             Branch = branch,
@@ -184,15 +184,15 @@ public static class MetaAiTests
             RetrievalK = 8,
             Trace = true
         };
-        
+
         // Register pipeline steps as tools
         tools = tools.WithPipelineSteps(state);
         var llm = new ToolAwareChatModel(chatModel, tools);
         state.Llm = llm;
         state.Tools = tools;
-        
+
         Console.WriteLine($"✓ Meta-AI system initialized with {tools.Count} tools");
-        
+
         // Create a prompt that asks the LLM to use pipeline tools
         var metaPrompt = @"You have access to pipeline execution tools that allow you to build upon your own reasoning.
 
@@ -209,15 +209,15 @@ Task: Explain the concept of meta-AI and how you could use your own pipeline too
 Think step by step about which pipeline tools you could invoke to enhance your reasoning.";
 
         state.Prompt = metaPrompt;
-        
+
         try
         {
             // Execute LLM with tool awareness
             var (response, toolCalls) = await llm.GenerateWithToolsAsync(metaPrompt);
-            
+
             Console.WriteLine($"\n=== LLM Response ===");
             Console.WriteLine(response);
-            
+
             if (toolCalls.Any())
             {
                 Console.WriteLine($"\n✓ LLM invoked {toolCalls.Count} pipeline tools:");
@@ -244,7 +244,7 @@ Think step by step about which pipeline tools you could invoke to enhance your r
                 throw;
             }
         }
-        
+
         Console.WriteLine("✓ Meta-AI integration test completed!");
     }
 
@@ -256,12 +256,12 @@ Think step by step about which pipeline tools you could invoke to enhance your r
         Console.WriteLine("\n" + new string('=', 60));
         Console.WriteLine("META-AI LAYER TESTS");
         Console.WriteLine(new string('=', 60) + "\n");
-        
+
         TestPipelineStepsRegisteredAsTools();
         TestSelectivePipelineStepRegistration();
         TestPipelineStepToolSchemas();
         await TestMetaAiIntegration();
-        
+
         Console.WriteLine("\n" + new string('=', 60));
         Console.WriteLine("✓ ALL META-AI TESTS PASSED!");
         Console.WriteLine(new string('=', 60) + "\n");

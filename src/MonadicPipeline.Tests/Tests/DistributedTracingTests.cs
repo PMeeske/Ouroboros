@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using Xunit;
 using LangChainPipeline.Diagnostics;
+using Xunit;
 
 namespace LangChainPipeline.Tests;
 
@@ -17,10 +17,10 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var activity = DistributedTracing.StartActivity("test_operation");
-        
+
         // Assert
         Assert.NotNull(activity);
         Assert.Equal("test_operation", activity.OperationName);
@@ -36,10 +36,10 @@ public class DistributedTracingTests
             ["key1"] = "value1",
             ["key2"] = 42
         };
-        
+
         // Act
         using var activity = DistributedTracing.StartActivity("test_operation", tags: tags);
-        
+
         // Assert
         Assert.NotNull(activity);
         // At least one tag should be present
@@ -51,11 +51,11 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var activity = DistributedTracing.StartActivity("test_operation");
         DistributedTracing.RecordEvent("test_event", new Dictionary<string, object?> { ["detail"] = "info" });
-        
+
         // Assert
         Assert.NotNull(activity);
         Assert.Single(activity.Events);
@@ -68,11 +68,11 @@ public class DistributedTracingTests
         // Arrange
         TracingConfiguration.EnableTracing();
         var exception = new InvalidOperationException("Test error");
-        
+
         // Act
         using var activity = DistributedTracing.StartActivity("test_operation");
         DistributedTracing.RecordException(exception);
-        
+
         // Assert
         Assert.NotNull(activity);
         Assert.Equal(ActivityStatusCode.Error, activity.Status);
@@ -85,11 +85,11 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var activity = DistributedTracing.StartActivity("test_operation");
         DistributedTracing.SetStatus(ActivityStatusCode.Ok, "Success");
-        
+
         // Assert
         Assert.NotNull(activity);
         Assert.Equal(ActivityStatusCode.Ok, activity.Status);
@@ -101,11 +101,11 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var activity = DistributedTracing.StartActivity("test_operation");
         DistributedTracing.AddTag("custom_key", "custom_value");
-        
+
         // Assert
         Assert.NotNull(activity);
         Assert.Contains(activity.Tags, t => t.Key == "custom_key" && t.Value as string == "custom_value");
@@ -116,11 +116,11 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var activity = DistributedTracing.StartActivity("test_operation");
         var traceId = DistributedTracing.GetTraceId();
-        
+
         // Assert
         Assert.NotNull(traceId);
         Assert.NotEmpty(traceId);
@@ -131,11 +131,11 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var activity = DistributedTracing.StartActivity("test_operation");
         var spanId = DistributedTracing.GetSpanId();
-        
+
         // Assert
         Assert.NotNull(spanId);
         Assert.NotEmpty(spanId);
@@ -146,10 +146,10 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var activity = TracingExtensions.TraceToolExecution("test_tool", "input data");
-        
+
         // Assert
         Assert.NotNull(activity);
         Assert.Contains("test_tool", activity.OperationName);
@@ -161,10 +161,10 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var activity = TracingExtensions.TracePipelineExecution("test_pipeline");
-        
+
         // Assert
         Assert.NotNull(activity);
         Assert.Contains("test_pipeline", activity.OperationName);
@@ -176,10 +176,10 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var activity = TracingExtensions.TraceLlmRequest("gpt-4", 500);
-        
+
         // Assert
         Assert.NotNull(activity);
         Assert.Equal("llm.request", activity.OperationName);
@@ -191,10 +191,10 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var activity = TracingExtensions.TraceVectorOperation("search", 10);
-        
+
         // Assert
         Assert.NotNull(activity);
         Assert.Contains("search", activity.OperationName);
@@ -206,11 +206,11 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var activity = TracingExtensions.TraceLlmRequest("gpt-4", 500);
         activity.CompleteLlmRequest(responseLength: 1000, tokenCount: 150);
-        
+
         // Assert
         Assert.NotNull(activity);
         // Tags set via SetTag show up after activity completion
@@ -222,11 +222,11 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var activity = TracingExtensions.TraceToolExecution("test_tool", "input");
         activity.CompleteToolExecution(success: true, outputLength: 200);
-        
+
         // Assert
         Assert.NotNull(activity);
         // Tags set via SetTag show up after activity completion
@@ -238,11 +238,11 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var activity = TracingExtensions.TraceToolExecution("test_tool", "input");
         activity.CompleteToolExecution(success: false, outputLength: 0);
-        
+
         // Assert
         Assert.NotNull(activity);
         // Tags set via SetTag show up after activity completion
@@ -254,14 +254,14 @@ public class DistributedTracingTests
     {
         // Arrange
         TracingConfiguration.EnableTracing();
-        
+
         // Act
         using var parentActivity = DistributedTracing.StartActivity("parent");
         var parentId = parentActivity?.Id;
-        
+
         using var childActivity = DistributedTracing.StartActivity("child");
         var childParentId = childActivity?.ParentId;
-        
+
         // Assert
         Assert.NotNull(parentActivity);
         Assert.NotNull(childActivity);
@@ -274,17 +274,17 @@ public class DistributedTracingTests
         // Arrange
         int startedCount = 0;
         int stoppedCount = 0;
-        
+
         TracingConfiguration.EnableTracing(
             onActivityStarted: _ => startedCount++,
             onActivityStopped: _ => stoppedCount++);
-        
+
         // Act
         using (var activity = DistributedTracing.StartActivity("test"))
         {
             // Activity is active
         }
-        
+
         // Assert
         Assert.Equal(1, startedCount);
         Assert.Equal(1, stoppedCount);
@@ -297,11 +297,11 @@ public class DistributedTracingTests
         TracingConfiguration.EnableTracing();
         using var activity1 = DistributedTracing.StartActivity("test1");
         Assert.NotNull(activity1);
-        
+
         // Act
         TracingConfiguration.DisableTracing();
         using var activity2 = DistributedTracing.StartActivity("test2");
-        
+
         // Assert
         Assert.Null(activity2);
     }

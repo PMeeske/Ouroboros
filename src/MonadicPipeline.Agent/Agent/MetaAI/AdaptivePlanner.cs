@@ -120,7 +120,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                     break;
 
                 var step = currentPlan.Steps[i];
-                
+
                 // Create execution context
                 var context = new ExecutionContext(
                     plan,
@@ -134,7 +134,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
 
                 // Check if adaptation is needed before execution
                 var adaptationAction = await EvaluateAdaptationAsync(context, ct);
-                
+
                 if (adaptationAction != null)
                 {
                     adaptationHistory.Add($"Step {i}: {adaptationAction.Strategy} - {adaptationAction.Reason}");
@@ -265,17 +265,17 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
         while (attempts < maxRetries)
         {
             attempts++;
-            
+
             // Execute step (simplified - in real implementation would use orchestrator)
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            
+
             try
             {
                 // Simulate execution
                 await Task.Delay(50, ct);
-                
+
                 sw.Stop();
-                
+
                 lastResult = new StepResult(
                     step,
                     true,
@@ -345,7 +345,7 @@ Expected: {context.CurrentStep.ExpectedOutcome}
 Suggest an alternative approach to achieve the same outcome.";
 
                 var suggestion = await _llm.GenerateTextAsync(prompt, ct);
-                
+
                 // Parse suggestion into a new step (simplified)
                 var replacementStep = new PlanStep(
                     "alternative_approach",

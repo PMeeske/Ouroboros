@@ -70,7 +70,7 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
     /// <summary>
     /// Generates text with tools using orchestrator recommendations.
     /// </summary>
-    public async Task<(string Text, List<ToolExecution> Tools, OrchestratorDecision? Decision)> 
+    public async Task<(string Text, List<ToolExecution> Tools, OrchestratorDecision? Decision)>
         GenerateWithOrchestratedToolsAsync(string prompt, CancellationToken ct = default)
     {
         var sw = Stopwatch.StartNew();

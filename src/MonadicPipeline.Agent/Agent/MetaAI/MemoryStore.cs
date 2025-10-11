@@ -106,12 +106,12 @@ public sealed class MemoryStore : IMemoryStore
     public async Task<MemoryStatistics> GetStatisticsAsync()
     {
         var experiences = _experiences.Values.ToList();
-        
+
         var totalCount = experiences.Count;
         var successCount = experiences.Count(e => e.Execution.Success);
         var failCount = totalCount - successCount;
-        var avgQuality = experiences.Any() 
-            ? experiences.Average(e => e.Verification.QualityScore) 
+        var avgQuality = experiences.Any()
+            ? experiences.Average(e => e.Verification.QualityScore)
             : 0.0;
 
         var goalCounts = experiences
@@ -134,7 +134,7 @@ public sealed class MemoryStore : IMemoryStore
     public async Task ClearAsync(CancellationToken ct = default)
     {
         _experiences.Clear();
-        
+
         if (_vectorStore != null)
         {
             await _vectorStore.ClearAsync(ct);

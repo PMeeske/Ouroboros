@@ -2,15 +2,15 @@
 // Minimal CLI entry (top-level)
 // ==============================
 
-using LangChain.Providers.Ollama;
-using LangChain.DocumentLoaders;
-using LangChain.Databases;
-using CommandLine;
-using LangChainPipeline.Options;
 using System.Diagnostics;
-using LangChainPipeline.Diagnostics; // added
-using Microsoft.Extensions.Hosting;
+using CommandLine;
+using LangChain.Databases;
+using LangChain.DocumentLoaders;
+using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
+using LangChainPipeline.Diagnostics; // added
+using LangChainPipeline.Options;
+using Microsoft.Extensions.Hosting;
 
 try
 {

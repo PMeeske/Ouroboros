@@ -49,7 +49,7 @@ public class VectorStoreFactory
             throw new InvalidOperationException("Connection string is required for Qdrant vector store");
         }
 
-        _logger?.LogInformation("Creating Qdrant vector store with connection: {Connection}", 
+        _logger?.LogInformation("Creating Qdrant vector store with connection: {Connection}",
             MaskConnectionString(_config.ConnectionString));
 
         // FUTURE: Implement QdrantVectorStore when Qdrant package is added

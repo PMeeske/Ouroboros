@@ -22,27 +22,27 @@ public enum PermissionLevel
     /// Read-only operations, no side effects.
     /// </summary>
     ReadOnly,
-    
+
     /// <summary>
     /// Can write to temporary/isolated storage.
     /// </summary>
     Isolated,
-    
+
     /// <summary>
     /// Can modify user data with confirmation.
     /// </summary>
     UserDataWithConfirmation,
-    
+
     /// <summary>
     /// Can modify user data without confirmation.
     /// </summary>
     UserData,
-    
+
     /// <summary>
     /// Can modify system state.
     /// </summary>
     System,
-    
+
     /// <summary>
     /// Unrestricted access (use with extreme caution).
     /// </summary>
@@ -72,7 +72,7 @@ public interface ISafetyGuard
     /// <param name="currentLevel">Current permission level</param>
     /// <returns>Safety check result</returns>
     SafetyCheckResult CheckSafety(
-        string operation, 
+        string operation,
         Dictionary<string, object> parameters,
         PermissionLevel currentLevel);
 
@@ -84,7 +84,7 @@ public interface ISafetyGuard
     /// <param name="currentLevel">Current permission level</param>
     /// <returns>True if permitted, false otherwise</returns>
     bool IsToolExecutionPermitted(
-        string toolName, 
+        string toolName,
         string arguments,
         PermissionLevel currentLevel);
 

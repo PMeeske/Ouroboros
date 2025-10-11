@@ -13,9 +13,9 @@ public static class EnvironmentDetector
     public static bool IsLocalDevelopment()
     {
         // Check ASPNETCORE_ENVIRONMENT or DOTNET_ENVIRONMENT first
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
                          ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
-        
+
         if (!string.IsNullOrWhiteSpace(environment))
         {
             // Development or Local environment names indicate local development
@@ -24,7 +24,7 @@ public static class EnvironmentDetector
             {
                 return true;
             }
-            
+
             // Production or Staging explicitly indicate non-local
             if (environment.Equals("Production", StringComparison.OrdinalIgnoreCase) ||
                 environment.Equals("Staging", StringComparison.OrdinalIgnoreCase))
@@ -32,26 +32,26 @@ public static class EnvironmentDetector
                 return false;
             }
         }
-        
+
         // Check for Kubernetes environment (indicates non-local deployment)
         if (IsRunningInKubernetes())
         {
             return false;
         }
-        
+
         // Check for localhost Ollama endpoint as indicator of local development
         var ollamaEndpoint = Environment.GetEnvironmentVariable("PIPELINE__LlmProvider__OllamaEndpoint");
-        if (!string.IsNullOrWhiteSpace(ollamaEndpoint) && 
+        if (!string.IsNullOrWhiteSpace(ollamaEndpoint) &&
             (ollamaEndpoint.Contains("localhost", StringComparison.OrdinalIgnoreCase) ||
              ollamaEndpoint.Contains("127.0.0.1")))
         {
             return true;
         }
-        
+
         // Default to production (safe default - assume non-local unless proven otherwise)
         return false;
     }
-    
+
     /// <summary>
     /// Determines if the application is running inside a Kubernetes cluster.
     /// </summary>
@@ -63,27 +63,27 @@ public static class EnvironmentDetector
         {
             return true;
         }
-        
+
         // Check for KUBERNETES_SERVICE_HOST environment variable
         var k8sHost = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST");
         if (!string.IsNullOrWhiteSpace(k8sHost))
         {
             return true;
         }
-        
+
         return false;
     }
-    
+
     /// <summary>
     /// Gets the current environment name from environment variables.
     /// </summary>
     /// <returns>Environment name (Development, Staging, Production) or null if not set.</returns>
     public static string? GetEnvironmentName()
     {
-        return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
+        return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
                ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
     }
-    
+
     /// <summary>
     /// Determines if the application is running in production mode.
     /// </summary>
@@ -91,22 +91,22 @@ public static class EnvironmentDetector
     public static bool IsProduction()
     {
         var environment = GetEnvironmentName();
-        
+
         if (!string.IsNullOrWhiteSpace(environment))
         {
             return environment.Equals("Production", StringComparison.OrdinalIgnoreCase);
         }
-        
+
         // If in Kubernetes and no environment set, assume production
         if (IsRunningInKubernetes())
         {
             return true;
         }
-        
+
         // Default to production (safe default)
         return true;
     }
-    
+
     /// <summary>
     /// Determines if the application is running in staging mode.
     /// </summary>
@@ -114,7 +114,7 @@ public static class EnvironmentDetector
     public static bool IsStaging()
     {
         var environment = GetEnvironmentName();
-        return !string.IsNullOrWhiteSpace(environment) && 
+        return !string.IsNullOrWhiteSpace(environment) &&
                environment.Equals("Staging", StringComparison.OrdinalIgnoreCase);
     }
 }
