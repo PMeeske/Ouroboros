@@ -155,6 +155,67 @@ var result = await epicOrchestrator.ExecuteSubIssueAsync(
 );
 ```
 
+#### Example: Issue #138 - Lock & Tag Scope
+
+```csharp
+// Requires GitHub token with repo permissions
+string githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? "your-token-here";
+var scopeLockTool = new GitHubScopeLockTool(githubToken, "PMeeske", "MonadicPipeline");
+
+var result = await epicOrchestrator.ExecuteSubIssueAsync(
+    120,
+    138,
+    async assignment =>
+    {
+        // Verify prerequisites are completed
+        Console.WriteLine("Verifying prerequisites...");
+        // - Issue #134: Must-Have Feature List
+        // - Issue #135: Non-Functional Requirements
+        // - Issue #136: KPIs & Acceptance Criteria
+        // - Issue #137: Stakeholder Review Loop
+        
+        if (assignment.Branch != null)
+        {
+            // Apply scope lock to issue #2
+            var lockArgs = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                IssueNumber = 2,
+                Milestone = "v1.0"
+            });
+            
+            var lockResult = await scopeLockTool.InvokeAsync(lockArgs);
+            
+            if (!lockResult.IsSuccess)
+            {
+                return Result<SubIssueAssignment, string>.Failure(
+                    $"Scope lock failed: {lockResult.Error}");
+            }
+            
+            // Record the scope lock in the branch
+            var updatedBranch = assignment.Branch.WithIngestEvent(
+                "scope-lock-applied",
+                new[] { "issue-2-locked", "milestone-v1.0", "label-scope-locked" }
+            );
+            
+            updatedBranch = updatedBranch.WithReasoning(
+                new FinalSpec(
+                    "Scope formally locked for v1.0 release. " +
+                    "Issue #2 tagged with 'scope-locked' label. " +
+                    "Confirmation comment posted. " +
+                    "No further scope changes allowed without explicit approval."),
+                "Apply scope lock to prevent scope creep",
+                null
+            );
+            
+            var updatedAssignment = assignment with { Branch = updatedBranch };
+            return Result<SubIssueAssignment, string>.Success(updatedAssignment);
+        }
+        
+        return Result<SubIssueAssignment, string>.Success(assignment);
+    }
+);
+```
+
 ### Step 5: Parallel Execution
 
 Work on multiple sub-issues simultaneously:
