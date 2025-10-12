@@ -35,9 +35,13 @@ This directory contains comprehensive technical documentation for MonadicPipelin
 ### 🧠 Architecture & Features
 
 #### Core Architecture
+- [**Architecture Documentation**](ARCHITECTURE.md) - Detailed system architecture
 - [**Self-Improving Agent**](SELF_IMPROVING_AGENT.md) - Self-improving agent architecture and capabilities
 - [**Iterative Refinement Architecture**](ITERATIVE_REFINEMENT_ARCHITECTURE.md) - Refinement loop architecture
 - [**Recursive Chunking**](RECURSIVE_CHUNKING.md) - Large context processing with adaptive chunking
+
+#### Specifications & Requirements
+- [**Non-Functional Requirements (NFRs)**](specs/v1.0-nfr.md) - v1.0 NFRs with 9 categories (Performance, Security, Reliability, Scalability, Compatibility, Maintainability, Observability, Resource Efficiency, Compliance)
 
 #### Phase Implementation
 - [**Phase 2 Implementation Summary**](PHASE2_IMPLEMENTATION_SUMMARY.md) - Metacognition features
@@ -56,6 +60,8 @@ This directory contains comprehensive technical documentation for MonadicPipelin
 
 - [**Contributing Guide**](CONTRIBUTING.md) - Guidelines for contributing to the project
 - [**Architecture Documentation**](ARCHITECTURE.md) - Detailed system architecture
+- [**Epic #120 Integration Guide**](Epic120Integration.md) - Epic branch orchestration and v1.0 release coordination
+- [**Feature Engineering**](FEATURE_ENGINEERING.md) - Feature extraction and engineering approaches
 
 ### 📚 Historical Documentation
 

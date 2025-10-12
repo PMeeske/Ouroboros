@@ -1317,12 +1317,16 @@
 
 ### 68. Non-Functional Requirements [MUST]
 **Priority:** Must-Have  
-**Status:** Planned (Epic #120)  
-**Description:** Defined NFRs for performance, security, scalability.
+**Status:** ✅ Completed (Epic #120)  
+**Description:** Defined NFRs for performance, security, scalability, reliability, compatibility, maintainability, observability, resource efficiency, and compliance.
 
 **Evidence:**
+- specs/v1.0-nfr.md: Comprehensive NFR document with 9 categories
 - Epic120Integration.md: Issue #135, #147
 - Part of Requirements & Scope category
+- 90+ prioritized requirements with quantifiable metrics
+- 37 evidence citations to existing code/config
+- 65 tables with specific targets and constraints
 
 ---
 
@@ -1627,7 +1631,7 @@ This document captures ≥90% of all referenced features from the codebase docum
 Per Epic #120 workflow:
 1. ✅ **Issue #133 - Aggregate Existing Discussions** (This document)
 2. 📋 **Issue #134 - Define Must-Have Feature List** - Prioritize features for v1.0
-3. 📋 **Issue #135 - Non-Functional Requirements** - Define NFRs
+3. ✅ **Issue #135 - Non-Functional Requirements** - NFRs defined (specs/v1.0-nfr.md)
 4. 📋 **Issue #136 - KPIs & Acceptance Criteria** - Define success metrics
 5. 📋 **Issue #137 - Stakeholder Review Loop** - Validate with stakeholders
 6. 📋 **Issue #138 - Lock & Tag Scope** - Finalize v1.0 scope
