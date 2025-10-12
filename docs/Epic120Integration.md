@@ -375,7 +375,7 @@ async Task<Result<SubIssueAssignment, string>> AutomatedTaskWorkflow(SubIssueAss
 ### Requirements & Scope (133-138, 145-150)
 - **#133, #145**: Aggregate Existing Discussions
 - **#134, #146**: Define Must-Have Feature List
-- **#135, #147**: Non-Functional Requirements (NFRs)
+- **#135, #147**: Non-Functional Requirements (NFRs) → [v1.0-nfr.md](specs/v1.0-nfr.md)
 - **#136, #148**: KPIs & Acceptance Criteria
 - **#137, #149**: Stakeholder Review Loop
 - **#138, #150**: Lock & Tag Scope
