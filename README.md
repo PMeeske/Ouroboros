@@ -4,7 +4,7 @@
 [![.NET Version](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![LangChain](https://img.shields.io/badge/LangChain-0.17.0-purple)](https://www.nuget.org/packages/LangChain/)
 [![Coverage](https://img.shields.io/badge/coverage-8.4%25-yellow)](TEST_COVERAGE_REPORT.md)
-[![Tests](https://img.shields.io/badge/tests-224%20passing-brightgreen)](src/MonadicPipeline.Tests)
+[![Tests](https://img.shields.io/badge/tests-304%20passing-brightgreen)](src/MonadicPipeline.Tests)
 
 A **sophisticated functional programming-based AI pipeline system** built on LangChain, implementing category theory principles, monadic composition, and functional programming patterns to create type-safe, composable AI workflows.
 
@@ -610,6 +610,20 @@ public class CustomTool : ITool
     }
 }
 ```
+
+#### Built-in Tools
+
+MonadicPipeline includes several built-in tools:
+
+- **MathTool**: Arithmetic expression evaluation
+- **RetrievalTool**: Semantic search over ingested documents
+- **GitHubScopeLockTool**: Formal scope locking mechanism to prevent scope creep
+  - Adds `scope-locked` label to GitHub issues
+  - Posts confirmation comments
+  - Updates milestones
+  - Integrates with Epic Branch Orchestrator for release planning
+
+See [SCOPE_LOCK_GUIDE.md](docs/SCOPE_LOCK_GUIDE.md) for detailed documentation on scope locking.
 
 ### Testing
 

@@ -423,6 +423,94 @@ async Task<Result<SubIssueAssignment, string>> AutomatedTaskWorkflow(SubIssueAss
 }
 ```
 
+### Pattern 4: Scope Locking Workflow (Issue #138)
+
+The scope locking pattern is used to formally lock the scope of a release to prevent uncontrolled scope creep. This pattern uses the `GitHubScopeLockTool` to:
+
+1. Add a "scope-locked" label to the issue
+2. Post a confirmation comment explaining the scope lock
+3. Update the milestone to track the locked scope
+4. Record the scope lock event in the pipeline branch
+
+```csharp
+async Task<Result<SubIssueAssignment, string>> ScopeLockingWorkflow(
+    SubIssueAssignment assignment,
+    GitHubScopeLockTool scopeLockTool,
+    int issueNumber,
+    string milestone)
+{
+    if (assignment.Branch == null)
+        return Result<SubIssueAssignment, string>.Failure("No branch available");
+    
+    var branch = assignment.Branch;
+    
+    // Step 1: Validate prerequisites (all specs merged and reviewed)
+    var validationResult = ValidatePrerequisites();
+    if (!validationResult.IsSuccess)
+    {
+        return Result<SubIssueAssignment, string>.Failure(
+            $"Prerequisites not met: {validationResult.Error}");
+    }
+    
+    // Step 2: Apply scope lock to the GitHub issue
+    var lockArgs = System.Text.Json.JsonSerializer.Serialize(new
+    {
+        IssueNumber = issueNumber,
+        Milestone = milestone
+    });
+    
+    var lockResult = await scopeLockTool.InvokeAsync(lockArgs);
+    if (!lockResult.IsSuccess)
+    {
+        return Result<SubIssueAssignment, string>.Failure(
+            $"Scope lock failed: {lockResult.Error}");
+    }
+    
+    // Step 3: Record the scope lock in the branch
+    branch = branch.WithIngestEvent(
+        "scope-lock-applied",
+        new[] { $"issue-{issueNumber}-locked", $"milestone-{milestone}", "label-scope-locked" }
+    );
+    
+    // Step 4: Generate final specification documenting the lock
+    var scopeSpec = $"Scope formally locked for {milestone} release. " +
+                   $"Issue #{issueNumber} tagged with 'scope-locked' label. " +
+                   $"No further scope changes allowed without explicit approval. " +
+                   $"Change control process must be followed for any modifications.";
+    
+    branch = branch.WithReasoning(
+        new FinalSpec(scopeSpec),
+        "Apply scope lock to prevent scope creep",
+        null
+    );
+    
+    return Result<SubIssueAssignment, string>.Success(
+        assignment with { Branch = branch }
+    );
+}
+
+// Usage example for Issue #138
+var githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+var scopeLockTool = new GitHubScopeLockTool(githubToken, "PMeeske", "MonadicPipeline");
+
+var result = await epicOrchestrator.ExecuteSubIssueAsync(
+    120,
+    138,
+    async assignment => await ScopeLockingWorkflow(
+        assignment,
+        scopeLockTool,
+        issueNumber: 2,
+        milestone: "v1.0"
+    )
+);
+```
+
+**Key Benefits:**
+- **Prevents Scope Creep**: Formal mechanism to lock requirements
+- **Transparency**: GitHub label and comment visible to all stakeholders
+- **Traceability**: Scope lock event recorded in pipeline branch
+- **Change Control**: Establishes process for handling scope change requests
+
 ## Epic #120 Sub-Issue Categories
 
 ### Project Management (121-126, 139-144)
