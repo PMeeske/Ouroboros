@@ -25,8 +25,8 @@ public class StakeholderReviewLoopTests
         var requiredReviewers = new List<string> { "reviewer1", "reviewer2", "reviewer3" };
         var draftSpec = "# Draft Specification\n\nThis is a test draft spec for review.";
 
-        // Start review loop
-        var reviewTask = reviewLoop.ExecuteReviewLoopAsync(
+        // Start review loop in background
+        var reviewTask = Task.Run(async () => await reviewLoop.ExecuteReviewLoopAsync(
             "Test Feature Spec",
             "Testing stakeholder review workflow",
             draftSpec,
@@ -35,25 +35,25 @@ public class StakeholderReviewLoopTests
                 MinimumRequiredApprovals: 2,
                 RequireAllReviewersApprove: true,
                 ReviewTimeout: TimeSpan.FromSeconds(30),
-                PollingInterval: TimeSpan.FromMilliseconds(500)),
-            CancellationToken.None);
+                PollingInterval: TimeSpan.FromMilliseconds(100)),
+            CancellationToken.None));
 
-        // Simulate reviews coming in
-        await Task.Delay(100);
+        // Wait for PR to be created
+        await Task.Delay(200);
 
-        // Get the PR ID (we need to access the mock provider's internal state)
-        // For testing, we'll simulate the reviews directly
-        var prId = "test-pr-1";
+        // Get the created PR ID
+        var prId = mockProvider.LastCreatedPrId;
+        Assert.NotNull(prId);
 
         // Simulate all required reviewers approving
-        mockProvider.SimulateReview(prId, "reviewer1", true, "Looks good!");
-        mockProvider.SimulateReview(prId, "reviewer2", true, "LGTM");
-        mockProvider.SimulateReview(prId, "reviewer3", true, "Approved");
+        mockProvider.SimulateReview(prId!, "reviewer1", true, "Looks good!");
+        mockProvider.SimulateReview(prId!, "reviewer2", true, "LGTM");
+        mockProvider.SimulateReview(prId!, "reviewer3", true, "Approved");
 
         // Wait for review loop to complete
         var result = await reviewTask;
 
-        Assert.True(result.IsSuccess, $"Review loop should succeed, but got: {result.Error}");
+        Assert.True(result.IsSuccess, $"Review loop should succeed, but got: {(result.IsSuccess ? "success" : result.Error)}");
 
         var reviewResult = result.Value;
 
@@ -100,7 +100,7 @@ public class StakeholderReviewLoopTests
         // Resolve comments
         var resolveResult = await reviewLoop.ResolveCommentsAsync(pr.Id, comments);
 
-        Assert.True(resolveResult.IsSuccess, $"Comment resolution should succeed");
+        Assert.True(resolveResult.IsSuccess, $"Comment resolution should succeed, but got: {(resolveResult.IsSuccess ? "success" : resolveResult.Error)}");
 
         var resolvedCount = resolveResult.Value;
 
@@ -131,24 +131,24 @@ public class StakeholderReviewLoopTests
         var pr = prResult.Value;
 
         // Start monitoring in background
-        var monitorTask = reviewLoop.MonitorReviewProgressAsync(
+        var monitorTask = Task.Run(async () => await reviewLoop.MonitorReviewProgressAsync(
             pr.Id,
             new StakeholderReviewConfig(
                 RequireAllReviewersApprove: true,
                 ReviewTimeout: TimeSpan.FromSeconds(10),
-                PollingInterval: TimeSpan.FromMilliseconds(200)));
+                PollingInterval: TimeSpan.FromMilliseconds(100))));
 
         // Simulate reviews coming in over time
         await Task.Delay(100);
         mockProvider.SimulateReview(pr.Id, "reviewer1", true, "Approved");
 
-        await Task.Delay(200);
+        await Task.Delay(100);
         mockProvider.SimulateReview(pr.Id, "reviewer2", true, "LGTM");
 
         // Wait for monitoring to complete
         var result = await monitorTask;
 
-        Assert.True(result.IsSuccess, $"Monitoring should succeed, but got: {result.Error}");
+        Assert.True(result.IsSuccess, $"Monitoring should succeed");
 
         var state = result.Value;
 

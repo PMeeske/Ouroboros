@@ -188,6 +188,7 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
     private readonly Dictionary<string, PullRequest> _prs = new();
     private readonly Dictionary<string, List<ReviewDecision>> _reviews = new();
     private readonly Dictionary<string, List<ReviewComment>> _comments = new();
+    public string? LastCreatedPrId { get; private set; }
 
     public Task<Result<PullRequest, string>> OpenPullRequestAsync(
         string title,
@@ -207,6 +208,7 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
         _prs[pr.Id] = pr;
         _reviews[pr.Id] = new List<ReviewDecision>();
         _comments[pr.Id] = new List<ReviewComment>();
+        LastCreatedPrId = pr.Id;
 
         return Task.FromResult(Result<PullRequest, string>.Success(pr));
     }
@@ -256,14 +258,19 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
         if (comment == null)
             return Task.FromResult(Result<bool, string>.Failure("Comment not found"));
 
+        // Remove old comment and add resolved version
         var updatedComment = comment with
         {
             Status = ReviewCommentStatus.Resolved,
             ResolvedAt = DateTime.UtcNow
         };
 
-        _comments[prId].Remove(comment);
-        _comments[prId].Add(updatedComment);
+        var comments = _comments[prId];
+        var index = comments.IndexOf(comment);
+        if (index >= 0)
+        {
+            comments[index] = updatedComment;
+        }
 
         return Task.FromResult(Result<bool, string>.Success(true));
     }
@@ -284,6 +291,13 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
     public void SimulateReview(string prId, string reviewerId, bool approved, string? feedback = null)
     {
         if (!_reviews.ContainsKey(prId)) return;
+
+        // Remove any existing review from this reviewer (they can update their review)
+        var existingReview = _reviews[prId].FirstOrDefault(r => r.ReviewerId == reviewerId);
+        if (existingReview != null)
+        {
+            _reviews[prId].Remove(existingReview);
+        }
 
         var review = new ReviewDecision(
             reviewerId,
@@ -501,7 +515,10 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
         {
             int resolvedCount = 0;
 
-            foreach (var comment in comments.Where(c => c.Status == ReviewCommentStatus.Open))
+            // Create a copy to avoid modification during enumeration
+            var openComments = comments.Where(c => c.Status == ReviewCommentStatus.Open).ToList();
+
+            foreach (var comment in openComments)
             {
                 // Generate resolution based on comment content
                 var resolution = GenerateResolution(comment.Content);
