@@ -58,59 +58,86 @@ jobs:
     
     - name: Analyze issue type
       id: analyze
-      run: |
-        ISSUE_TITLE="${{ steps.issue.outputs.title }}"
-        ISSUE_BODY="${{ steps.issue.outputs.body }}"
-        
-        # Determine issue type based on keywords
-        ISSUE_TYPE="general"
-        
-        if echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "bug\|error\|fix\|crash\|fail"; then
-          ISSUE_TYPE="bug"
-        elif echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "feature\|enhance\|add\|implement\|new"; then
-          ISSUE_TYPE="feature"
-        elif echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "test\|coverage\|spec"; then
-          ISSUE_TYPE="test"
-        elif echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "doc\|documentation\|readme"; then
-          ISSUE_TYPE="documentation"
-        elif echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "refactor\|improve\|optimize"; then
-          ISSUE_TYPE="refactor"
-        fi
-        
-        echo "type=$ISSUE_TYPE" >> $GITHUB_OUTPUT
-        echo "Detected issue type: $ISSUE_TYPE"
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const issueTitle = '${{ steps.issue.outputs.title }}'.toLowerCase();
+          const issueBody = '${{ steps.issue.outputs.body }}'.toLowerCase();
+          const combined = issueTitle + ' ' + issueBody;
+          
+          let issueType = 'general';
+          
+          if (/bug|error|fix|crash|fail/.test(combined)) {
+            issueType = 'bug';
+          } else if (/feature|enhance|add|implement|new/.test(combined)) {
+            issueType = 'feature';
+          } else if (/test|coverage|spec/.test(combined)) {
+            issueType = 'test';
+          } else if (/doc|documentation|readme/.test(combined)) {
+            issueType = 'documentation';
+          } else if (/refactor|improve|optimize/.test(combined)) {
+            issueType = 'refactor';
+          }
+          
+          core.setOutput('type', issueType);
+          console.log(`Detected issue type: ${issueType}`);
+          return issueType;
     
     - name: Search codebase for context
       id: context
-      run: |
-        ISSUE_TITLE="${{ steps.issue.outputs.title }}"
-        
-        # Extract key terms from issue title
-        KEYWORDS=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | grep -oE '\w{4,}' | head -5)
-        
-        echo "## 🔍 Codebase Context Analysis" > context-analysis.md
-        echo "" >> context-analysis.md
-        echo "Searching for relevant files related to: **$ISSUE_TITLE**" >> context-analysis.md
-        echo "" >> context-analysis.md
-        
-        # Search for related files
-        echo "### Related Files" >> context-analysis.md
-        echo "" >> context-analysis.md
-        
-        for keyword in $KEYWORDS; do
-          echo "#### Files mentioning '$keyword':" >> context-analysis.md
-          find src -name "*.cs" -type f -exec grep -l "$keyword" {} \; 2>/dev/null | head -5 | while read file; do
-            echo "- \`$file\`" >> context-analysis.md
-          done
-          echo "" >> context-analysis.md
-        done
-        
-        # Find related test files
-        echo "### Related Test Files" >> context-analysis.md
-        echo "" >> context-analysis.md
-        find src/MonadicPipeline.Tests -name "*.cs" -type f | head -10 | while read file; do
-          echo "- \`$file\`" >> context-analysis.md
-        done
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+          
+          const issueTitle = '${{ steps.issue.outputs.title }}';
+          
+          // Extract keywords (4+ letter words)
+          const keywords = issueTitle
+            .toLowerCase()
+            .match(/\w{4,}/g)
+            ?.slice(0, 5) || [];
+          
+          let output = '## 🔍 Codebase Context Analysis\n\n';
+          output += `Searching for relevant files related to: **${issueTitle}**\n\n`;
+          output += '### Related Files\n\n';
+          
+          for (const keyword of keywords) {
+            output += `#### Files mentioning '${keyword}':\n`;
+            try {
+              // Safely search for files containing the keyword
+              const files = execSync(
+                `find src -name "*.cs" -type f -exec grep -l "${keyword.replace(/[^a-zA-Z0-9]/g, '')}" {} \\; 2>/dev/null | head -5`,
+                { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }
+              ).trim().split('\n').filter(f => f);
+              
+              files.forEach(file => {
+                output += `- \`${file}\`\n`;
+              });
+            } catch (e) {
+              // No files found or error - continue
+            }
+            output += '\n';
+          }
+          
+          // Find related test files
+          output += '### Related Test Files\n\n';
+          try {
+            const testFiles = execSync(
+              'find src/MonadicPipeline.Tests -name "*.cs" -type f | head -10',
+              { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }
+            ).trim().split('\n').filter(f => f);
+            
+            testFiles.forEach(file => {
+              output += `- \`${file}\`\n`;
+            });
+          } catch (e) {
+            output += '- No test files found\n';
+          }
+          
+          // Write output to file
+          fs.writeFileSync('context-analysis.md', output);
     
     - name: Generate implementation suggestions
       id: suggestions
