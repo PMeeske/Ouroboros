@@ -1,0 +1,280 @@
+name: Copilot Continuous Improvement
+
+on:
+  schedule:
+    # Run weekly on Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: 'Analysis scope'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - core
+          - tests
+          - docs
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  code-quality-scan:
+    name: Weekly Code Quality Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restore and build
+      run: |
+        dotnet restore
+        dotnet build --configuration Release --no-restore
+    
+    - name: Analyze code metrics
+      id: metrics
+      run: |
+        echo "## 📊 Code Quality Metrics" > improvement-report.md
+        echo "" >> improvement-report.md
+        echo "Generated on: $(date)" >> improvement-report.md
+        echo "" >> improvement-report.md
+        
+        # Count lines of code
+        echo "### Codebase Statistics" >> improvement-report.md
+        echo "" >> improvement-report.md
+        echo "| Metric | Count |" >> improvement-report.md
+        echo "|--------|-------|" >> improvement-report.md
+        
+        CS_FILES=$(find src -name "*.cs" -not -path "*/obj/*" -not -path "*/bin/*" | wc -l)
+        TOTAL_LINES=$(find src -name "*.cs" -not -path "*/obj/*" -not -path "*/bin/*" -exec wc -l {} \; | awk '{sum+=$1} END {print sum}')
+        TEST_FILES=$(find src/MonadicPipeline.Tests -name "*.cs" | wc -l)
+        
+        echo "| C# Files | $CS_FILES |" >> improvement-report.md
+        echo "| Total Lines | $TOTAL_LINES |" >> improvement-report.md
+        echo "| Test Files | $TEST_FILES |" >> improvement-report.md
+        echo "" >> improvement-report.md
+    
+    - name: Scan for code smells
+      run: |
+        echo "### 🔍 Potential Improvements Detected" >> improvement-report.md
+        echo "" >> improvement-report.md
+        
+        # Check for large methods
+        echo "#### Large Methods" >> improvement-report.md
+        echo "" >> improvement-report.md
+        find src -name "*.cs" -not -path "*/obj/*" -not -path "*/bin/*" -type f | while read file; do
+          # Find methods with more than 50 lines
+          awk '/^\s*(public|private|protected|internal).*\(.*\)/ {method=$0; line=NR; next} /^\s*\}/ && NR-line>50 {print FILENAME ":" line ": " method}' "$file" 2>/dev/null
+        done | head -5 | while read line; do
+          echo "- $line" >> improvement-report.md
+        done || echo "- ✅ No large methods detected" >> improvement-report.md
+        echo "" >> improvement-report.md
+        
+        # Check for TODO comments
+        echo "#### TODO Comments" >> improvement-report.md
+        echo "" >> improvement-report.md
+        grep -rn "TODO\|FIXME\|HACK" src --include="*.cs" | head -10 | while read line; do
+          echo "- $line" >> improvement-report.md
+        done || echo "- ✅ No TODO comments found" >> improvement-report.md
+        echo "" >> improvement-report.md
+        
+        # Check for missing XML documentation
+        echo "#### Missing Documentation" >> improvement-report.md
+        echo "" >> improvement-report.md
+        find src -name "*.cs" -not -path "*/obj/*" -not -path "*/bin/*" -not -path "*/Tests/*" -type f | while read file; do
+          # Check if file has public types without XML docs
+          if grep -q "public class\|public interface\|public enum" "$file" 2>/dev/null; then
+            if ! grep -q "/// <summary>" "$file" 2>/dev/null; then
+              echo "- \`$file\`: Missing XML documentation" >> improvement-report.md
+            fi
+          fi
+        done | head -10
+        echo "" >> improvement-report.md
+    
+    - name: Analyze test coverage gaps
+      continue-on-error: true
+      run: |
+        echo "### 🧪 Test Coverage Analysis" >> improvement-report.md
+        echo "" >> improvement-report.md
+        
+        # Run tests with coverage
+        dotnet test \
+          --configuration Release \
+          --no-build \
+          --collect:"XPlat Code Coverage" \
+          --results-directory ./TestResults \
+          > test-output.txt 2>&1 || true
+        
+        # Extract test summary
+        if grep -q "Passed!" test-output.txt; then
+          PASSED=$(grep "Passed!" test-output.txt | head -1)
+          echo "$PASSED" >> improvement-report.md
+        fi
+        
+        # Install ReportGenerator for coverage analysis
+        dotnet tool install -g dotnet-reportgenerator-globaltool 2>/dev/null || true
+        
+        # Generate coverage report
+        reportgenerator \
+          -reports:"TestResults/*/coverage.cobertura.xml" \
+          -targetdir:"CoverageReport" \
+          -reporttypes:"TextSummary" 2>/dev/null || true
+        
+        if [ -f "CoverageReport/Summary.txt" ]; then
+          echo "" >> improvement-report.md
+          echo '```' >> improvement-report.md
+          cat CoverageReport/Summary.txt >> improvement-report.md
+          echo '```' >> improvement-report.md
+        fi
+        
+        echo "" >> improvement-report.md
+        echo "💡 **Recommendation**: Aim for >80% line coverage on core modules" >> improvement-report.md
+        echo "" >> improvement-report.md
+    
+    - name: Check security patterns
+      run: |
+        echo "### 🔒 Security Review" >> improvement-report.md
+        echo "" >> improvement-report.md
+        
+        # Check for hardcoded secrets or sensitive data
+        echo "#### Potential Security Issues" >> improvement-report.md
+        echo "" >> improvement-report.md
+        
+        # Look for potential hardcoded credentials
+        grep -rn "password\s*=\|apikey\s*=\|secret\s*=" src --include="*.cs" --ignore-case | head -5 | while read line; do
+          echo "- ⚠️ $line" >> improvement-report.md
+        done || echo "- ✅ No hardcoded credentials detected" >> improvement-report.md
+        
+        echo "" >> improvement-report.md
+        
+        # Check for SQL injection risks
+        grep -rn "ExecuteSqlRaw\|FromSqlRaw" src --include="*.cs" | head -5 | while read line; do
+          echo "- ⚠️ Review for SQL injection: $line" >> improvement-report.md
+        done || echo "- ✅ No direct SQL execution detected" >> improvement-report.md
+        
+        echo "" >> improvement-report.md
+    
+    - name: Suggest architectural improvements
+      run: |
+        echo "### 🏗️ Architectural Recommendations" >> improvement-report.md
+        echo "" >> improvement-report.md
+        
+        # Check for proper error handling patterns
+        echo "#### Error Handling" >> improvement-report.md
+        echo "" >> improvement-report.md
+        
+        THROW_COUNT=$(grep -r "throw new" src --include="*.cs" | wc -l)
+        RESULT_COUNT=$(grep -r "Result<" src --include="*.cs" | wc -l)
+        
+        echo "- Exception throws: $THROW_COUNT" >> improvement-report.md
+        echo "- Result<T> usages: $RESULT_COUNT" >> improvement-report.md
+        echo "" >> improvement-report.md
+        
+        if [ $THROW_COUNT -gt $RESULT_COUNT ]; then
+          echo "💡 **Recommendation**: Consider replacing more exception throws with \`Result<T>\` monads for better functional error handling" >> improvement-report.md
+        else
+          echo "✅ Good functional error handling pattern with \`Result<T>\` monads" >> improvement-report.md
+        fi
+        echo "" >> improvement-report.md
+        
+        # Check for async patterns
+        echo "#### Async Patterns" >> improvement-report.md
+        echo "" >> improvement-report.md
+        
+        BLOCKING_COUNT=$(grep -r "\.Result\|\.Wait()" src --include="*.cs" -c | awk '{sum+=$1} END {print sum}')
+        ASYNC_COUNT=$(grep -r "async Task\|await " src --include="*.cs" -c | awk '{sum+=$1} END {print sum}')
+        
+        echo "- Async/await usages: $ASYNC_COUNT" >> improvement-report.md
+        echo "- Blocking calls: $BLOCKING_COUNT" >> improvement-report.md
+        echo "" >> improvement-report.md
+        
+        if [ $BLOCKING_COUNT -gt 10 ]; then
+          echo "⚠️ **Warning**: Found $BLOCKING_COUNT blocking async calls - consider using await instead" >> improvement-report.md
+        else
+          echo "✅ Good async/await patterns" >> improvement-report.md
+        fi
+        echo "" >> improvement-report.md
+    
+    - name: Generate improvement tasks
+      run: |
+        echo "### 📋 Suggested Improvement Tasks" >> improvement-report.md
+        echo "" >> improvement-report.md
+        echo "Based on the analysis, consider the following improvements:" >> improvement-report.md
+        echo "" >> improvement-report.md
+        echo "1. **Documentation**: Add XML documentation to public APIs missing it" >> improvement-report.md
+        echo "2. **Testing**: Increase test coverage for modules below 80%" >> improvement-report.md
+        echo "3. **Code Quality**: Refactor large methods (>50 lines) into smaller functions" >> improvement-report.md
+        echo "4. **Error Handling**: Replace exception throwing with Result<T> monads where appropriate" >> improvement-report.md
+        echo "5. **Async Patterns**: Eliminate blocking async calls" >> improvement-report.md
+        echo "" >> improvement-report.md
+        echo "---" >> improvement-report.md
+        echo "" >> improvement-report.md
+        echo "🤖 *This report was automatically generated by the Copilot Continuous Improvement workflow.*" >> improvement-report.md
+        echo "" >> improvement-report.md
+        echo "To disable these weekly reports, remove or modify `.github/workflows/copilot-continuous-improvement.yml`" >> improvement-report.md
+    
+    - name: Create improvement issue
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('improvement-report.md', 'utf8');
+          
+          // Check if there's already an open improvement issue this week
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: 'continuous-improvement',
+            per_page: 100
+          });
+          
+          const now = new Date();
+          const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+          
+          const recentIssue = issues.data.find(issue => 
+            new Date(issue.created_at) > weekAgo
+          );
+          
+          if (recentIssue) {
+            // Update existing issue with comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: recentIssue.number,
+              body: `## 🔄 Updated Analysis\n\n${report}`
+            });
+            console.log(`Updated existing issue #${recentIssue.number}`);
+          } else {
+            // Create new improvement issue
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Weekly Code Quality Report - ${now.toISOString().split('T')[0]}`,
+              body: report,
+              labels: ['continuous-improvement', 'quality']
+            });
+            console.log(`Created new improvement issue #${issue.data.number}`);
+          }
+    
+    - name: Upload report artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: improvement-report-${{ github.run_id }}
+        path: |
+          improvement-report.md
+          test-output.txt
+          CoverageReport/
+        retention-days: 90

@@ -2,6 +2,19 @@
 
 This directory contains GitHub Actions workflows for automated CI/CD of MonadicPipeline.
 
+## 🤖 Copilot Development Loop Workflows
+
+**NEW**: Automated development assistance powered by AI
+
+- [**Copilot Workflows Documentation**](README_COPILOT.md) - Complete guide to AI-assisted workflows
+- `copilot-code-review.yml` - Automated PR reviews with functional programming checks
+- `copilot-issue-assistant.yml` - Issue analysis and implementation guidance
+- `copilot-continuous-improvement.yml` - Weekly code quality reports
+
+See [Copilot Development Loop Guide](../../docs/COPILOT_DEVELOPMENT_LOOP.md) for full documentation.
+
+---
+
 ## Active Workflows
 
 ### Ollama Integration Tests (`ollama-integration-test.yml`)
