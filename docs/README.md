@@ -59,6 +59,7 @@ This directory contains comprehensive technical documentation for MonadicPipelin
 ### 👥 Contributing & Development
 
 - [**Contributing Guide**](CONTRIBUTING.md) - Guidelines for contributing to the project
+- [**GitHub Copilot Development Loop**](COPILOT_DEVELOPMENT_LOOP.md) - Automated development workflows with AI assistance
 - [**Architecture Documentation**](ARCHITECTURE.md) - Detailed system architecture
 - [**Epic #120 Integration Guide**](Epic120Integration.md) - Epic branch orchestration and v1.0 release coordination
 - [**Feature Engineering**](FEATURE_ENGINEERING.md) - Feature extraction and engineering approaches
