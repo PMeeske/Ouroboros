@@ -254,7 +254,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: recentIssue.number,
-              body: `## 🔄 Updated Analysis\n\n${report}`
+              body: `## 🔄 Updated Analysis\n\n${report}\n\n---\n\n**@copilot** Please review the updated analysis.`
             });
             console.log(`Updated existing issue #${recentIssue.number}`);
           } else {
@@ -263,10 +263,18 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `Weekly Code Quality Report - ${now.toISOString().split('T')[0]}`,
-              body: report,
-              labels: ['continuous-improvement', 'quality']
+              body: `${report}\n\n---\n\n**@copilot** has been automatically assigned to this issue for analysis.`,
+              labels: ['continuous-improvement', 'quality', 'copilot-assist']
             });
             console.log(`Created new improvement issue #${issue.data.number}`);
+            
+            // Add a comment to trigger copilot analysis
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.data.number,
+              body: '@copilot Please analyze this quality report and suggest specific improvements.'
+            });
           }
     
     - name: Upload report artifacts

@@ -6,7 +6,7 @@ MonadicPipeline implements an **automatic development loop** powered by GitHub C
 
 ## 🔄 The Development Loop
 
-The development loop consists of three main workflows that work together to enhance code quality and development velocity:
+The development loop consists of four main workflows that work together to enhance code quality and development velocity:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -15,22 +15,29 @@ The development loop consists of three main workflows that work together to enha
                                 │
                                 ▼
         ┌───────────────────────────────────────────┐
-        │  1. Developer Creates PR/Opens Issue      │
+        │  Scheduled/Triggered: Development Cycle    │
+        │  - Checks open PR limit (max 5)           │
+        │  - Analyzes codebase for improvements     │
+        │  - Generates improvement tasks            │
+        │  - Assigns @copilot automatically         │
         └───────────────────────────────────────────┘
                                 │
                 ┌───────────────┴───────────────┐
                 ▼                               ▼
     ┌───────────────────────┐       ┌─────────────────────┐
-    │ Copilot Code Review   │       │ Issue Assistant     │
-    │ - Analyzes changes    │       │ - Analyzes issue    │
-    │ - Suggests patterns   │       │ - Finds context     │
-    │ - Checks guidelines   │       │ - Suggests approach │
+    │ 1. Issue Assistant    │       │ 2. Developer Action │
+    │ - Analyzes issue      │       │ - Creates PR/Issue  │
+    │ - Finds context       │       │ - Implements fix    │
+    │ - Suggests approach   │       │                     │
     └───────────────────────┘       └─────────────────────┘
                 │                               │
                 └───────────────┬───────────────┘
                                 ▼
                     ┌───────────────────────┐
-                    │ Developer Implements  │
+                    │ 3. Copilot Code Review│
+                    │ - Analyzes changes    │
+                    │ - Suggests patterns   │
+                    │ - Checks guidelines   │
                     └───────────────────────┘
                                 │
                                 ▼
@@ -38,19 +45,73 @@ The development loop consists of three main workflows that work together to enha
                     │ Code Merged to Main   │
                     └───────────────────────┘
                                 │
-                                ▼
-        ┌───────────────────────────────────────────┐
-        │ 3. Weekly: Continuous Improvement         │
-        │ - Code quality metrics                    │
-        │ - Test coverage analysis                  │
-        │ - Security review                         │
-        │ - Architectural recommendations           │
-        └───────────────────────────────────────────┘
+                ┌───────────────┴───────────────┐
+                ▼                               ▼
+    ┌───────────────────────┐       ┌─────────────────────────┐
+    │ 4. Weekly: Continuous │       │ Trigger New Cycle       │
+    │    Improvement        │       │ (if < 5 open PRs)       │
+    │ - Metrics & analysis  │       │                         │
+    └───────────────────────┘       └─────────────────────────┘
 ```
 
 ## 🤖 Workflows
 
-### 1. Copilot Code Review (`copilot-code-review.yml`)
+### 1. Copilot Automated Development Cycle (`copilot-automated-development-cycle.yml`) ⭐ **NEW**
+
+**Trigger**: 
+- Automatically runs twice daily (9 AM and 5 PM UTC)
+- Triggers when a PR is merged to main
+- Manually triggered with workflow dispatch
+
+**Purpose**: Orchestrates continuous code improvement by automatically generating and managing improvement tasks
+
+**Features**:
+- ✅ Checks open PR limit (max 5 copilot PRs)
+- ✅ Analyzes codebase for improvement opportunities
+- ✅ Generates prioritized improvement tasks
+- ✅ Automatically creates issues with @copilot assignment
+- ✅ Triggers issue assistant for immediate guidance
+- ✅ Maintains cycle status tracking
+- ✅ Prevents overwhelming the repository with too many PRs
+- ✅ Automatically resumes when PRs are merged
+
+**Task Types Generated**:
+1. **TODO/FIXME Resolution** - Addresses technical debt markers
+2. **Documentation** - Adds missing XML docs to public APIs
+3. **Test Coverage** - Creates tests for uncovered code
+4. **Error Handling** - Converts exceptions to Result<T> monads
+5. **Async Patterns** - Fixes blocking async calls
+
+**Example Output**:
+```markdown
+🤖 Copilot Development Cycle Summary
+=================================
+
+📊 Open Copilot PRs: 2/5
+📝 Issues Created: 3
+⏰ Next Cycle: Scheduled (9 AM UTC) or PR merge
+
+Tasks Created:
+1. [Copilot] Address TODO/FIXME comments in codebase
+2. [Copilot] Add XML documentation to public APIs
+3. [Copilot] Increase test coverage for core modules
+```
+
+**Configuration**:
+- **Schedule**: Modify cron expression to change frequency
+- **Max Tasks**: Adjust `max_tasks` input (default: 3)
+- **PR Limit**: Hard-coded to 5 (can be forced via input)
+
+**Usage**:
+- **Automatic**: Runs on schedule (twice daily)
+- **On PR Merge**: Automatically triggers new cycle
+- **Manual**: Use workflow dispatch with optional parameters:
+  - `force`: Skip PR limit check
+  - `max_tasks`: Number of tasks to create
+
+---
+
+### 2. Copilot Code Review (`copilot-code-review.yml`)
 
 **Trigger**: Automatically runs on every Pull Request
 
@@ -97,9 +158,9 @@ The development loop consists of three main workflows that work together to enha
 
 ---
 
-### 2. Copilot Issue Assistant (`copilot-issue-assistant.yml`)
+### 2. Copilot Code Review (`copilot-code-review.yml`)
 
-**Trigger**: Runs when:
+**Trigger**: Automatically runs on every Pull Request
 - A new issue is opened
 - An issue is labeled with `copilot-assist`
 - A comment mentions `@copilot`
@@ -163,9 +224,25 @@ Searching for relevant files related to: **Add support for async pipeline steps*
 
 ---
 
-### 3. Copilot Continuous Improvement (`copilot-continuous-improvement.yml`)
+### 3. Copilot Issue Assistant (`copilot-issue-assistant.yml`)
 
-**Trigger**: 
+**Trigger**: Runs when:
+- A new issue is opened
+- An issue is labeled with `copilot-assist`
+- A comment mentions `@copilot`
+- Manually triggered with workflow dispatch
+
+**Purpose**: Analyzes issues and provides implementation guidance
+
+**Features**:
+- ✅ Automatically classifies issue type (bug, feature, test, docs, refactor)
+- ✅ Searches codebase for relevant files and context
+- ✅ Provides implementation approach based on issue type
+- ✅ Suggests architectural patterns to follow
+- ✅ References project coding guidelines
+- ✅ Posts comprehensive analysis as issue comment
+- ✅ **Automatically adds copilot-assist label** ⭐ **NEW**
+- ✅ **Mentions @copilot in analysis comment** ⭐ **NEW** 
 - Automatically runs weekly (Monday 9 AM UTC)
 - Manually triggered for immediate analysis
 
@@ -182,6 +259,8 @@ Searching for relevant files related to: **Add support for async pipeline steps*
 - ✅ Functional programming pattern analysis
 - ✅ Async/await pattern review
 - ✅ Creates improvement issues with actionable tasks
+- ✅ **Automatically adds copilot-assist label** ⭐ **NEW**
+- ✅ **Mentions @copilot for analysis** ⭐ **NEW**
 
 **Example Output**:
 ```markdown
@@ -270,9 +349,34 @@ The development loop workflows are automatically enabled when you:
 
 No additional setup required! The workflows are ready to use immediately:
 
-1. **Code Review**: Automatically runs on every PR
-2. **Issue Assistant**: Automatically runs on new issues
-3. **Continuous Improvement**: Runs weekly automatically
+1. **Automated Development Cycle**: Runs automatically twice daily
+2. **Code Review**: Automatically runs on every PR
+3. **Issue Assistant**: Automatically runs on new issues
+4. **Continuous Improvement**: Runs weekly automatically
+
+### Understanding the Automated Cycle
+
+The **Automated Development Cycle** is the heart of the system:
+
+1. **Schedule Check**: Runs twice daily (9 AM and 5 PM UTC)
+2. **PR Limit Check**: Ensures max 5 open copilot PRs
+3. **Code Analysis**: Scans codebase for improvements
+4. **Task Generation**: Creates prioritized improvement issues
+5. **Auto-Assignment**: Assigns @copilot to new issues
+6. **Guidance Trigger**: Triggers issue assistant automatically
+7. **Tracking**: Updates cycle status issue
+
+**PR Limit Mechanism**:
+- Maximum of 5 open PRs with `copilot/` branch prefix
+- Prevents overwhelming reviewers with too many PRs
+- Automatically resumes when PRs are merged
+- Can be forced via workflow dispatch if needed
+
+**Task Prioritization**:
+1. **High**: Bugs, test coverage, blocking async calls
+2. **Medium**: Documentation, error handling refactors
+3. **Low**: Code style, minor optimizations
+3. Have appropriate permissions configured
 
 ### Manual Triggers
 
@@ -365,6 +469,16 @@ Add your own code quality checks by modifying the workflow files to include addi
 
 ### Typical Development Flow
 
+**Automated Flow** (New!):
+1. **Scheduled Cycle** → Analyzes codebase for improvements
+2. **Task Generation** → Creates prioritized improvement issues
+3. **Auto-Assignment** → @copilot assigned to issues
+4. **Issue Analysis** → Copilot provides implementation guidance
+5. **Developer Implements** → Creates PR based on guidance
+6. **Code Review** → Copilot reviews changes
+7. **Merge** → Triggers new cycle if < 5 PRs open
+
+**Manual Flow**:
 1. **Create Issue** → Copilot analyzes and provides guidance
 2. **Create PR** → Copilot reviews code changes
 3. **Address Review** → Make changes based on suggestions
@@ -382,6 +496,7 @@ Add your own code quality checks by modifying the workflow files to include addi
 
 ## 📚 Related Documentation
 
+- [Automated Development Cycle Quick Reference](AUTOMATED_DEVELOPMENT_CYCLE.md) - Detailed guide for the automated cycle ⭐ **NEW**
 - [GitHub Copilot Instructions](.github/copilot-instructions.md) - Project-specific coding guidelines
 - [Contributing Guide](../CONTRIBUTING.md) - How to contribute to the project
 - [Test Coverage Report](../TEST_COVERAGE_REPORT.md) - Current test coverage status
@@ -424,14 +539,16 @@ To improve the development loop:
 
 Planned improvements to the development loop:
 
+- [x] ~~Automatic PR creation for common improvements~~ ✅ **Completed** (via automated cycle)
+- [x] ~~Automated issue generation and @copilot assignment~~ ✅ **Completed**
+- [x] ~~Scheduled development cycles with PR limits~~ ✅ **Completed**
 - [ ] Integration with GitHub Copilot Chat API
-- [ ] Automatic PR creation for common improvements
 - [ ] ML-based code quality predictions
 - [ ] Integration with external code analysis tools
 - [ ] Custom rule engine for project-specific patterns
 - [ ] Performance analysis and optimization suggestions
 - [ ] Dependency vulnerability scanning
-- [ ] Automated refactoring suggestions
+- [ ] Automated refactoring suggestions with PR creation
 
 ---
 

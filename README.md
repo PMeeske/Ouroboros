@@ -706,6 +706,23 @@ reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:"TestCoverageRep
 
 MonadicPipeline features an **automatic development loop** powered by GitHub Copilot that provides:
 
+### 🤖 Automated Development Cycle ⭐ **NEW**
+
+Fully automated code improvement workflow:
+- 🔄 Runs twice daily (9 AM and 5 PM UTC)
+- 📊 Maintains max 5 open copilot PRs
+- 🔍 Analyzes codebase for improvements
+- 📝 Auto-generates prioritized improvement tasks
+- 👤 Automatically assigns @copilot to issues
+- 🚀 Triggers new cycle when PRs are merged
+
+**Features**:
+- TODO/FIXME resolution
+- Documentation gap filling
+- Test coverage improvement
+- Error handling modernization (Result<T> monads)
+- Async/await pattern fixes
+
 ### Automated Code Review
 
 Every pull request automatically receives AI-assisted code review:
@@ -722,6 +739,7 @@ When you create an issue, Copilot automatically:
 - 📁 Finds relevant files in the codebase
 - 💡 Suggests implementation approaches
 - 📋 Provides step-by-step guidance
+- 👤 Auto-assigns @copilot for analysis ⭐ **NEW**
 
 **Usage**: Add the `copilot-assist` label or mention `@copilot` in comments
 
@@ -733,6 +751,7 @@ Weekly automated analysis provides:
 - 🔒 Security pattern review
 - 🏗️ Architectural recommendations
 - 📋 Actionable improvement tasks
+- 👤 Auto-assigns @copilot to quality reports ⭐ **NEW**
 
 **Schedule**: Runs every Monday at 9 AM UTC
 
