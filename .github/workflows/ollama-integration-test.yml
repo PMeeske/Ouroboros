@@ -24,18 +24,18 @@ jobs:
     name: Ollama Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
-    
+
     - name: Cache NuGet packages
       uses: actions/cache@v4
       with:
@@ -43,21 +43,21 @@ jobs:
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
-    
+
     - name: Restore dependencies
       run: dotnet restore
-    
+
     - name: Build
       run: dotnet build --configuration Release --no-restore
-    
+
     - name: Setup Ollama
       run: |
         # Install Ollama
         curl -fsSL https://ollama.com/install.sh | sh
-        
+
         # Start Ollama service in background
         ollama serve > /tmp/ollama.log 2>&1 &
-        
+
         # Wait for Ollama to be ready
         echo "Waiting for Ollama service to start..."
         for i in {1..30}; do
@@ -73,54 +73,54 @@ jobs:
           echo -n "."
           sleep 2
         done
-    
+
     - name: Pull Ollama models
       run: |
         echo "Pulling llama3:8b model (memory-efficient)..."
         ollama pull llama3:8b
-        
+
         echo "Pulling nomic-embed-text embedding model..."
         ollama pull nomic-embed-text
-        
+
         echo "✓ Models pulled successfully"
         ollama list
-    
+
     - name: Test 1 - Basic Ollama Connectivity
       run: |
         echo "=== Test 1: Basic Ollama Connectivity ==="
         cd src/MonadicPipeline.CLI
-        
+
         # Basic ask command to verify Ollama works
         dotnet run --no-build --configuration Release -- ask \
           -q "What is 2+2? Answer with just the number." \
           --model "llama3:8b" \
           --max-tokens 50
-        
+
         echo "✓ Basic connectivity test passed"
-    
+
     - name: Test 2 - Pipeline DSL Execution
       run: |
         echo "=== Test 2: Pipeline DSL Execution ==="
         cd src/MonadicPipeline.CLI
-        
+
         # Test pipeline DSL with draft step
         dotnet run --no-build --configuration Release -- pipeline \
           --dsl "SetPrompt('Explain what functional programming is in one sentence') | UseDraft" \
           --model "llama3:8b" \
           --max-tokens 100
-        
+
         echo "✓ Pipeline DSL test passed"
-    
+
     - name: Test 3 - Memory-Efficient Reverse Engineering
       run: |
         echo "=== Test 3: Reverse Engineering Pipeline (Memory-Efficient) ==="
         cd src/MonadicPipeline.CLI
-        
+
         # Create a minimal test directory structure
         mkdir -p /tmp/test-project
         echo "# Test Project" > /tmp/test-project/README.md
         echo "public class TestClass { }" > /tmp/test-project/TestClass.cs
-        
+
         # Run reverse engineering pipeline with memory-efficient settings
         dotnet run --no-build --configuration Release -- pipeline \
           --dsl "UseDir('root=/tmp/test-project|norec') | UseIngest | SetTopic('Generate markdown requirement specs') | UseDraft" \
@@ -128,18 +128,18 @@ jobs:
           --embed "nomic-embed-text" \
           --topk 3 \
           --max-tokens 200
-        
+
         echo "✓ Reverse engineering test passed"
-    
+
     - name: Test 4 - RAG with Embeddings
       run: |
         echo "=== Test 4: RAG with Embeddings ==="
         cd src/MonadicPipeline.CLI
-        
+
         # Create test content for RAG
         mkdir -p /tmp/rag-test
         echo "Functional programming is a paradigm that treats computation as evaluation of mathematical functions." > /tmp/rag-test/fp-guide.txt
-        
+
         # Test with RAG enabled
         dotnet run --no-build --configuration Release -- ask \
           -q "What is functional programming?" \
@@ -148,9 +148,9 @@ jobs:
           --rag \
           --topk 2 \
           --max-tokens 100
-        
+
         echo "✓ RAG test passed"
-    
+
     - name: Verify Ollama Service Logs
       if: always()
       run: |
@@ -160,7 +160,7 @@ jobs:
         else
           echo "No Ollama logs found"
         fi
-    
+
     - name: Generate Test Summary
       if: always()
       run: |
@@ -181,7 +181,7 @@ jobs:
         echo "- RAM: ~7GB available on GitHub Actions" >> $GITHUB_STEP_SUMMARY
         echo "- Model Size: llama3:8b (~4.7GB)" >> $GITHUB_STEP_SUMMARY
         echo "- Timeout: 30 minutes" >> $GITHUB_STEP_SUMMARY
-    
+
     - name: Upload Test Artifacts
       uses: actions/upload-artifact@v4
       if: always()

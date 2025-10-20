@@ -26,18 +26,18 @@ jobs:
       (github.event_name == 'issues' && github.event.action == 'opened') ||
       (github.event_name == 'issues' && github.event.action == 'labeled' && contains(github.event.issue.labels.*.name, 'copilot-assist')) ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@copilot'))
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
-    
+
     - name: Get issue details
       id: issue
       uses: actions/github-script@v7
@@ -49,13 +49,13 @@ jobs:
             repo: context.repo.repo,
             issue_number: issueNumber
           });
-          
+
           core.setOutput('number', issueNumber);
           core.setOutput('title', issue.data.title);
           core.setOutput('body', issue.data.body || '');
-          
+
           return issue.data;
-    
+
     - name: Analyze issue type
       id: analyze
       uses: actions/github-script@v7
@@ -64,9 +64,9 @@ jobs:
           const issueTitle = '${{ steps.issue.outputs.title }}'.toLowerCase();
           const issueBody = '${{ steps.issue.outputs.body }}'.toLowerCase();
           const combined = issueTitle + ' ' + issueBody;
-          
+
           let issueType = 'general';
-          
+
           if (/bug|error|fix|crash|fail/.test(combined)) {
             issueType = 'bug';
           } else if (/feature|enhance|add|implement|new/.test(combined)) {
@@ -78,11 +78,11 @@ jobs:
           } else if (/refactor|improve|optimize/.test(combined)) {
             issueType = 'refactor';
           }
-          
+
           core.setOutput('type', issueType);
           console.log(`Detected issue type: ${issueType}`);
           return issueType;
-    
+
     - name: Search codebase for context
       id: context
       uses: actions/github-script@v7
@@ -90,19 +90,19 @@ jobs:
         script: |
           const fs = require('fs');
           const { execSync } = require('child_process');
-          
+
           const issueTitle = '${{ steps.issue.outputs.title }}';
-          
+
           // Extract keywords (4+ letter words)
           const keywords = issueTitle
             .toLowerCase()
             .match(/\w{4,}/g)
             ?.slice(0, 5) || [];
-          
+
           let output = '## 🔍 Codebase Context Analysis\n\n';
           output += `Searching for relevant files related to: **${issueTitle}**\n\n`;
           output += '### Related Files\n\n';
-          
+
           for (const keyword of keywords) {
             output += `#### Files mentioning '${keyword}':\n`;
             try {
@@ -111,7 +111,7 @@ jobs:
                 `find src -name "*.cs" -type f -exec grep -l "${keyword.replace(/[^a-zA-Z0-9]/g, '')}" {} \\; 2>/dev/null | head -5`,
                 { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }
               ).trim().split('\n').filter(f => f);
-              
+
               files.forEach(file => {
                 output += `- \`${file}\`\n`;
               });
@@ -120,7 +120,7 @@ jobs:
             }
             output += '\n';
           }
-          
+
           // Find related test files
           output += '### Related Test Files\n\n';
           try {
@@ -128,28 +128,28 @@ jobs:
               'find src/MonadicPipeline.Tests -name "*.cs" -type f | head -10',
               { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }
             ).trim().split('\n').filter(f => f);
-            
+
             testFiles.forEach(file => {
               output += `- \`${file}\`\n`;
             });
           } catch (e) {
             output += '- No test files found\n';
           }
-          
+
           // Write output to file
           fs.writeFileSync('context-analysis.md', output);
-    
+
     - name: Generate implementation suggestions
       id: suggestions
       run: |
         ISSUE_TYPE="${{ steps.analyze.outputs.type }}"
-        
+
         echo "" >> context-analysis.md
         echo "---" >> context-analysis.md
         echo "" >> context-analysis.md
         echo "## 💡 Implementation Suggestions" >> context-analysis.md
         echo "" >> context-analysis.md
-        
+
         case "$ISSUE_TYPE" in
           bug)
             echo "### Bug Fix Approach" >> context-analysis.md
@@ -195,7 +195,7 @@ jobs:
             echo "5. **Verify behavior**: Run full test suite after changes" >> context-analysis.md
             ;;
         esac
-        
+
         echo "" >> context-analysis.md
         echo "### Key Guidelines" >> context-analysis.md
         echo "" >> context-analysis.md
@@ -206,7 +206,7 @@ jobs:
         echo "- ✅ Write tests that validate monadic laws and composition" >> context-analysis.md
         echo "" >> context-analysis.md
         echo "📘 Review [GitHub Copilot Instructions](.github/copilot-instructions.md) for detailed coding guidelines." >> context-analysis.md
-    
+
     - name: Add copilot-assist label
       uses: actions/github-script@v7
       with:
@@ -217,11 +217,11 @@ jobs:
             repo: context.repo.repo,
             issue_number: ${{ steps.issue.outputs.number }}
           });
-          
-          const hasLabel = issue.labels.some(label => 
+
+          const hasLabel = issue.labels.some(label =>
             label.name === 'copilot-assist'
           );
-          
+
           if (!hasLabel) {
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
@@ -231,21 +231,21 @@ jobs:
             });
             console.log('Added copilot-assist label');
           }
-    
+
     - name: Post analysis comment
       uses: actions/github-script@v7
       with:
         script: |
           const fs = require('fs');
           const analysis = fs.readFileSync('context-analysis.md', 'utf8');
-          
+
           await github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: ${{ steps.issue.outputs.number }},
             body: `## 🤖 GitHub Copilot Issue Analysis\n\n${analysis}\n\n---\n\n**@copilot** has been automatically assigned to this issue.\n\n*This analysis was automatically generated. To regenerate, add the \`copilot-assist\` label or mention \`@copilot\` in a comment.*`
           });
-    
+
     - name: Upload analysis artifacts
       uses: actions/upload-artifact@v4
       with:

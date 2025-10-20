@@ -32,42 +32,42 @@ jobs:
     outputs:
       can_proceed: ${{ steps.check.outputs.can_proceed }}
       open_pr_count: ${{ steps.check.outputs.open_pr_count }}
-    
+
     steps:
-    - name: Check open PRs
-      id: check
-      uses: actions/github-script@v7
-      with:
-        script: |
-          // Count open PRs created by copilot workflows
-          const { data: pullRequests } = await github.rest.pulls.list({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            state: 'open',
-            per_page: 100
-          });
-          
-          // Filter PRs created by copilot workflows (those with 'copilot/' branch prefix)
-          const copilotPRs = pullRequests.filter(pr => 
-            pr.head.ref.startsWith('copilot/')
-          );
-          
-          const openCount = copilotPRs.length;
-          const maxPRs = 5;
-          const force = '${{ github.event.inputs.force }}' === 'true';
-          
-          console.log(`Open Copilot PRs: ${openCount}/${maxPRs}`);
-          
-          const canProceed = force || openCount < maxPRs;
-          
-          core.setOutput('can_proceed', canProceed);
-          core.setOutput('open_pr_count', openCount);
-          
-          if (!canProceed) {
-            console.log('⚠️ Maximum of 5 open PRs reached. Skipping cycle.');
-          } else {
-            console.log('✅ Can proceed with development cycle');
-          }
+      - name: Check open PRs
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Count open PRs created by copilot workflows
+            const { data: pullRequests } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+
+            // Filter PRs created by copilot workflows (those with 'copilot/' branch prefix)
+            const copilotPRs = pullRequests.filter(pr =>
+              pr.head.ref.startsWith('copilot/')
+            );
+
+            const openCount = copilotPRs.length;
+            const maxPRs = 5;
+            const force = '${{ github.event.inputs.force }}' === 'true';
+
+            console.log(`Open Copilot PRs: ${openCount}/${maxPRs}`);
+
+            const canProceed = force || openCount < maxPRs;
+
+            core.setOutput('can_proceed', canProceed);
+            core.setOutput('open_pr_count', openCount);
+
+            if (!canProceed) {
+              console.log('⚠️ Maximum of 5 open PRs reached. Skipping cycle.');
+            } else {
+              console.log('✅ Can proceed with development cycle');
+            }
 
   analyze-and-generate-tasks:
     name: Analyze Codebase and Generate Tasks
@@ -76,428 +76,428 @@ jobs:
     if: needs.check-pr-limit.outputs.can_proceed == 'true'
     outputs:
       tasks: ${{ steps.generate.outputs.tasks }}
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
-    
-    - name: Restore and build
-      run: |
-        dotnet restore
-        dotnet build --configuration Release --no-restore
-    
-    - name: Run code analysis
-      id: analyze
-      run: |
-        echo "Running comprehensive code analysis..."
-        
-        # Create analysis output directory
-        mkdir -p analysis-output
-        
-        # Analyze TODO comments
-        echo "## TODO/FIXME Items" > analysis-output/todos.md
-        grep -rn "TODO\|FIXME\|HACK" src --include="*.cs" | head -20 > analysis-output/todos.txt || echo "None found" > analysis-output/todos.txt
-        
-        # Check for missing XML documentation
-        echo "## Missing Documentation" > analysis-output/docs.md
-        find src -name "*.cs" -not -path "*/obj/*" -not -path "*/bin/*" -not -path "*/Tests/*" -type f | while read file; do
-          if grep -q "public class\|public interface\|public enum" "$file" 2>/dev/null; then
-            if ! grep -q "/// <summary>" "$file" 2>/dev/null; then
-              echo "- $file" >> analysis-output/docs.txt
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore and build
+        run: |
+          dotnet restore
+          dotnet build --configuration Release --no-restore
+
+      - name: Run code analysis
+        id: analyze
+        run: |
+          echo "Running comprehensive code analysis..."
+
+          # Create analysis output directory
+          mkdir -p analysis-output
+
+          # Analyze TODO comments
+          echo "## TODO/FIXME Items" > analysis-output/todos.md
+          grep -rn "TODO\|FIXME\|HACK" src --include="*.cs" | head -20 > analysis-output/todos.txt || echo "None found" > analysis-output/todos.txt
+
+          # Check for missing XML documentation
+          echo "## Missing Documentation" > analysis-output/docs.md
+          find src -name "*.cs" -not -path "*/obj/*" -not -path "*/bin/*" -not -path "*/Tests/*" -type f | while read file; do
+            if grep -q "public class\|public interface\|public enum" "$file" 2>/dev/null; then
+              if ! grep -q "/// <summary>" "$file" 2>/dev/null; then
+                echo "- $file" >> analysis-output/docs.txt
+              fi
             fi
-          fi
-        done
-        
-        # Analyze test coverage gaps
-        echo "## Test Coverage Gaps" > analysis-output/coverage.md
-        # Find source files without corresponding test files
-        find src -path "*/MonadicPipeline.*/Domain/*.cs" -o -path "*/MonadicPipeline.*/Core/*.cs" | while read srcfile; do
-          basename=$(basename "$srcfile" .cs)
-          testfile=$(find src -path "*/Tests/*${basename}Tests.cs" 2>/dev/null)
-          if [ -z "$testfile" ]; then
-            echo "- $srcfile (missing test)" >> analysis-output/coverage.txt
-          fi
-        done
-        
-        # Check for exception throwing vs Result<T> usage
-        echo "## Error Handling Opportunities" > analysis-output/error-handling.md
-        grep -rn "throw new" src --include="*.cs" -A 2 | head -30 > analysis-output/error-handling.txt || echo "None found" > analysis-output/error-handling.txt
-        
-        # Check for blocking async patterns
-        echo "## Async/Await Issues" > analysis-output/async.md
-        grep -rn "\.Result\|\.Wait()" src --include="*.cs" | head -20 > analysis-output/async.txt || echo "None found" > analysis-output/async.txt
-        
-        echo "Analysis complete"
-    
-    - name: Generate improvement tasks
-      id: generate
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const fs = require('fs');
-          const maxTasks = parseInt('${{ github.event.inputs.max_tasks }}' || '3');
-          
-          const tasks = [];
-          
-          // Priority 1: TODO/FIXME items
-          if (fs.existsSync('analysis-output/todos.txt')) {
-            const todos = fs.readFileSync('analysis-output/todos.txt', 'utf8').split('\n').filter(l => l.trim());
-            if (todos.length > 0 && todos[0] !== 'None found') {
-              const todoList = todos.slice(0, 5).join('\n');
-              tasks.push({
-                priority: 'high',
-                type: 'bug',
-                title: 'Address TODO/FIXME comments in codebase',
-                body: [
-                  '## 🔧 Code Maintenance Task',
-                  '',
-                  'The following TODO/FIXME comments need attention:',
-                  '',
-                  '```',
-                  todoList,
-                  '```',
-                  '',
-                  '### Approach',
-                  '1. Review each TODO/FIXME comment',
-                  '2. Either implement the required changes or convert to proper issues',
-                  '3. Remove completed TODOs',
-                  '4. Update code with proper implementations',
-                  '',
-                  '### Guidelines',
-                  '- Use Result<T> for error handling',
-                  '- Follow functional programming patterns',
-                  '- Add tests for any new logic',
-                  '- Update documentation as needed'
-                ].join('\n'),
-                labels: ['enhancement', 'code-quality']
-              });
+          done
+
+          # Analyze test coverage gaps
+          echo "## Test Coverage Gaps" > analysis-output/coverage.md
+          # Find source files without corresponding test files
+          find src -path "*/MonadicPipeline.*/Domain/*.cs" -o -path "*/MonadicPipeline.*/Core/*.cs" | while read srcfile; do
+            basename=$(basename "$srcfile" .cs)
+            testfile=$(find src -path "*/Tests/*${basename}Tests.cs" 2>/dev/null)
+            if [ -z "$testfile" ]; then
+              echo "- $srcfile (missing test)" >> analysis-output/coverage.txt
+            fi
+          done
+
+          # Check for exception throwing vs Result<T> usage
+          echo "## Error Handling Opportunities" > analysis-output/error-handling.md
+          grep -rn "throw new" src --include="*.cs" -A 2 | head -30 > analysis-output/error-handling.txt || echo "None found" > analysis-output/error-handling.txt
+
+          # Check for blocking async patterns
+          echo "## Async/Await Issues" > analysis-output/async.md
+          grep -rn "\.Result\|\.Wait()" src --include="*.cs" | head -20 > analysis-output/async.txt || echo "None found" > analysis-output/async.txt
+
+          echo "Analysis complete"
+
+      - name: Generate improvement tasks
+        id: generate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const maxTasks = parseInt('${{ github.event.inputs.max_tasks }}' || '3');
+
+            const tasks = [];
+
+            // Priority 1: TODO/FIXME items
+            if (fs.existsSync('analysis-output/todos.txt')) {
+              const todos = fs.readFileSync('analysis-output/todos.txt', 'utf8').split('\n').filter(l => l.trim());
+              if (todos.length > 0 && todos[0] !== 'None found') {
+                const todoList = todos.slice(0, 5).join('\n');
+                tasks.push({
+                  priority: 'high',
+                  type: 'bug',
+                  title: 'Address TODO/FIXME comments in codebase',
+                  body: [
+                    '## 🔧 Code Maintenance Task',
+                    '',
+                    'The following TODO/FIXME comments need attention:',
+                    '',
+                    '```',
+                    todoList,
+                    '```',
+                    '',
+                    '### Approach',
+                    '1. Review each TODO/FIXME comment',
+                    '2. Either implement the required changes or convert to proper issues',
+                    '3. Remove completed TODOs',
+                    '4. Update code with proper implementations',
+                    '',
+                    '### Guidelines',
+                    '- Use Result<T> for error handling',
+                    '- Follow functional programming patterns',
+                    '- Add tests for any new logic',
+                    '- Update documentation as needed'
+                  ].join('\n'),
+                  labels: ['enhancement', 'code-quality']
+                });
+              }
             }
-          }
-          
-          // Priority 2: Missing documentation
-          if (fs.existsSync('analysis-output/docs.txt')) {
-            const docs = fs.readFileSync('analysis-output/docs.txt', 'utf8').split('\n').filter(l => l.trim());
-            if (docs.length > 0) {
-              const docList = docs.slice(0, 10).join('\n');
-              tasks.push({
-                priority: 'medium',
-                type: 'documentation',
-                title: 'Add XML documentation to public APIs',
-                body: [
-                  '## 📚 Documentation Task',
-                  '',
-                  'The following files are missing XML documentation:',
-                  '',
-                  docList,
-                  '',
-                  '### Approach',
-                  '1. Add /// <summary> tags to all public classes, methods, and properties',
-                  '2. Include parameter descriptions',
-                  '3. Add example usage where appropriate',
-                  '4. Follow existing documentation patterns',
-                  '',
-                  '### Guidelines',
-                  '- Use clear, concise descriptions',
-                  '- Include examples for complex APIs',
-                  '- Document edge cases and exceptions',
-                  '- Reference related types and methods'
-                ].join('\n'),
-                labels: ['documentation']
-              });
+
+            // Priority 2: Missing documentation
+            if (fs.existsSync('analysis-output/docs.txt')) {
+              const docs = fs.readFileSync('analysis-output/docs.txt', 'utf8').split('\n').filter(l => l.trim());
+              if (docs.length > 0) {
+                const docList = docs.slice(0, 10).join('\n');
+                tasks.push({
+                  priority: 'medium',
+                  type: 'documentation',
+                  title: 'Add XML documentation to public APIs',
+                  body: [
+                    '## 📚 Documentation Task',
+                    '',
+                    'The following files are missing XML documentation:',
+                    '',
+                    docList,
+                    '',
+                    '### Approach',
+                    '1. Add /// <summary> tags to all public classes, methods, and properties',
+                    '2. Include parameter descriptions',
+                    '3. Add example usage where appropriate',
+                    '4. Follow existing documentation patterns',
+                    '',
+                    '### Guidelines',
+                    '- Use clear, concise descriptions',
+                    '- Include examples for complex APIs',
+                    '- Document edge cases and exceptions',
+                    '- Reference related types and methods'
+                  ].join('\n'),
+                  labels: ['documentation']
+                });
+              }
             }
-          }
-          
-          // Priority 3: Test coverage gaps
-          if (fs.existsSync('analysis-output/coverage.txt')) {
-            const coverage = fs.readFileSync('analysis-output/coverage.txt', 'utf8').split('\n').filter(l => l.trim());
-            if (coverage.length > 0) {
-              const coverageList = coverage.slice(0, 10).join('\n');
-              tasks.push({
-                priority: 'high',
-                type: 'test',
-                title: 'Increase test coverage for core modules',
-                body: [
-                  '## 🧪 Testing Task',
-                  '',
-                  'The following source files lack corresponding test coverage:',
-                  '',
-                  coverageList,
-                  '',
-                  '### Approach',
-                  '1. Create test files following existing patterns',
-                  '2. Test happy paths and error cases',
-                  '3. Validate monadic composition laws',
-                  '4. Test edge cases and boundary conditions',
-                  '5. Aim for >80% line coverage',
-                  '',
-                  '### Guidelines',
-                  '- Follow existing test structure in MonadicPipeline.Tests',
-                  '- Use xUnit patterns',
-                  '- Mock external dependencies properly',
-                  '- Test both success and failure paths'
-                ].join('\n'),
-                labels: ['testing', 'quality']
-              });
+
+            // Priority 3: Test coverage gaps
+            if (fs.existsSync('analysis-output/coverage.txt')) {
+              const coverage = fs.readFileSync('analysis-output/coverage.txt', 'utf8').split('\n').filter(l => l.trim());
+              if (coverage.length > 0) {
+                const coverageList = coverage.slice(0, 10).join('\n');
+                tasks.push({
+                  priority: 'high',
+                  type: 'test',
+                  title: 'Increase test coverage for core modules',
+                  body: [
+                    '## 🧪 Testing Task',
+                    '',
+                    'The following source files lack corresponding test coverage:',
+                    '',
+                    coverageList,
+                    '',
+                    '### Approach',
+                    '1. Create test files following existing patterns',
+                    '2. Test happy paths and error cases',
+                    '3. Validate monadic composition laws',
+                    '4. Test edge cases and boundary conditions',
+                    '5. Aim for >80% line coverage',
+                    '',
+                    '### Guidelines',
+                    '- Follow existing test structure in MonadicPipeline.Tests',
+                    '- Use xUnit patterns',
+                    '- Mock external dependencies properly',
+                    '- Test both success and failure paths'
+                  ].join('\n'),
+                  labels: ['testing', 'quality']
+                });
+              }
             }
-          }
-          
-          // Priority 4: Error handling improvements
-          if (fs.existsSync('analysis-output/error-handling.txt')) {
-            const errorHandling = fs.readFileSync('analysis-output/error-handling.txt', 'utf8').split('\n').filter(l => l.trim());
-            if (errorHandling.length > 0 && errorHandling[0] !== 'None found') {
-              const errorList = errorHandling.slice(0, 8).join('\n');
-              tasks.push({
-                priority: 'medium',
-                type: 'refactor',
-                title: 'Replace exception throwing with Result<T> monads',
-                body: [
-                  '## ♻️ Refactoring Task',
-                  '',
-                  'Found exception throws that could be replaced with Result<T> monads:',
-                  '',
-                  '```',
-                  errorList,
-                  '```',
-                  '',
-                  '### Approach',
-                  '1. Identify exception throw locations',
-                  '2. Replace with Result<T>.Error() calls',
-                  '3. Update callers to handle Result<T>',
-                  '4. Add tests for error cases',
-                  '5. Update documentation',
-                  '',
-                  '### Guidelines',
-                  '- Use Result<T> for expected errors',
-                  '- Keep exceptions for truly exceptional cases',
-                  '- Maintain backward compatibility',
-                  '- Test all error paths'
-                ].join('\n'),
-                labels: ['refactoring', 'functional-programming']
-              });
+
+            // Priority 4: Error handling improvements
+            if (fs.existsSync('analysis-output/error-handling.txt')) {
+              const errorHandling = fs.readFileSync('analysis-output/error-handling.txt', 'utf8').split('\n').filter(l => l.trim());
+              if (errorHandling.length > 0 && errorHandling[0] !== 'None found') {
+                const errorList = errorHandling.slice(0, 8).join('\n');
+                tasks.push({
+                  priority: 'medium',
+                  type: 'refactor',
+                  title: 'Replace exception throwing with Result<T> monads',
+                  body: [
+                    '## ♻️ Refactoring Task',
+                    '',
+                    'Found exception throws that could be replaced with Result<T> monads:',
+                    '',
+                    '```',
+                    errorList,
+                    '```',
+                    '',
+                    '### Approach',
+                    '1. Identify exception throw locations',
+                    '2. Replace with Result<T>.Error() calls',
+                    '3. Update callers to handle Result<T>',
+                    '4. Add tests for error cases',
+                    '5. Update documentation',
+                    '',
+                    '### Guidelines',
+                    '- Use Result<T> for expected errors',
+                    '- Keep exceptions for truly exceptional cases',
+                    '- Maintain backward compatibility',
+                    '- Test all error paths'
+                  ].join('\n'),
+                  labels: ['refactoring', 'functional-programming']
+                });
+              }
             }
-          }
-          
-          // Priority 5: Async/await improvements
-          if (fs.existsSync('analysis-output/async.txt')) {
-            const asyncIssues = fs.readFileSync('analysis-output/async.txt', 'utf8').split('\n').filter(l => l.trim());
-            if (asyncIssues.length > 0 && asyncIssues[0] !== 'None found') {
-              const asyncList = asyncIssues.slice(0, 5).join('\n');
-              tasks.push({
-                priority: 'high',
-                type: 'bug',
-                title: 'Fix blocking async calls (.Result/.Wait)',
-                body: [
-                  '## ⚡ Performance Task',
-                  '',
-                  'Found blocking async calls that should use await:',
-                  '',
-                  '```',
-                  asyncList,
-                  '```',
-                  '',
-                  '### Approach',
-                  '1. Replace .Result with await',
-                  '2. Replace .Wait() with await',
-                  '3. Ensure calling methods are async',
-                  '4. Add ConfigureAwait(false) where appropriate',
-                  '5. Test for deadlock scenarios',
-                  '',
-                  '### Guidelines',
-                  '- Never block on async code',
-                  '- Use await consistently',
-                  '- Handle cancellation tokens',
-                  '- Test async behavior thoroughly'
-                ].join('\n'),
-                labels: ['bug', 'performance']
-              });
+
+            // Priority 5: Async/await improvements
+            if (fs.existsSync('analysis-output/async.txt')) {
+              const asyncIssues = fs.readFileSync('analysis-output/async.txt', 'utf8').split('\n').filter(l => l.trim());
+              if (asyncIssues.length > 0 && asyncIssues[0] !== 'None found') {
+                const asyncList = asyncIssues.slice(0, 5).join('\n');
+                tasks.push({
+                  priority: 'high',
+                  type: 'bug',
+                  title: 'Fix blocking async calls (.Result/.Wait)',
+                  body: [
+                    '## ⚡ Performance Task',
+                    '',
+                    'Found blocking async calls that should use await:',
+                    '',
+                    '```',
+                    asyncList,
+                    '```',
+                    '',
+                    '### Approach',
+                    '1. Replace .Result with await',
+                    '2. Replace .Wait() with await',
+                    '3. Ensure calling methods are async',
+                    '4. Add ConfigureAwait(false) where appropriate',
+                    '5. Test for deadlock scenarios',
+                    '',
+                    '### Guidelines',
+                    '- Never block on async code',
+                    '- Use await consistently',
+                    '- Handle cancellation tokens',
+                    '- Test async behavior thoroughly'
+                  ].join('\n'),
+                  labels: ['bug', 'performance']
+                });
+              }
             }
-          }
-          
-          // Limit to max_tasks
-          const selectedTasks = tasks.slice(0, maxTasks);
-          
-          console.log(`Generated ${selectedTasks.length} improvement tasks`);
-          core.setOutput('tasks', JSON.stringify(selectedTasks));
-          
-          return selectedTasks;
-    
-    - name: Upload analysis artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: code-analysis-${{ github.run_id }}
-        path: analysis-output/
-        retention-days: 30
+
+            // Limit to max_tasks
+            const selectedTasks = tasks.slice(0, maxTasks);
+
+            console.log(`Generated ${selectedTasks.length} improvement tasks`);
+            core.setOutput('tasks', JSON.stringify(selectedTasks));
+
+            return selectedTasks;
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-analysis-${{ github.run_id }}
+          path: analysis-output/
+          retention-days: 30
 
   create-improvement-issues:
     name: Create Improvement Issues
     runs-on: ubuntu-latest
     needs: [check-pr-limit, analyze-and-generate-tasks]
     if: needs.analyze-and-generate-tasks.outputs.tasks != '[]'
-    
+
     steps:
-    - name: Create issues with @copilot assignment
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const tasksJson = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
-          if (!tasksJson || tasksJson === '' || tasksJson === '[]') {
-            console.log('No tasks to create');
-            return;
-          }
-          
-          const tasks = JSON.parse(tasksJson);
-          console.log(`Creating ${tasks.length} improvement issues...`);
-          
-          for (const task of tasks) {
-            // Check if similar issue already exists
-            const { data: existingIssues } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: task.labels.join(','),
-              per_page: 100
-            });
-            
-            const similarIssue = existingIssues.find(issue => 
-              issue.title.toLowerCase().includes(task.title.toLowerCase().split(' ').slice(0, 3).join(' '))
-            );
-            
-            if (similarIssue) {
-              console.log(`⚠️ Similar issue already exists: #${similarIssue.number} - "${similarIssue.title}"`);
-              continue;
+      - name: Create issues with @copilot assignment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tasksJson = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
+            if (!tasksJson || tasksJson === '' || tasksJson === '[]') {
+              console.log('No tasks to create');
+              return;
             }
-            
-            // Create the issue
-            const issue = await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `[Copilot] ${task.title}`,
-              body: `${task.body}\n\n---\n\n🤖 **Automated Task**: This issue was automatically generated by the Copilot Development Cycle.\n\n**@copilot** Please analyze this issue and provide implementation guidance.`,
-              labels: [...task.labels, 'copilot-automated', 'copilot-assist'],
-              assignees: []
-            });
-            
-            console.log(`✅ Created issue #${issue.data.number}: ${task.title}`);
-            
-            // Add a comment to trigger the issue assistant
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.data.number,
-              body: '@copilot Please analyze this issue and provide detailed implementation guidance.'
-            });
-          }
-    
-    - name: Post summary
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const tasksJson = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
-          const tasks = tasksJson && tasksJson !== '' && tasksJson !== '[]' ? JSON.parse(tasksJson) : [];
-          const openPRs = '${{ needs.check-pr-limit.outputs.open_pr_count }}';
-          
-          console.log('\n=================================');
-          console.log('🤖 Copilot Development Cycle Summary');
-          console.log('=================================\n');
-          console.log(`📊 Open Copilot PRs: ${openPRs}/5`);
-          console.log(`📝 Issues Created: ${tasks.length}`);
-          console.log(`⏰ Next Cycle: Check schedule or PR merge event`);
-          console.log('\n=================================\n');
+
+            const tasks = JSON.parse(tasksJson);
+            console.log(`Creating ${tasks.length} improvement issues...`);
+
+            for (const task of tasks) {
+              // Check if similar issue already exists
+              const { data: existingIssues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: task.labels.join(','),
+                per_page: 100
+              });
+
+              const similarIssue = existingIssues.find(issue =>
+                issue.title.toLowerCase().includes(task.title.toLowerCase().split(' ').slice(0, 3).join(' '))
+              );
+
+              if (similarIssue) {
+                console.log(`⚠️ Similar issue already exists: #${similarIssue.number} - "${similarIssue.title}"`);
+                continue;
+              }
+
+              // Create the issue
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `[Copilot] ${task.title}`,
+                body: `${task.body}\n\n---\n\n🤖 **Automated Task**: This issue was automatically generated by the Copilot Development Cycle.\n\n**@copilot** Please analyze this issue and provide implementation guidance.`,
+                labels: [...task.labels, 'copilot-automated', 'copilot-assist'],
+                assignees: []
+              });
+
+              console.log(`✅ Created issue #${issue.data.number}: ${task.title}`);
+
+              // Add a comment to trigger the issue assistant
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.data.number,
+                body: '@copilot Please analyze this issue and provide detailed implementation guidance.'
+              });
+            }
+
+      - name: Post summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tasksJson = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
+            const tasks = tasksJson && tasksJson !== '' && tasksJson !== '[]' ? JSON.parse(tasksJson) : [];
+            const openPRs = '${{ needs.check-pr-limit.outputs.open_pr_count }}';
+
+            console.log('\n=================================');
+            console.log('🤖 Copilot Development Cycle Summary');
+            console.log('=================================\n');
+            console.log(`📊 Open Copilot PRs: ${openPRs}/5`);
+            console.log(`📝 Issues Created: ${tasks.length}`);
+            console.log(`⏰ Next Cycle: Check schedule or PR merge event`);
+            console.log('\n=================================\n');
 
   update-cycle-status:
     name: Update Cycle Status
     runs-on: ubuntu-latest
     needs: [check-pr-limit, analyze-and-generate-tasks, create-improvement-issues]
     if: always()
-    
+
     steps:
-    - name: Create or update tracking issue
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const now = new Date();
-          const dateStr = now.toISOString().split('T')[0];
-          
-          // Find or create tracking issue
-          const { data: issues } = await github.rest.issues.listForRepo({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            state: 'open',
-            labels: 'copilot-cycle-tracker',
-            per_page: 100
-          });
-          
-          let trackingIssue = issues.find(i => i.title.includes('Development Cycle Status'));
-          
-          const canProceed = '${{ needs.check-pr-limit.outputs.can_proceed }}';
-          const openPRs = '${{ needs.check-pr-limit.outputs.open_pr_count }}';
-          const tasksOutput = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
-          let tasksCreated = 0;
-          try {
-            if (tasksOutput && tasksOutput !== '' && tasksOutput !== '[]') {
-              tasksCreated = JSON.parse(tasksOutput).length;
+      - name: Create or update tracking issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+
+            // Find or create tracking issue
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'copilot-cycle-tracker',
+              per_page: 100
+            });
+
+            let trackingIssue = issues.find(i => i.title.includes('Development Cycle Status'));
+
+            const canProceed = '${{ needs.check-pr-limit.outputs.can_proceed }}';
+            const openPRs = '${{ needs.check-pr-limit.outputs.open_pr_count }}';
+            const tasksOutput = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
+            let tasksCreated = 0;
+            try {
+              if (tasksOutput && tasksOutput !== '' && tasksOutput !== '[]') {
+                tasksCreated = JSON.parse(tasksOutput).length;
+              }
+            } catch (e) {
+              console.log('Warning: Could not parse tasks output:', e.message);
+              tasksCreated = 0;
             }
-          } catch (e) {
-            console.log('Warning: Could not parse tasks output:', e.message);
-            tasksCreated = 0;
-          }
-          
-          const status = canProceed === 'true' ? '🟢 Active' : '🟡 Paused (Max PRs)';
-          
-          const nextActions = canProceed === 'true' ? 
-            '- ✅ Cycle is active - new tasks created\n- ⏳ Waiting for issue analysis and PR creation\n- 🔄 Next cycle: Scheduled or on PR merge' : 
-            '- ⚠️ Maximum of 5 PRs reached\n- 🔄 Will resume when PRs are merged\n- 📊 Review and merge existing PRs to continue';
-          
-          const body = '# 🤖 Copilot Automated Development Cycle Status\n\n' +
-            '## Current Status: ' + status + '\n\n' +
-            '**Last Update**: ' + now.toISOString() + '\n\n' +
-            '### Metrics\n' +
-            '- 📊 Open Copilot PRs: **' + openPRs + '/5**\n' +
-            '- 📝 Tasks Created This Cycle: **' + tasksCreated + '**\n' +
-            '- ⏰ Workflow: **' + context.workflow + '**\n' +
-            '- 🔄 Run: [#' + context.runNumber + '](' + context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ')\n\n' +
-            '### Next Actions\n' + nextActions + '\n\n' +
-            '### Recent Activity\n' +
-            '- Cycle Run: ' + now.toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' }) + '\n' +
-            '- Status: ' + (canProceed === 'true' ? 'Executed successfully' : 'Skipped due to PR limit') + '\n\n' +
-            '---\n\n' +
-            '*This issue tracks the automated development cycle. Do not close manually.*';
-          
-          if (trackingIssue) {
-            // Update existing issue
-            await github.rest.issues.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: trackingIssue.number,
-              body: body
-            });
-            console.log(`Updated tracking issue #${trackingIssue.number}`);
-          } else {
-            // Create new tracking issue
-            const issue = await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: '🤖 Copilot Automated Development Cycle Status',
-              body: body,
-              labels: ['copilot-cycle-tracker', 'automation']
-            });
-            
-            // Pin the issue
-            await github.rest.issues.lock({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.data.number,
-              lock_reason: 'resolved'
-            }).catch(() => {
-              console.log('Note: Could not lock tracking issue (might need additional permissions)');
-            });
-            
-            console.log(`Created tracking issue #${issue.data.number}`);
-          }
+
+            const status = canProceed === 'true' ? '🟢 Active' : '🟡 Paused (Max PRs)';
+
+            const nextActions = canProceed === 'true' ?
+              '- ✅ Cycle is active - new tasks created\n- ⏳ Waiting for issue analysis and PR creation\n- 🔄 Next cycle: Scheduled or on PR merge' :
+              '- ⚠️ Maximum of 5 PRs reached\n- 🔄 Will resume when PRs are merged\n- 📊 Review and merge existing PRs to continue';
+
+            const body = '# 🤖 Copilot Automated Development Cycle Status\n\n' +
+              '## Current Status: ' + status + '\n\n' +
+              '**Last Update**: ' + now.toISOString() + '\n\n' +
+              '### Metrics\n' +
+              '- 📊 Open Copilot PRs: **' + openPRs + '/5**\n' +
+              '- 📝 Tasks Created This Cycle: **' + tasksCreated + '**\n' +
+              '- ⏰ Workflow: **' + context.workflow + '**\n' +
+              '- 🔄 Run: [#' + context.runNumber + '](' + context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ')\n\n' +
+              '### Next Actions\n' + nextActions + '\n\n' +
+              '### Recent Activity\n' +
+              '- Cycle Run: ' + now.toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' }) + '\n' +
+              '- Status: ' + (canProceed === 'true' ? 'Executed successfully' : 'Skipped due to PR limit') + '\n\n' +
+              '---\n\n' +
+              '*This issue tracks the automated development cycle. Do not close manually.*';
+
+            if (trackingIssue) {
+              // Update existing issue
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: trackingIssue.number,
+                body: body
+              });
+              console.log(`Updated tracking issue #${trackingIssue.number}`);
+            } else {
+              // Create new tracking issue
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '🤖 Copilot Automated Development Cycle Status',
+                body: body,
+                labels: ['copilot-cycle-tracker', 'automation']
+              });
+
+              // Pin the issue
+              await github.rest.issues.lock({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.data.number,
+                lock_reason: 'resolved'
+              }).catch(() => {
+                console.log('Note: Could not lock tracking issue (might need additional permissions)');
+              });
+
+              console.log(`Created tracking issue #${issue.data.number}`);
+            }

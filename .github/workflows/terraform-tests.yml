@@ -199,25 +199,25 @@ jobs:
             echo "❌ Terraform validation failed"
             exit 1
           fi
-          
+
           if [ "${{ needs.module-tests.result }}" != "success" ]; then
             echo "❌ Module tests failed"
             exit 1
           fi
-          
+
           if [ "${{ needs.environment-tests.result }}" != "success" ]; then
             echo "⚠️  Environment tests had issues"
           fi
-          
+
           if [ "${{ needs.run-test-suite.result }}" != "success" ]; then
             echo "❌ Test suite failed"
             exit 1
           fi
-          
+
           if [ "${{ needs.security-scan.result }}" != "success" ]; then
             echo "⚠️  Security scan had warnings"
           fi
-          
+
           echo "✅ All critical tests passed!"
 
       - name: Comment PR
@@ -226,13 +226,13 @@ jobs:
         with:
           script: |
             const output = `#### Terraform Tests Results 🧪
-            
+
             - Validation: ${{ needs.terraform-validate.result == 'success' && '✅' || '❌' }}
             - Module Tests: ${{ needs.module-tests.result == 'success' && '✅' || '❌' }}
             - Environment Tests: ${{ needs.environment-tests.result == 'success' && '✅' || '⚠️' }}
             - Test Suite: ${{ needs.run-test-suite.result == 'success' && '✅' || '❌' }}
             - Security Scan: ${{ needs.security-scan.result == 'success' && '✅' || '⚠️' }}
-            
+
             *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
 
             github.rest.issues.createComment({
