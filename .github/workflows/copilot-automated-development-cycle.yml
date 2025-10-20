@@ -346,8 +346,13 @@ jobs:
       uses: actions/github-script@v7
       with:
         script: |
-          const tasks = JSON.parse('${{ needs.analyze-and-generate-tasks.outputs.tasks }}');
+          const tasksJson = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
+          if (!tasksJson || tasksJson === '' || tasksJson === '[]') {
+            console.log('No tasks to create');
+            return;
+          }
           
+          const tasks = JSON.parse(tasksJson);
           console.log(`Creating ${tasks.length} improvement issues...`);
           
           for (const task of tasks) {
@@ -394,7 +399,8 @@ jobs:
       uses: actions/github-script@v7
       with:
         script: |
-          const tasks = JSON.parse('${{ needs.analyze-and-generate-tasks.outputs.tasks }}');
+          const tasksJson = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
+          const tasks = tasksJson && tasksJson !== '' && tasksJson !== '[]' ? JSON.parse(tasksJson) : [];
           const openPRs = '${{ needs.check-pr-limit.outputs.open_pr_count }}';
           
           console.log('\n=================================');
@@ -432,8 +438,16 @@ jobs:
           
           const canProceed = '${{ needs.check-pr-limit.outputs.can_proceed }}';
           const openPRs = '${{ needs.check-pr-limit.outputs.open_pr_count }}';
-          const tasksCreated = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}' !== '[]' ? 
-            JSON.parse('${{ needs.analyze-and-generate-tasks.outputs.tasks }}').length : 0;
+          const tasksOutput = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
+          let tasksCreated = 0;
+          try {
+            if (tasksOutput && tasksOutput !== '' && tasksOutput !== '[]') {
+              tasksCreated = JSON.parse(tasksOutput).length;
+            }
+          } catch (e) {
+            console.log('Warning: Could not parse tasks output:', e.message);
+            tasksCreated = 0;
+          }
           
           const status = canProceed === 'true' ? '🟢 Active' : '🟡 Paused (Max PRs)';
           
