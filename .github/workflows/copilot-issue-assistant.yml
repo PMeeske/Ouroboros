@@ -180,6 +180,31 @@ jobs:
         echo "" >> context-analysis.md
         echo "📘 Review [GitHub Copilot Instructions](.github/copilot-instructions.md) for detailed coding guidelines." >> context-analysis.md
     
+    - name: Add copilot-assist label
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Add copilot-assist label if not already present
+          const { data: issue } = await github.rest.issues.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: ${{ steps.issue.outputs.number }}
+          });
+          
+          const hasLabel = issue.labels.some(label => 
+            label.name === 'copilot-assist'
+          );
+          
+          if (!hasLabel) {
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.issue.outputs.number }},
+              labels: ['copilot-assist']
+            });
+            console.log('Added copilot-assist label');
+          }
+    
     - name: Post analysis comment
       uses: actions/github-script@v7
       with:
@@ -191,7 +216,7 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: ${{ steps.issue.outputs.number }},
-            body: `## 🤖 GitHub Copilot Issue Analysis\n\n${analysis}\n\n---\n\n*This analysis was automatically generated. To regenerate, add the \`copilot-assist\` label or mention \`@copilot\` in a comment.*`
+            body: `## 🤖 GitHub Copilot Issue Analysis\n\n${analysis}\n\n---\n\n**@copilot** has been automatically assigned to this issue.\n\n*This analysis was automatically generated. To regenerate, add the \`copilot-assist\` label or mention \`@copilot\` in a comment.*`
           });
     
     - name: Upload analysis artifacts
