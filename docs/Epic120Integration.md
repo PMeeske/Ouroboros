@@ -526,7 +526,7 @@ var result = await epicOrchestrator.ExecuteSubIssueAsync(
 - **#134, #146**: Define Must-Have Feature List
 - **#135, #147**: Non-Functional Requirements (NFRs) → [v1.0-nfr.md](specs/v1.0-nfr.md)
 - **#136, #148**: KPIs & Acceptance Criteria
-- **#137, #149**: Stakeholder Review Loop
+- **#137, #149**: Stakeholder Review Loop → [STAKEHOLDER_REVIEW_LOOP.md](STAKEHOLDER_REVIEW_LOOP.md) ✅
 - **#138, #150**: Lock & Tag Scope
 
 ## Best Practices
