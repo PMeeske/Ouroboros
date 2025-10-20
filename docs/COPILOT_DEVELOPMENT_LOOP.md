@@ -496,6 +496,7 @@ Add your own code quality checks by modifying the workflow files to include addi
 
 ## 📚 Related Documentation
 
+- [Automated Development Cycle Quick Reference](AUTOMATED_DEVELOPMENT_CYCLE.md) - Detailed guide for the automated cycle ⭐ **NEW**
 - [GitHub Copilot Instructions](.github/copilot-instructions.md) - Project-specific coding guidelines
 - [Contributing Guide](../CONTRIBUTING.md) - How to contribute to the project
 - [Test Coverage Report](../TEST_COVERAGE_REPORT.md) - Current test coverage status
