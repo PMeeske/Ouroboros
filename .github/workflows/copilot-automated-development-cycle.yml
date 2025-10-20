@@ -155,7 +155,27 @@ jobs:
                 priority: 'high',
                 type: 'bug',
                 title: 'Address TODO/FIXME comments in codebase',
-                body: `## 🔧 Code Maintenance Task\n\nThe following TODO/FIXME comments need attention:\n\n\`\`\`\n${todoList}\n\`\`\`\n\n### Approach\n1. Review each TODO/FIXME comment\n2. Either implement the required changes or convert to proper issues\n3. Remove completed TODOs\n4. Update code with proper implementations\n\n### Guidelines\n- Use Result<T> for error handling\n- Follow functional programming patterns\n- Add tests for any new logic\n- Update documentation as needed`,
+                body: [
+                  '## 🔧 Code Maintenance Task',
+                  '',
+                  'The following TODO/FIXME comments need attention:',
+                  '',
+                  '```',
+                  todoList,
+                  '```',
+                  '',
+                  '### Approach',
+                  '1. Review each TODO/FIXME comment',
+                  '2. Either implement the required changes or convert to proper issues',
+                  '3. Remove completed TODOs',
+                  '4. Update code with proper implementations',
+                  '',
+                  '### Guidelines',
+                  '- Use Result<T> for error handling',
+                  '- Follow functional programming patterns',
+                  '- Add tests for any new logic',
+                  '- Update documentation as needed'
+                ].join('\n'),
                 labels: ['enhancement', 'code-quality']
               });
             }
@@ -170,7 +190,25 @@ jobs:
                 priority: 'medium',
                 type: 'documentation',
                 title: 'Add XML documentation to public APIs',
-                body: `## 📚 Documentation Task\n\nThe following files are missing XML documentation:\n\n${docList}\n\n### Approach\n1. Add /// <summary> tags to all public classes, methods, and properties\n2. Include parameter descriptions\n3. Add example usage where appropriate\n4. Follow existing documentation patterns\n\n### Guidelines\n- Use clear, concise descriptions\n- Include examples for complex APIs\n- Document edge cases and exceptions\n- Reference related types and methods`,
+                body: [
+                  '## 📚 Documentation Task',
+                  '',
+                  'The following files are missing XML documentation:',
+                  '',
+                  docList,
+                  '',
+                  '### Approach',
+                  '1. Add /// <summary> tags to all public classes, methods, and properties',
+                  '2. Include parameter descriptions',
+                  '3. Add example usage where appropriate',
+                  '4. Follow existing documentation patterns',
+                  '',
+                  '### Guidelines',
+                  '- Use clear, concise descriptions',
+                  '- Include examples for complex APIs',
+                  '- Document edge cases and exceptions',
+                  '- Reference related types and methods'
+                ].join('\n'),
                 labels: ['documentation']
               });
             }
@@ -185,7 +223,26 @@ jobs:
                 priority: 'high',
                 type: 'test',
                 title: 'Increase test coverage for core modules',
-                body: `## 🧪 Testing Task\n\nThe following source files lack corresponding test coverage:\n\n${coverageList}\n\n### Approach\n1. Create test files following existing patterns\n2. Test happy paths and error cases\n3. Validate monadic composition laws\n4. Test edge cases and boundary conditions\n5. Aim for >80% line coverage\n\n### Guidelines\n- Follow existing test structure in MonadicPipeline.Tests\n- Use xUnit patterns\n- Mock external dependencies properly\n- Test both success and failure paths`,
+                body: [
+                  '## 🧪 Testing Task',
+                  '',
+                  'The following source files lack corresponding test coverage:',
+                  '',
+                  coverageList,
+                  '',
+                  '### Approach',
+                  '1. Create test files following existing patterns',
+                  '2. Test happy paths and error cases',
+                  '3. Validate monadic composition laws',
+                  '4. Test edge cases and boundary conditions',
+                  '5. Aim for >80% line coverage',
+                  '',
+                  '### Guidelines',
+                  '- Follow existing test structure in MonadicPipeline.Tests',
+                  '- Use xUnit patterns',
+                  '- Mock external dependencies properly',
+                  '- Test both success and failure paths'
+                ].join('\n'),
                 labels: ['testing', 'quality']
               });
             }
@@ -200,7 +257,28 @@ jobs:
                 priority: 'medium',
                 type: 'refactor',
                 title: 'Replace exception throwing with Result<T> monads',
-                body: `## ♻️ Refactoring Task\n\nFound exception throws that could be replaced with Result<T> monads:\n\n\`\`\`\n${errorList}\n\`\`\`\n\n### Approach\n1. Identify exception throw locations\n2. Replace with Result<T>.Error() calls\n3. Update callers to handle Result<T>\n4. Add tests for error cases\n5. Update documentation\n\n### Guidelines\n- Use Result<T> for expected errors\n- Keep exceptions for truly exceptional cases\n- Maintain backward compatibility\n- Test all error paths`,
+                body: [
+                  '## ♻️ Refactoring Task',
+                  '',
+                  'Found exception throws that could be replaced with Result<T> monads:',
+                  '',
+                  '```',
+                  errorList,
+                  '```',
+                  '',
+                  '### Approach',
+                  '1. Identify exception throw locations',
+                  '2. Replace with Result<T>.Error() calls',
+                  '3. Update callers to handle Result<T>',
+                  '4. Add tests for error cases',
+                  '5. Update documentation',
+                  '',
+                  '### Guidelines',
+                  '- Use Result<T> for expected errors',
+                  '- Keep exceptions for truly exceptional cases',
+                  '- Maintain backward compatibility',
+                  '- Test all error paths'
+                ].join('\n'),
                 labels: ['refactoring', 'functional-programming']
               });
             }
@@ -215,7 +293,28 @@ jobs:
                 priority: 'high',
                 type: 'bug',
                 title: 'Fix blocking async calls (.Result/.Wait)',
-                body: `## ⚡ Performance Task\n\nFound blocking async calls that should use await:\n\n\`\`\`\n${asyncList}\n\`\`\`\n\n### Approach\n1. Replace .Result with await\n2. Replace .Wait() with await\n3. Ensure calling methods are async\n4. Add ConfigureAwait(false) where appropriate\n5. Test for deadlock scenarios\n\n### Guidelines\n- Never block on async code\n- Use await consistently\n- Handle cancellation tokens\n- Test async behavior thoroughly`,
+                body: [
+                  '## ⚡ Performance Task',
+                  '',
+                  'Found blocking async calls that should use await:',
+                  '',
+                  '```',
+                  asyncList,
+                  '```',
+                  '',
+                  '### Approach',
+                  '1. Replace .Result with await',
+                  '2. Replace .Wait() with await',
+                  '3. Ensure calling methods are async',
+                  '4. Add ConfigureAwait(false) where appropriate',
+                  '5. Test for deadlock scenarios',
+                  '',
+                  '### Guidelines',
+                  '- Never block on async code',
+                  '- Use await consistently',
+                  '- Handle cancellation tokens',
+                  '- Test async behavior thoroughly'
+                ].join('\n'),
                 labels: ['bug', 'performance']
               });
             }
