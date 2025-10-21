@@ -242,7 +242,7 @@ jobs:
       - name: Validate IONOS prerequisites
         run: |
           echo "Validating IONOS Cloud prerequisites..."
-          
+
           # Check storage class
           if kubectl get storageclass ionos-enterprise-ssd &> /dev/null; then
             echo "✓ IONOS storage class 'ionos-enterprise-ssd' found"
@@ -253,7 +253,7 @@ jobs:
             echo ""
             echo "This may cause PVC provisioning issues during deployment"
           fi
-          
+
           # Check cluster nodes
           NODE_COUNT=$(kubectl get nodes --no-headers 2>/dev/null | wc -l)
           if [ "$NODE_COUNT" -gt 0 ]; then
@@ -321,9 +321,9 @@ jobs:
       - name: Wait for deployments
         run: |
           echo "Waiting for deployments to be ready..."
-          
+
           DEPLOYMENT_WARNINGS=0
-          
+
           # Function to wait with better feedback
           wait_for_deployment() {
             local deployment=$1
@@ -336,12 +336,12 @@ jobs:
               return 1
             fi
           }
-          
+
           wait_for_deployment "ollama" || ((DEPLOYMENT_WARNINGS++))
           wait_for_deployment "qdrant" || ((DEPLOYMENT_WARNINGS++))
           wait_for_deployment "monadic-pipeline" || ((DEPLOYMENT_WARNINGS++))
           wait_for_deployment "monadic-pipeline-webapi" || ((DEPLOYMENT_WARNINGS++))
-          
+
           if [ "$DEPLOYMENT_WARNINGS" -gt 0 ]; then
             echo ""
             echo "⚠️  $DEPLOYMENT_WARNINGS deployment(s) did not become ready"
