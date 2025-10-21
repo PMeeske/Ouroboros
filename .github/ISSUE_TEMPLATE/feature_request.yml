@@ -2,7 +2,8 @@
 name: ✨ Feature Request
 about: Suggest a new feature or enhancement
 title: "[FEATURE] "
-labels: ["enhancement", "needs-triage", "copilot-assist"]
+labels: ["enhancement", "needs-triage"]
+assignees: ["copilot"]
 ---
 
 ## 🎯 Feature Description
@@ -28,6 +29,3 @@ What would need to be true for this feature to be considered complete?
 - [ ] Criterion 1
 - [ ] Criterion 2
 - [ ] Criterion 3
-
----
-*This issue will automatically be labeled with `copilot-assist` to notify @copilot for analysis and assistance.*
