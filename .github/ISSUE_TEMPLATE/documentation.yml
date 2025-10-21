@@ -2,8 +2,7 @@
 name: 📚 Documentation Issue
 about: Report missing, unclear, or incorrect documentation
 title: "[DOCS] "
-labels: ["documentation", "needs-triage"]
-assignees: ["copilot"]
+labels: ["documentation", "needs-triage", "copilot-assist"]
 ---
 
 ## 📚 Documentation Issue
@@ -22,3 +21,6 @@ How could the documentation be improved?
 
 ## 🔍 Additional Context
 Add any other context or examples here.
+
+---
+*This issue will automatically be labeled with `copilot-assist` to notify @copilot for analysis and assistance.*
