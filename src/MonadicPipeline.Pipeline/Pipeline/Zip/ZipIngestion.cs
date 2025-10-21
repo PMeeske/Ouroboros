@@ -4,8 +4,46 @@ using System.Xml.Linq;
 
 namespace LangChainPipeline.Pipeline.Ingestion.Zip;
 
-public enum ZipContentKind { Csv, Xml, Text, Binary }
+/// <summary>
+/// Specifies the type of content found in a zip archive entry.
+/// </summary>
+public enum ZipContentKind 
+{ 
+    /// <summary>
+    /// CSV (Comma-Separated Values) file content.
+    /// </summary>
+    Csv, 
+    
+    /// <summary>
+    /// XML (Extensible Markup Language) document content.
+    /// </summary>
+    Xml, 
+    
+    /// <summary>
+    /// Plain text content.
+    /// </summary>
+    Text, 
+    
+    /// <summary>
+    /// Binary or unknown content type.
+    /// </summary>
+    Binary 
+}
 
+/// <summary>
+/// Represents metadata and access to a file within a zip archive.
+/// </summary>
+/// <param name="FullPath">The full path of the file within the zip archive.</param>
+/// <param name="Directory">The directory path of the file, if any.</param>
+/// <param name="FileName">The name of the file.</param>
+/// <param name="Kind">The classified content type of the file.</param>
+/// <param name="Length">The uncompressed size of the file in bytes.</param>
+/// <param name="CompressedLength">The compressed size of the file in bytes.</param>
+/// <param name="CompressionRatio">The compression ratio (uncompressed/compressed).</param>
+/// <param name="OpenStream">A function to open a stream to the file's content.</param>
+/// <param name="Parsed">Optional parsed content metadata, populated after parsing.</param>
+/// <param name="ZipPath">The file path to the underlying zip archive for lifecycle management.</param>
+/// <param name="MaxCompressionRatioLimit">The compression ratio limit that was applied during scan.</param>
 public sealed record ZipFileRecord(
     string FullPath,
     string? Directory,
@@ -20,11 +58,33 @@ public sealed record ZipFileRecord(
     double MaxCompressionRatioLimit // the limit that was applied during scan
 );
 
+/// <summary>
+/// Represents a parsed CSV table with header and data rows.
+/// </summary>
+/// <param name="Header">The header row containing column names.</param>
+/// <param name="Rows">The data rows of the table.</param>
 public sealed record CsvTable(string[] Header, List<string[]> Rows);
+
+/// <summary>
+/// Wraps an XML document loaded from a zip entry.
+/// </summary>
+/// <param name="Document">The loaded XML document.</param>
 public sealed record XmlDoc(XDocument Document);
 
+/// <summary>
+/// Provides utilities for ingesting and parsing files from zip archives.
+/// </summary>
 public static class ZipIngestion
 {
+    /// <summary>
+    /// Scans a zip archive and returns metadata for all files, applying size and compression ratio limits.
+    /// </summary>
+    /// <param name="zipPath">The file path to the zip archive to scan.</param>
+    /// <param name="maxTotalBytes">Maximum total uncompressed bytes allowed across all entries (default: 500 MB).</param>
+    /// <param name="maxCompressionRatio">Maximum allowed compression ratio to detect zip bombs (default: 200).</param>
+    /// <param name="ct">Cancellation token for the operation.</param>
+    /// <returns>A read-only list of file records from the zip archive.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the total size exceeds maxTotalBytes.</exception>
     public static Task<IReadOnlyList<ZipFileRecord>> ScanAsync(
         string zipPath,
         long maxTotalBytes = 500 * 1024 * 1024,
@@ -82,6 +142,15 @@ public static class ZipIngestion
         _ => ZipContentKind.Binary
     };
 
+    /// <summary>
+    /// Parses the content of zip file records based on their detected type.
+    /// </summary>
+    /// <param name="items">The collection of zip file records to parse.</param>
+    /// <param name="csvMaxLines">Maximum number of CSV lines to read (default: 50).</param>
+    /// <param name="binaryMaxBytes">Maximum bytes to read from binary/text files (default: 128 KB).</param>
+    /// <param name="includeXmlText">Whether to include text preview for XML documents (default: true).</param>
+    /// <param name="ct">Cancellation token for the operation.</param>
+    /// <returns>A read-only list of file records with parsed content populated.</returns>
     public static async Task<IReadOnlyList<ZipFileRecord>> ParseAsync(
         IEnumerable<ZipFileRecord> items,
         int csvMaxLines = 50,
@@ -322,8 +391,20 @@ public static class ZipIngestion
     }
 }
 
+/// <summary>
+/// Provides streaming enumeration of zip archive entries for memory-efficient processing.
+/// </summary>
 public static class ZipIngestionStreaming
 {
+    /// <summary>
+    /// Asynchronously enumerates files in a zip archive with applied size and compression limits.
+    /// This method provides streaming access without loading all entries into memory at once.
+    /// </summary>
+    /// <param name="zipPath">The file path to the zip archive to enumerate.</param>
+    /// <param name="maxTotalBytes">Maximum total uncompressed bytes allowed across all entries (default: 500 MB).</param>
+    /// <param name="maxCompressionRatio">Maximum allowed compression ratio to detect zip bombs (default: 200).</param>
+    /// <param name="ct">Cancellation token for the operation.</param>
+    /// <returns>An async enumerable of zip file records.</returns>
     public static async IAsyncEnumerable<ZipFileRecord> EnumerateAsync(string zipPath,
         long maxTotalBytes = 500 * 1024 * 1024,
         double maxCompressionRatio = 200d,
@@ -392,15 +473,38 @@ internal static class ZipIngestionStreamingHelpers
     }
 }
 
+/// <summary>
+/// Provides a thread-safe cache for storing and retrieving deferred zip text content.
+/// </summary>
 public static class DeferredZipTextCache
 {
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> Map = new();
+    
+    /// <summary>
+    /// Stores text content associated with an identifier.
+    /// </summary>
+    /// <param name="id">The unique identifier for the cached text.</param>
+    /// <param name="text">The text content to store.</param>
     public static void Store(string id, string text) => Map[id] = text;
+    
+    /// <summary>
+    /// Attempts to retrieve and remove text content associated with an identifier.
+    /// </summary>
+    /// <param name="id">The unique identifier for the cached text.</param>
+    /// <param name="text">When this method returns, contains the retrieved text if found; otherwise, an empty string.</param>
+    /// <returns>True if the text was found and removed; otherwise, false.</returns>
     public static bool TryTake(string id, out string text)
     {
         if (Map.TryRemove(id, out text!)) return true;
         text = string.Empty; return false;
     }
+    
+    /// <summary>
+    /// Attempts to retrieve text content associated with an identifier without removing it.
+    /// </summary>
+    /// <param name="id">The unique identifier for the cached text.</param>
+    /// <param name="text">When this method returns, contains the retrieved text if found; otherwise, null.</param>
+    /// <returns>True if the text was found; otherwise, false.</returns>
     public static bool TryPeek(string id, out string text) => Map.TryGetValue(id, out text!);
 }
 
