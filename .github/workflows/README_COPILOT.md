@@ -142,7 +142,71 @@ This directory contains GitHub Actions workflows that implement the automatic de
 
 ---
 
-### 3. `copilot-continuous-improvement.yml`
+### 3. `copilot-automated-development-cycle.yml`
+
+**Purpose**: Automated development cycle with task generation and copilot assignment
+
+**Triggers**:
+- `schedule`: Twice daily at 9 AM and 5 PM UTC (`0 9,17 * * *`)
+- `pull_request` closed on main branch
+- Manual trigger with customizable options
+
+**What it does**:
+1. Checks PR limit (max 5 open copilot PRs)
+2. Analyzes codebase for improvement opportunities:
+   - TODO/FIXME comments
+   - Missing documentation
+   - Test coverage gaps
+   - Error handling improvements
+   - Async/await issues
+3. Generates prioritized improvement tasks
+4. Creates GitHub issues for selected tasks
+5. **Assigns copilot to unassigned issues** (NEW)
+6. Updates cycle status tracking issue
+
+**New Feature: Unassigned Issues Assignment**
+- Scans for open issues without assignees
+- Identifies copilot-relevant issues by:
+  - Labels: `copilot-assist`, `copilot-automated`, `continuous-improvement`
+  - Title: Contains `[Copilot]`
+- Automatically assigns copilot to those issues
+- Adds notification comment with `@copilot` mention
+- Reports count of newly assigned issues
+
+**Permissions**:
+- `contents: write` - Read repository
+- `issues: write` - Create and update issues
+- `pull-requests: write` - Create PRs
+
+**Configuration Options**:
+- `force`: Bypass PR limit (default: false)
+- `max_tasks`: Maximum tasks to create (default: 3)
+- `assign_unassigned`: Enable unassigned issue assignment (default: true)
+
+**Example Task Issue**:
+```markdown
+## 🔧 Code Maintenance Task
+
+The following TODO/FIXME comments need attention:
+
+[List of TODOs]
+
+### Approach
+1. Review each TODO/FIXME comment
+2. Either implement the required changes or convert to proper issues
+3. Remove completed TODOs
+4. Update code with proper implementations
+
+---
+
+🤖 **GitHub Copilot** has been automatically assigned to this issue.
+
+@copilot Please analyze this issue and provide implementation guidance.
+```
+
+---
+
+### 4. `copilot-continuous-improvement.yml`
 
 **Purpose**: Weekly code quality analysis and improvement suggestions
 
@@ -223,6 +287,13 @@ Line Coverage: 78.4%
 3. OR mention `@copilot` in a comment
 4. Review the implementation suggestions
 
+**Automatic Copilot Assignment**:
+- Copilot is automatically assigned to unassigned issues that have:
+  - `copilot-assist`, `copilot-automated`, or `continuous-improvement` labels
+  - `[Copilot]` prefix in the title
+- Runs automatically twice daily with the development cycle
+- Can be manually triggered via workflow_dispatch
+
 **Checking Quality Reports**:
 1. Look for issues labeled `continuous-improvement`
 2. Review the weekly metrics and suggestions
@@ -234,10 +305,19 @@ Line Coverage: 78.4%
 Edit `copilot-code-review.yml` to add/remove checks
 
 **Adjust Schedule**:
-Modify the cron expression in `copilot-continuous-improvement.yml`
+Modify the cron expression in workflows:
+- `copilot-continuous-improvement.yml` - Weekly quality reports
+- `copilot-automated-development-cycle.yml` - Twice daily task generation
 
 **Configure Thresholds**:
 Update the analysis parameters in workflow files
+
+**Control Unassigned Issue Assignment**:
+Disable automatic copilot assignment by setting:
+```yaml
+assign_unassigned: false
+```
+in workflow_dispatch manual trigger
 
 ---
 
