@@ -230,33 +230,8 @@ jobs:
               labels: ['copilot-assist']
             });
             console.log('Added copilot-assist label');
-          }
-
-    - name: Assign copilot to issue
-      uses: actions/github-script@v7
-      with:
-        script: |
-          // Assign copilot if not already assigned
-          const { data: issue } = await github.rest.issues.get({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: ${{ steps.issue.outputs.number }}
-          });
-
-          const hasAssignee = issue.assignees.some(assignee =>
-            assignee.login === 'copilot'
-          );
-
-          if (!hasAssignee) {
-            await github.rest.issues.addAssignees({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: ${{ steps.issue.outputs.number }},
-              assignees: ['copilot']
-            });
-            console.log('Assigned copilot to issue');
           } else {
-            console.log('Copilot already assigned');
+            console.log('copilot-assist label already present');
           }
 
     - name: Post analysis comment
