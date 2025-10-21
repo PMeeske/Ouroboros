@@ -324,7 +324,16 @@ jobs:
             const selectedTasks = tasks.slice(0, maxTasks);
 
             console.log(`Generated ${selectedTasks.length} improvement tasks`);
-            core.setOutput('tasks', JSON.stringify(selectedTasks));
+            
+            // Base64 encode the tasks to avoid JSON parsing issues with special characters
+            // Only set output if there are tasks to avoid running downstream jobs unnecessarily
+            if (selectedTasks.length > 0) {
+              const tasksJson = JSON.stringify(selectedTasks);
+              const tasksBase64 = Buffer.from(tasksJson).toString('base64');
+              core.setOutput('tasks', tasksBase64);
+            } else {
+              core.setOutput('tasks', '');
+            }
 
             return selectedTasks;
 
@@ -339,19 +348,21 @@ jobs:
     name: Create Improvement Issues
     runs-on: ubuntu-latest
     needs: [check-pr-limit, analyze-and-generate-tasks]
-    if: needs.analyze-and-generate-tasks.outputs.tasks != '[]'
+    if: needs.analyze-and-generate-tasks.outputs.tasks != ''
 
     steps:
       - name: Create issues with @copilot assignment
         uses: actions/github-script@v7
         with:
           script: |
-            const tasksJson = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
-            if (!tasksJson || tasksJson === '' || tasksJson === '[]') {
+            const tasksBase64 = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
+            if (!tasksBase64 || tasksBase64 === '') {
               console.log('No tasks to create');
               return;
             }
 
+            // Decode base64 and parse JSON
+            const tasksJson = Buffer.from(tasksBase64, 'base64').toString('utf8');
             const tasks = JSON.parse(tasksJson);
             console.log(`Creating ${tasks.length} improvement issues...`);
 
@@ -399,8 +410,16 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const tasksJson = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
-            const tasks = tasksJson && tasksJson !== '' && tasksJson !== '[]' ? JSON.parse(tasksJson) : [];
+            const tasksBase64 = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
+            let tasks = [];
+            if (tasksBase64 && tasksBase64 !== '') {
+              try {
+                const tasksJson = Buffer.from(tasksBase64, 'base64').toString('utf8');
+                tasks = JSON.parse(tasksJson);
+              } catch (e) {
+                console.log('Warning: Could not parse tasks:', e.message);
+              }
+            }
             const openPRs = '${{ needs.check-pr-limit.outputs.open_pr_count }}';
 
             console.log('\n=================================');
@@ -438,11 +457,12 @@ jobs:
 
             const canProceed = '${{ needs.check-pr-limit.outputs.can_proceed }}';
             const openPRs = '${{ needs.check-pr-limit.outputs.open_pr_count }}';
-            const tasksOutput = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
+            const tasksBase64 = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
             let tasksCreated = 0;
             try {
-              if (tasksOutput && tasksOutput !== '' && tasksOutput !== '[]') {
-                tasksCreated = JSON.parse(tasksOutput).length;
+              if (tasksBase64 && tasksBase64 !== '') {
+                const tasksJson = Buffer.from(tasksBase64, 'base64').toString('utf8');
+                tasksCreated = JSON.parse(tasksJson).length;
               }
             } catch (e) {
               console.log('Warning: Could not parse tasks output:', e.message);
