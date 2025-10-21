@@ -92,6 +92,13 @@ if grep -q "schedule:" "$WORKFLOWS_DIR/copilot-continuous-improvement.yml" 2>/de
 else
     print_result "Continuous improvement has schedule" 1
 fi
+
+# Check automated development cycle workflow
+if grep -q "schedule:" "$WORKFLOWS_DIR/copilot-automated-development-cycle.yml" 2>/dev/null; then
+    print_result "Automated development cycle has schedule" 0
+else
+    print_result "Automated development cycle has schedule" 1
+fi
 echo ""
 
 echo "Test 4: Check Workflow Permissions"
@@ -179,6 +186,37 @@ if find src -name "*.cs" -type f -exec grep -q "async Task\|await " {} \; 2>/dev
     print_result "Codebase uses async/await" 0
 else
     print_result "Codebase uses async/await" 1
+fi
+echo ""
+
+echo "Test 8: Check Unassigned Issues Assignment Feature"
+echo "--------------------------------------------------"
+# Check that the automated development cycle includes the new job
+if grep -q "assign-copilot-to-unassigned:" "$WORKFLOWS_DIR/copilot-automated-development-cycle.yml" 2>/dev/null; then
+    print_result "Unassigned issues assignment job exists" 0
+else
+    print_result "Unassigned issues assignment job exists" 1
+fi
+
+# Check that workflow has the new input parameter
+if grep -q "assign_unassigned:" "$WORKFLOWS_DIR/copilot-automated-development-cycle.yml" 2>/dev/null; then
+    print_result "Workflow has assign_unassigned input" 0
+else
+    print_result "Workflow has assign_unassigned input" 1
+fi
+
+# Check that the job scans for unassigned issues
+if grep -q "listForRepo" "$WORKFLOWS_DIR/copilot-automated-development-cycle.yml" 2>/dev/null; then
+    print_result "Job scans repository issues" 0
+else
+    print_result "Job scans repository issues" 1
+fi
+
+# Check that the job assigns copilot
+if grep -q "addAssignees" "$WORKFLOWS_DIR/copilot-automated-development-cycle.yml" 2>/dev/null; then
+    print_result "Job assigns copilot to issues" 0
+else
+    print_result "Job assigns copilot to issues" 1
 fi
 echo ""
 
