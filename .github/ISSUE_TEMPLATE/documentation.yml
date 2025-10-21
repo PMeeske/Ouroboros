@@ -3,7 +3,7 @@ name: 📚 Documentation Issue
 about: Report missing, unclear, or incorrect documentation
 title: "[DOCS] "
 labels: ["documentation", "needs-triage"]
-assignees: []
+assignees: ["copilot"]
 ---
 
 ## 📚 Documentation Issue
