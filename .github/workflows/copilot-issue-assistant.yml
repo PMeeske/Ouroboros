@@ -232,33 +232,6 @@ jobs:
             console.log('Added copilot-assist label');
           }
 
-    - name: Assign copilot to issue
-      uses: actions/github-script@v7
-      with:
-        script: |
-          // Assign copilot if not already assigned
-          const { data: issue } = await github.rest.issues.get({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: ${{ steps.issue.outputs.number }}
-          });
-
-          const hasAssignee = issue.assignees.some(assignee =>
-            assignee.login === 'copilot'
-          );
-
-          if (!hasAssignee) {
-            await github.rest.issues.addAssignees({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: ${{ steps.issue.outputs.number }},
-              assignees: ['copilot']
-            });
-            console.log('Assigned copilot to issue');
-          } else {
-            console.log('Copilot already assigned');
-          }
-
     - name: Post analysis comment
       uses: actions/github-script@v7
       with:
@@ -270,7 +243,7 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: ${{ steps.issue.outputs.number }},
-            body: `## 🤖 GitHub Copilot Issue Analysis\n\n${analysis}\n\n---\n\n**@copilot** has been automatically assigned to this issue.\n\n*This analysis was automatically generated. To regenerate, add the \`copilot-assist\` label or mention \`@copilot\` in a comment.*`
+            body: `## 🤖 GitHub Copilot Issue Analysis\n\n${analysis}\n\n---\n\n**@copilot** has been automatically notified about this issue.\n\n*This analysis was automatically generated. To regenerate, add the \`copilot-assist\` label or mention \`@copilot\` in a comment.*`
           });
 
     - name: Upload analysis artifacts
