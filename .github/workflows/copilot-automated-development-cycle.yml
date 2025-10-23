@@ -79,7 +79,8 @@ jobs:
     name: Analyze Codebase and Generate Tasks
     runs-on: ubuntu-latest
     needs: check-pr-limit
-    if: needs.check-pr-limit.outputs.can_proceed == 'true'
+    # Use bracket-notation for job IDs containing hyphens
+    if: needs['check-pr-limit'].outputs.can_proceed == 'true'
     outputs:
       tasks: ${{ steps.generate.outputs.tasks }}
     steps:
@@ -200,7 +201,8 @@ jobs:
     name: Create Improvement Issues
     runs-on: ubuntu-latest
     needs: [check-pr-limit, analyze-and-generate-tasks]
-    if: needs.analyze-and-generate-tasks.outputs.tasks != ''
+    # Bracket-notation for job ID with hyphens
+    if: needs['analyze-and-generate-tasks'].outputs.tasks != ''
     steps:
       - name: Create issues (assign to agent user or label)
         uses: actions/github-script@v7
@@ -210,7 +212,7 @@ jobs:
           github-token: ${{ secrets.COPILOT_BOT_TOKEN }}  # ⬅️ PAT
           script: |
             const copilotUser = (process.env.COPILOT_AGENT_USER || '').trim() || null;
-            const tasksB64 = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
+            const tasksB64 = '${{ needs['analyze-and-generate-tasks'].outputs.tasks }}';
             const tasksJson = Buffer.from(tasksB64, 'base64').toString('utf8');
             const tasks = JSON.parse(tasksJson || '[]');
 
@@ -286,7 +288,7 @@ jobs:
     name: Assign Copilot to Unassigned Issues
     runs-on: ubuntu-latest
     needs: check-pr-limit
-    if: always() && (github.event.inputs.assign_unassigned != 'false')
+    if: always() && (github.event_name != 'workflow_dispatch' || github.event.inputs.assign_unassigned != 'false')
     steps:
       - name: Assign agent user or label remaining unassigned Copilot issues
         uses: actions/github-script@v7
@@ -363,8 +365,9 @@ jobs:
           script: |
             const now = new Date();
             const dateIso = now.toISOString();
-            const canProceed = '${{ needs.check-pr-limit.outputs.can_proceed }}' === 'true';
-            const openPRs = '${{ needs.check-pr-limit.outputs.open_pr_count }}';
+            // Use bracket-notation for hyphenated job IDs
+            const canProceed = '${{ needs['check-pr-limit'].outputs.can_proceed }}' === 'true';
+            const openPRs  = '${{ needs['check-pr-limit'].outputs.open_pr_count }}';
 
             // Find existing tracking issue
             const { data: issues } = await github.rest.issues.listForRepo({
@@ -382,6 +385,8 @@ jobs:
               `Status: ${status}`,
               '',
               `Last run: ${dateIso}`,
+              '',
+              `Open Copilot PRs: ${openPRs}`
             ].join('\n');
 
             let tracking = issues.find(i => (i.title || '').includes('Copilot Development Cycle Status'));
