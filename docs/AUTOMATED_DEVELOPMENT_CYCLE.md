@@ -429,9 +429,22 @@ A: Modify the `find` commands in the analysis steps to exclude paths.
 
 ---
 
+## Playwright-Based Assignment
+
+As of the latest version, the automated development cycle uses **Playwright** to assign `@copilot` to issues via the GitHub web UI instead of using the API directly. This provides:
+
+- Visual proof of automation through screenshots
+- More realistic interaction with GitHub
+- Better debugging capabilities
+- Automatic fallback to API if UI automation fails
+
+For detailed information about the Playwright integration, see:
+- [Playwright Copilot Assignment Guide](PLAYWRIGHT_COPILOT_ASSIGNMENT.md)
+
 ## Related Documentation
 
 - [Main Development Loop Guide](COPILOT_DEVELOPMENT_LOOP.md)
+- [Playwright Copilot Assignment](PLAYWRIGHT_COPILOT_ASSIGNMENT.md)
 - [Contributing Guidelines](../CONTRIBUTING.md)
 - [GitHub Actions Documentation](https://docs.github.com/actions)
 
