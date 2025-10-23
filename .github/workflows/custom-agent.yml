@@ -10,29 +10,50 @@ permissions:
 
 jobs:
   analyze:
-    if: contains(github.event.issue.labels.*.name, 'copilot-agent')
+    # Fire if:
+    # - the new label (for "labeled" action) is any Copilot label, OR
+    # - for opened/edited, the issue already has any Copilot labels, OR
+    # - the title contains "[Copilot]"
+    if: >
+      (
+        github.event.action == 'labeled' &&
+        contains(fromJson('["copilot-agent","copilot-assist","copilot-automated","needs-copilot-review","triage"]'),
+                 github.event.label.name)
+      ) || (
+        contains(github.event.issue.title, '[Copilot]') ||
+        contains(github.event.issue.labels.*.name, 'copilot-agent') ||
+        contains(github.event.issue.labels.*.name, 'copilot-assist') ||
+        contains(github.event.issue.labels.*.name, 'copilot-automated') ||
+        contains(github.event.issue.labels.*.name, 'needs-copilot-review') ||
+        contains(github.event.issue.labels.*.name, 'triage')
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Log task metadata
         run: |
-          echo "Processing Copilot agent task: #${{ github.event.issue.number }}"
+          echo "Action: ${{ github.event.action }}"
+          echo "Issue #: ${{ github.event.issue.number }}"
           echo "Title: ${{ github.event.issue.title }}"
-          echo "Labels: ${{ toJson(github.event.issue.labels) }}"
-      
+          echo "New label (if labeled): ${{ github.event.label.name }}"
+          echo "All labels: ${{ toJson(github.event.issue.labels) }}"
+
       - name: Post agent analysis comment
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const issue = context.payload.issue;
-            const body = `
-              **Copilot Agent Analysis**
-              Hello! I'm your Copilot Agent.I’ve detected this automated task and will begin processing it.
-              Please wait while I analyze your request and prepare recommendations.  
-              *(This is an automated response triggered by label \`copilot-agent\`.)*`;
+            const body = [
+              '🤖 **Copilot Agent Analysis**',
+              '',
+              "I've detected this automated task and will begin processing it.",
+              'I will analyze the request and provide recommendations shortly.',
+              '',
+              '_(Triggered by Copilot label or title match.)_'
+            ].join('\n');
             await github.rest.issues.createComment({
-              issue_number: issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
+              issue_number: issue.number,
               body
             });
