@@ -1,4 +1,4 @@
-name: Copilot Agent Task Processor
+name: Copilot Custom Agent Task Processor
 
 on:
   issues:
