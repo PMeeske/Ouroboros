@@ -26,13 +26,10 @@ jobs:
           script: |
             const issue = context.payload.issue;
             const body = `
-🤖 **Copilot Agent Analysis**
-
-Hello! I'm your Copilot Agent.
-I’ve detected this automated task and will begin processing it.
-Please wait while I analyze your request and prepare recommendations.  
-*(This is an automated response triggered by label \`copilot-agent\`.)*
-`;
+              **Copilot Agent Analysis**
+              Hello! I'm your Copilot Agent.I’ve detected this automated task and will begin processing it.
+              Please wait while I analyze your request and prepare recommendations.  
+              *(This is an automated response triggered by label \`copilot-agent\`.)*`;
             await github.rest.issues.createComment({
               issue_number: issue.number,
               owner: context.repo.owner,
