@@ -21,3 +21,14 @@ appsettings.*.local.json
 TestCoverageReport/
 coverage/
 **/coverage.cobertura.xml
+
+# Node.js dependencies and Playwright
+node_modules/
+package-lock.json
+.github/scripts/node_modules/
+.github/scripts/package-lock.json
+
+# Playwright artifacts
+playwright-report/
+test-results/
+playwright/.cache/
