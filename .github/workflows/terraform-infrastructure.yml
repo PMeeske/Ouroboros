@@ -41,7 +41,7 @@ env:
 
 jobs:
   terraform:
-    name: Terraform ${{ github.event.inputs.action || 'plan' }} - ${{ github.event.inputs.environment || 'dev' }}
+    name: Terraform ${{ inputs.action || 'plan' }} - ${{ inputs.environment || 'dev' }}
     runs-on: ubuntu-latest
     environment: IONOS  # Use IONOS environment for secrets
 
@@ -90,7 +90,7 @@ jobs:
       - name: Determine environment file
         id: env_file
         run: |
-          ENV="${{ github.event.inputs.environment }}"
+          ENV="${{ inputs.environment }}"
           if [ -z "$ENV" ]; then
             ENV="dev"
           fi
@@ -137,14 +137,14 @@ jobs:
 
       - name: Terraform Apply
         if: |
-          github.event.inputs.action == 'apply' &&
-          (github.event.inputs.auto_approve == 'true' || github.event_name == 'push')
+          inputs.action == 'apply' &&
+          (inputs.auto_approve == 'true' || github.event_name == 'push')
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform apply -auto-approve tfplan
 
       - name: Terraform Destroy
-        if: github.event.inputs.action == 'destroy' && github.event.inputs.auto_approve == 'true'
+        if: inputs.action == 'destroy' && inputs.auto_approve == 'true'
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform destroy \
@@ -152,7 +152,7 @@ jobs:
             -auto-approve
 
       - name: Output Terraform Results
-        if: github.event.inputs.action == 'apply' || github.event_name == 'push'
+        if: inputs.action == 'apply' || github.event_name == 'push'
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           echo "## Terraform Outputs"
@@ -161,7 +161,7 @@ jobs:
           terraform output deployment_summary
 
       - name: Upload Terraform Outputs
-        if: github.event.inputs.action == 'apply' || github.event_name == 'push'
+        if: inputs.action == 'apply' || github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: terraform-outputs-${{ steps.env_file.outputs.environment }}
@@ -169,14 +169,14 @@ jobs:
           retention-days: 30
 
       - name: Save Kubeconfig
-        if: github.event.inputs.action == 'apply' || github.event_name == 'push'
+        if: inputs.action == 'apply' || github.event_name == 'push'
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform output -raw k8s_kubeconfig > kubeconfig-${{ steps.env_file.outputs.environment }}.yaml
           echo "::add-mask::$(cat kubeconfig-${{ steps.env_file.outputs.environment }}.yaml)"
 
       - name: Upload Kubeconfig
-        if: github.event.inputs.action == 'apply' || github.event_name == 'push'
+        if: inputs.action == 'apply' || github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: kubeconfig-${{ steps.env_file.outputs.environment }}
@@ -193,8 +193,8 @@ jobs:
       - name: Notification
         run: |
           if [ "${{ needs.terraform.result }}" == "success" ]; then
-            echo "✅ Terraform ${{ github.event.inputs.action || 'plan' }} completed successfully for ${{ github.event.inputs.environment || 'dev' }}"
+            echo "✅ Terraform ${{ inputs.action || 'plan' }} completed successfully for ${{ inputs.environment || 'dev' }}"
           else
-            echo "❌ Terraform ${{ github.event.inputs.action || 'plan' }} failed for ${{ github.event.inputs.environment || 'dev' }}"
+            echo "❌ Terraform ${{ inputs.action || 'plan' }} failed for ${{ inputs.environment || 'dev' }}"
             exit 1
           fi
