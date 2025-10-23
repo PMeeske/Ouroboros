@@ -265,7 +265,7 @@ jobs:
               title: `Weekly Code Quality Report - ${now.toISOString().split('T')[0]}`,
               body: `${report}\n\n---\n\n**@copilot** has been automatically assigned to this issue for analysis.`,
               labels: ['continuous-improvement', 'quality', 'copilot-assist'],
-              assignees: [context.repo.owner]
+              assignees: ['copilot']
             });
             console.log(`Created new improvement issue #${issue.data.number}`);
 
