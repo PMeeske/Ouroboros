@@ -207,6 +207,7 @@ jobs:
         env:
           COPILOT_AGENT_USER: ${{ env.COPILOT_AGENT_USER }}
         with:
+          github-token: ${{ secrets.COPILOT_BOT_TOKEN }}  # ⬅️ PAT
           script: |
             const copilotUser = (process.env.COPILOT_AGENT_USER || '').trim() || null;
             const tasksB64 = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
@@ -237,8 +238,8 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title: `[Copilot] ${task.title}`,
-                body: `${task.body}\n\n---\n\n🤖 **Automated Task**: Created by the Copilot Development Cycle.`,
-                labels: [...(task.labels ?? []), 'copilot-automated']
+                body: `${task.body}\n\n---\n\n🤖 Created by Copilot Development Cycle.`,
+                labels: [...(task.labels ?? []), 'copilot-agent']   // ⬅️ ensure trigger label
               });
 
               console.log(`✅ Created issue #${issue.data.number}: ${task.title}`);
