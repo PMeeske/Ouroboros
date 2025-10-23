@@ -161,11 +161,10 @@ This directory contains GitHub Actions workflows that implement the automatic de
    - Async/await issues
 3. Generates prioritized improvement tasks
 4. Creates GitHub issues for selected tasks
-5. **🎭 Uses Playwright to assign copilot via GitHub UI** (NEW)
-6. Falls back to API if UI automation fails
-7. **Assigns copilot to unassigned issues** (NEW)
-8. Captures screenshots for debugging
-9. Updates cycle status tracking issue
+5. **🎭 Assigns copilot to issues via Playwright UI automation** (NEW - for both new and unassigned issues)
+6. Captures screenshots for debugging and uploads as artifacts
+7. Falls back to API if UI automation fails
+8. Updates cycle status tracking issue
 
 **New Feature: Playwright-Based Assignment** 🎭
 - Uses browser automation instead of GitHub API
@@ -180,7 +179,7 @@ This directory contains GitHub Actions workflows that implement the automatic de
 - Identifies copilot-relevant issues by:
   - Labels: `copilot-assist`, `copilot-automated`, `continuous-improvement`
   - Title: Contains `[Copilot]`
-- Uses Playwright to assign via UI (with API fallback)
+- Assignment mechanism: See Playwright-Based Assignment above
 - Adds notification comment with `@copilot` mention
 - Reports count of newly assigned issues
 
