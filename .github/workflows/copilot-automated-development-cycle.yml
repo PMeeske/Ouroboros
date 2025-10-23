@@ -2,10 +2,13 @@ name: Copilot Automated Development Cycle
 
 on:
   schedule:
-    # Run twice daily at 9 AM and 5 PM UTC
+    # Twice daily at 9 AM and 5 PM UTC
     - cron: '0 9,17 * * *'
   pull_request:
     types: [closed]
+    branches: [main]
+  # Handy for testing changes immediately
+  push:
     branches: [main]
   workflow_dispatch:
     inputs:
@@ -24,6 +27,11 @@ on:
         required: false
         default: true
         type: boolean
+      force_create_when_empty:
+        description: 'Create a placeholder agent task if analysis finds nothing'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -31,7 +39,8 @@ permissions:
   pull-requests: write
 
 env:
-  COPILOT_AGENT_USER: ${{ secrets.COPILOT_AGENT_USER }} # optional
+  # Optional: set to a real machine user (e.g., my-org-copilot) to receive assignments
+  COPILOT_AGENT_USER: ${{ secrets.COPILOT_AGENT_USER }}
 
 jobs:
   check-pr-limit:
@@ -40,7 +49,6 @@ jobs:
     outputs:
       can_proceed: ${{ steps.check.outputs.can_proceed }}
       open_pr_count: ${{ steps.check.outputs.open_pr_count }}
-
     steps:
       - name: Check open PRs
         id: check
@@ -54,16 +62,17 @@ jobs:
               per_page: 100
             });
 
-            const copilotPRs = pullRequests.filter(pr => pr.head.ref.startsWith('copilot/'));
+            // Treat copilot PRs as those with branch prefix "copilot/"
+            const copilotPRs = pullRequests.filter(pr => (pr.head.ref || '').startsWith('copilot/'));
             const openCount = copilotPRs.length;
             const maxPRs = 5;
-            const force = '${{ github.event.inputs.force }}' === 'true';
+            const force = ('${{ github.event.inputs.force }}' || '').toString() === 'true';
 
             console.log(`Open Copilot PRs: ${openCount}/${maxPRs}`);
             const canProceed = force || openCount < maxPRs;
 
-            core.setOutput('can_proceed', canProceed);
-            core.setOutput('open_pr_count', openCount);
+            core.setOutput('can_proceed', String(canProceed));
+            core.setOutput('open_pr_count', String(openCount));
             console.log(canProceed ? '✅ Can proceed with cycle' : '⚠️ Max PRs reached');
 
   analyze-and-generate-tasks:
@@ -73,25 +82,35 @@ jobs:
     if: needs.check-pr-limit.outputs.can_proceed == 'true'
     outputs:
       tasks: ${{ steps.generate.outputs.tasks }}
-
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - run: dotnet restore
-      - run: dotnet build --configuration Release --no-restore
-
       - name: Run code analysis
+        shell: bash
         run: |
-          echo "Running code analysis..."
+          set -eo pipefail
+          echo "Running repository-wide analysis..."
           mkdir -p analysis-output
-          grep -rn "TODO\|FIXME" src --include="*.cs" | head -20 > analysis-output/todos.txt || echo "None found" > analysis-output/todos.txt
-          echo "Analysis complete"
+
+          # Use git grep across the repo (ignore binaries), limit to top 50 lines for compactness
+          if git rev-parse --git-dir > /dev/null 2>&1; then
+            git grep -n -I -E "TODO|FIXME|HACK" -- . \
+              ":(exclude)bin" ":(exclude)obj" ":(exclude).git" \
+              | head -50 > analysis-output/todos.txt || true
+          else
+            # Fallback if git is not available (should not happen in Actions)
+            grep -rnI -E "TODO|FIXME|HACK" . | head -50 > analysis-output/todos.txt || true
+          fi
+
+          # If file ended up empty, mark as "None found"
+          if [ ! -s analysis-output/todos.txt ]; then
+            echo "None found" > analysis-output/todos.txt
+          fi
+
+          echo "Analysis complete. Preview:"
+          head -20 analysis-output/todos.txt || true
 
       - name: Generate improvement tasks
         id: generate
@@ -99,74 +118,167 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+
+            // Inputs
+            const maxTasksRaw = '${{ github.event.inputs.max_tasks }}';
+            const maxTasks = Number.isFinite(parseInt(maxTasksRaw)) ? parseInt(maxTasksRaw) : 3;
+            const forceCreate = ('${{ github.event.inputs.force_create_when_empty }}' || '').toString() === 'true';
+
+            // Read analysis findings
             const todos = fs.existsSync('analysis-output/todos.txt')
-              ? fs.readFileSync('analysis-output/todos.txt', 'utf8').split('\n').filter(Boolean)
+              ? fs.readFileSync('analysis-output/todos.txt','utf8').split('\n').filter(l => l.trim() !== '')
               : [];
 
             const tasks = [];
+
+            // Task 1: TODO/FIXME/HACK triage
             if (todos.length && todos[0] !== 'None found') {
               tasks.push({
-                title: 'Address TODOs',
-                body: `Found TODOs:\n\n\`\`\`\n${todos.slice(0,5).join('\n')}\n\`\`\`\n\nPlease resolve these.`,
-                labels: ['enhancement', 'copilot-automated']
+                priority: 'high',
+                type: 'maintenance',
+                title: 'Address TODO/FIXME/HACK items',
+                body: [
+                  '## 🔧 Code Maintenance',
+                  '',
+                  'Top findings:',
+                  '```',
+                  todos.slice(0, 20).join('\n'),
+                  '```',
+                  '',
+                  '### Approach',
+                  '1. Review each finding',
+                  '2. Implement fixes or create dedicated issues',
+                  '3. Remove TODO/FIXME/HACK from code after resolution',
+                  '',
+                  '### Guidelines',
+                  '- Prefer Result<T> over throwing for expected errors',
+                  '- Add/adjust tests when changing logic',
+                  '- Update docs/comments accordingly'
+                ].join('\n'),
+                labels: ['enhancement','copilot-automated','copilot-assist']
               });
             }
 
-            const tasksJson = JSON.stringify(tasks);
-            const tasksBase64 = Buffer.from(tasksJson).toString('base64');
-            core.setOutput('tasks', tasksBase64);
+            let selected = tasks.slice(0, Math.max(1, maxTasks));
+
+            // Optional placeholder if nothing found
+            if (selected.length === 0 && forceCreate) {
+              selected = [{
+                priority: 'low',
+                type: 'agent-task',
+                title: 'Copilot Agent: Triage and propose improvements',
+                body: [
+                  '## 🤖 Agent Task (Placeholder)',
+                  '',
+                  'The analyzer did not find concrete items.',
+                  'Please triage the repository and propose 2–3 improvements (tests, docs, refactors).'
+                ].join('\n'),
+                labels: ['copilot-automated','copilot-assist','triage']
+              }];
+            }
+
+            const b64 = Buffer.from(JSON.stringify(selected)).toString('base64');
+            core.setOutput('tasks', b64);
+
+            console.log(`Tasks generated: ${selected.length}`);
+            console.log(`Tasks (base64, first 120 chars): ${b64.substring(0,120)}...`);
+
+      - name: Debug generated tasks
+        shell: bash
+        run: |
+          echo "tasks (base64): ${{ steps.generate.outputs.tasks }}"
+          echo "${{ steps.generate.outputs.tasks }}" | base64 -d || true
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-analysis-${{ github.run_id }}
+          path: analysis-output/
+          retention-days: 14
 
   create-improvement-issues:
     name: Create Improvement Issues
     runs-on: ubuntu-latest
     needs: [check-pr-limit, analyze-and-generate-tasks]
     if: needs.analyze-and-generate-tasks.outputs.tasks != ''
-
     steps:
-      - name: Create issues (assign or label Copilot)
+      - name: Create issues (assign to agent user or label)
         uses: actions/github-script@v7
+        env:
+          COPILOT_AGENT_USER: ${{ env.COPILOT_AGENT_USER }}
         with:
           script: |
-            const tasksBase64 = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
-            const tasksJson = Buffer.from(tasksBase64, 'base64').toString('utf8');
-            const tasks = JSON.parse(tasksJson);
-            const copilotUser = process.env.COPILOT_AGENT_USER || null;
+            const copilotUser = (process.env.COPILOT_AGENT_USER || '').trim() || null;
+            const tasksB64 = '${{ needs.analyze-and-generate-tasks.outputs.tasks }}';
+            const tasksJson = Buffer.from(tasksB64, 'base64').toString('utf8');
+            const tasks = JSON.parse(tasksJson || '[]');
+
+            console.log(`Creating ${tasks.length} issue(s)...`);
 
             for (const task of tasks) {
-              try {
-                const issue = await github.rest.issues.create({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  title: `[Copilot] ${task.title}`,
-                  body: `${task.body}\n\n---\n\n🤖 Automated Copilot Task`,
-                  labels: [...task.labels, 'copilot-assist']
-                });
+              // Avoid duplicate by similar title (basic guard)
+              const { data: existing } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                per_page: 100,
+                labels: (task.labels || []).join(',')
+              });
+              const key = (task.title || '').toLowerCase().split(' ').slice(0, 4).join(' ');
+              const dup = existing.find(i => (i.title || '').toLowerCase().includes(key));
 
-                if (copilotUser) {
-                  try {
-                    await github.rest.issues.addAssignees({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      issue_number: issue.data.number,
-                      assignees: [copilotUser]
-                    });
-                    console.log(`✅ Assigned ${copilotUser} to issue #${issue.data.number}`);
-                  } catch (err) {
-                    console.log(`⚠️ Could not assign ${copilotUser}: ${err.message}`);
-                  }
-                } else {
+              if (dup) {
+                console.log(`⚠️ Similar issue exists #${dup.number} "${dup.title}" — skipping`);
+                continue;
+              }
+
+              // Create issue
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `[Copilot] ${task.title}`,
+                body: `${task.body}\n\n---\n\n🤖 **Automated Task**: Created by the Copilot Development Cycle.`,
+                labels: [...(task.labels ?? []), 'copilot-automated']
+              });
+
+              console.log(`✅ Created issue #${issue.data.number}: ${task.title}`);
+
+              // Assign or label for review
+              if (copilotUser) {
+                try {
+                  await github.rest.issues.addAssignees({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.data.number,
+                    assignees: [copilotUser]
+                  });
+                  console.log(`🧑‍🚀 Assigned ${copilotUser} → #${issue.data.number}`);
+                } catch (err) {
+                  console.log(`⚠️ Could not assign ${copilotUser}: ${err.message}`);
                   await github.rest.issues.addLabels({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     issue_number: issue.data.number,
                     labels: ['needs-copilot-review']
                   });
-                  console.log(`ℹ️ Added review label to issue #${issue.data.number}`);
                 }
-
-              } catch (e) {
-                console.log(`⚠️ Failed to create issue: ${e.message}`);
+              } else {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.data.number,
+                  labels: ['needs-copilot-review']
+                });
+                console.log(`ℹ️ Labeled #${issue.data.number} for Copilot review`);
               }
+
+              // Optional: notify via comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.data.number,
+                body: '🤖 Copilot Agent queued: will analyze this issue and provide guidance.'
+              });
             }
 
   assign-copilot-to-unassigned:
@@ -174,13 +286,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: check-pr-limit
     if: always() && (github.event.inputs.assign_unassigned != 'false')
-
     steps:
-      - name: Find and assign or label unassigned Copilot issues
+      - name: Assign agent user or label remaining unassigned Copilot issues
         uses: actions/github-script@v7
+        env:
+          COPILOT_AGENT_USER: ${{ env.COPILOT_AGENT_USER }}
         with:
           script: |
-            const copilotUser = process.env.COPILOT_AGENT_USER || null;
+            const copilotUser = (process.env.COPILOT_AGENT_USER || '').trim() || null;
             const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -188,72 +301,105 @@ jobs:
               per_page: 100
             });
 
+            let touched = 0;
+
             for (const issue of issues) {
-              if (issue.pull_request || (issue.assignees && issue.assignees.length > 0)) continue;
-              const labels = issue.labels.map(l => l.name);
-              if (labels.includes('copilot-automated') || issue.title.includes('[Copilot]')) {
-                if (copilotUser) {
-                  try {
-                    await github.rest.issues.addAssignees({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      issue_number: issue.number,
-                      assignees: [copilotUser]
-                    });
-                    console.log(`✅ Assigned ${copilotUser} to #${issue.number}`);
-                  } catch (err) {
-                    console.log(`⚠️ Could not assign ${copilotUser}: ${err.message}`);
-                  }
-                } else {
+              if (issue.pull_request) continue;
+              if (issue.assignees && issue.assignees.length > 0) continue;
+
+              const labels = (issue.labels || []).map(l => l.name || l);
+              const isCopilotish =
+                labels.includes('copilot-automated') ||
+                labels.includes('copilot-assist') ||
+                labels.includes('triage') ||
+                (issue.title || '').includes('[Copilot]');
+
+              if (!isCopilotish) continue;
+
+              if (copilotUser) {
+                try {
+                  await github.rest.issues.addAssignees({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    assignees: [copilotUser]
+                  });
+                  console.log(`🧑‍🚀 Assigned ${copilotUser} → #${issue.number}`);
+                } catch (err) {
+                  console.log(`⚠️ Could not assign ${copilotUser}: ${err.message}`);
                   await github.rest.issues.addLabels({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     issue_number: issue.number,
                     labels: ['needs-copilot-review']
                   });
-                  console.log(`ℹ️ Added review label to #${issue.number}`);
+                  console.log(`ℹ️ Labeled #${issue.number} for Copilot review`);
                 }
+              } else {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: ['needs-copilot-review']
+                });
+                console.log(`ℹ️ Labeled #${issue.number} for Copilot review`);
               }
+
+              touched++;
             }
+
+            console.log(`✅ Processed ${touched} unassigned Copilot issue(s)`);
 
   update-cycle-status:
     name: Update Cycle Status
     runs-on: ubuntu-latest
     needs: [check-pr-limit, analyze-and-generate-tasks, create-improvement-issues, assign-copilot-to-unassigned]
     if: always()
-
     steps:
-      - name: Update or create tracking issue
+      - name: Create or update tracking issue
         uses: actions/github-script@v7
         with:
           script: |
             const now = new Date();
+            const dateIso = now.toISOString();
+            const canProceed = '${{ needs.check-pr-limit.outputs.can_proceed }}' === 'true';
+            const openPRs = '${{ needs.check-pr-limit.outputs.open_pr_count }}';
+
+            // Find existing tracking issue
             const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
-              labels: 'copilot-cycle-tracker'
+              labels: 'copilot-cycle-tracker',
+              per_page: 100
             });
 
-            const status = '${{ needs.check-pr-limit.outputs.can_proceed }}' === 'true' ? '🟢 Active' : '🟡 Paused';
-            const body = `# 🤖 Copilot Development Cycle\n\nStatus: **${status}**\n\nLast run: ${now.toISOString()}`;
+            const status = canProceed ? '🟢 Active' : '🟡 Paused (Max PRs)';
+            const body = [
+              '# 🤖 Copilot Development Cycle',
+              '',
+              `Status: ${status}`,
+              '',
+              `Last run: ${dateIso}`,
+            ].join('\n');
 
-            let tracker = issues.find(i => i.title.includes('Development Cycle Status'));
-            if (tracker) {
+            let tracking = issues.find(i => (i.title || '').includes('Copilot Development Cycle Status'));
+
+            if (tracking) {
               await github.rest.issues.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: tracker.number,
+                issue_number: tracking.number,
                 body
               });
-              console.log(`✅ Updated tracking issue #${tracker.number}`);
+              console.log(`Updated tracking issue #${tracking.number}`);
             } else {
-              await github.rest.issues.create({
+              const created = await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title: '🤖 Copilot Development Cycle Status',
                 body,
-                labels: ['copilot-cycle-tracker']
+                labels: ['copilot-cycle-tracker','automation']
               });
-              console.log('✅ Created new tracking issue');
+              console.log(`Created tracking issue #${created.data.number}`);
             }
