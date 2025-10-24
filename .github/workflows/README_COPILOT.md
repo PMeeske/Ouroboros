@@ -161,15 +161,25 @@ This directory contains GitHub Actions workflows that implement the automatic de
    - Async/await issues
 3. Generates prioritized improvement tasks
 4. Creates GitHub issues for selected tasks
-5. **Assigns copilot to unassigned issues** (NEW)
-6. Updates cycle status tracking issue
+5. **🎭 Assigns copilot to issues via Playwright UI automation** (NEW - for both new and unassigned issues)
+6. Captures screenshots for debugging and uploads as artifacts
+7. Falls back to API if UI automation fails
+8. Updates cycle status tracking issue
+
+**New Feature: Playwright-Based Assignment** 🎭
+- Uses browser automation instead of GitHub API
+- Interacts with GitHub UI like a human would
+- Captures screenshots at each step for debugging
+- Uploads artifacts for troubleshooting
+- Automatically falls back to API if UI fails
+- See [Playwright Assignment Guide](../../docs/PLAYWRIGHT_COPILOT_ASSIGNMENT.md)
 
 **New Feature: Unassigned Issues Assignment**
 - Scans for open issues without assignees
 - Identifies copilot-relevant issues by:
   - Labels: `copilot-assist`, `copilot-automated`, `continuous-improvement`
   - Title: Contains `[Copilot]`
-- Automatically assigns copilot to those issues
+- Assignment mechanism: See Playwright-Based Assignment above
 - Adds notification comment with `@copilot` mention
 - Reports count of newly assigned issues
 
@@ -415,6 +425,8 @@ Planned improvements:
 ## 📚 Related Documentation
 
 - [Full Documentation](../../docs/COPILOT_DEVELOPMENT_LOOP.md)
+- [Automated Development Cycle](../../docs/AUTOMATED_DEVELOPMENT_CYCLE.md)
+- [Playwright Copilot Assignment](../../docs/PLAYWRIGHT_COPILOT_ASSIGNMENT.md) 🎭
 - [Quick Start Guide](../COPILOT_QUICKSTART.md)
 - [Copilot Instructions](../copilot-instructions.md)
 - [Main Workflows README](README.md)

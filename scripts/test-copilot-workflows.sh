@@ -220,6 +220,58 @@ else
 fi
 echo ""
 
+echo "Test 9: Check Playwright Integration"
+echo "------------------------------------"
+# Check that Playwright script exists
+if [ -f "$PROJECT_ROOT/.github/scripts/assign-copilot-via-ui.js" ]; then
+    print_result "Playwright assignment script exists" 0
+else
+    print_result "Playwright assignment script exists" 1
+fi
+
+# Check that package.json exists for Playwright dependencies
+if [ -f "$PROJECT_ROOT/.github/scripts/package.json" ]; then
+    print_result "Playwright package.json exists" 0
+else
+    print_result "Playwright package.json exists" 1
+fi
+
+# Check that workflow uses Playwright
+if grep -q "assign-copilot-via-ui.js" "$WORKFLOWS_DIR/copilot-automated-development-cycle.yml" 2>/dev/null; then
+    print_result "Workflow uses Playwright script" 0
+else
+    print_result "Workflow uses Playwright script" 1
+fi
+
+# Check that workflow has Playwright setup steps
+if grep -q "Setup Node.js for Playwright" "$WORKFLOWS_DIR/copilot-automated-development-cycle.yml" 2>/dev/null; then
+    print_result "Workflow has Playwright setup" 0
+else
+    print_result "Workflow has Playwright setup" 1
+fi
+
+# Check that workflow installs Playwright
+if grep -q "playwright install" "$WORKFLOWS_DIR/copilot-automated-development-cycle.yml" 2>/dev/null; then
+    print_result "Workflow installs Playwright browsers" 0
+else
+    print_result "Workflow installs Playwright browsers" 1
+fi
+
+# Check that workflow has fallback to API
+if grep -q "Fallback - Assign via API" "$WORKFLOWS_DIR/copilot-automated-development-cycle.yml" 2>/dev/null; then
+    print_result "Workflow has API fallback mechanism" 0
+else
+    print_result "Workflow has API fallback mechanism" 1
+fi
+
+# Check that .gitignore excludes node_modules
+if grep -q "node_modules" "$PROJECT_ROOT/.gitignore" 2>/dev/null; then
+    print_result ".gitignore excludes node_modules" 0
+else
+    print_result ".gitignore excludes node_modules" 1
+fi
+echo ""
+
 # Summary
 echo "=============================================="
 echo "Test Results Summary"

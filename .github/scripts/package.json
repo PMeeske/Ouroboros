@@ -1,0 +1,15 @@
+{
+  "name": "copilot-github-automation",
+  "version": "1.0.0",
+  "description": "Playwright automation scripts for GitHub Copilot assignment",
+  "private": true,
+  "scripts": {
+    "install-playwright": "npx playwright install chromium --with-deps"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.40.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

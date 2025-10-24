@@ -713,7 +713,9 @@ Fully automated code improvement workflow:
 - 📊 Maintains max 5 open copilot PRs
 - 🔍 Analyzes codebase for improvements
 - 📝 Auto-generates prioritized improvement tasks
-- 👤 Automatically assigns @copilot to issues
+- 🎭 Uses Playwright to assign @copilot via GitHub UI
+- 🖼️ Captures screenshots for debugging
+- 🔄 Falls back to API if UI automation fails
 - 🚀 Triggers new cycle when PRs are merged
 
 **Features**:
@@ -757,7 +759,10 @@ Weekly automated analysis provides:
 
 ### Documentation
 
-See [GitHub Copilot Development Loop Guide](docs/COPILOT_DEVELOPMENT_LOOP.md) for complete documentation.
+See these guides for complete documentation:
+- [GitHub Copilot Development Loop Guide](docs/COPILOT_DEVELOPMENT_LOOP.md)
+- [Automated Development Cycle](docs/AUTOMATED_DEVELOPMENT_CYCLE.md)
+- [Playwright Copilot Assignment](docs/PLAYWRIGHT_COPILOT_ASSIGNMENT.md) 🎭 **NEW**
 
 ---
 

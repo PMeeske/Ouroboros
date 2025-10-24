@@ -203,8 +203,13 @@ jobs:
     needs: [check-pr-limit, analyze-and-generate-tasks]
     # Bracket-notation for job ID with hyphens
     if: needs['analyze-and-generate-tasks'].outputs.tasks != ''
+    outputs:
+      created_issue_numbers: ${{ steps.create.outputs.issue_numbers }}
     steps:
-      - name: Create issues (assign to agent user or label)
+      - uses: actions/checkout@v4
+
+      - name: Create issues
+        id: create
         uses: actions/github-script@v7
         env:
           COPILOT_AGENT_USER: ${{ env.COPILOT_AGENT_USER }}
@@ -217,6 +222,7 @@ jobs:
             const tasks = JSON.parse(tasksJson || '[]');
 
             console.log(`Creating ${tasks.length} issue(s)...`);
+            const createdIssueNumbers = [];
 
             for (const task of tasks) {
               // Avoid duplicate by similar title (basic guard)
@@ -245,35 +251,7 @@ jobs:
               });
 
               console.log(`✅ Created issue #${issue.data.number}: ${task.title}`);
-
-              // Assign or label for review
-              if (copilotUser) {
-                try {
-                  await github.rest.issues.addAssignees({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: issue.data.number,
-                    assignees: [copilotUser]
-                  });
-                  console.log(`🧑‍🚀 Assigned ${copilotUser} → #${issue.data.number}`);
-                } catch (err) {
-                  console.log(`⚠️ Could not assign ${copilotUser}: ${err.message}`);
-                  await github.rest.issues.addLabels({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: issue.data.number,
-                    labels: ['needs-copilot-review']
-                  });
-                }
-              } else {
-                await github.rest.issues.addLabels({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.data.number,
-                  labels: ['needs-copilot-review']
-                });
-                console.log(`ℹ️ Labeled #${issue.data.number} for Copilot review`);
-              }
+              createdIssueNumbers.push(issue.data.number);
 
               // Optional: notify via comment
               await github.rest.issues.createComment({
@@ -284,19 +262,121 @@ jobs:
               });
             }
 
+            // Set output for next step
+            core.setOutput('issue_numbers', createdIssueNumbers.join(','));
+            console.log(`Created issues: ${createdIssueNumbers.join(', ')}`);
+
+      - name: Setup Node.js for Playwright
+        if: steps.create.outputs.issue_numbers != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright dependencies
+        if: steps.create.outputs.issue_numbers != ''
+        working-directory: .github/scripts
+        run: |
+          npm install
+          npx playwright install chromium --with-deps
+
+      - name: Assign Copilot via Playwright UI
+        if: steps.create.outputs.issue_numbers != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
+          COPILOT_USER: ${{ env.COPILOT_AGENT_USER || 'copilot' }}
+        working-directory: .github/scripts
+        run: |
+          ISSUE_NUMBERS="${{ steps.create.outputs.issue_numbers }}"
+          IFS=',' read -ra ISSUES <<< "$ISSUE_NUMBERS"
+          
+          for issue_num in "${ISSUES[@]}"; do
+            echo "🎭 Attempting to assign @${COPILOT_USER} to issue #${issue_num} via Playwright..."
+            node assign-copilot-via-ui.js "${{ github.repository_owner }}" "${{ github.event.repository.name }}" "$issue_num" "${COPILOT_USER}" || {
+              echo "⚠️ Playwright assignment failed for issue #${issue_num}, will fallback to API"
+            }
+          done
+
+      - name: Upload Playwright artifacts
+        if: always() && steps.create.outputs.issue_numbers != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-screenshots-${{ github.run_id }}
+          path: /tmp/github-*.png
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Fallback - Assign via API if Playwright failed
+        if: steps.create.outputs.issue_numbers != ''
+        uses: actions/github-script@v7
+        env:
+          COPILOT_AGENT_USER: ${{ env.COPILOT_AGENT_USER }}
+        with:
+          github-token: ${{ secrets.COPILOT_BOT_TOKEN }}
+          script: |
+            const copilotUser = (process.env.COPILOT_AGENT_USER || '').trim() || 'copilot';
+            const issueNumbers = '${{ steps.create.outputs.issue_numbers }}'.split(',').filter(n => n);
+            
+            console.log(`🔄 Fallback: Checking assignments for issues: ${issueNumbers.join(', ')}`);
+            
+            for (const issueNum of issueNumbers) {
+              const num = parseInt(issueNum);
+              if (!num) continue;
+              
+              try {
+                // Check if already assigned
+                const { data: issue } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: num
+                });
+                
+                if (issue.assignees && issue.assignees.length > 0) {
+                  console.log(`✅ Issue #${num} already has assignees, skipping`);
+                  continue;
+                }
+                
+                // Assign via API
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: num,
+                  assignees: [copilotUser]
+                });
+                console.log(`🧑‍🚀 Assigned ${copilotUser} to #${num} via API`);
+              } catch (err) {
+                console.log(`⚠️ Could not assign ${copilotUser} to #${num}: ${err.message}`);
+                // Add label for manual review
+                try {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: num,
+                    labels: ['needs-copilot-review']
+                  });
+                  console.log(`ℹ️ Labeled #${num} for Copilot review`);
+                } catch (labelErr) {
+                  console.log(`⚠️ Could not add label to #${num}: ${labelErr.message}`);
+                }
+              }
+            }
+
   assign-copilot-to-unassigned:
     name: Assign Copilot to Unassigned Issues
     runs-on: ubuntu-latest
     needs: check-pr-limit
     if: always() && (github.event_name != 'workflow_dispatch' || github.event.inputs.assign_unassigned != 'false')
+    outputs:
+      unassigned_issue_numbers: ${{ steps.find.outputs.issue_numbers }}
     steps:
-      - name: Assign agent user or label remaining unassigned Copilot issues
+      - uses: actions/checkout@v4
+
+      - name: Find unassigned Copilot issues
+        id: find
         uses: actions/github-script@v7
         env:
           COPILOT_AGENT_USER: ${{ env.COPILOT_AGENT_USER }}
         with:
           script: |
-            const copilotUser = (process.env.COPILOT_AGENT_USER || '').trim() || null;
             const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -304,7 +384,7 @@ jobs:
               per_page: 100
             });
 
-            let touched = 0;
+            const unassignedIssues = [];
 
             for (const issue of issues) {
               if (issue.pull_request) continue;
@@ -319,39 +399,105 @@ jobs:
 
               if (!isCopilotish) continue;
 
-              if (copilotUser) {
+              unassignedIssues.push(issue.number);
+              console.log(`Found unassigned Copilot issue: #${issue.number}`);
+            }
+
+            core.setOutput('issue_numbers', unassignedIssues.join(','));
+            console.log(`✅ Found ${unassignedIssues.length} unassigned Copilot issue(s)`);
+
+      - name: Setup Node.js for Playwright
+        if: steps.find.outputs.issue_numbers != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright dependencies
+        if: steps.find.outputs.issue_numbers != ''
+        working-directory: .github/scripts
+        run: |
+          npm install
+          npx playwright install chromium --with-deps
+
+      - name: Assign Copilot via Playwright UI
+        if: steps.find.outputs.issue_numbers != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
+          COPILOT_USER: ${{ env.COPILOT_AGENT_USER || 'copilot' }}
+        working-directory: .github/scripts
+        run: |
+          ISSUE_NUMBERS="${{ steps.find.outputs.issue_numbers }}"
+          IFS=',' read -ra ISSUES <<< "$ISSUE_NUMBERS"
+          
+          for issue_num in "${ISSUES[@]}"; do
+            echo "🎭 Attempting to assign @${COPILOT_USER} to issue #${issue_num} via Playwright..."
+            node assign-copilot-via-ui.js "${{ github.repository_owner }}" "${{ github.event.repository.name }}" "$issue_num" "${COPILOT_USER}" || {
+              echo "⚠️ Playwright assignment failed for issue #${issue_num}, will fallback to API"
+            }
+          done
+
+      - name: Upload Playwright artifacts
+        if: always() && steps.find.outputs.issue_numbers != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-unassigned-screenshots-${{ github.run_id }}
+          path: /tmp/github-*.png
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Fallback - Assign via API if Playwright failed
+        if: steps.find.outputs.issue_numbers != ''
+        uses: actions/github-script@v7
+        env:
+          COPILOT_AGENT_USER: ${{ env.COPILOT_AGENT_USER }}
+        with:
+          script: |
+            const copilotUser = (process.env.COPILOT_AGENT_USER || '').trim() || 'copilot';
+            const issueNumbers = '${{ steps.find.outputs.issue_numbers }}'.split(',').filter(n => n);
+            
+            console.log(`🔄 Fallback: Checking assignments for issues: ${issueNumbers.join(', ')}`);
+            
+            for (const issueNum of issueNumbers) {
+              const num = parseInt(issueNum);
+              if (!num) continue;
+              
+              try {
+                // Check if already assigned
+                const { data: issue } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: num
+                });
+                
+                if (issue.assignees && issue.assignees.length > 0) {
+                  console.log(`✅ Issue #${num} already has assignees, skipping`);
+                  continue;
+                }
+                
+                // Assign via API
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: num,
+                  assignees: [copilotUser]
+                });
+                console.log(`🧑‍🚀 Assigned ${copilotUser} to #${num} via API`);
+              } catch (err) {
+                console.log(`⚠️ Could not assign ${copilotUser} to #${num}: ${err.message}`);
+                // Add label for manual review
                 try {
-                  await github.rest.issues.addAssignees({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: issue.number,
-                    assignees: [copilotUser]
-                  });
-                  console.log(`🧑‍🚀 Assigned ${copilotUser} → #${issue.number}`);
-                } catch (err) {
-                  console.log(`⚠️ Could not assign ${copilotUser}: ${err.message}`);
                   await github.rest.issues.addLabels({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
-                    issue_number: issue.number,
+                    issue_number: num,
                     labels: ['needs-copilot-review']
                   });
-                  console.log(`ℹ️ Labeled #${issue.number} for Copilot review`);
+                  console.log(`ℹ️ Labeled #${num} for Copilot review`);
+                } catch (labelErr) {
+                  console.log(`⚠️ Could not add label to #${num}: ${labelErr.message}`);
                 }
-              } else {
-                await github.rest.issues.addLabels({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  labels: ['needs-copilot-review']
-                });
-                console.log(`ℹ️ Labeled #${issue.number} for Copilot review`);
               }
-
-              touched++;
             }
-
-            console.log(`✅ Processed ${touched} unassigned Copilot issue(s)`);
 
   update-cycle-status:
     name: Update Cycle Status
