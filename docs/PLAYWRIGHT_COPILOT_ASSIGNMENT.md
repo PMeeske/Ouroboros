@@ -100,11 +100,22 @@ The `copilot-automated-development-cycle.yml` workflow now includes:
 
 ### Authentication
 
-The script attempts multiple authentication strategies:
+**IMPORTANT**: GitHub PAT tokens cannot be used for browser authentication. The script requires a valid GitHub session cookie.
 
-1. **GitHub Token Headers**: Sets Authorization header with PAT token
-2. **Session Cookies**: Uses GitHub session cookies if available (via `GITHUB_COOKIE_USER_SESSION`)
-3. **Note**: PAT tokens alone cannot authenticate browser sessions; requires proper OAuth flow or session cookies
+**Authentication Strategy**:
+
+1. **Required**: `GITHUB_COOKIE_USER_SESSION` - A valid user_session cookie from an authenticated GitHub browser session
+2. **Fallback**: If no session cookie is provided, the script exits early and the workflow uses the GitHub API instead (which works with just a PAT token)
+
+**How to obtain a session cookie**:
+
+1. Open a browser and log into GitHub
+2. Open Developer Tools (F12)
+3. Go to Application → Cookies → github.com
+4. Find and copy the value of the `user_session` cookie
+5. Add it as a repository secret named `GITHUB_COOKIE_USER_SESSION`
+
+**Note**: Session cookies expire after some time. If Playwright automation stops working, you may need to refresh the cookie.
 
 ### UI Interaction Flow
 
@@ -162,15 +173,42 @@ Screenshots are saved to `/tmp/` with descriptive names:
 
 ## Configuration
 
+### Setting Up GitHub Session Cookie (Optional)
+
+To enable Playwright browser automation, you need to add the `GITHUB_COOKIE_USER_SESSION` secret:
+
+1. **Obtain the cookie**:
+   - Open a browser and log into GitHub
+   - Press F12 to open Developer Tools
+   - Navigate to: Application → Storage → Cookies → https://github.com
+   - Find the `user_session` cookie
+   - Copy its Value (a long alphanumeric string)
+
+2. **Add as repository secret**:
+   - Go to your repository on GitHub
+   - Navigate to: Settings → Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `GITHUB_COOKIE_USER_SESSION`
+   - Value: Paste the cookie value you copied
+   - Click "Add secret"
+
+3. **Verify**: The next workflow run will use Playwright for UI automation
+
+**Important**: Session cookies expire after a period of inactivity (typically 30-90 days). If Playwright automation stops working, you may need to refresh the cookie by repeating these steps.
+
 ### Environment Variables
 
-**Required:**
+**Required for API Fallback:**
 - `GITHUB_TOKEN`: GitHub Personal Access Token with `repo` and `issues:write` scopes
 
+**Required for Playwright UI Automation:**
+- `GITHUB_COOKIE_USER_SESSION`: GitHub session cookie from an authenticated browser session
+
 **Optional:**
-- `GITHUB_COOKIE_USER_SESSION`: GitHub session cookie for authenticated requests (currently not fully supported)
 - `COPILOT_USER`: Username to assign (defaults to 'copilot')
 - `COPILOT_AGENT_USER`: Workflow-level setting for agent username
+
+**Default Behavior**: If `GITHUB_COOKIE_USER_SESSION` is not provided, Playwright automation is skipped and the workflow uses the GitHub API directly (which only requires `GITHUB_TOKEN`).
 
 ### Workflow Inputs
 
@@ -195,16 +233,20 @@ npm install
 
 ### Manual Execution
 
+**Without Session Cookie (will exit early, demonstrating fallback behavior):**
 ```bash
 export GITHUB_TOKEN="your_github_token"
 node assign-copilot-via-ui.js <owner> <repo> <issue-number> [copilot-username]
 ```
 
-**Example:**
+**With Session Cookie (enables full Playwright automation):**
 ```bash
 export GITHUB_TOKEN="ghp_..."
+export GITHUB_COOKIE_USER_SESSION="your_session_cookie"
 node assign-copilot-via-ui.js PMeeske MonadicPipeline 123 copilot
 ```
+
+**Note**: To obtain `GITHUB_COOKIE_USER_SESSION`, see the Authentication section above.
 
 ### Debug Mode
 
@@ -237,11 +279,16 @@ browser = await chromium.launch({
 
 #### 2. Authentication Fails
 
-**Symptom**: Script shows "Not authenticated" or redirects to login page
+**Symptom**: Script exits early with "No GitHub session cookie available" message
 
-**Explanation**: GitHub PAT tokens cannot be used for browser authentication. The current implementation documents this limitation.
+**Explanation**: GitHub PAT tokens cannot be used for browser authentication. A valid session cookie is required.
 
-**Workaround**: The workflow includes an API fallback that handles this case.
+**Solution**: 
+1. Obtain a `user_session` cookie from an authenticated GitHub browser session (see Authentication section above)
+2. Add it as a repository secret named `GITHUB_COOKIE_USER_SESSION`
+3. Re-run the workflow
+
+**Workaround**: If you don't need Playwright UI automation, you can simply let the workflow use the API fallback, which works reliably without a session cookie.
 
 #### 3. Selectors Break After GitHub UI Update
 
@@ -271,12 +318,17 @@ browser = await chromium.launch({
 
 **Issue**: GitHub does not support PAT token authentication for browser sessions.
 
-**Impact**: The Playwright script may not be able to authenticate and perform assignments through the UI.
+**Impact**: The Playwright script requires a valid GitHub session cookie to function. Without it, browser-based automation cannot work.
 
-**Mitigation**: 
-- Workflow includes API fallback for reliable operation
-- Screenshots document the authentication state
-- Future enhancement: OAuth flow integration
+**Current Solution**: 
+- Script detects when no session cookie is available and exits early
+- Workflow automatically uses API fallback for reliable operation
+- No additional configuration needed for API-only mode
+- Screenshots are only captured when Playwright actually runs
+
+**To Enable Playwright UI Automation**:
+- Add `GITHUB_COOKIE_USER_SESSION` secret with a valid session cookie (see Authentication section)
+- Note: Session cookies expire and need periodic refresh
 
 ### Performance
 

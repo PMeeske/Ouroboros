@@ -283,16 +283,21 @@ jobs:
         if: steps.create.outputs.issue_numbers != ''
         env:
           GITHUB_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
+          GITHUB_COOKIE_USER_SESSION: ${{ secrets.GITHUB_COOKIE_USER_SESSION }}
           COPILOT_USER: ${{ env.COPILOT_AGENT_USER || 'copilot' }}
         working-directory: .github/scripts
         run: |
           ISSUE_NUMBERS="${{ steps.create.outputs.issue_numbers }}"
           IFS=',' read -ra ISSUES <<< "$ISSUE_NUMBERS"
           
+          echo "ℹ️  Playwright UI automation requires GITHUB_COOKIE_USER_SESSION secret"
+          echo "ℹ️  If not set, will skip to API fallback (this is normal and expected)"
+          echo ""
+          
           for issue_num in "${ISSUES[@]}"; do
             echo "🎭 Attempting to assign @${COPILOT_USER} to issue #${issue_num} via Playwright..."
             node assign-copilot-via-ui.js "${{ github.repository_owner }}" "${{ github.event.repository.name }}" "$issue_num" "${COPILOT_USER}" || {
-              echo "⚠️ Playwright assignment failed for issue #${issue_num}, will fallback to API"
+              echo "⚠️ Playwright assignment not available for issue #${issue_num}, will use API fallback"
             }
           done
 
@@ -423,16 +428,21 @@ jobs:
         if: steps.find.outputs.issue_numbers != ''
         env:
           GITHUB_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
+          GITHUB_COOKIE_USER_SESSION: ${{ secrets.GITHUB_COOKIE_USER_SESSION }}
           COPILOT_USER: ${{ env.COPILOT_AGENT_USER || 'copilot' }}
         working-directory: .github/scripts
         run: |
           ISSUE_NUMBERS="${{ steps.find.outputs.issue_numbers }}"
           IFS=',' read -ra ISSUES <<< "$ISSUE_NUMBERS"
           
+          echo "ℹ️  Playwright UI automation requires GITHUB_COOKIE_USER_SESSION secret"
+          echo "ℹ️  If not set, will skip to API fallback (this is normal and expected)"
+          echo ""
+          
           for issue_num in "${ISSUES[@]}"; do
             echo "🎭 Attempting to assign @${COPILOT_USER} to issue #${issue_num} via Playwright..."
             node assign-copilot-via-ui.js "${{ github.repository_owner }}" "${{ github.event.repository.name }}" "$issue_num" "${COPILOT_USER}" || {
-              echo "⚠️ Playwright assignment failed for issue #${issue_num}, will fallback to API"
+              echo "⚠️ Playwright assignment not available for issue #${issue_num}, will use API fallback"
             }
           done
 

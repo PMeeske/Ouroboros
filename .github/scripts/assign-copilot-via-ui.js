@@ -4,15 +4,28 @@
  * Playwright script to assign @copilot to GitHub issues via UI
  * 
  * This script uses Playwright to interact with GitHub's web UI to assign
- * copilot to issues. It authenticates using GitHub's cookie-based session.
+ * copilot to issues. It requires GitHub browser authentication via session cookie.
  * 
  * Usage:
  *   node assign-copilot-via-ui.js <owner> <repo> <issue-number> [copilot-username]
  * 
  * Environment variables:
- *   GITHUB_TOKEN - GitHub Personal Access Token (required)
- *   GITHUB_COOKIE_USER_SESSION - GitHub user_session cookie (optional, for authenticated requests)
+ *   GITHUB_TOKEN - GitHub Personal Access Token (required for API fallback)
+ *   GITHUB_COOKIE_USER_SESSION - GitHub user_session cookie (REQUIRED for browser auth)
  *   COPILOT_USER - Username to assign (defaults to 'copilot')
+ * 
+ * Authentication:
+ *   GitHub PAT tokens CANNOT be used for browser authentication. You must provide
+ *   a valid user_session cookie obtained from an authenticated GitHub browser session.
+ *   
+ *   To obtain the cookie:
+ *   1. Log into GitHub in a browser
+ *   2. Open DevTools → Application → Cookies → github.com
+ *   3. Copy the value of the "user_session" cookie
+ *   4. Set it as GITHUB_COOKIE_USER_SESSION environment variable or secret
+ *   
+ *   Without a valid session cookie, this script will exit early and the workflow
+ *   will use the API fallback method, which works reliably with just a PAT token.
  */
 
 const { chromium } = require('@playwright/test');
@@ -30,8 +43,17 @@ const githubToken = process.env.GITHUB_TOKEN;
 const githubCookie = process.env.GITHUB_COOKIE_USER_SESSION;
 
 if (!githubToken) {
-  console.error('Error: GITHUB_TOKEN environment variable is required');
+  console.error('Error: GITHUB_TOKEN environment variable is required (for API fallback)');
   process.exit(1);
+}
+
+// Log authentication status
+if (!githubCookie) {
+  console.log('⚠️  GITHUB_COOKIE_USER_SESSION not provided');
+  console.log('ℹ️   Browser authentication will not be available');
+} else {
+  console.log('✅ GITHUB_COOKIE_USER_SESSION provided');
+  console.log('ℹ️  Browser authentication enabled');
 }
 
 async function assignCopilotToIssue() {
@@ -40,8 +62,26 @@ async function assignCopilotToIssue() {
   console.log(`   Issue: #${issueNumber}`);
   console.log(`   Assignee: @${copilotUsername}`);
   
+  // Check if we have proper authentication
+  if (!githubCookie) {
+    console.log('⚠️ No GitHub session cookie available');
+    console.log('ℹ️  Note: GitHub PAT tokens cannot be used for browser authentication');
+    console.log('ℹ️  Skipping Playwright UI automation - will use API fallback instead');
+    console.log('');
+    console.log('To enable browser authentication, provide GITHUB_COOKIE_USER_SESSION:');
+    console.log('  1. Log into GitHub in a browser');
+    console.log('  2. Open DevTools → Application → Cookies → github.com');
+    console.log('  3. Copy the value of the "user_session" cookie');
+    console.log('  4. Set it as GITHUB_COOKIE_USER_SESSION secret');
+    console.log('');
+    console.log('For now, the workflow will use the API fallback which works reliably.');
+    return false;
+  }
+  
   let browser;
   try {
+    console.log('🔐 Using GitHub session cookie for authentication');
+    
     // Launch browser in headless mode
     browser = await chromium.launch({
       headless: true,
@@ -51,24 +91,21 @@ async function assignCopilotToIssue() {
     const context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       extraHTTPHeaders: {
-        'Authorization': `token ${githubToken}`,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
       }
     });
     
-    // If we have a session cookie, use it for authentication
-    if (githubCookie) {
-      await context.addCookies([{
-        name: 'user_session',
-        value: githubCookie,
-        domain: '.github.com',
-        path: '/',
-        httpOnly: true,
-        secure: true,
-        sameSite: 'Lax'
-      }]);
-      console.log('🔐 Added GitHub session cookie');
-    }
+    // Add the session cookie for authentication
+    await context.addCookies([{
+      name: 'user_session',
+      value: githubCookie,
+      domain: '.github.com',
+      path: '/',
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Lax'
+    }]);
+    console.log('✅ GitHub session cookie added');
     
     const page = await context.newPage();
     
