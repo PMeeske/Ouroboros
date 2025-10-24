@@ -38,7 +38,10 @@ node assign-copilot-via-ui.js <owner> <repo> <issue-number> [copilot-username]
 ```bash
 export GITHUB_TOKEN="ghp_your_token_here"
 export GITHUB_COOKIE_USER_SESSION="your_session_cookie"
-node assign-copilot-via-ui.js PMeeske MonadicPipeline 123 copilot
+node assign-copilot-via-ui.js <owner> <repo> <issue-number> [copilot-username]
+
+# Example:
+# node assign-copilot-via-ui.js PMeeske MonadicPipeline 123 copilot
 ```
 
 ## Authentication
@@ -68,7 +71,9 @@ To enable Playwright UI automation in GitHub Actions workflows:
 
 ### Cookie Expiration
 
-Session cookies typically expire after 30-90 days of inactivity. If Playwright automation stops working:
+**Note**: Session cookie lifespans may vary based on GitHub's policies. Typically they expire after a period of inactivity (often 30-90 days, but check GitHub's documentation for current information).
+
+If Playwright automation stops working:
 
 1. Obtain a fresh cookie using the steps above
 2. Update the `GITHUB_COOKIE_USER_SESSION` secret
