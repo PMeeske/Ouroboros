@@ -260,7 +260,7 @@ Look for these messages:
 
 ## Related Documentation
 
-- [Main README](.github/scripts/README.md) - Quick start and usage
+- [Main README](README.md) - Quick start and usage
 - [Test Suite](test-authentication.sh) - Authentication tests
 - [Playwright Docs](../../docs/PLAYWRIGHT_COPILOT_ASSIGNMENT.md) - Detailed guide
 - [Dev Cycle Docs](../../docs/AUTOMATED_DEVELOPMENT_CYCLE.md) - Workflow overview
