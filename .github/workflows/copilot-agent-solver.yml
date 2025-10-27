@@ -3,107 +3,73 @@ name: Copilot Agent Solver
 on:
   issues:
     types:
+      # Trigger when an issue is opened or labeled
       - opened
       - labeled
 
 permissions:
+  # Required to create PRs
   pull-requests: write
+  # Required to read/write repo contents and issues
   contents: write
   issues: write
 
 jobs:
   dispatch-copilot-agent:
+    # Run if the issue has the 'copilot-agent' label
     if: contains(github.event.issue.labels.*.name, 'copilot-agent')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup and Run Copilot
+      - name: Authenticate, Install, and Run Copilot
+        id: copilot-suggest
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
+          # Use a non-conflicting name for the secret
+          GH_SECRET: ${{ secrets.COPILOT_BOT_TOKEN }}
           GH_ISSUE_NUMBER: ${{ github.event.issue.number }}
           GH_ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
-          echo "Setting up GitHub CLI configuration..."
+          # Step 1: Perform the non-interactive login.
+          # We pipe the secret from our non-conflicting env var.
+          # GH_TOKEN is NOT set in the environment, so the CLI is happy.
+          echo "${GH_SECRET}" | gh auth login --with-token
+          echo "✅ gh auth login completed."
+
+          # Step 2: Install the Copilot extension.
+          # We must now set GH_TOKEN for the remaining commands to use.
+          export GH_TOKEN=${GH_SECRET}
+          gh extension install github/gh-copilot
+          echo "✅ gh-copilot extension installed."
+
+          # Step 3: Run the suggest command.
+          echo "🤖 Asking Copilot to suggest a fix..."
+          gh copilot suggest "Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}" --shell-out bash > copilot_plan.sh
           
-          # Create the config directory
-          mkdir -p ~/.config/gh
+          echo "🤖 Copilot has generated a plan:"
+          cat copilot_plan.sh
           
-          # Create hosts.yml with oauth_token
-          echo "github.com:" > ~/.config/gh/hosts.yml
-          echo "    user: PMeeske" >> ~/.config/gh/hosts.yml
-          echo "    oauth_token: ${GITHUB_TOKEN}" >> ~/.config/gh/hosts.yml
-          echo "    git_protocol: https" >> ~/.config/gh/hosts.yml
+          # Make the plan executable
+          chmod +x copilot_plan.sh
           
-          # Create config.yml to disable telemetry prompt
-          echo "# Disable telemetry and prompts" > ~/.config/gh/config.yml
-          echo "version: 1" >> ~/.config/gh/config.yml
-          echo "prompt: disabled" >> ~/.config/gh/config.yml
-          echo "telemetry: false" >> ~/.config/gh/config.yml
-          
-          # Also set environment variables to disable interactivity
-          export GH_PROMPT_DISABLED=true
-          export GH_NO_UPDATE_NOTIFIER=true
-          export GITHUB_COPILOT_TELEMETRY_OPTOUT=true
-          
-          echo "Installing Copilot extension..."
-          gh extension install github/gh-copilot --force
-          
-          echo "🤖 Attempting Copilot suggest with all prompts disabled..."
-          
-          # Method 1: Try with yes piped to answer the telemetry prompt
-          echo "Method 1: Piping 'n' to answer telemetry prompt..."
-          echo "n" | gh copilot suggest "Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}" --shell-out bash > copilot_plan.sh 2>&1 || {
-            echo "Method 1 failed. Output:"
-            cat copilot_plan.sh
-            
-            # Method 2: Try with expect if available
-            echo "Method 2: Trying with timeout and forced input..."
-            timeout 5 bash -c 'echo -e "n\n" | gh copilot suggest "Fix issue #'${GH_ISSUE_NUMBER}': '${GH_ISSUE_TITLE}'" --shell-out bash' > copilot_plan.sh 2>&1 || {
-              echo "Method 2 failed. Output:"
-              cat copilot_plan.sh
-              
-              # Method 3: Background process with input
-              echo "Method 3: Background with input redirection..."
-              ( echo "n" | gh copilot suggest "Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}" --shell-out bash & ) > copilot_plan.sh 2>&1
-              sleep 3
-              pkill -f "gh copilot" || true
-              
-              echo "Final output:"
-              cat copilot_plan.sh
-            }
-          }
-          
-          # Check if we got any valid output
-          if [ -f copilot_plan.sh ] && grep -q "#!/" copilot_plan.sh; then
-            echo "✅ Copilot plan generated successfully!"
-            chmod +x copilot_plan.sh
-            ./copilot_plan.sh
-          else
-            echo "❌ Failed to generate a valid plan"
-            echo "Final debugging: Let's check what token type gh actually sees..."
-            gh api user --jq '.login + " (token type: " + .__typename + ")"' || echo "Could not determine token type"
-            exit 1
-          fi
+          # Run the plan generated by Copilot
+          ./copilot_plan.sh
+          echo "✅ Copilot plan executed."
 
       - name: Create Pull Request
-        if: success()
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
           GH_ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          if ! git diff --quiet HEAD 2>/dev/null; then
-            echo "✅ Changes detected. Creating Pull Request..."
-            gh pr create \
-              --title "🤖 Copilot fix for #${GH_ISSUE_NUMBER}" \
-              --body "Automated fix for issue #${GH_ISSUE_NUMBER}." \
-              --base main
+        
+          if ! git diff --quiet HEAD; then
+            echo "✅ Changes found. Creating Pull Request..."
+            gh pr create --title "🤖 Copilot fix for #${GH_ISSUE_NUMBER}" --body "Addresses issue #${GH_ISSUE_NUMBER} with a solution suggested by \`gh copilot\`." --fill
           else
-            echo "⚠️ No changes were made."
+            echo "⚠️ No changes were made by Copilot. Skipping PR creation."
           fi
