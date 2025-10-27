@@ -9,9 +9,8 @@ on:
 permissions:
   # Required for the coding agent to create PRs
   pull-requests: write
-  # Required to read contents of the repo
+  # Required to read contents of the repo and issue details
   contents: read
-  # Required to read issue details
   issues: read
 
 jobs:
@@ -20,38 +19,14 @@ jobs:
     if: github.event.label.name == 'copilot-agent'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Get issue details
-        id: issue_details
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const issue = context.issue;
-            const { data: issueData } = await github.rest.issues.get({
-              owner: issue.owner,
-              repo: issue.repo,
-              issue_number: issue.number
-            });
-            core.setOutput('title', issueData.title);
-            core.setOutput('body', issueData.body);
-            core.setOutput('number', issue.number);
-
+      # This is the official action to trigger the Copilot coding agent.
+      # It replaces the broken github-script step.
       - name: Dispatch Copilot coding agent
-        uses: actions/github-script@v7
+        uses: github/copilot-action@v1
+        env:
+          # This action requires a token with write permissions for pull-requests and issues.
+          # A PAT (Personal Access Token) is recommended.
+          GITHUB_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
         with:
-          script: |
-            const problemTitle = `${{ steps.issue_details.outputs.title }}`;
-            const problemBody = `${{ steps.issue_details.outputs.body }}`;
-            const issueNumber = `${{ steps.issue_details.outputs.number }}`;
-
-            // The 'github.copilot.run' function is a placeholder for the actual
-            // function that dispatches the coding agent. It takes the repository,
-            // a problem statement, and a title.
-            // This is how you would programmatically invoke the agent.
-            await github.copilot.run({
-              repo: context.repo,
-              title: `Fix #${issueNumber}: ${problemTitle}`,
-              body: problemBody
-            });
+          # The action will use the title and body of this issue as the problem statement.
+          issue-number: ${{ github.event.issue.number }}
