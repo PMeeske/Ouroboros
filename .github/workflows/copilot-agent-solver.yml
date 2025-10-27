@@ -51,12 +51,10 @@ jobs:
           # Try to manually create an OAuth-style token entry
           echo "Attempting to manually configure OAuth token..."
           mkdir -p ~/.config/gh
-          cat > ~/.config/gh/hosts.yml << EOF
-github.com:
-    user: PMeeske
-    oauth_token: ${GITHUB_TOKEN}
-    git_protocol: https
-EOF
+          echo "github.com:" > ~/.config/gh/hosts.yml
+          echo "    user: PMeeske" >> ~/.config/gh/hosts.yml
+          echo "    oauth_token: ${GITHUB_TOKEN}" >> ~/.config/gh/hosts.yml
+          echo "    git_protocol: https" >> ~/.config/gh/hosts.yml
           
           echo "Updated hosts.yml:"
           cat ~/.config/gh/hosts.yml
