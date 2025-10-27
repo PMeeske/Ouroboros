@@ -23,9 +23,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Authenticate GitHub CLI for Copilot
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
+        run: |
+          # Perform a non-interactive login. This is the crucial step.
+          # The token is piped from stdin.
+          echo "${GH_TOKEN}" | gh auth login --with-token
+          
+          # Verify that the login was successful and see which user is logged in.
+          echo "Verifying gh auth status:"
+          gh auth status
+
       - name: Install GitHub CLI Copilot extension
         shell: bash
         env:
+          # Although we've logged in, it's good practice to keep the token available
+          # for the gh command in the environment.
           GH_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
         run: |
           gh extension install github/gh-copilot
@@ -38,8 +53,7 @@ jobs:
           GH_ISSUE_NUMBER: ${{ github.event.issue.number }}
           GH_ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
-          # This is the corrected command.
-          # The --shell-out flag requires an argument specifying the shell type.
+          # Now that we are properly authenticated, this command should succeed.
           gh copilot suggest "Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}" --shell-out bash > copilot_plan.sh
           
           echo "🤖 Copilot has generated a plan:"
