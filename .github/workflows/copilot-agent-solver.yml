@@ -1,0 +1,57 @@
+name: Copilot Agent Solver
+
+on:
+  issues:
+    types:
+      # Trigger when an issue is labeled
+      - labeled
+
+permissions:
+  # Required for the coding agent to create PRs
+  pull-requests: write
+  # Required to read contents of the repo
+  contents: read
+  # Required to read issue details
+  issues: read
+
+jobs:
+  dispatch-copilot-agent:
+    # Only run if the label added is 'copilot-agent'
+    if: github.event.label.name == 'copilot-agent'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get issue details
+        id: issue_details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.issue;
+            const { data: issueData } = await github.rest.issues.get({
+              owner: issue.owner,
+              repo: issue.repo,
+              issue_number: issue.number
+            });
+            core.setOutput('title', issueData.title);
+            core.setOutput('body', issueData.body);
+            core.setOutput('number', issue.number);
+
+      - name: Dispatch Copilot coding agent
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const problemTitle = `${{ steps.issue_details.outputs.title }}`;
+            const problemBody = `${{ steps.issue_details.outputs.body }}`;
+            const issueNumber = `${{ steps.issue_details.outputs.number }}`;
+
+            // The 'github.copilot.run' function is a placeholder for the actual
+            // function that dispatches the coding agent. It takes the repository,
+            // a problem statement, and a title.
+            // This is how you would programmatically invoke the agent.
+            await github.copilot.run({
+              repo: context.repo,
+              title: `Fix #${issueNumber}: ${problemTitle}`,
+              body: problemBody
+            });
