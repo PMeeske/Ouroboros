@@ -273,9 +273,9 @@ jobs:
         env:
           COPILOT_AGENT_USER: ${{ env.COPILOT_AGENT_USER }}
         with:
-          github-token: ${{ secrets.COPILOT_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const copilotUser = (process.env.COPILOT_AGENT_USER || '').trim();
+            const copilotUser = (process.env.GH_TOKEN || '').trim();
             if (!copilotUser) {
               console.log("⚠️ COPILOT_AGENT_USER is not set. Skipping assignment.");
               return;
