@@ -26,21 +26,27 @@ jobs:
       - name: Authenticate GitHub CLI for Copilot
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
+          # We still need the token available in the step's main environment
+          GH_TOKEN_SECRET: ${{ secrets.COPILOT_BOT_TOKEN }}
         run: |
-          # Perform a non-interactive login. This is the crucial step.
-          # The token is piped from stdin.
-          echo "${GH_TOKEN}" | gh auth login --with-token
+          # Temporarily unset GH_TOKEN and then perform the login.
+          # The command is wrapped in a subshell `(...)` to ensure that GH_TOKEN
+          # remains unset only for the duration of the auth command.
+          (
+            unset GH_TOKEN
+            echo "${GH_TOKEN_SECRET}" | gh auth login --with-token
+          )
           
-          # Verify that the login was successful and see which user is logged in.
           echo "Verifying gh auth status:"
+          # Now that login is stored, we set GH_TOKEN for subsequent commands
+          # to ensure they are also authenticated correctly.
+          export GH_TOKEN=${GH_TOKEN_SECRET}
           gh auth status
 
       - name: Install GitHub CLI Copilot extension
         shell: bash
         env:
-          # Although we've logged in, it's good practice to keep the token available
-          # for the gh command in the environment.
+          # Pass the token for this step as well.
           GH_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
         run: |
           gh extension install github/gh-copilot
@@ -53,7 +59,7 @@ jobs:
           GH_ISSUE_NUMBER: ${{ github.event.issue.number }}
           GH_ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
-          # Now that we are properly authenticated, this command should succeed.
+          # This command should now succeed with the persistent auth.
           gh copilot suggest "Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}" --shell-out bash > copilot_plan.sh
           
           echo "🤖 Copilot has generated a plan:"
@@ -71,11 +77,9 @@ jobs:
           GH_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
           GH_ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          # The 'git config' commands are crucial for the commit to be valid.
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
         
-          # Check if there are any changes to commit
           if ! git diff --quiet HEAD; then
             echo "✅ Changes found. Creating Pull Request..."
             gh pr create --title "🤖 Copilot fix for #${GH_ISSUE_NUMBER}" --body "Addresses issue #${GH_ISSUE_NUMBER} with a solution suggested by \`gh copilot\`." --fill
