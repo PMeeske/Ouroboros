@@ -25,6 +25,9 @@ jobs:
 
       - name: Install GitHub CLI Copilot extension
         shell: bash
+        # This env block is the fix. The 'gh' command needs authentication.
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
         run: |
           gh extension install github/gh-copilot
           
@@ -32,9 +35,7 @@ jobs:
         id: copilot-suggest
         shell: bash
         env:
-          # The CLI needs a token with repo write access
           GH_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
-          # Tell Copilot which issue to fix
           GH_ISSUE: ${{ github.event.issue.number }}
         run: |
           # Ask Copilot for a suggestion. It will output a plan and the shell commands to execute.
