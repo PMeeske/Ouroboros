@@ -15,8 +15,9 @@ permissions:
 
 jobs:
   dispatch-copilot-agent:
-    # Only run if the label added is 'copilot-agent'
-    if: github.event.label.name == 'copilot-agent'
+    # New, more robust check:
+    # Runs if the issue's labels list contains 'copilot-agent'.
+    if: contains(github.event.issue.labels.*.name, 'copilot-agent')
     runs-on: ubuntu-latest
     steps:
       # This is the official action to trigger the Copilot coding agent.
