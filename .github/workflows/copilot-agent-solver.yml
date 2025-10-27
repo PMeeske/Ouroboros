@@ -32,16 +32,17 @@ jobs:
           GH_ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           # Step 1: Perform the non-interactive login.
-          # The token is piped from stdin.
-          echo "${GH_TOKEN}" | gh auth login --with-token
+          # We unset GH_TOKEN right before the command, but pipe the same token value in.
+          # This satisfies the CLI's requirement that GH_TOKEN not be set in the environment during `auth login`.
+          (unset GH_TOKEN; echo "${GH_TOKEN}" | gh auth login --with-token)
           echo "✅ gh auth login completed."
 
           # Step 2: Install the Copilot extension.
+          # The GH_TOKEN env var is still available for the rest of the script.
           gh extension install github/gh-copilot
           echo "✅ gh-copilot extension installed."
 
           # Step 3: Run the suggest command.
-          # All commands are in the same step, so authentication is guaranteed to be present.
           echo "🤖 Asking Copilot to suggest a fix..."
           gh copilot suggest "Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}" --shell-out bash > copilot_plan.sh
           
