@@ -39,9 +39,9 @@ jobs:
           GH_ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           # This is the corrected command.
-          # We pass the topic as a string argument, not with a flag.
-          # We also specify the type of suggestion we want ('shell').
-          gh copilot suggest "Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}" --type shell --shell-out > copilot_plan.sh
+          # We have removed the invalid '--type' flag.
+          # The '--shell-out' flag is sufficient on its own.
+          gh copilot suggest "Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}" --shell-out > copilot_plan.sh
           
           echo "🤖 Copilot has generated a plan:"
           cat copilot_plan.sh
@@ -58,10 +58,14 @@ jobs:
           GH_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
           GH_ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
+          # The 'git config' commands are crucial for the commit to be valid.
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+        
           # Check if there are any changes to commit
-          if ! git diff --quiet; then
+          if ! git diff --quiet HEAD; then
             echo "✅ Changes found. Creating Pull Request..."
-            gh pr create --title "🤖 Copilot fix for #${GH_ISSUE_NUMBER}" --body "Addresses issue #${GH_ISSUE_NUMBER} with a solution suggested by gh copilot." --fill
+            gh pr create --title "🤖 Copilot fix for #${GH_ISSUE_NUMBER}" --body "Addresses issue #${GH_ISSUE_NUMBER} with a solution suggested by \`gh copilot\`." --fill
           else
             echo "⚠️ No changes were made by Copilot. Skipping PR creation."
           fi
