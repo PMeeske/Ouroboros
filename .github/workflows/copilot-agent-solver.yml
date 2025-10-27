@@ -39,9 +39,8 @@ jobs:
           GH_ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           # This is the corrected command.
-          # We have removed the invalid '--type' flag.
-          # The '--shell-out' flag is sufficient on its own.
-          gh copilot suggest "Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}" --shell-out > copilot_plan.sh
+          # The --shell-out flag requires an argument specifying the shell type.
+          gh copilot suggest "Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}" --shell-out bash > copilot_plan.sh
           
           echo "🤖 Copilot has generated a plan:"
           cat copilot_plan.sh
