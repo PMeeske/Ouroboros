@@ -26,69 +26,66 @@ jobs:
           GH_ISSUE_NUMBER: ${{ github.event.issue.number }}
           GH_ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
-          echo "🔍 Debugging: Let's see what gh copilot is looking for..."
+          echo "Setting up GitHub CLI configuration..."
           
-          # First, let's see where gh stores its config
-          echo "GitHub CLI config location:"
-          gh config list
-          echo "---"
-          
-          # Try to understand what's in the .config directory
-          echo "Config directory contents:"
-          ls -la ~/.config/gh/ 2>/dev/null || echo "No ~/.config/gh directory"
-          echo "---"
-          
-          # Check if there's a hosts.yml file
-          echo "Hosts config:"
-          cat ~/.config/gh/hosts.yml 2>/dev/null || echo "No hosts.yml file"
-          echo "---"
-          
-          # Install extension with debug output
-          echo "Installing Copilot extension with verbose output..."
-          GH_DEBUG=1 gh extension install github/gh-copilot --force
-          echo "---"
-          
-          # Try to manually create an OAuth-style token entry
-          echo "Attempting to manually configure OAuth token..."
+          # Create the config directory
           mkdir -p ~/.config/gh
+          
+          # Create hosts.yml with oauth_token
           echo "github.com:" > ~/.config/gh/hosts.yml
           echo "    user: PMeeske" >> ~/.config/gh/hosts.yml
           echo "    oauth_token: ${GITHUB_TOKEN}" >> ~/.config/gh/hosts.yml
           echo "    git_protocol: https" >> ~/.config/gh/hosts.yml
           
-          echo "Updated hosts.yml:"
-          cat ~/.config/gh/hosts.yml
-          echo "---"
+          # Create config.yml to disable telemetry prompt
+          echo "# Disable telemetry and prompts" > ~/.config/gh/config.yml
+          echo "version: 1" >> ~/.config/gh/config.yml
+          echo "prompt: disabled" >> ~/.config/gh/config.yml
+          echo "telemetry: false" >> ~/.config/gh/config.yml
           
-          # Now try copilot with debug mode
-          echo "🤖 Running Copilot suggest with debug output..."
-          GH_DEBUG=1 gh copilot suggest "Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}" --shell-out bash 2>&1 | tee copilot_output.txt
+          # Also set environment variables to disable interactivity
+          export GH_PROMPT_DISABLED=true
+          export GH_NO_UPDATE_NOTIFIER=true
+          export GITHUB_COPILOT_TELEMETRY_OPTOUT=true
           
-          # Check what happened
-          echo "---"
-          echo "Copilot output analysis:"
-          if grep -q "Error" copilot_output.txt; then
-            echo "❌ Error detected. Full output:"
-            cat copilot_output.txt
+          echo "Installing Copilot extension..."
+          gh extension install github/gh-copilot --force
+          
+          echo "🤖 Attempting Copilot suggest with all prompts disabled..."
+          
+          # Method 1: Try with yes piped to answer the telemetry prompt
+          echo "Method 1: Piping 'n' to answer telemetry prompt..."
+          echo "n" | gh copilot suggest "Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}" --shell-out bash > copilot_plan.sh 2>&1 || {
+            echo "Method 1 failed. Output:"
+            cat copilot_plan.sh
             
-            # Last resort: Try the experimental API approach
-            echo "---"
-            echo "🔬 Attempting experimental API call..."
-            curl -X POST \
-              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-              -H "Accept: application/vnd.github.v3+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              https://api.github.com/copilot/suggest \
-              -d "{\"prompt\": \"Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}\", \"language\": \"bash\"}" \
-              2>&1 | tee api_response.json
-            
-            echo "API Response:"
-            cat api_response.json
-          else
-            echo "✅ Success? Checking for plan file..."
-            if [ -f copilot_plan.sh ]; then
+            # Method 2: Try with expect if available
+            echo "Method 2: Trying with timeout and forced input..."
+            timeout 5 bash -c 'echo -e "n\n" | gh copilot suggest "Fix issue #'${GH_ISSUE_NUMBER}': '${GH_ISSUE_TITLE}'" --shell-out bash' > copilot_plan.sh 2>&1 || {
+              echo "Method 2 failed. Output:"
               cat copilot_plan.sh
-            fi
+              
+              # Method 3: Background process with input
+              echo "Method 3: Background with input redirection..."
+              ( echo "n" | gh copilot suggest "Fix issue #${GH_ISSUE_NUMBER}: ${GH_ISSUE_TITLE}" --shell-out bash & ) > copilot_plan.sh 2>&1
+              sleep 3
+              pkill -f "gh copilot" || true
+              
+              echo "Final output:"
+              cat copilot_plan.sh
+            }
+          }
+          
+          # Check if we got any valid output
+          if [ -f copilot_plan.sh ] && grep -q "#!/" copilot_plan.sh; then
+            echo "✅ Copilot plan generated successfully!"
+            chmod +x copilot_plan.sh
+            ./copilot_plan.sh
+          else
+            echo "❌ Failed to generate a valid plan"
+            echo "Final debugging: Let's check what token type gh actually sees..."
+            gh api user --jq '.login + " (token type: " + .__typename + ")"' || echo "Could not determine token type"
+            exit 1
           fi
 
       - name: Create Pull Request
