@@ -28,19 +28,19 @@ jobs:
         shell: bash
         env:
           # Use a non-conflicting name for the secret
-          GH_SECRET: ${{ secrets.COPILOT_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_ISSUE_NUMBER: ${{ github.event.issue.number }}
           GH_ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           # Step 1: Perform the non-interactive login.
           # We pipe the secret from our non-conflicting env var.
           # GH_TOKEN is NOT set in the environment, so the CLI is happy.
-          echo "${GH_SECRET}" | gh auth login --with-token
+          echo "${GH_TOKEN}" | gh auth login --with-token
           echo "✅ gh auth login completed."
 
           # Step 2: Install the Copilot extension.
           # We must now set GH_TOKEN for the remaining commands to use.
-          export GH_TOKEN=${GH_SECRET}
+          export GH_TOKEN=${GH_TOKEN}
           gh extension install github/gh-copilot
           echo "✅ gh-copilot extension installed."
 
