@@ -117,7 +117,7 @@ public static class SyncStepExtensions
     /// Convert async Step to sync (blocking - use with caution)
     /// </summary>
     public static SyncStep<TIn, TOut> ToSync<TIn, TOut>(this Step<TIn, TOut> asyncStep)
-        => new(input => asyncStep(input).GetAwaiter().GetResult());
+        => new(input => Task.Run(() => asyncStep(input)).GetAwaiter().GetResult());
 
     /// <summary>
     /// Compose sync step with async step

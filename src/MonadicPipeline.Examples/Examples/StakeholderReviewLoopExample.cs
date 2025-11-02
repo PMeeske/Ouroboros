@@ -183,12 +183,12 @@ Implement advanced search functionality with filters and facets.
         var resolveResult = await reviewLoop.ResolveCommentsAsync(pr.Id, comments);
 
         resolveResult.Match(
-            resolved =>
+            async resolved =>
             {
                 Console.WriteLine($"✅ Resolved {resolved} comment(s)");
 
                 // Verify resolution
-                var updatedCommentsResult = reviewProvider.GetCommentsAsync(pr.Id).Result;
+                var updatedCommentsResult = await reviewProvider.GetCommentsAsync(pr.Id);
                 if (updatedCommentsResult.IsSuccess)
                 {
                     var resolvedComments = updatedCommentsResult.Value

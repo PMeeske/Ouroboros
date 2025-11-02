@@ -96,7 +96,7 @@ public struct ContextualStepDefinition<TIn, TOut, TContext>
     }
 
     /// <summary>
-    /// Execute pipeline
+    /// Execute pipeline (synchronous convenience method)
     /// </summary>
     public async Task<(TOut result, List<string> logs)> InvokeAsync(TIn input, TContext context)
         => await _compiled(input, context);
