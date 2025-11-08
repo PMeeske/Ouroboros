@@ -204,6 +204,38 @@ curl http://localhost:8080/health
 
 See [Web API Documentation](src/MonadicPipeline.WebApi/README.md) for more details.
 
+#### Android App (Mobile CLI Interface)
+
+MonadicPipeline is now available as an Android app with a terminal-style CLI interface and integrated Ollama support:
+
+```bash
+# Navigate to Android project directory
+cd src/MonadicPipeline.Android
+
+# Build the APK
+dotnet build -c Release -f net8.0-android
+
+# Install on connected device
+dotnet build -c Release -f net8.0-android -t:Install
+```
+
+**Features:**
+- ✅ **Terminal-Style UI**: Green-on-black terminal interface for mobile
+- ✅ **Ollama Integration**: Connect to local or remote Ollama servers
+- ✅ **Automatic Model Management**: Models auto-unload after 5 minutes of inactivity
+- ✅ **Small Model Optimization**: Recommended models (tinyllama, phi, qwen, gemma)
+- ✅ **Efficiency Hints**: Built-in guidance for battery, network, and memory usage
+- ✅ **Standalone Operation**: Download models as needed from Ollama
+
+**Quick Start on Android:**
+1. Launch the app
+2. Configure Ollama endpoint: `config http://YOUR_SERVER_IP:11434`
+3. Pull a small model on your server: `ollama pull tinyllama`
+4. Ask questions: `ask What is functional programming?`
+
+See [Android App Documentation](src/MonadicPipeline.Android/README.md) for complete instructions.
+
+
 #### Smart Model Orchestrator
 
 The orchestrator command provides intelligent model selection based on the task type:
@@ -425,6 +457,8 @@ src/
 ├── MonadicPipeline.Providers/   # External service providers
 ├── MonadicPipeline.Agent/       # AI orchestration and meta-AI
 ├── MonadicPipeline.CLI/         # Command-line interface
+├── MonadicPipeline.WebApi/      # REST API for containerized deployments
+├── MonadicPipeline.Android/     # Android app with terminal CLI interface
 ├── MonadicPipeline.Examples/    # Comprehensive examples
 └── MonadicPipeline.Tests/       # Test suite
 ```
