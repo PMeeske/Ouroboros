@@ -17,9 +17,20 @@ A minimal CLI interface for MonadicPipeline on Android with integrated Ollama su
 - Access to an Ollama server (local network or remote)
 - Internet connection for downloading models
 
-## Building the App
+## Getting the APK
 
-### Prerequisites
+### Option 1: Download from GitHub Actions (Easiest)
+
+The Android APK is automatically built by CI/CD and available as an artifact:
+
+1. Go to the [Actions tab](../../actions/workflows/android-build.yml) in this repository
+2. Click on the latest successful workflow run
+3. Download the `monadic-pipeline-android-apk` artifact
+4. Extract and install the APK on your Android device
+
+### Option 2: Build Locally
+
+#### Prerequisites
 
 1. Install .NET 8.0 SDK or later
 2. Install .NET MAUI workload:
@@ -27,7 +38,7 @@ A minimal CLI interface for MonadicPipeline on Android with integrated Ollama su
    dotnet workload install maui-android
    ```
 
-### Build Steps
+#### Build Steps
 
 1. Navigate to the project directory:
    ```bash
@@ -48,6 +59,8 @@ A minimal CLI interface for MonadicPipeline on Android with integrated Ollama su
    ```
    bin/Release/net8.0-android/com.adaptivesystems.monadicpipeline-Signed.apk
    ```
+
+**Note:** The Android project is built separately from the main solution to avoid requiring MAUI workloads in all CI environments.
 
 ### Deploy to Device
 

@@ -1,0 +1,65 @@
+name: Android App Build
+
+on:
+  push:
+    branches: [ main, develop, 'copilot/**' ]
+    paths:
+      - 'src/MonadicPipeline.Android/**'
+      - '.github/workflows/android-build.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/MonadicPipeline.Android/**'
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Install MAUI workload
+      run: |
+        dotnet workload install maui-android --skip-sign-check
+
+    - name: Restore dependencies
+      run: |
+        cd src/MonadicPipeline.Android
+        dotnet restore
+
+    - name: Build Android APK
+      run: |
+        cd src/MonadicPipeline.Android
+        dotnet build -c Release -f net8.0-android
+
+    - name: Find APK
+      id: find-apk
+      run: |
+        APK_PATH=$(find src/MonadicPipeline.Android/bin/Release/net8.0-android -name "*.apk" | head -n 1)
+        echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+        echo "Found APK at: $APK_PATH"
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: monadic-pipeline-android-apk
+        path: ${{ steps.find-apk.outputs.apk_path }}
+        retention-days: 30
+
+    - name: Build summary
+      run: |
+        echo "## ✅ Android APK Built Successfully" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**APK Location:** \`${{ steps.find-apk.outputs.apk_path }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Download the APK from the workflow artifacts above." >> $GITHUB_STEP_SUMMARY

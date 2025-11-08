@@ -206,13 +206,15 @@ See [Web API Documentation](src/MonadicPipeline.WebApi/README.md) for more detai
 
 #### Android App (Mobile CLI Interface)
 
-MonadicPipeline is now available as an Android app with a terminal-style CLI interface and integrated Ollama support:
+MonadicPipeline is now available as an Android app with a terminal-style CLI interface and integrated Ollama support.
+
+**Get the APK:**
+- **Download:** APK is automatically built by CI/CD - download from [GitHub Actions artifacts](../../actions/workflows/android-build.yml)
+- **Build locally:** Requires MAUI workload (see below)
 
 ```bash
-# Navigate to Android project directory
+# To build locally (requires: dotnet workload install maui-android)
 cd src/MonadicPipeline.Android
-
-# Build the APK
 dotnet build -c Release -f net8.0-android
 
 # Install on connected device
@@ -228,10 +230,11 @@ dotnet build -c Release -f net8.0-android -t:Install
 - ✅ **Standalone Operation**: Download models as needed from Ollama
 
 **Quick Start on Android:**
-1. Launch the app
-2. Configure Ollama endpoint: `config http://YOUR_SERVER_IP:11434`
-3. Pull a small model on your server: `ollama pull tinyllama`
-4. Ask questions: `ask What is functional programming?`
+1. Download and install the APK from GitHub Actions artifacts
+2. Launch the app
+3. Configure Ollama endpoint: `config http://YOUR_SERVER_IP:11434`
+4. Pull a small model on your server: `ollama pull tinyllama`
+5. Ask questions: `ask What is functional programming?`
 
 See [Android App Documentation](src/MonadicPipeline.Android/README.md) for complete instructions.
 
