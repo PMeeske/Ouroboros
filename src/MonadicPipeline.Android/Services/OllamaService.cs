@@ -1,16 +1,20 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Net.Http.Headers;
 
 namespace MonadicPipeline.Android.Services;
 
 /// <summary>
-/// Service for interacting with Ollama API
+/// Service for interacting with Ollama API with authentication support
 /// </summary>
 public class OllamaService
 {
     private readonly HttpClient _httpClient;
     private string _baseUrl;
+    private string? _apiKey;
+    private string? _username;
+    private string? _password;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OllamaService"/> class.
@@ -32,6 +36,59 @@ public class OllamaService
     {
         get => _baseUrl;
         set => _baseUrl = value;
+    }
+
+    /// <summary>
+    /// Set API key authentication
+    /// </summary>
+    /// <param name="apiKey">The API key for bearer token authentication</param>
+    public void SetApiKey(string? apiKey)
+    {
+        _apiKey = apiKey;
+        UpdateAuthenticationHeaders();
+    }
+
+    /// <summary>
+    /// Set basic authentication credentials
+    /// </summary>
+    /// <param name="username">Username</param>
+    /// <param name="password">Password</param>
+    public void SetBasicAuth(string? username, string? password)
+    {
+        _username = username;
+        _password = password;
+        UpdateAuthenticationHeaders();
+    }
+
+    /// <summary>
+    /// Clear all authentication
+    /// </summary>
+    public void ClearAuthentication()
+    {
+        _apiKey = null;
+        _username = null;
+        _password = null;
+        _httpClient.DefaultRequestHeaders.Authorization = null;
+    }
+
+    private void UpdateAuthenticationHeaders()
+    {
+        _httpClient.DefaultRequestHeaders.Authorization = null;
+
+        if (!string.IsNullOrEmpty(_apiKey))
+        {
+            // Bearer token authentication
+            _httpClient.DefaultRequestHeaders.Authorization = 
+                new AuthenticationHeaderValue("Bearer", _apiKey);
+        }
+        else if (!string.IsNullOrEmpty(_username) && !string.IsNullOrEmpty(_password))
+        {
+            // Basic authentication
+            var credentials = Convert.ToBase64String(
+                Encoding.ASCII.GetBytes($"{_username}:{_password}"));
+            _httpClient.DefaultRequestHeaders.Authorization = 
+                new AuthenticationHeaderValue("Basic", credentials);
+        }
     }
 
     /// <summary>
