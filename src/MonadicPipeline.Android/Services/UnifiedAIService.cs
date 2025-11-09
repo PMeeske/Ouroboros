@@ -506,24 +506,3 @@ Please use the knowledge base context above to inform your response.";
         return fullResponse.ToString();
     }
 }
-
-/// <summary>
-/// Response from Ollama generate API
-/// </summary>
-public class OllamaGenerateResponse
-{
-    /// <summary>
-    /// Gets or sets the model name
-    /// </summary>
-    public string? Model { get; set; }
-
-    /// <summary>
-    /// Gets or sets the response text
-    /// </summary>
-    public string? Response { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether generation is complete
-    /// </summary>
-    public bool Done { get; set; }
-}
