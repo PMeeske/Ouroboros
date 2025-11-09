@@ -159,7 +159,8 @@ public partial class MainPage : ContentPage
         settingsView.SettingsChanged += (s, args) =>
         {
             _cliExecutor.OllamaEndpoint = args.OllamaEndpoint;
-            AppendOutput($"Settings updated: Endpoint = {args.OllamaEndpoint}");
+            _outputHistory.AppendLine($"Settings updated: Endpoint = {args.OllamaEndpoint}");
+            UpdateOutput();
         };
         await Navigation.PushAsync(settingsView);
     }
@@ -195,7 +196,7 @@ public partial class MainPage : ContentPage
                 await ExecuteCommand();
                 break;
             case "Settings":
-                await OnSettingsClicked(sender, e);
+                OnSettingsClicked(sender, e);
                 break;
         }
     }
