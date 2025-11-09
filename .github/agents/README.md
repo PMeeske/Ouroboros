@@ -76,6 +76,35 @@ This agent specializes in:
 @cloud-devops-expert How do I set up zero-downtime deployments with health checks?
 ```
 
+### 4. Android Expert (`android-expert.md`)
+
+**Expertise:** Android Development, Kotlin, Jetpack Compose, Mobile Architecture
+
+This agent specializes in:
+- Modern Android development with Kotlin
+- Jetpack Compose declarative UI
+- Android architecture patterns (MVVM, Clean Architecture)
+- Dependency injection with Hilt/Dagger
+- Coroutines and Flow for reactive programming
+- Performance optimization and memory management
+- Android testing strategies
+- Material Design implementation
+
+**Use this agent when:**
+- Building Android applications or features
+- Implementing Jetpack Compose UIs
+- Setting up Android architecture components
+- Optimizing app performance and memory usage
+- Writing Android unit and UI tests
+- Integrating third-party libraries
+- Implementing security best practices
+- Troubleshooting Android-specific issues
+
+**Example invocation:**
+```
+@android-expert How do I implement a MVVM architecture with Jetpack Compose and Hilt?
+```
+
 ## How to Use Custom Agents
 
 ### In GitHub Copilot Chat
@@ -103,6 +132,7 @@ This agent specializes in:
    - Functional programming questions → `@functional-pipeline-expert`
    - AI/ML orchestration questions → `@ai-orchestration-specialist`
    - Infrastructure/deployment questions → `@cloud-devops-expert`
+   - Android development questions → `@android-expert`
 
 2. **Provide Context:**
    - Include relevant code snippets
@@ -121,19 +151,24 @@ This agent specializes in:
 
 ## Agent Capabilities Matrix
 
-| Capability | Functional Pipeline | AI Orchestration | Cloud DevOps |
-|------------|-------------------|------------------|--------------|
-| Monadic Composition | ✅ Expert | ⚠️ Basic | ❌ N/A |
-| Event Sourcing | ✅ Expert | ⚠️ Basic | ❌ N/A |
-| LangChain Integration | ✅ Expert | ✅ Expert | ❌ N/A |
-| Model Orchestration | ⚠️ Basic | ✅ Expert | ❌ N/A |
-| Self-Improving Agents | ⚠️ Basic | ✅ Expert | ❌ N/A |
-| Skill Extraction | ❌ N/A | ✅ Expert | ❌ N/A |
-| Kubernetes | ❌ N/A | ❌ N/A | ✅ Expert |
-| CI/CD Pipelines | ❌ N/A | ❌ N/A | ✅ Expert |
-| Infrastructure as Code | ❌ N/A | ❌ N/A | ✅ Expert |
-| Observability | ⚠️ Basic | ⚠️ Basic | ✅ Expert |
-| Security | ⚠️ Basic | ⚠️ Basic | ✅ Expert |
+| Capability | Functional Pipeline | AI Orchestration | Cloud DevOps | Android Expert |
+|------------|-------------------|------------------|--------------|----------------|
+| Monadic Composition | ✅ Expert | ⚠️ Basic | ❌ N/A | ❌ N/A |
+| Event Sourcing | ✅ Expert | ⚠️ Basic | ❌ N/A | ❌ N/A |
+| LangChain Integration | ✅ Expert | ✅ Expert | ❌ N/A | ❌ N/A |
+| Model Orchestration | ⚠️ Basic | ✅ Expert | ❌ N/A | ❌ N/A |
+| Self-Improving Agents | ⚠️ Basic | ✅ Expert | ❌ N/A | ❌ N/A |
+| Skill Extraction | ❌ N/A | ✅ Expert | ❌ N/A | ❌ N/A |
+| Kubernetes | ❌ N/A | ❌ N/A | ✅ Expert | ❌ N/A |
+| CI/CD Pipelines | ❌ N/A | ❌ N/A | ✅ Expert | ⚠️ Basic |
+| Infrastructure as Code | ❌ N/A | ❌ N/A | ✅ Expert | ❌ N/A |
+| Observability | ⚠️ Basic | ⚠️ Basic | ✅ Expert | ⚠️ Basic |
+| Security | ⚠️ Basic | ⚠️ Basic | ✅ Expert | ✅ Expert |
+| Android Development | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| Kotlin Programming | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| Jetpack Compose | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| Mobile Architecture | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| Android Testing | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
 
 Legend:
 - ✅ Expert: Deep expertise, primary responsibility

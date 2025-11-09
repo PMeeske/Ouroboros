@@ -45,7 +45,23 @@ The agent would provide:
 - Service and Ingress setup
 - Complete CI/CD pipeline
 
-## Example 4: Combining Multiple Agents
+## Example 4: Building an Android App
+
+**Scenario:** You need to create an Android app that uses the MonadicPipeline API.
+
+**Question to @android-expert:**
+> "I need to build an Android app that connects to the MonadicPipeline API. How should I structure the app using MVVM, Jetpack Compose, and Hilt for dependency injection?"
+
+**Expected Guidance:**
+The agent would provide:
+- Clean Architecture setup with domain, data, and presentation layers
+- Repository pattern for API integration
+- ViewModel with StateFlow for UI state management
+- Compose UI components with proper state hoisting
+- Hilt modules for dependency injection
+- Example implementation with proper error handling
+
+## Example 5: Combining Multiple Agents
 
 **Scenario:** Building a complete feature from design to deployment.
 
@@ -131,12 +147,42 @@ low-confidence tasks use ensemble models?
 
 **Expected Response:** The agent should provide Dockerfile examples with USER directives and security best practices.
 
+### Android Expert Tests
+
+**Test 1: Architecture**
+```
+@android-expert How do I implement MVVM with Clean Architecture for my Android app?
+```
+
+**Expected Response:** The agent should provide a layered architecture with domain, data, and presentation layers, including ViewModel, Repository, and Use Case examples.
+
+**Test 2: Jetpack Compose**
+```
+@android-expert Review this Compose code for proper state management:
+
+@Composable
+fun UserScreen(viewModel: UserViewModel) {
+    val user = viewModel.getUser()
+    Text(text = user.name)
+}
+```
+
+**Expected Response:** The agent should identify the lack of lifecycle-aware state collection and suggest using collectAsStateWithLifecycle().
+
+**Test 3: Memory Leaks**
+```
+@android-expert How do I prevent memory leaks when using location services in Android?
+```
+
+**Expected Response:** The agent should provide lifecycle-aware component examples with DisposableEffect for proper cleanup.
+
 ## Verification Checklist
 
 - [ ] Agents understand MonadicPipeline architecture
 - [ ] Functional Pipeline Expert provides monadic patterns
 - [ ] AI Orchestration Specialist knows Meta-AI architecture
 - [ ] Cloud DevOps Expert has Kubernetes expertise
+- [ ] Android Expert provides modern Android best practices
 - [ ] Agents provide code examples with explanations
 - [ ] Agents identify anti-patterns and suggest improvements
 - [ ] Documentation is clear and accessible
