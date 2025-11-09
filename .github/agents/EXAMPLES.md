@@ -45,7 +45,36 @@ The agent would provide:
 - Service and Ingress setup
 - Complete CI/CD pipeline
 
-## Example 4: Combining Multiple Agents
+## Example 4: Building an Android or MAUI App
+
+**Scenario:** You need to create a mobile app that uses the MonadicPipeline API.
+
+**Question to @android-expert (for native Android):**
+> "I need to build an Android app with Kotlin that connects to the MonadicPipeline API. How should I structure the app using MVVM, Jetpack Compose, and Hilt for dependency injection?"
+
+**Expected Guidance:**
+The agent would provide:
+- Clean Architecture setup with domain, data, and presentation layers
+- Repository pattern for API integration with Retrofit
+- ViewModel with StateFlow for UI state management
+- Compose UI components with proper state hoisting
+- Hilt modules for dependency injection
+- Example implementation with proper error handling
+
+**Question to @android-expert (for cross-platform MAUI):**
+> "I need to build a cross-platform app with .NET MAUI (C#) that connects to the MonadicPipeline API and runs on Android, iOS, and Windows. How should I structure it using MVVM with CommunityToolkit?"
+
+**Expected Guidance:**
+The agent would provide:
+- .NET MAUI project structure with shared business logic
+- MVVM with CommunityToolkit.Mvvm and source generators
+- Cross-platform API client with Refit
+- XAML or C# Markup UI with data binding
+- Dependency injection setup in MauiProgram.cs
+- Platform-specific code handling
+- Example implementation for all target platforms
+
+## Example 5: Combining Multiple Agents
 
 **Scenario:** Building a complete feature from design to deployment.
 
@@ -131,12 +160,63 @@ low-confidence tasks use ensemble models?
 
 **Expected Response:** The agent should provide Dockerfile examples with USER directives and security best practices.
 
+### Android & MAUI Expert Tests
+
+**Test 1: Android Architecture**
+```
+@android-expert How do I implement MVVM with Clean Architecture for my Android app using Kotlin and Compose?
+```
+
+**Expected Response:** The agent should provide a layered architecture with domain, data, and presentation layers, including ViewModel, Repository, and Use Case examples with Kotlin.
+
+**Test 2: .NET MAUI Architecture**
+```
+@android-expert How do I implement MVVM with Clean Architecture for my .NET MAUI app using C# and CommunityToolkit?
+```
+
+**Expected Response:** The agent should provide a cross-platform architecture with shared business logic, MVVM with source generators, and platform-specific handling.
+
+**Test 3: Jetpack Compose State Management**
+```
+@android-expert Review this Compose code for proper state management:
+
+@Composable
+fun UserScreen(viewModel: UserViewModel) {
+    val user = viewModel.getUser()
+    Text(text = user.name)
+}
+```
+
+**Expected Response:** The agent should identify the lack of lifecycle-aware state collection and suggest using collectAsStateWithLifecycle().
+
+**Test 4: MAUI Cross-Platform**
+```
+@android-expert How do I access platform-specific features in .NET MAUI while keeping my code testable?
+```
+
+**Expected Response:** The agent should provide examples of conditional compilation, platform abstractions, and dependency injection for platform services.
+
+**Test 5: Memory Leaks (Android)**
+```
+@android-expert How do I prevent memory leaks when using location services in Android?
+```
+
+**Expected Response:** The agent should provide lifecycle-aware component examples with DisposableEffect for proper cleanup.
+
+**Test 6: Memory Management (MAUI)**
+```
+@android-expert How do I properly dispose of resources in .NET MAUI ViewModels?
+```
+
+**Expected Response:** The agent should explain IDisposable implementation, proper cleanup in ViewModels, and lifecycle management in MAUI.
+
 ## Verification Checklist
 
 - [ ] Agents understand MonadicPipeline architecture
 - [ ] Functional Pipeline Expert provides monadic patterns
 - [ ] AI Orchestration Specialist knows Meta-AI architecture
 - [ ] Cloud DevOps Expert has Kubernetes expertise
+- [ ] Android & MAUI Expert provides modern mobile best practices (Kotlin & C#)
 - [ ] Agents provide code examples with explanations
 - [ ] Agents identify anti-patterns and suggest improvements
 - [ ] Documentation is clear and accessible

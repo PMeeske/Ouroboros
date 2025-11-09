@@ -76,6 +76,38 @@ This agent specializes in:
 @cloud-devops-expert How do I set up zero-downtime deployments with health checks?
 ```
 
+### 4. Android & MAUI Expert (`android-expert.md`)
+
+**Expertise:** Android Development (Kotlin), .NET MAUI Cross-Platform (C#), Mobile Architecture
+
+This agent specializes in:
+- Native Android development with Kotlin and Jetpack Compose
+- Cross-platform development with .NET MAUI (C#)
+- Mobile architecture patterns (MVVM, Clean Architecture)
+- Dependency injection (Hilt for Android, built-in DI for MAUI)
+- Coroutines/Flow (Kotlin) and async/await (C#)
+- Performance optimization and memory management
+- Mobile testing strategies (unit, UI, integration)
+- Material Design and cross-platform UI
+- Security best practices for mobile apps
+
+**Use this agent when:**
+- Building native Android applications with Kotlin
+- Developing cross-platform apps with .NET MAUI
+- Implementing mobile architecture components
+- Optimizing app performance and memory usage
+- Writing mobile unit and UI tests
+- Integrating third-party libraries
+- Implementing mobile security best practices
+- Troubleshooting platform-specific issues
+- Choosing between native and cross-platform approaches
+
+**Example invocation:**
+```
+@android-expert How do I implement a MVVM architecture with Jetpack Compose and Hilt?
+@android-expert How do I build a cross-platform app with .NET MAUI that shares business logic?
+```
+
 ## How to Use Custom Agents
 
 ### In GitHub Copilot Chat
@@ -103,6 +135,7 @@ This agent specializes in:
    - Functional programming questions → `@functional-pipeline-expert`
    - AI/ML orchestration questions → `@ai-orchestration-specialist`
    - Infrastructure/deployment questions → `@cloud-devops-expert`
+   - Android (Kotlin) or .NET MAUI (C#) development → `@android-expert`
 
 2. **Provide Context:**
    - Include relevant code snippets
@@ -121,19 +154,27 @@ This agent specializes in:
 
 ## Agent Capabilities Matrix
 
-| Capability | Functional Pipeline | AI Orchestration | Cloud DevOps |
-|------------|-------------------|------------------|--------------|
-| Monadic Composition | ✅ Expert | ⚠️ Basic | ❌ N/A |
-| Event Sourcing | ✅ Expert | ⚠️ Basic | ❌ N/A |
-| LangChain Integration | ✅ Expert | ✅ Expert | ❌ N/A |
-| Model Orchestration | ⚠️ Basic | ✅ Expert | ❌ N/A |
-| Self-Improving Agents | ⚠️ Basic | ✅ Expert | ❌ N/A |
-| Skill Extraction | ❌ N/A | ✅ Expert | ❌ N/A |
-| Kubernetes | ❌ N/A | ❌ N/A | ✅ Expert |
-| CI/CD Pipelines | ❌ N/A | ❌ N/A | ✅ Expert |
-| Infrastructure as Code | ❌ N/A | ❌ N/A | ✅ Expert |
-| Observability | ⚠️ Basic | ⚠️ Basic | ✅ Expert |
-| Security | ⚠️ Basic | ⚠️ Basic | ✅ Expert |
+| Capability | Functional Pipeline | AI Orchestration | Cloud DevOps | Android & MAUI Expert |
+|------------|-------------------|------------------|--------------|----------------------|
+| Monadic Composition | ✅ Expert | ⚠️ Basic | ❌ N/A | ❌ N/A |
+| Event Sourcing | ✅ Expert | ⚠️ Basic | ❌ N/A | ❌ N/A |
+| LangChain Integration | ✅ Expert | ✅ Expert | ❌ N/A | ❌ N/A |
+| Model Orchestration | ⚠️ Basic | ✅ Expert | ❌ N/A | ❌ N/A |
+| Self-Improving Agents | ⚠️ Basic | ✅ Expert | ❌ N/A | ❌ N/A |
+| Skill Extraction | ❌ N/A | ✅ Expert | ❌ N/A | ❌ N/A |
+| Kubernetes | ❌ N/A | ❌ N/A | ✅ Expert | ❌ N/A |
+| CI/CD Pipelines | ❌ N/A | ❌ N/A | ✅ Expert | ⚠️ Basic |
+| Infrastructure as Code | ❌ N/A | ❌ N/A | ✅ Expert | ❌ N/A |
+| Observability | ⚠️ Basic | ⚠️ Basic | ✅ Expert | ⚠️ Basic |
+| Security | ⚠️ Basic | ⚠️ Basic | ✅ Expert | ✅ Expert |
+| Android Development (Kotlin) | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| .NET MAUI (C#) | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| Kotlin Programming | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| C# Programming | ⚠️ Basic | ⚠️ Basic | ⚠️ Basic | ✅ Expert |
+| Jetpack Compose | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| Mobile Architecture | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| Mobile Testing | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| Cross-Platform Development | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
 
 Legend:
 - ✅ Expert: Deep expertise, primary responsibility
