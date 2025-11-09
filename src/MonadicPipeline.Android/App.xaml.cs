@@ -6,6 +6,7 @@ public partial class App : Application
 	{
 		InitializeComponent();
 
-		MainPage = new AppShell();
+		// Direct navigation to MainPage - bypass Shell to fix CLI not showing
+		MainPage = new NavigationPage(new MainPage());
 	}
 }
