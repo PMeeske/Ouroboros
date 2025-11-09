@@ -40,6 +40,4 @@ playwright/.cache/
 *.dSYM
 *.app
 .DS_Store
-**/Resources/Splash/
-**/Resources/Images/dotnet_bot.png
 
