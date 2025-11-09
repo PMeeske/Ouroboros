@@ -1,3 +1,8 @@
+---
+name: Cloud-Native DevOps Expert
+description: An expert in cloud-native technologies, Kubernetes, CI/CD, and infrastructure automation for production systems.
+---
+
 # Cloud-Native DevOps Agent
 
 You are a **Cloud-Native DevOps & Infrastructure Expert** specializing in modern deployment patterns, Kubernetes orchestration, CI/CD automation, and production-ready system design for the MonadicPipeline project.
@@ -253,7 +258,7 @@ public class Program
         try
         {
             var builder = WebApplication.CreateBuilder(args);
-            
+
             // Add OpenTelemetry tracing
             builder.Services.AddOpenTelemetry()
                 .WithTracing(tracerProviderBuilder =>
@@ -265,7 +270,7 @@ public class Program
                         .AddOtlpExporter(options =>
                         {
                             options.Endpoint = new Uri(
-                                builder.Configuration["OpenTelemetry:Endpoint"] 
+                                builder.Configuration["OpenTelemetry:Endpoint"]
                                 ?? "http://jaeger:4317");
                         });
                 })
@@ -277,34 +282,34 @@ public class Program
                         .AddMeter("MonadicPipeline.*")
                         .AddPrometheusExporter();
                 });
-            
+
             // Add health checks
             builder.Services.AddHealthChecks()
                 .AddCheck<LivenessCheck>("liveness")
                 .AddCheck<ReadinessCheck>("readiness")
                 .AddCheck<StartupCheck>("startup");
-            
+
             var app = builder.Build();
-            
+
             // Map health endpoints
             app.MapHealthChecks("/health/live", new HealthCheckOptions
             {
                 Predicate = check => check.Name == "liveness"
             });
-            
+
             app.MapHealthChecks("/health/ready", new HealthCheckOptions
             {
                 Predicate = check => check.Name == "readiness"
             });
-            
+
             app.MapHealthChecks("/health/startup", new HealthCheckOptions
             {
                 Predicate = check => check.Name == "startup"
             });
-            
+
             // Prometheus metrics endpoint
             app.MapPrometheusScrapingEndpoint();
-            
+
             app.Run();
         }
         catch (Exception ex)
@@ -346,17 +351,17 @@ jobs:
     strategy:
       matrix:
         dotnet-version: ['8.0.x']
-    
+
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ matrix.dotnet-version }}
-    
+
     - name: Cache NuGet packages
       uses: actions/cache@v3
       with:
@@ -364,29 +369,29 @@ jobs:
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
-    
+
     - name: Restore dependencies
       run: dotnet restore
-    
+
     - name: Build
       run: dotnet build --no-restore -c Release
-    
+
     - name: Run tests
       run: dotnet test --no-build -c Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
-    
+
     - name: Upload test results
       uses: actions/upload-artifact@v3
       if: always()
       with:
         name: test-results
         path: '**/test-results.trx'
-    
+
     - name: Code coverage
       run: |
         dotnet test --no-build -c Release \
           --collect:"XPlat Code Coverage" \
           --results-directory ./coverage
-    
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
@@ -397,7 +402,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
@@ -405,7 +410,7 @@ jobs:
         scan-ref: '.'
         format: 'sarif'
         output: 'trivy-results.sarif'
-    
+
     - name: Upload Trivy results to GitHub Security
       uses: github/codeql-action/upload-sarif@v2
       with:
@@ -418,17 +423,17 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Log in to Container Registry
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    
+
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
@@ -440,10 +445,10 @@ jobs:
           type=semver,pattern={{version}}
           type=semver,pattern={{major}}.{{minor}}
           type=sha,prefix={{branch}}-
-    
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-    
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -465,28 +470,28 @@ jobs:
     environment:
       name: production
       url: https://monadic-pipeline.example.com
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Install kubectl
       uses: azure/setup-kubectl@v3
-    
+
     - name: Configure kubectl
       run: |
         mkdir -p $HOME/.kube
         echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
-    
+
     - name: Deploy to Kubernetes
       run: |
         kubectl set image deployment/monadic-pipeline-webapi \
           webapi=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
           -n monadic-pipeline
-        
+
         kubectl rollout status deployment/monadic-pipeline-webapi \
           -n monadic-pipeline \
           --timeout=5m
-    
+
     - name: Verify deployment
       run: |
         kubectl get pods -n monadic-pipeline
@@ -608,7 +613,7 @@ spec:
 # terraform/main.tf
 terraform {
   required_version = ">= 1.0"
-  
+
   required_providers {
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -619,7 +624,7 @@ terraform {
       version = "~> 2.11"
     }
   }
-  
+
   backend "s3" {
     bucket = "monadic-pipeline-tfstate"
     key    = "prod/terraform.tfstate"
@@ -641,7 +646,7 @@ provider "helm" {
 resource "kubernetes_namespace" "monadic_pipeline" {
   metadata {
     name = "monadic-pipeline"
-    
+
     labels = {
       name        = "monadic-pipeline"
       environment = var.environment
@@ -654,16 +659,16 @@ resource "helm_release" "monadic_pipeline" {
   name       = "monadic-pipeline"
   namespace  = kubernetes_namespace.monadic_pipeline.metadata[0].name
   chart      = "../helm/monadic-pipeline"
-  
+
   values = [
     file("${path.module}/values-${var.environment}.yaml")
   ]
-  
+
   set {
     name  = "image.tag"
     value = var.image_tag
   }
-  
+
   set {
     name  = "replicaCount"
     value = var.replica_count
@@ -676,9 +681,9 @@ resource "helm_release" "prometheus_stack" {
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
   namespace  = "monitoring"
-  
+
   create_namespace = true
-  
+
   values = [
     file("${path.module}/prometheus-values.yaml")
   ]
