@@ -117,6 +117,49 @@ jobs:
         echo "4. Enable 'Install from Unknown Sources' in Android settings" >> $GITHUB_STEP_SUMMARY
         echo "5. Install the APK" >> $GITHUB_STEP_SUMMARY
 
+    - name: Send email notification with APK download link
+      if: success()
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: ${{ secrets.SMTP_SERVER }}
+        server_port: ${{ secrets.SMTP_PORT }}
+        username: ${{ secrets.SMTP_USERNAME }}
+        password: ${{ secrets.SMTP_PASSWORD }}
+        subject: "✅ Android APK Build Successful - ${{ github.repository }}"
+        to: ${{ secrets.NOTIFICATION_EMAIL }}
+        from: ${{ secrets.SMTP_FROM_EMAIL }}
+        body: |
+          Hello,
+
+          The Android APK has been successfully built for the MonadicPipeline app!
+
+          📱 **Build Details:**
+          - Repository: ${{ github.repository }}
+          - Branch: ${{ github.ref_name }}
+          - Commit: ${{ github.sha }}
+          - Commit Message: ${{ github.event.head_commit.message }}
+          - Build Triggered By: ${{ github.actor }}
+
+          📦 **APK Information:**
+          - File: ${{ steps.find-apk.outputs.apk_path }}
+          - Build Configuration: Release
+
+          🔗 **Download Link:**
+          You can download the APK from the workflow artifacts:
+          ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          📲 **Installation Instructions:**
+          1. Download the artifact from the link above
+          2. Extract the APK file from the ZIP
+          3. Transfer to your Android device (via USB, email, or cloud storage)
+          4. Enable "Install from Unknown Sources" in Android settings
+          5. Open the APK file on your device to install
+
+          ⏰ **Note:** Artifacts are retained for 30 days
+
+          This is an automated message from GitHub Actions.
+        priority: normal
+
     - name: Failure summary
       if: failure()
       run: |
