@@ -1975,39 +1975,61 @@ public class EncryptedFileService
         aes.BlockSize = 128;
         aes.Mode = CipherMode.CBC;
         
-        // Derive key from password
+        // Derive key from password with generated salt
         using var deriveBytes = new Rfc2898DeriveBytes(
             password,
             16, // salt size
             10000, // iterations
             HashAlgorithmName.SHA256);
         
+        var salt = deriveBytes.Salt; // Get the generated salt
         aes.Key = deriveBytes.GetBytes(32);
-        aes.IV = deriveBytes.GetBytes(16);
+        aes.IV = aes.IV; // Use auto-generated IV
         
         using var encryptor = aes.CreateEncryptor();
-        return await Task.Run(() => encryptor.TransformFinalBlock(data, 0, data.Length));
+        var encryptedData = await Task.Run(() => 
+            encryptor.TransformFinalBlock(data, 0, data.Length));
+        
+        // Return: salt (16 bytes) + IV (16 bytes) + encrypted data
+        var result = new byte[salt.Length + aes.IV.Length + encryptedData.Length];
+        Buffer.BlockCopy(salt, 0, result, 0, salt.Length);
+        Buffer.BlockCopy(aes.IV, 0, result, salt.Length, aes.IV.Length);
+        Buffer.BlockCopy(encryptedData, 0, result, salt.Length + aes.IV.Length, 
+            encryptedData.Length);
+        
+        return result;
     }
     
     public async Task<byte[]> DecryptDataAsync(byte[] encryptedData, string password)
     {
+        // Extract salt (first 16 bytes) and IV (next 16 bytes)
+        var salt = new byte[16];
+        var iv = new byte[16];
+        Buffer.BlockCopy(encryptedData, 0, salt, 0, 16);
+        Buffer.BlockCopy(encryptedData, 16, iv, 0, 16);
+        
         using var aes = Aes.Create();
         aes.KeySize = 256;
         aes.BlockSize = 128;
         aes.Mode = CipherMode.CBC;
+        aes.IV = iv;
         
+        // Derive key using the extracted salt
         using var deriveBytes = new Rfc2898DeriveBytes(
             password,
-            16,
+            salt, // Use extracted salt
             10000,
             HashAlgorithmName.SHA256);
         
         aes.Key = deriveBytes.GetBytes(32);
-        aes.IV = deriveBytes.GetBytes(16);
+        
+        // Decrypt only the actual encrypted data (skip salt and IV)
+        var cipherText = new byte[encryptedData.Length - 32];
+        Buffer.BlockCopy(encryptedData, 32, cipherText, 0, cipherText.Length);
         
         using var decryptor = aes.CreateDecryptor();
-        return await Task.Run(() => decryptor.TransformFinalBlock(
-            encryptedData, 0, encryptedData.Length));
+        return await Task.Run(() => 
+            decryptor.TransformFinalBlock(cipherText, 0, cipherText.Length));
     }
 }
 
