@@ -17,7 +17,11 @@ public partial class MainPage : ContentPage
     public MainPage()
     {
         InitializeComponent();
-        _cliExecutor = new CliExecutor();
+        
+        // Initialize with database support
+        var dbPath = Path.Combine(FileSystem.AppDataDirectory, "command_history.db");
+        _cliExecutor = new CliExecutor(dbPath);
+        
         _outputHistory = new StringBuilder();
         _outputHistory.AppendLine("MonadicPipeline CLI");
         _outputHistory.AppendLine("Type 'help' to see available commands");

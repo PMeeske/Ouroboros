@@ -3,30 +3,54 @@ using System.Text;
 namespace MonadicPipeline.Android.Services;
 
 /// <summary>
-/// Service to execute CLI commands within the Android app with Ollama integration
+/// Enhanced service to execute CLI commands within the Android app with full Ollama integration
 /// </summary>
 public class CliExecutor
 {
-    private string _ollamaEndpoint = "http://localhost:11434";
+    private readonly OllamaService _ollamaService;
+    private readonly ModelManager _modelManager;
+    private readonly CommandExecutor _commandExecutor;
+    private readonly CommandHistoryService? _historyService;
+    private readonly CommandSuggestionEngine? _suggestionEngine;
+    
     private string? _currentModel;
     private DateTime _lastModelUse;
     private readonly TimeSpan _modelUnloadDelay = TimeSpan.FromMinutes(5);
     private Timer? _modelUnloadTimer;
-    private readonly List<string> _availableSmallModels = new()
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CliExecutor"/> class.
+    /// </summary>
+    /// <param name="databasePath">Optional path to SQLite database for history</param>
+    public CliExecutor(string? databasePath = null)
     {
-        "tinyllama",      // 1.1B - Very small, fast
-        "phi",            // 2.7B - Small but capable
-        "qwen:0.5b",      // 0.5B - Extremely lightweight
-        "gemma:2b",       // 2B - Good balance
-    };
+        _ollamaService = new OllamaService("http://localhost:11434");
+        _modelManager = new ModelManager(_ollamaService);
+        _commandExecutor = new CommandExecutor(requiresRoot: false);
+        
+        if (!string.IsNullOrEmpty(databasePath))
+        {
+            try
+            {
+                _historyService = new CommandHistoryService(databasePath);
+                _suggestionEngine = new CommandSuggestionEngine(_historyService);
+            }
+            catch
+            {
+                // Gracefully handle database initialization failures
+                _historyService = null;
+                _suggestionEngine = null;
+            }
+        }
+    }
 
     /// <summary>
     /// Gets or sets the Ollama endpoint URL
     /// </summary>
     public string OllamaEndpoint
     {
-        get => _ollamaEndpoint;
-        set => _ollamaEndpoint = value;
+        get => _ollamaService.BaseUrl;
+        set => _ollamaService.BaseUrl = value;
     }
 
     /// <summary>
@@ -41,6 +65,12 @@ public class CliExecutor
                 return "Error: Empty command";
             }
 
+            // Add to history
+            if (_historyService != null)
+            {
+                await _historyService.AddCommandAsync(command);
+            }
+
             var parts = ParseCommand(command);
             var cmd = parts.Length > 0 ? parts[0].ToLowerInvariant() : string.Empty;
 
@@ -51,14 +81,19 @@ public class CliExecutor
                 "about" => GetAboutInfo(),
                 "ask" => await ExecuteAskAsync(parts),
                 "config" => ExecuteConfigCommand(parts),
-                "models" => GetModelsInfo(),
-                "pull" => GetPullInfo(parts),
-                "status" => GetStatusInfo(),
+                "models" => await GetModelsInfoAsync(),
+                "pull" => await ExecutePullAsync(parts),
+                "delete" => await ExecuteDeleteAsync(parts),
+                "status" => await GetStatusInfoAsync(),
                 "hints" => GetEfficiencyHints(),
-                "ping" => "pong",
+                "suggest" => await GetSuggestionsAsync(parts),
+                "history" => await GetHistoryAsync(parts),
+                "shell" => await ExecuteShellAsync(parts),
+                "ollama" => await ExecuteOllamaCommandAsync(parts),
+                "ping" => await TestConnectionAsync(),
                 "clear" => "CLEAR_SCREEN",
                 "exit" or "quit" => "Use the back button to exit the app",
-                _ => $"Unknown command: {cmd}\nType 'help' for available commands"
+                _ => await HandleUnknownCommandAsync(cmd, parts)
             };
         }
         catch (Exception ex)
@@ -72,24 +107,46 @@ public class CliExecutor
         return @"Available Commands:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-help         - Show this help message
-version      - Show version information
-about        - About MonadicPipeline
-config       - Configure Ollama endpoint
-             Usage: config <endpoint>
-             Example: config http://192.168.1.100:11434
-status       - Show current status and loaded model
-models       - Show recommended models
-pull         - Show model pull instructions
-             Usage: pull <model-name>
-             Example: pull tinyllama
-ask          - Ask a question using AI
-             Usage: ask <your question>
-             Example: ask What is functional programming?
-hints        - Get efficiency hints for mobile CLI
-ping         - Test connection
-clear        - Clear the screen
-exit/quit    - Exit instructions
+System Commands:
+  help         - Show this help message
+  version      - Show version information
+  about        - About MonadicPipeline
+  clear        - Clear the screen
+  exit/quit    - Exit instructions
+
+Ollama Configuration:
+  config       - Configure Ollama endpoint
+               Usage: config <endpoint>
+               Example: config http://192.168.1.100:11434
+  status       - Show current status and loaded model
+  ping         - Test connection to Ollama
+
+Model Management:
+  models       - List available models from Ollama
+  pull         - Download a model from Ollama
+               Usage: pull <model-name>
+               Example: pull tinyllama
+  delete       - Delete a model
+               Usage: delete <model-name>
+
+AI Interaction:
+  ask          - Ask a question using AI
+               Usage: ask <your question>
+               Example: ask What is functional programming?
+
+Intelligence & History:
+  suggest      - Get command suggestions
+               Usage: suggest [partial command]
+  history      - Show recent command history
+               Usage: history [count]
+  hints        - Get efficiency hints for mobile CLI
+
+Advanced:
+  shell        - Execute native shell command
+               Usage: shell <command>
+               Example: shell ls -la
+  ollama       - Manage Ollama service (if supported)
+               Usage: ollama <start|stop|status>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Recommended small models for Android:
@@ -141,7 +198,7 @@ License: Open Source";
     {
         if (parts.Length < 2)
         {
-            return $@"Current Ollama endpoint: {_ollamaEndpoint}
+            return $@"Current Ollama endpoint: {OllamaEndpoint}
 
 Usage: config <endpoint>
 Example: config http://192.168.1.100:11434
@@ -158,7 +215,7 @@ accessible from this device.";
 
         OllamaEndpoint = newEndpoint;
         
-        return $@"✓ Endpoint configured: {_ollamaEndpoint}
+        return $@"✓ Endpoint configured: {OllamaEndpoint}
 
 To use the AI features:
 1. Ensure Ollama is running on this server
@@ -166,9 +223,47 @@ To use the AI features:
 3. Ask questions: ask <question>";
     }
 
-    private string GetModelsInfo()
+    private async Task<string> GetModelsInfoAsync()
     {
-        return $@"Ollama Endpoint: {_ollamaEndpoint}
+        try
+        {
+            var models = await _modelManager.GetAvailableModelsAsync();
+            
+            if (models.Count == 0)
+            {
+                return $@"Ollama Endpoint: {OllamaEndpoint}
+
+No models found. Pull a model first:
+  pull tinyllama
+
+Or check connection with: ping";
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Ollama Endpoint: {OllamaEndpoint}");
+            sb.AppendLine();
+            sb.AppendLine("Available Models:");
+            sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            
+            foreach (var model in models)
+            {
+                sb.AppendLine($"• {model.Name}");
+                sb.AppendLine($"  Size: {model.FormattedSize}");
+                if (model.IsRecommended)
+                {
+                    sb.AppendLine("  ⭐ Recommended for mobile");
+                }
+                sb.AppendLine();
+            }
+            
+            sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            sb.AppendLine("Use 'ask <question>' to chat with a model");
+            
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $@"Error listing models: {ex.Message}
 
 Recommended Models for Android:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -195,45 +290,112 @@ gemma:2b (2B parameters)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-To pull a model, run this on your Ollama server:
-  ollama pull tinyllama
+To pull a model:
+  pull tinyllama
 
-Or use Ollama's web interface/CLI on the server.
-
-Then verify with: status";
+Then verify with: models";
+        }
     }
 
-    private string GetPullInfo(string[] parts)
+    private async Task<string> ExecutePullAsync(string[] parts)
     {
-        var modelName = parts.Length > 1 ? parts[1] : "tinyllama";
+        if (parts.Length < 2)
+        {
+            return @"Usage: pull <model-name>
+Examples:
+  pull tinyllama
+  pull phi
+  pull qwen:0.5b
+
+This will download the model from Ollama.
+Use 'models' to see recommended models.";
+        }
+
+        var modelName = parts[1];
         
-        return $@"To download model '{modelName}':
+        try
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Pulling model: {modelName}");
+            sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            sb.AppendLine("This may take a few minutes...");
+            sb.AppendLine();
 
-On your Ollama server, run:
-  ollama pull {modelName}
+            await _modelManager.PullModelAsync(modelName, progress =>
+            {
+                // Progress updates could be streamed in a real implementation
+            });
 
-Or use Ollama's web interface at:
-  {_ollamaEndpoint}/
+            sb.AppendLine();
+            sb.AppendLine($"✓ Model '{modelName}' pulled successfully!");
+            sb.AppendLine();
+            sb.AppendLine("Try it out:");
+            sb.AppendLine($"  ask What is functional programming?");
+            
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $@"Error pulling model: {ex.Message}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Note: Models are downloaded to the Ollama server,
-not to your Android device. This saves space and
-allows multiple devices to share models.
+Note: Make sure:
+1. Ollama server is running
+2. You're connected to the network
+3. The model name is correct
 
-Recommended: Use WiFi when pulling large models.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-After pulling, use: models
-Then try: ask <your question>";
+Use 'models' to see available models.";
+        }
     }
 
-    private string GetStatusInfo()
+    private async Task<string> ExecuteDeleteAsync(string[] parts)
+    {
+        if (parts.Length < 2)
+        {
+            return @"Usage: delete <model-name>
+Example: delete tinyllama
+
+This will remove the model from Ollama.
+Use 'models' to see available models.";
+        }
+
+        var modelName = parts[1];
+        
+        try
+        {
+            await _modelManager.DeleteModelAsync(modelName);
+            return $@"✓ Model '{modelName}' deleted successfully!
+
+Use 'models' to see remaining models.";
+        }
+        catch (Exception ex)
+        {
+            return $"Error deleting model: {ex.Message}";
+        }
+    }
+
+    private async Task<string> GetStatusInfoAsync()
     {
         var status = new StringBuilder();
         status.AppendLine("System Status:");
         status.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        status.AppendLine($"Ollama Endpoint: {_ollamaEndpoint}");
-        status.AppendLine($"Connection: Not tested (use 'models' to verify)");
+        status.AppendLine($"Ollama Endpoint: {OllamaEndpoint}");
+        
+        // Test connection
+        var connected = await _ollamaService.TestConnectionAsync();
+        status.AppendLine($"Connection: {(connected ? "✓ Connected" : "✗ Failed")}");
+        
+        if (connected)
+        {
+            try
+            {
+                var models = await _modelManager.GetAvailableModelsAsync();
+                status.AppendLine($"Available Models: {models.Count}");
+            }
+            catch
+            {
+                status.AppendLine("Available Models: Unknown");
+            }
+        }
         
         if (_currentModel != null)
         {
@@ -249,10 +411,19 @@ Then try: ask <your question>";
         }
         
         status.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        status.AppendLine("\nFor full functionality:");
-        status.AppendLine("1. Configure endpoint: config <url>");
-        status.AppendLine("2. Pull model on server: ollama pull tinyllama");
-        status.AppendLine("3. Ask questions: ask <question>");
+        
+        if (!connected)
+        {
+            status.AppendLine("\nTo get started:");
+            status.AppendLine("1. Configure endpoint: config <url>");
+            status.AppendLine("2. Pull model: pull tinyllama");
+            status.AppendLine("3. Ask questions: ask <question>");
+        }
+        else
+        {
+            status.AppendLine("\nTip: Use 'models' to see available models");
+        }
+        
         return status.ToString();
     }
 
@@ -307,54 +478,53 @@ Best Practices:
 
         var question = string.Join(" ", parts.Skip(1));
         
-        // Update model usage tracking
-        if (_currentModel == null)
+        try
         {
-            _currentModel = "auto-selected";
+            // Auto-select smallest model if none loaded
+            if (_currentModel == null)
+            {
+                _currentModel = await _modelManager.GetSmallestAvailableModelAsync();
+                
+                if (_currentModel == null)
+                {
+                    return @"No models available. Pull a model first:
+  pull tinyllama
+
+Then try your question again.";
+                }
+            }
+            
+            _lastModelUse = DateTime.UtcNow;
+            ResetUnloadTimer();
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Q: {question}");
+            sb.AppendLine();
+            sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            sb.AppendLine($"Using model: {_currentModel}");
+            sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            sb.AppendLine();
+
+            // Generate response
+            var response = await _ollamaService.GenerateAsync(_currentModel, question);
+            
+            sb.AppendLine("A: " + response);
+            sb.AppendLine();
+            sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            sb.AppendLine($"Model will auto-unload after {_modelUnloadDelay.TotalMinutes} minutes of inactivity");
+            
+            return sb.ToString();
         }
-        
-        _lastModelUse = DateTime.UtcNow;
-        ResetUnloadTimer();
+        catch (Exception ex)
+        {
+            return $@"Error generating response: {ex.Message}
 
-        await Task.Delay(100); // Simulate processing
-
-        return $@"Q: {question}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Feature Demonstration Mode
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-This Android CLI app demonstrates the interface
-structure for MonadicPipeline on mobile.
-
-To enable full AI capabilities:
-
-1. Set up Ollama on a networked computer:
-   • Install from https://ollama.ai/
-   • Pull a model: ollama pull tinyllama
-   • Verify: ollama list
-
-2. Configure this app:
-   • Find your computer's IP address
-   • Run: config http://YOUR_IP:11434
-   • Test: status
-
-3. Ask questions:
-   • The app will connect to your Ollama server
-   • Responses will be generated by the AI model
-   • Models auto-unload after {_modelUnloadDelay.TotalMinutes} minutes
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-For now, this demonstrates:
-✓ Terminal-style mobile interface
-✓ Command parsing and execution
-✓ Model lifecycle management
-✓ Network configuration
-✓ Efficiency optimization hints
-
-Ready for Ollama integration!
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+Troubleshooting:
+1. Check connection: ping
+2. Verify endpoint: status
+3. List models: models
+4. Pull a model: pull tinyllama";
+        }
     }
 
     private void ResetUnloadTimer()
@@ -370,6 +540,281 @@ Ready for Ollama integration!
                 _modelUnloadTimer = null;
             }
         }, null, _modelUnloadDelay, TimeSpan.FromMinutes(1));
+    }
+
+    private async Task<string> GetSuggestionsAsync(string[] parts)
+    {
+        if (_suggestionEngine == null)
+        {
+            return "Suggestion engine not available (database not initialized).";
+        }
+
+        var partialCommand = parts.Length > 1 ? string.Join(" ", parts.Skip(1)) : string.Empty;
+        
+        try
+        {
+            var suggestions = await _suggestionEngine.GetSuggestionsAsync(partialCommand, 10);
+            
+            if (suggestions.Count == 0)
+            {
+                return "No suggestions found. Type 'help' to see available commands.";
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Command Suggestions:");
+            sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            
+            foreach (var suggestion in suggestions)
+            {
+                sb.AppendLine($"• {suggestion.Command}");
+                if (!string.IsNullOrEmpty(suggestion.Description))
+                {
+                    sb.AppendLine($"  {suggestion.Description}");
+                }
+                sb.AppendLine($"  Confidence: {suggestion.Confidence:P0} | Source: {suggestion.Source}");
+                sb.AppendLine();
+            }
+            
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"Error getting suggestions: {ex.Message}";
+        }
+    }
+
+    private async Task<string> GetHistoryAsync(string[] parts)
+    {
+        if (_historyService == null)
+        {
+            return "Command history not available (database not initialized).";
+        }
+
+        var count = 20;
+        if (parts.Length > 1 && int.TryParse(parts[1], out var requestedCount))
+        {
+            count = Math.Min(requestedCount, 100);
+        }
+
+        try
+        {
+            var history = await _historyService.GetRecentHistoryAsync(count);
+            
+            if (history.Count == 0)
+            {
+                return "No command history yet.";
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Recent Command History (last {history.Count}):");
+            sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            
+            foreach (var entry in history)
+            {
+                sb.AppendLine($"[{entry.ExecutedAt:yyyy-MM-dd HH:mm:ss}] {entry.Command}");
+            }
+            
+            sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            sb.AppendLine("\nUse 'suggest' to get command suggestions based on history.");
+            
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"Error retrieving history: {ex.Message}";
+        }
+    }
+
+    private async Task<string> ExecuteShellAsync(string[] parts)
+    {
+        if (parts.Length < 2)
+        {
+            return @"Usage: shell <command>
+Examples:
+  shell ls -la
+  shell ps aux
+  shell df -h
+
+⚠️  Warning: Shell commands run with app permissions only.
+Root access is not available by default.";
+        }
+
+        var shellCommand = string.Join(" ", parts.Skip(1));
+        
+        // Validate command
+        var validation = _commandExecutor.ValidateCommand(shellCommand);
+        if (!validation.IsValid)
+        {
+            return $"⚠️  Command validation failed: {validation.Message}";
+        }
+
+        try
+        {
+            var result = await _commandExecutor.ExecuteAsync(shellCommand);
+            
+            var sb = new StringBuilder();
+            sb.AppendLine($"$ {shellCommand}");
+            sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            
+            if (!string.IsNullOrEmpty(result.Output))
+            {
+                sb.AppendLine(result.Output);
+            }
+            
+            if (!string.IsNullOrEmpty(result.Error))
+            {
+                sb.AppendLine("STDERR:");
+                sb.AppendLine(result.Error);
+            }
+            
+            sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            sb.AppendLine($"Exit Code: {result.ExitCode}");
+            
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"Error executing shell command: {ex.Message}";
+        }
+    }
+
+    private async Task<string> ExecuteOllamaCommandAsync(string[] parts)
+    {
+        if (parts.Length < 2)
+        {
+            return @"Usage: ollama <start|stop|status|restart>
+Examples:
+  ollama status
+  ollama start
+  ollama stop
+
+Note: Ollama service management requires Termux or similar.
+This feature may not work on all devices.";
+        }
+
+        var subCommand = parts[1].ToLowerInvariant();
+        
+        return subCommand switch
+        {
+            "status" => await GetOllamaServiceStatusAsync(),
+            "start" => await StartOllamaServiceAsync(),
+            "stop" => await StopOllamaServiceAsync(),
+            "restart" => await RestartOllamaServiceAsync(),
+            _ => $"Unknown ollama command: {subCommand}\nUse: ollama <start|stop|status|restart>"
+        };
+    }
+
+    private async Task<string> GetOllamaServiceStatusAsync()
+    {
+        var connected = await _ollamaService.TestConnectionAsync();
+        
+        if (connected)
+        {
+            return @"✓ Ollama service is running and accessible
+
+Use 'models' to see available models.";
+        }
+        else
+        {
+            return $@"✗ Cannot connect to Ollama service at {OllamaEndpoint}
+
+Possible reasons:
+1. Ollama is not running
+2. Wrong endpoint configured (use 'config' to fix)
+3. Network connection issues
+
+To start Ollama on Termux:
+  ollama serve";
+        }
+    }
+
+    private async Task<string> StartOllamaServiceAsync()
+    {
+        return @"⚠️  Ollama service management not fully implemented yet.
+
+To start Ollama manually:
+1. Install Termux from F-Droid
+2. Install Ollama in Termux:
+   pkg install ollama
+3. Start the service:
+   ollama serve
+
+Then configure this app:
+  config http://localhost:11434";
+    }
+
+    private async Task<string> StopOllamaServiceAsync()
+    {
+        return @"⚠️  Ollama service management not fully implemented yet.
+
+To stop Ollama manually:
+1. Find the Ollama process:
+   ps aux | grep ollama
+2. Kill the process:
+   kill <pid>";
+    }
+
+    private async Task<string> RestartOllamaServiceAsync()
+    {
+        return @"⚠️  Ollama service management not fully implemented yet.
+
+To restart Ollama manually:
+1. Stop the service (see 'ollama stop')
+2. Start it again (see 'ollama start')";
+    }
+
+    private async Task<string> TestConnectionAsync()
+    {
+        try
+        {
+            var connected = await _ollamaService.TestConnectionAsync();
+            
+            if (connected)
+            {
+                return $"✓ Successfully connected to Ollama at {OllamaEndpoint}";
+            }
+            else
+            {
+                return $"✗ Cannot connect to Ollama at {OllamaEndpoint}\n\nCheck endpoint with: config";
+            }
+        }
+        catch (Exception ex)
+        {
+            return $"✗ Connection test failed: {ex.Message}";
+        }
+    }
+
+    private async Task<string> HandleUnknownCommandAsync(string cmd, string[] parts)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"Unknown command: {cmd}");
+        sb.AppendLine();
+        
+        // Try to suggest similar commands
+        if (_suggestionEngine != null)
+        {
+            try
+            {
+                var suggestions = await _suggestionEngine.GetSuggestionsAsync(cmd, 3);
+                if (suggestions.Count > 0)
+                {
+                    sb.AppendLine("Did you mean:");
+                    foreach (var suggestion in suggestions)
+                    {
+                        sb.AppendLine($"  • {suggestion.Command}");
+                    }
+                    sb.AppendLine();
+                }
+            }
+            catch
+            {
+                // Ignore suggestion errors
+            }
+        }
+        
+        sb.AppendLine("Type 'help' for available commands");
+        
+        return sb.ToString();
     }
 
     private string[] ParseCommand(string command)
