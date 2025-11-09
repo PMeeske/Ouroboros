@@ -76,33 +76,36 @@ This agent specializes in:
 @cloud-devops-expert How do I set up zero-downtime deployments with health checks?
 ```
 
-### 4. Android Expert (`android-expert.md`)
+### 4. Android & MAUI Expert (`android-expert.md`)
 
-**Expertise:** Android Development, Kotlin, Jetpack Compose, Mobile Architecture
+**Expertise:** Android Development (Kotlin), .NET MAUI Cross-Platform (C#), Mobile Architecture
 
 This agent specializes in:
-- Modern Android development with Kotlin
-- Jetpack Compose declarative UI
-- Android architecture patterns (MVVM, Clean Architecture)
-- Dependency injection with Hilt/Dagger
-- Coroutines and Flow for reactive programming
+- Native Android development with Kotlin and Jetpack Compose
+- Cross-platform development with .NET MAUI (C#)
+- Mobile architecture patterns (MVVM, Clean Architecture)
+- Dependency injection (Hilt for Android, built-in DI for MAUI)
+- Coroutines/Flow (Kotlin) and async/await (C#)
 - Performance optimization and memory management
-- Android testing strategies
-- Material Design implementation
+- Mobile testing strategies (unit, UI, integration)
+- Material Design and cross-platform UI
+- Security best practices for mobile apps
 
 **Use this agent when:**
-- Building Android applications or features
-- Implementing Jetpack Compose UIs
-- Setting up Android architecture components
+- Building native Android applications with Kotlin
+- Developing cross-platform apps with .NET MAUI
+- Implementing mobile architecture components
 - Optimizing app performance and memory usage
-- Writing Android unit and UI tests
+- Writing mobile unit and UI tests
 - Integrating third-party libraries
-- Implementing security best practices
-- Troubleshooting Android-specific issues
+- Implementing mobile security best practices
+- Troubleshooting platform-specific issues
+- Choosing between native and cross-platform approaches
 
 **Example invocation:**
 ```
 @android-expert How do I implement a MVVM architecture with Jetpack Compose and Hilt?
+@android-expert How do I build a cross-platform app with .NET MAUI that shares business logic?
 ```
 
 ## How to Use Custom Agents
@@ -132,7 +135,7 @@ This agent specializes in:
    - Functional programming questions → `@functional-pipeline-expert`
    - AI/ML orchestration questions → `@ai-orchestration-specialist`
    - Infrastructure/deployment questions → `@cloud-devops-expert`
-   - Android development questions → `@android-expert`
+   - Android (Kotlin) or .NET MAUI (C#) development → `@android-expert`
 
 2. **Provide Context:**
    - Include relevant code snippets
@@ -151,8 +154,8 @@ This agent specializes in:
 
 ## Agent Capabilities Matrix
 
-| Capability | Functional Pipeline | AI Orchestration | Cloud DevOps | Android Expert |
-|------------|-------------------|------------------|--------------|----------------|
+| Capability | Functional Pipeline | AI Orchestration | Cloud DevOps | Android & MAUI Expert |
+|------------|-------------------|------------------|--------------|----------------------|
 | Monadic Composition | ✅ Expert | ⚠️ Basic | ❌ N/A | ❌ N/A |
 | Event Sourcing | ✅ Expert | ⚠️ Basic | ❌ N/A | ❌ N/A |
 | LangChain Integration | ✅ Expert | ✅ Expert | ❌ N/A | ❌ N/A |
@@ -164,11 +167,14 @@ This agent specializes in:
 | Infrastructure as Code | ❌ N/A | ❌ N/A | ✅ Expert | ❌ N/A |
 | Observability | ⚠️ Basic | ⚠️ Basic | ✅ Expert | ⚠️ Basic |
 | Security | ⚠️ Basic | ⚠️ Basic | ✅ Expert | ✅ Expert |
-| Android Development | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| Android Development (Kotlin) | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| .NET MAUI (C#) | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
 | Kotlin Programming | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| C# Programming | ⚠️ Basic | ⚠️ Basic | ⚠️ Basic | ✅ Expert |
 | Jetpack Compose | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
 | Mobile Architecture | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
-| Android Testing | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| Mobile Testing | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| Cross-Platform Development | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
 
 Legend:
 - ✅ Expert: Deep expertise, primary responsibility
