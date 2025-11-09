@@ -423,6 +423,40 @@ UI Update (MainPage output display)
 
 ## Troubleshooting
 
+### Purple Screen on Startup
+
+If the app shows only a purple screen with no UI:
+
+**Root Cause:** This indicates a service initialization failure during startup. The app's MainPage failed to load properly.
+
+**Solution (Automatic):** 
+- As of the latest version, the app includes comprehensive error handling
+- You should now see the terminal UI with error messages explaining what failed
+- The app will gracefully degrade and show which features are unavailable
+
+**Common Initialization Errors:**
+
+1. **Database Error:**
+   - Message: `⚠ Initialization error: [SQLite error]`
+   - Cause: Issues creating or accessing the command history database
+   - Solution: The app will continue without history features; no action needed
+
+2. **Service Initialization:**
+   - Message: `⚠ Suggestions unavailable: [error details]`
+   - Cause: CommandHistoryService or CommandSuggestionEngine failed
+   - Solution: Core functionality works; suggestions temporarily unavailable
+
+3. **Permission Issues:**
+   - Ensure the app has Storage permission
+   - Go to Android Settings > Apps > MonadicPipeline > Permissions
+   - Enable Storage access
+
+**If you still see a purple screen after update:**
+- Uninstall the app completely
+- Clear app data: Settings > Apps > MonadicPipeline > Storage > Clear Data
+- Reinstall the latest version
+- Report the issue with device details
+
 ### "Error listing models"
 - Ensure Ollama is running on the configured endpoint
 - Check network connectivity

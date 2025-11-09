@@ -9,7 +9,7 @@ namespace MonadicPipeline.Android;
 /// </summary>
 public partial class MainPage : ContentPage
 {
-    private readonly CliExecutor _cliExecutor;
+    private readonly CliExecutor? _cliExecutor;
     private readonly StringBuilder _outputHistory;
     private readonly List<string> _commandHistory;
     private int _historyIndex;
@@ -22,10 +22,6 @@ public partial class MainPage : ContentPage
     {
         InitializeComponent();
         
-        // Initialize with database support
-        var dbPath = Path.Combine(FileSystem.AppDataDirectory, "command_history.db");
-        _cliExecutor = new CliExecutor(dbPath);
-        
         _outputHistory = new StringBuilder();
         _commandHistory = new List<string>();
         _historyIndex = -1;
@@ -34,29 +30,59 @@ public partial class MainPage : ContentPage
         _outputHistory.AppendLine("Enhanced with AI-powered suggestions and Ollama integration");
         _outputHistory.AppendLine("Type 'help' to see available commands");
         _outputHistory.AppendLine();
-        _outputHistory.Append("> ");
-        UpdateOutput();
         
-        // Initialize suggestion engine if available
+        // Initialize with database support - with error handling
         try
         {
-            var historyService = new CommandHistoryService(dbPath);
-            _suggestionEngine = new CommandSuggestionEngine(historyService);
-        }
-        catch
-        {
-            // Gracefully handle if suggestions aren't available
-            _suggestionEngine = null;
-        }
+            var dbPath = Path.Combine(FileSystem.AppDataDirectory, "command_history.db");
+            _cliExecutor = new CliExecutor(dbPath);
+            
+            // Initialize suggestion engine if available
+            try
+            {
+                var historyService = new CommandHistoryService(dbPath);
+                _suggestionEngine = new CommandSuggestionEngine(historyService);
+            }
+            catch (Exception ex)
+            {
+                // Gracefully handle if suggestions aren't available
+                _suggestionEngine = null;
+                _outputHistory.AppendLine($"⚠ Suggestions unavailable: {ex.Message}");
+                _outputHistory.AppendLine();
+            }
 
-        // Load settings
-        LoadSettings();
+            // Load settings
+            LoadSettings();
+        }
+        catch (Exception ex)
+        {
+            _outputHistory.AppendLine($"⚠ Initialization error: {ex.Message}");
+            _outputHistory.AppendLine("Some features may be unavailable.");
+            _outputHistory.AppendLine();
+            
+            // Create a minimal fallback executor
+            try
+            {
+                _cliExecutor = new CliExecutor(null);
+            }
+            catch
+            {
+                // If even that fails, we'll handle it in ExecuteCommand
+                _cliExecutor = null!;
+            }
+        }
+        
+        _outputHistory.Append("> ");
+        UpdateOutput();
     }
 
     private void LoadSettings()
     {
-        var endpoint = Preferences.Get("ollama_endpoint", "http://localhost:11434");
-        _cliExecutor.OllamaEndpoint = endpoint;
+        if (_cliExecutor != null)
+        {
+            var endpoint = Preferences.Get("ollama_endpoint", "http://localhost:11434");
+            _cliExecutor.OllamaEndpoint = endpoint;
+        }
     }
 
     private async void OnCommandEntered(object? sender, EventArgs e)
@@ -142,6 +168,12 @@ public partial class MainPage : ContentPage
     {
         try
         {
+            if (_cliExecutor == null)
+            {
+                await DisplayAlert("Error", "CLI executor not initialized. Cannot access models.", "OK");
+                return;
+            }
+            
             var ollamaService = new OllamaService(_cliExecutor.OllamaEndpoint);
             var modelManager = new ModelManager(ollamaService);
             var modelManagerView = new ModelManagerView(modelManager);
@@ -158,9 +190,12 @@ public partial class MainPage : ContentPage
         var settingsView = new SettingsView();
         settingsView.SettingsChanged += (s, args) =>
         {
-            _cliExecutor.OllamaEndpoint = args.OllamaEndpoint;
-            _outputHistory.AppendLine($"Settings updated: Endpoint = {args.OllamaEndpoint}");
-            UpdateOutput();
+            if (_cliExecutor != null)
+            {
+                _cliExecutor.OllamaEndpoint = args.OllamaEndpoint;
+                _outputHistory.AppendLine($"Settings updated: Endpoint = {args.OllamaEndpoint}");
+                UpdateOutput();
+            }
         };
         await Navigation.PushAsync(settingsView);
     }
@@ -215,7 +250,22 @@ public partial class MainPage : ContentPage
         _outputHistory.AppendLine();
 
         // Execute command
-        var result = await _cliExecutor.ExecuteCommandAsync(command);
+        string result;
+        if (_cliExecutor == null)
+        {
+            result = "Error: CLI executor not initialized. App may be in degraded state.";
+        }
+        else
+        {
+            try
+            {
+                result = await _cliExecutor.ExecuteCommandAsync(command);
+            }
+            catch (Exception ex)
+            {
+                result = $"Error executing command: {ex.Message}";
+            }
+        }
 
         // Handle special commands
         if (result == "CLEAR_SCREEN")
