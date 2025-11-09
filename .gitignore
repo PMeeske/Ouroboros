@@ -32,3 +32,12 @@ package-lock.json
 playwright-report/
 test-results/
 playwright/.cache/
+
+# Android/MAUI build artifacts
+*.apk
+*.aab
+*.ipa
+*.dSYM
+*.app
+.DS_Store
+

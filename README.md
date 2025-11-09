@@ -204,6 +204,41 @@ curl http://localhost:8080/health
 
 See [Web API Documentation](src/MonadicPipeline.WebApi/README.md) for more details.
 
+#### Android App (Mobile CLI Interface)
+
+MonadicPipeline is now available as an Android app with a terminal-style CLI interface and integrated Ollama support.
+
+**Get the APK:**
+- **Download:** APK is automatically built by CI/CD - download from [GitHub Actions artifacts](../../actions/workflows/android-build.yml)
+- **Build locally:** Requires MAUI workload (see below)
+
+```bash
+# To build locally (requires: dotnet workload install maui-android)
+cd src/MonadicPipeline.Android
+dotnet build -c Release -f net8.0-android
+
+# Install on connected device
+dotnet build -c Release -f net8.0-android -t:Install
+```
+
+**Features:**
+- ✅ **Terminal-Style UI**: Green-on-black terminal interface for mobile
+- ✅ **Ollama Integration**: Connect to local or remote Ollama servers
+- ✅ **Automatic Model Management**: Models auto-unload after 5 minutes of inactivity
+- ✅ **Small Model Optimization**: Recommended models (tinyllama, phi, qwen, gemma)
+- ✅ **Efficiency Hints**: Built-in guidance for battery, network, and memory usage
+- ✅ **Standalone Operation**: Download models as needed from Ollama
+
+**Quick Start on Android:**
+1. Download and install the APK from GitHub Actions artifacts
+2. Launch the app
+3. Configure Ollama endpoint: `config http://YOUR_SERVER_IP:11434`
+4. Pull a small model on your server: `ollama pull tinyllama`
+5. Ask questions: `ask What is functional programming?`
+
+See [Android App Documentation](src/MonadicPipeline.Android/README.md) for complete instructions.
+
+
 #### Smart Model Orchestrator
 
 The orchestrator command provides intelligent model selection based on the task type:
@@ -425,6 +460,8 @@ src/
 ├── MonadicPipeline.Providers/   # External service providers
 ├── MonadicPipeline.Agent/       # AI orchestration and meta-AI
 ├── MonadicPipeline.CLI/         # Command-line interface
+├── MonadicPipeline.WebApi/      # REST API for containerized deployments
+├── MonadicPipeline.Android/     # Android app with terminal CLI interface
 ├── MonadicPipeline.Examples/    # Comprehensive examples
 └── MonadicPipeline.Tests/       # Test suite
 ```

@@ -1,0 +1,130 @@
+name: Android App Build
+
+on:
+  push:
+    branches: [ main, develop, 'copilot/**' ]
+    paths:
+      - 'src/MonadicPipeline.Android/**'
+      - '.github/workflows/android-build.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/MonadicPipeline.Android/**'
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Install MAUI workload
+      run: |
+        echo "Installing MAUI Android workload..."
+        dotnet workload install maui-android --skip-sign-check --verbosity detailed
+        echo "Verifying installation..."
+        dotnet workload list
+        echo "Workload installation complete."
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-android-${{ hashFiles('**/MonadicPipeline.Android.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-android-
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies (Core libraries)
+      run: |
+        echo "Restoring core dependencies..."
+        cd src
+        dotnet restore MonadicPipeline.Core/MonadicPipeline.Core.csproj
+        dotnet restore MonadicPipeline.Domain/MonadicPipeline.Domain.csproj
+        dotnet restore MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj
+        dotnet restore MonadicPipeline.Tools/MonadicPipeline.Tools.csproj
+        dotnet restore MonadicPipeline.Providers/MonadicPipeline.Providers.csproj
+        dotnet restore MonadicPipeline.Agent/MonadicPipeline.Agent.csproj
+
+    - name: Restore Android project dependencies
+      run: |
+        echo "Restoring Android project dependencies..."
+        cd src/MonadicPipeline.Android
+        dotnet restore --verbosity detailed
+
+    - name: Build Android APK
+      run: |
+        echo "Building Android APK..."
+        cd src/MonadicPipeline.Android
+        dotnet build -c Release -f net8.0-android --verbosity normal
+
+    - name: List build output
+      if: always()
+      run: |
+        echo "Build output directory contents:"
+        find src/MonadicPipeline.Android/bin -type f 2>/dev/null || echo "No build output found"
+
+    - name: Find and verify APK
+      id: find-apk
+      run: |
+        echo "Searching for APK files..."
+        APK_PATH=$(find src/MonadicPipeline.Android/bin/Release/net8.0-android -name "*.apk" -type f 2>/dev/null | head -n 1)
+        if [ -z "$APK_PATH" ]; then
+          echo "Error: No APK found!"
+          echo "Listing all files in build directory:"
+          ls -R src/MonadicPipeline.Android/bin/ || echo "Build output directory not found"
+          exit 1
+        fi
+        echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+        echo "Found APK at: $APK_PATH"
+        ls -lh "$APK_PATH"
+
+    - name: Upload APK artifact
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: monadic-pipeline-android-apk
+        path: ${{ steps.find-apk.outputs.apk_path }}
+        retention-days: 30
+        if-no-files-found: error
+
+    - name: Build summary
+      if: success()
+      run: |
+        echo "## ✅ Android APK Built Successfully" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**APK Location:** \`${{ steps.find-apk.outputs.apk_path }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**File Size:** $(ls -lh ${{ steps.find-apk.outputs.apk_path }} | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Download the APK from the workflow artifacts above." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Installation" >> $GITHUB_STEP_SUMMARY
+        echo "1. Download the artifact" >> $GITHUB_STEP_SUMMARY
+        echo "2. Extract the APK file" >> $GITHUB_STEP_SUMMARY
+        echo "3. Transfer to your Android device" >> $GITHUB_STEP_SUMMARY
+        echo "4. Enable 'Install from Unknown Sources' in Android settings" >> $GITHUB_STEP_SUMMARY
+        echo "5. Install the APK" >> $GITHUB_STEP_SUMMARY
+
+    - name: Failure summary
+      if: failure()
+      run: |
+        echo "## ❌ Android APK Build Failed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Check the workflow logs above for detailed error messages." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Common issues:" >> $GITHUB_STEP_SUMMARY
+        echo "- MAUI workload installation failed" >> $GITHUB_STEP_SUMMARY
+        echo "- Missing dependencies" >> $GITHUB_STEP_SUMMARY
+        echo "- Build configuration errors" >> $GITHUB_STEP_SUMMARY
