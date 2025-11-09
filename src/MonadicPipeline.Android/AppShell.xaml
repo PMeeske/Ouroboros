@@ -5,7 +5,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:MonadicPipeline.Android"
     Shell.FlyoutBehavior="Disabled"
-    Title="MonadicPipeline.Android">
+    Title="MonadicPipeline.Android"
+    BackgroundColor="#1E1E1E">
 
     <ShellContent
         Title="Home"
