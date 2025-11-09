@@ -1,21 +1,47 @@
 # MonadicPipeline Android App
 
-A minimal CLI interface for MonadicPipeline on Android with integrated Ollama support.
+A powerful CLI interface for MonadicPipeline on Android with integrated AI provider support, Ollama management, and symbolic reasoning capabilities.
 
 ## Features
 
-- **Terminal-Style Interface**: Familiar CLI experience on mobile
-- **Ollama Integration**: Connect to local or remote Ollama servers
+### Core Features
+- **Terminal-Style Interface**: Familiar CLI experience on mobile with syntax highlighting
+- **Multi-Provider AI Support**: Connect to Ollama, OpenAI, Anthropic, Google AI, Meta LLaMA, and more
+- **Ollama Integration**: Full Ollama API support with authentication
 - **Automatic Model Management**: Models are loaded on-demand and auto-unloaded after 5 minutes of inactivity
-- **Small Model Support**: Optimized for lightweight models (tinyllama, phi, qwen, gemma)
-- **Efficiency Hints**: Built-in guidance for optimal mobile usage
-- **Standalone Operation**: Download models as needed from Ollama
+- **Intelligent Command Suggestions**: AI-powered auto-completion based on history and context
+- **Symbolic Reasoning Engine**: Logic programming with facts, rules, and inference
+- **Standalone Operation**: Fully offline-capable with local storage
+- **Security**: Secure credential storage using Android SecureStorage
+
+### Advanced Features
+- **Native Shell Execution**: Run shell commands directly on Android
+- **Command History**: SQLite-based persistent history with search
+- **Fuzzy Matching**: Smart command suggestions with Levenshtein distance
+- **Quick Actions**: One-tap access to common commands
+- **Model Manager**: Visual interface for browsing and managing AI models
+- **Settings Management**: Configure multiple AI providers with custom parameters
+- **Knowledge Base**: Build and query logical knowledge bases
+- **Streaming Responses**: Real-time AI response streaming
+
+## Supported AI Providers
+
+1. **Ollama** (Local) - Self-hosted models with authentication
+2. **OpenAI** - GPT-3.5, GPT-4, and other OpenAI models
+3. **Anthropic** - Claude 3 Haiku, Sonnet, Opus
+4. **Google AI** - Gemini Pro and PaLM models
+5. **Meta** - LLaMA models via Together.ai
+6. **Cohere** - Command and other Cohere models
+7. **Mistral AI** - Mistral models
+8. **Hugging Face** - Inference API access
+9. **Azure OpenAI** - Enterprise OpenAI deployment
 
 ## Requirements
 
 - Android device running API level 21 (Android 5.0) or higher
-- Access to an Ollama server (local network or remote)
-- Internet connection for downloading models
+- Internet connection for cloud AI providers
+- Optional: Local Ollama server for self-hosted AI
+- Permissions: Internet, Storage, Network State
 
 ## Getting the APK
 
@@ -93,11 +119,122 @@ dotnet build -c Release -f net8.0-android -t:Install
 
 ### Available Commands
 
-- `help` - Show all available commands
+#### System Commands
+- `help` - Show all available commands with descriptions
 - `version` - Display version information
 - `about` - About MonadicPipeline
+- `clear` - Clear the terminal screen
+- `exit` / `quit` - Exit instructions
+
+#### Configuration
 - `config <endpoint>` - Configure Ollama endpoint
-- `status` - Show current system status
+  - Example: `config http://192.168.1.100:11434`
+- `status` - Show current system status and connection
+- `ping` - Test connection to configured endpoint
+
+#### Model Management
+- `models` - List all available models from active provider
+- `pull <model>` - Download a model from Ollama
+  - Example: `pull tinyllama`
+- `delete <model>` - Delete a model
+  - Example: `delete tinyllama`
+
+#### AI Interaction
+- `ask <question>` - Ask a question using AI
+  - Example: `ask What is functional programming?`
+  - Uses the active AI provider and model
+  - Supports streaming responses
+
+#### Intelligence & History
+- `suggest [partial]` - Get intelligent command suggestions
+  - Uses fuzzy matching and command history
+  - Learns from usage patterns
+- `history [count]` - Show recent command history
+  - Example: `history 50`
+  - Stored persistently in SQLite
+
+#### Advanced Commands
+- `shell <command>` - Execute native shell command
+  - Example: `shell ls -la`
+  - Includes safety validation
+- `ollama <start|stop|status>` - Manage Ollama service (if supported)
+- `hints` - Get efficiency hints for mobile CLI usage
+
+## Quick Start Guide
+
+### 1. Basic Ollama Setup
+
+```bash
+# On first launch
+> config http://192.168.1.100:11434
+✓ Endpoint configured
+
+> status
+System Status:
+Connection: ✓ Connected
+Available Models: 2
+
+> models
+Available Models:
+• tinyllama (Size: 637 MB) ⭐ Recommended
+• phi (Size: 1.6 GB) ⭐ Recommended
+
+> ask What is functional programming?
+[AI generates response using tinyllama]
+```
+
+### 2. Using Multiple AI Providers
+
+```bash
+# Configure OpenAI via UI
+Settings > Configure AI Providers > OpenAI
+- API Key: sk-...
+- Model: gpt-3.5-turbo
+- Save and Set as Active
+
+> ask Explain monads in Haskell
+[AI generates response using OpenAI]
+```
+
+### 3. Symbolic Reasoning
+
+```bash
+# Via UI: Settings > Symbolic Reasoning
+Add Facts:
+- Cat is-a Animal
+- Animal is-a Living
+- Dog is-a Animal
+
+Execute Inference:
+Inferred: Cat is-a Living
+Inferred: Dog is-a Living
+
+# Use with AI
+> ask What do we know about cats?
+[AI uses knowledge base context in response]
+```
+
+### 4. Command History and Suggestions
+
+```bash
+# Type partial command
+> mo
+[Shows suggestions: models, ...]
+
+# Navigate history
+Press ↑ button to cycle through previous commands
+
+# View history
+> history 20
+[Shows last 20 commands]
+
+# Get suggestions
+> suggest pull
+Suggestions:
+• pull tinyllama
+• pull phi
+• pull qwen:0.5b
+```
 - `models` - List available models from Ollama
 - `pull <model>` - Download a model from Ollama
 - `ask <question>` - Ask a question using AI
@@ -145,36 +282,127 @@ A: Functional programming is a programming paradigm...
 
 ## Architecture
 
-### Key Components
+### Core Components
+
+#### Services Layer
 
 1. **CliExecutor** (`Services/CliExecutor.cs`)
-   - Handles command parsing and execution
-   - Manages Ollama provider lifecycle
-   - Implements automatic model unloading
-   - Provides efficiency hints
+   - Main command dispatcher and execution engine
+   - Integrates all services for unified command handling
+   - Manages AI model lifecycle (auto-load/unload)
 
-2. **MainPage** (`MainPage.xaml` / `MainPage.xaml.cs`)
-   - Terminal-style UI with scrollable output
-   - Command input and execution
-   - History management
+2. **CommandExecutor** (`Services/CommandExecutor.cs`)
+   - Native Android shell command execution
+   - Support for root and non-root operations
+   - Real-time output streaming
+   - Command validation and safety checks
 
-### Model Management
+3. **OllamaService** (`Services/OllamaService.cs`)
+   - Complete Ollama API client implementation
+   - Authentication support (Bearer token, Basic auth)
+   - Model operations: list, pull, delete, generate
+   - Streaming response handling
 
-The app implements intelligent model lifecycle management:
+4. **OllamaAuthService** (`Services/OllamaAuthService.cs`)
+   - Secure credential storage using Android SecureStorage
+   - Support for API key and Basic authentication
+   - Automatic authentication application
 
-- **Lazy Loading**: Models are only loaded when needed (first `ask` command)
-- **Auto-Unloading**: Models are automatically unloaded after 5 minutes of inactivity
-- **Memory Efficiency**: Only one model is kept in memory at a time
-- **Smart Selection**: Automatically selects smallest available model if none specified
+5. **UnifiedAIService** (`Services/UnifiedAIService.cs`)
+   - Single interface for all AI providers
+   - Provider-specific request formatting
+   - Streaming response handling across providers
+   - Integration with symbolic reasoning
 
-### Network Configuration
+6. **AIProviderService** (`Services/AIProviderService.cs`)
+   - Multi-provider configuration management
+   - Active provider selection
+   - Settings persistence with SharedPreferences
+   - Validation and defaults
 
-The app supports flexible Ollama endpoint configuration:
+7. **ModelManager** (`Services/ModelManager.cs`)
+   - AI model discovery and management
+   - Recommended models for mobile devices
+   - Model size and parameter tracking
+   - Availability checking
 
-- Default: `http://localhost:11434` (for local testing)
-- Configure any network-accessible Ollama server
-- Supports both WiFi and mobile data connections
-- Connection testing built-in
+8. **CommandHistoryService** (`Services/CommandHistoryService.cs`)
+   - SQLite-based command history persistence
+   - Search and query capabilities
+   - Statistics and frequency analysis
+   - Automatic cleanup of old entries
+
+9. **CommandSuggestionEngine** (`Services/CommandSuggestionEngine.cs`)
+   - Intelligent command completion
+   - Fuzzy matching with Levenshtein distance
+   - History-based learning
+   - Context-aware parameter suggestions
+
+10. **SymbolicReasoningEngine** (`Services/SymbolicReasoningEngine.cs`)
+    - Logic programming engine
+    - Knowledge base with facts (Subject-Predicate-Object)
+    - Inference rules (forward chaining)
+    - Pattern matching with variables
+    - Built-in reasoning rules (transitivity, inheritance)
+    - Query evaluation and unification
+
+#### UI Layer
+
+1. **MainPage** (`MainPage.xaml` / `MainPage.xaml.cs`)
+   - Terminal-style interface
+   - Auto-suggestion overlay
+   - Command history navigation (↑ button)
+   - Quick action buttons
+   - Real-time output display
+
+2. **ModelManagerView** (`Views/ModelManagerView.cs`)
+   - Visual model browser
+   - Model details and sizes
+   - Delete and manage models
+   - Recommended models highlighting
+
+3. **SettingsView** (`Views/SettingsView.cs`)
+   - Ollama endpoint configuration
+   - Auto-suggest toggles
+   - Command history settings
+   - Navigation to AI providers and reasoning
+
+4. **AIProviderConfigView** (`Views/AIProviderConfigView.cs`)
+   - Configure all AI providers
+   - Provider-specific settings
+   - API key management
+   - Temperature and token limits
+   - Active provider selection
+
+5. **SymbolicReasoningView** (`Views/SymbolicReasoningView.cs`)
+   - Interactive knowledge base editor
+   - Add facts (Subject-Predicate-Object)
+   - Execute inference
+   - View inferred facts
+   - Export/import knowledge base
+
+### Data Flow
+
+```
+User Input (MainPage)
+    ↓
+CliExecutor (Command Routing)
+    ↓
+Service Layer (CommandExecutor, OllamaService, UnifiedAIService, etc.)
+    ↓
+Storage/API (SQLite, SecureStorage, HTTP APIs)
+    ↓
+Response Processing
+    ↓
+UI Update (MainPage output display)
+```
+
+### Storage Architecture
+
+- **SQLite**: Command history, persistent data
+- **SecureStorage**: API keys, credentials
+- **SharedPreferences**: Settings, configurations
+- **File System**: Model storage (via Ollama)
 
 ## Performance Tips
 
