@@ -751,6 +751,34 @@ public static class CliSteps
             return s;
         };
 
+    private static async Task HandleDependencyExceptionAsync(Exception ex, CliPipelineState state)
+    {
+        if (ex.Message.Contains("Connection refused") || ex.Message.Contains("ECONNREFUSED"))
+        {
+            Console.Error.WriteLine("⚠ Error: Ollama is not running or not reachable.");
+            if (GuidedSetup.PromptYesNo("Would you like to run the guided setup for Ollama?"))
+            {
+                await GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true });
+                Console.WriteLine("Please re-run your command.");
+            }
+            Environment.Exit(1);
+        }
+        else if (ex.Message.Contains("metta") && (ex.Message.Contains("not found") || ex.Message.Contains("No such file")))
+        {
+            Console.Error.WriteLine("⚠ Error: MeTTa engine not found.");
+            if (GuidedSetup.PromptYesNo("Would you like to run the guided setup for MeTTa?"))
+            {
+                await GuidedSetup.RunAsync(new SetupOptions { InstallMeTTa = true });
+                Console.WriteLine("Please re-run your command.");
+            }
+            Environment.Exit(1);
+        }
+        else
+        {
+            state.Branch = state.Branch.WithIngestEvent($"error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
+        }
+    }
+
     private static string ParseString(string? arg)
     {
         arg ??= string.Empty;

@@ -11,6 +11,7 @@ using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Diagnostics; // added
 using LangChainPipeline.Options;
 using Microsoft.Extensions.Hosting;
+using MonadicPipeline.CLI.Setup;
 
 try
 {
@@ -40,7 +41,7 @@ return;
 static async Task ParseAndRunAsync(string[] args)
 {
     // CommandLineParser verbs
-    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions>(args)
+    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions, SetupOptions>(args)
         .MapResult(
             (AskOptions o) => RunAskAsync(o),
             (PipelineOptions o) => RunPipelineAsync(o),
@@ -49,6 +50,7 @@ static async Task ParseAndRunAsync(string[] args)
             (TestOptions o) => RunTestsAsync(o),
             (OrchestratorOptions o) => RunOrchestratorAsync(o),
             (MeTTaOptions o) => RunMeTTaAsync(o),
+            (SetupOptions o) => GuidedSetup.RunAsync(o),
             _ => Task.CompletedTask
         );
 }
@@ -203,6 +205,13 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
     catch (Exception ex)
     {
         Console.WriteLine($"Pipeline failed: {ex.Message}");
+        if (ex.Message.Contains("Connection refused") || ex.Message.Contains("ECONNREFUSED"))
+        {
+            if (GuidedSetup.PromptYesNo("Would you like to run the guided setup for Ollama?"))
+            {
+                await GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true });
+            }
+        }
     }
 }
 
@@ -512,6 +521,13 @@ static async Task RunAskAsync(AskOptions o)
         catch (Exception ex)
         {
             Console.WriteLine($"Error: {ex.Message}");
+            if (ex.Message.Contains("Connection refused") || ex.Message.Contains("ECONNREFUSED"))
+            {
+                if (GuidedSetup.PromptYesNo("Would you like to run the guided setup for Ollama?"))
+                {
+                    await GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true });
+                }
+            }
             return;
         }
     }
@@ -527,7 +543,17 @@ static async Task RunAskAsync(AskOptions o)
             Console.WriteLine($"[timing] total={sw.ElapsedMilliseconds}ms");
             Telemetry.PrintSummary();
         },
-        error => Console.WriteLine($"Error: {error.Message}")
+        error =>
+        {
+            Console.WriteLine($"Error: {error.Message}");
+            if (error.Message.Contains("Connection refused") || error.Message.Contains("ECONNREFUSED"))
+            {
+                if (GuidedSetup.PromptYesNo("Would you like to run the guided setup for Ollama?"))
+                {
+                    GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true }).Wait();
+                }
+            }
+        }
     );
 }
 
@@ -705,8 +731,11 @@ static async Task RunOrchestratorAsync(OrchestratorOptions o)
     }
     catch (Exception ex) when (ex.Message.Contains("Connection refused") || ex.Message.Contains("ECONNREFUSED"))
     {
-        Console.Error.WriteLine("⚠ Error: Ollama is not running. Please start Ollama before using the orchestrator.");
-        Console.Error.WriteLine("   Run: ollama serve");
+        Console.Error.WriteLine("⚠ Error: Ollama is not running or not reachable.");
+        if (GuidedSetup.PromptYesNo("Would you like to run the guided setup for Ollama?"))
+        {
+            await GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true });
+        }
         Environment.Exit(1);
     }
     catch (Exception ex)
@@ -843,15 +872,20 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
     }
     catch (Exception ex) when (ex.Message.Contains("Connection refused") || ex.Message.Contains("ECONNREFUSED"))
     {
-        Console.Error.WriteLine("⚠ Error: Ollama is not running. Please start Ollama before using the MeTTa orchestrator.");
-        Console.Error.WriteLine("   Run: ollama serve");
+        Console.Error.WriteLine("⚠ Error: Ollama is not running or not reachable.");
+        if (GuidedSetup.PromptYesNo("Would you like to run the guided setup for Ollama?"))
+        {
+            await GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true });
+        }
         Environment.Exit(1);
     }
     catch (Exception ex) when (ex.Message.Contains("metta") && (ex.Message.Contains("not found") || ex.Message.Contains("No such file")))
     {
-        Console.Error.WriteLine("⚠ Error: MeTTa engine not found. Please install MeTTa:");
-        Console.Error.WriteLine("   Install from: https://github.com/trueagi-io/hyperon-experimental");
-        Console.Error.WriteLine("   Ensure 'metta' executable is in your PATH");
+        Console.Error.WriteLine("⚠ Error: MeTTa engine not found.");
+        if (GuidedSetup.PromptYesNo("Would you like to run the guided setup for MeTTa?"))
+        {
+            await GuidedSetup.RunAsync(new SetupOptions { InstallMeTTa = true });
+        }
         Environment.Exit(1);
     }
     catch (Exception ex)
