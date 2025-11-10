@@ -91,7 +91,7 @@ Iteration N:  Critique(FinalSpec_{N-1}) → Improve → FinalSpec_N
 ### Prerequisites
 
 - [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later
-- [Ollama](https://ollama.ai/) (for local LLM providers) or remote API access
+- [Ollama](https://ollama.ai/) (for local LLM providers) or remote API access (optional)
 
 ### Installation
 
@@ -111,7 +111,27 @@ Iteration N:  Critique(FinalSpec_{N-1}) → Improve → FinalSpec_N
    dotnet build
    ```
 
-4. **Run examples:**
+4. **Run the guided setup (recommended for first-time users):**
+   ```bash
+   cd src/MonadicPipeline.CLI
+   dotnet run -- setup --all
+   ```
+   
+   The guided setup wizard will help you:
+   - Install and configure Ollama for local LLM execution
+   - Setup authentication for external providers (OpenAI, Ollama Cloud)
+   - Install MeTTa symbolic reasoning engine (optional)
+   - Configure local vector database (Qdrant)
+   
+   You can also run individual setup steps:
+   ```bash
+   dotnet run -- setup --ollama           # Install Ollama only
+   dotnet run -- setup --auth             # Configure authentication
+   dotnet run -- setup --metta            # Install MeTTa
+   dotnet run -- setup --vector-store     # Setup vector database
+   ```
+
+5. **Try the examples:**
    ```bash
    cd src/MonadicPipeline.Examples
    dotnet run
@@ -159,6 +179,60 @@ dotnet run -- metta --goal "Analyze data patterns and find insights"
 
 # Run MeTTa orchestrator in plan-only mode
 dotnet run -- metta --goal "Create a research plan" --plan-only
+```
+
+#### Orchestrating Complex Tasks with Small Models
+
+MonadicPipeline supports **intelligent model orchestration** that allows you to efficiently handle complex tasks by combining multiple small, specialized models. This approach is more cost-effective and often faster than using a single large model.
+
+**Key Features:**
+- **Automatic Model Selection**: The `--router auto` flag intelligently routes sub-tasks to specialized models
+- **Multi-Model Composition**: Combine general, coding, reasoning, and summarization models
+- **Performance Tracking**: Use `--show-metrics` to monitor model usage and optimize selection
+
+**Example: Complex Code Review with Small Models**
+
+```bash
+# Use multiple small models for different aspects of code review
+dotnet run -- pipeline \
+  -d "SetTopic('Code Review Best Practices') | UseDraft | UseCritique | UseImprove" \
+  --router auto \
+  --general-model phi3:mini \          # Fast general responses (2.3GB)
+  --coder-model deepseek-coder:1.3b \  # Specialized code analysis (800MB)
+  --reason-model qwen2.5:3b \          # Deep reasoning (2GB)
+  --trace                              # See which model handles each step
+```
+
+**Example: Efficient Question Answering**
+
+```bash
+# The orchestrator selects the best small model for your task
+dotnet run -- orchestrator \
+  --goal "Explain monadic composition in functional programming" \
+  --model phi3:mini \
+  --show-metrics
+```
+
+**Recommended Small Model Combinations:**
+
+1. **Balanced Setup** (5GB total):
+   - `phi3:mini` - General purpose (2.3GB)
+   - `qwen2.5:3b` - Complex reasoning (2GB)
+   - `deepseek-coder:1.3b` - Code tasks (800MB)
+
+2. **Ultra-Light Setup** (2.5GB total):
+   - `tinyllama` - Quick responses (637MB)
+   - `phi3:mini` - General tasks (2.3GB)
+
+3. **Specialized Setup** (8GB total):
+   - `llama3:8b` - Advanced reasoning (4.7GB)
+   - `deepseek-coder:6.7b` - Professional coding (3.8GB)
+
+Install recommended models:
+```bash
+ollama pull phi3:mini
+ollama pull qwen2.5:3b
+ollama pull deepseek-coder:1.3b
 ```
 
 #### Web API (Kubernetes-Friendly Remoting)
