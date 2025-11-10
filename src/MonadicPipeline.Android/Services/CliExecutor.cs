@@ -730,37 +730,184 @@ To start Ollama on Termux:
 
     private async Task<string> StartOllamaServiceAsync()
     {
-        return @"⚠️  Ollama service management not fully implemented yet.
+        try
+        {
+            // Try to start Ollama using shell command
+            var checkResult = await _commandExecutor.ExecuteAsync("which ollama");
+            
+            if (checkResult.ExitCode != 0 || string.IsNullOrWhiteSpace(checkResult.Output))
+            {
+                return @"✗ Ollama not found in PATH
 
-To start Ollama manually:
+To install Ollama:
 1. Install Termux from F-Droid
-2. Install Ollama in Termux:
+2. In Termux, run:
    pkg install ollama
-3. Start the service:
-   ollama serve
+3. Then try again: ollama start
 
-Then configure this app:
-  config http://localhost:11434";
+Or configure a remote endpoint:
+  config http://YOUR_SERVER_IP:11434";
+            }
+
+            // Check if Ollama is already running
+            var statusCheck = await _ollamaService.TestConnectionAsync();
+            if (statusCheck)
+            {
+                return $"✓ Ollama is already running at {OllamaEndpoint}";
+            }
+
+            // Try to start Ollama in the background
+            var startCommand = "nohup ollama serve > /dev/null 2>&1 &";
+            var startResult = await _commandExecutor.ExecuteAsync(startCommand);
+            
+            // Wait a moment for service to start
+            await Task.Delay(2000);
+            
+            // Verify it started
+            var verifyResult = await _ollamaService.TestConnectionAsync();
+            
+            if (verifyResult)
+            {
+                return @"✓ Ollama service started successfully!
+
+The service is now running at http://localhost:11434
+Use 'models' to see available models.";
+            }
+            else
+            {
+                return @"⚠️  Ollama command executed but service not responding
+
+This may be normal. Try:
+1. Wait a few seconds and run: ollama status
+2. Or manually start in Termux: ollama serve
+
+If problems persist, configure a remote endpoint:
+  config http://YOUR_SERVER_IP:11434";
+            }
+        }
+        catch (Exception ex)
+        {
+            return $@"✗ Failed to start Ollama service: {ex.Message}
+
+Manual startup:
+1. Open Termux
+2. Run: ollama serve
+3. In this app: config http://localhost:11434";
+        }
     }
 
     private async Task<string> StopOllamaServiceAsync()
     {
-        return @"⚠️  Ollama service management not fully implemented yet.
+        try
+        {
+            // First check if Ollama is running
+            var statusCheck = await _ollamaService.TestConnectionAsync();
+            if (!statusCheck)
+            {
+                return $"✓ Ollama service is not running at {OllamaEndpoint}";
+            }
 
-To stop Ollama manually:
-1. Find the Ollama process:
-   ps aux | grep ollama
-2. Kill the process:
-   kill <pid>";
+            // Try to find and kill the Ollama process
+            var psResult = await _commandExecutor.ExecuteAsync("pgrep -f 'ollama serve'");
+            
+            if (psResult.ExitCode != 0 || string.IsNullOrWhiteSpace(psResult.Output))
+            {
+                return @"⚠️  Could not find Ollama process
+
+The service appears to be running but the process wasn't found.
+This may mean:
+1. Ollama is running remotely
+2. Process has a different name
+3. Insufficient permissions
+
+To stop manually in Termux:
+  pkill -f ollama";
+            }
+
+            var pids = psResult.Output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            var sb = new StringBuilder();
+            sb.AppendLine("Stopping Ollama processes:");
+            
+            foreach (var pid in pids)
+            {
+                if (!string.IsNullOrWhiteSpace(pid))
+                {
+                    var killResult = await _commandExecutor.ExecuteAsync($"kill {pid.Trim()}");
+                    
+                    if (killResult.ExitCode == 0)
+                    {
+                        sb.AppendLine($"✓ Stopped process {pid}");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"✗ Failed to stop process {pid}");
+                    }
+                }
+            }
+            
+            // Wait a moment and verify
+            await Task.Delay(1000);
+            var verifyResult = await _ollamaService.TestConnectionAsync();
+            
+            if (!verifyResult)
+            {
+                sb.AppendLine();
+                sb.AppendLine("✓ Ollama service stopped successfully");
+            }
+            else
+            {
+                sb.AppendLine();
+                sb.AppendLine("⚠️  Service may still be running. Use 'status' to check.");
+            }
+            
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $@"✗ Failed to stop Ollama service: {ex.Message}
+
+Manual shutdown:
+1. Open Termux
+2. Run: pkill -f ollama
+3. Or find and kill: ps aux | grep ollama";
+        }
     }
 
     private async Task<string> RestartOllamaServiceAsync()
     {
-        return @"⚠️  Ollama service management not fully implemented yet.
+        try
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Restarting Ollama service...");
+            sb.AppendLine();
+            
+            // Stop the service
+            sb.AppendLine("Stopping Ollama:");
+            var stopResult = await StopOllamaServiceAsync();
+            sb.AppendLine(stopResult);
+            sb.AppendLine();
+            
+            // Wait a moment
+            sb.AppendLine("Waiting 2 seconds...");
+            await Task.Delay(2000);
+            sb.AppendLine();
+            
+            // Start the service
+            sb.AppendLine("Starting Ollama:");
+            var startResult = await StartOllamaServiceAsync();
+            sb.AppendLine(startResult);
+            
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $@"✗ Failed to restart Ollama service: {ex.Message}
 
-To restart Ollama manually:
-1. Stop the service (see 'ollama stop')
-2. Start it again (see 'ollama start')";
+Manual restart:
+1. Open Termux
+2. Run: pkill -f ollama
+3. Then: ollama serve";
+        }
     }
 
     private async Task<string> TestConnectionAsync()
