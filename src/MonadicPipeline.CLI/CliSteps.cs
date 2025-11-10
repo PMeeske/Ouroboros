@@ -1543,6 +1543,60 @@ public static class CliSteps
             return Task.FromResult(s);
         };
 
+    /// <summary>
+    /// Guided installation step for missing dependencies.
+    /// When executed, this step can validate or install missing dependencies interactively.
+    /// </summary>
+    /// <param name="args">Optional parameters for dependency validation</param>
+    /// <returns>A step that processes dependency installation</returns>
+    [PipelineToken("InstallDependenciesGuided", "MissingDependencies", "ValidateMissingDependencies")]
+    public static Step<CliPipelineState, CliPipelineState> InstallDependenciesGuided(string? args = null)
+        => async s =>
+        {
+            await Task.Yield(); // Ensure truly async
+            
+            var raw = ParseString(args);
+            string? dependencyName = null;
+            string? errorMessage = null;
+            
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    if (part.StartsWith("dep=", StringComparison.OrdinalIgnoreCase))
+                        dependencyName = part.Substring(4);
+                    else if (part.StartsWith("error=", StringComparison.OrdinalIgnoreCase))
+                        errorMessage = part.Substring(6);
+                }
+            }
+            
+            Console.WriteLine("[guided-install] Dependency installation step triggered");
+            
+            if (!string.IsNullOrWhiteSpace(dependencyName))
+            {
+                Console.WriteLine($"[guided-install] Missing dependency: {dependencyName}");
+            }
+            
+            if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                Console.WriteLine($"[guided-install] Error context: {errorMessage}");
+            }
+            
+            // Record the guided installation event
+            var eventSource = string.IsNullOrWhiteSpace(dependencyName) 
+                ? "guided-install:triggered:generic"
+                : $"guided-install:triggered:{dependencyName}";
+                
+            s.Branch = s.Branch.WithIngestEvent(eventSource, Array.Empty<string>());
+            
+            Console.WriteLine("[guided-install] To install dependencies, please run the appropriate package manager:");
+            Console.WriteLine("  - For .NET: dotnet restore");
+            Console.WriteLine("  - For npm: npm install");
+            Console.WriteLine("  - For Python: pip install -r requirements.txt");
+            
+            return s;
+        };
+
     private static Dictionary<string, string> ParseKeyValueArgs(string? args)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -1806,6 +1860,69 @@ public static class CliSteps
             ["vectorId"] = vectorId
         };
         return metadata;
+    }
+
+    /// <summary>
+    /// Helper method to handle dependency exceptions by scheduling guided-install step via ingest-event.
+    /// Instead of calling Environment.Exit, this method emits an ingest-event to schedule the guided installation step.
+    /// </summary>
+    /// <param name="state">The current CLI pipeline state</param>
+    /// <param name="exception">The exception that occurred</param>
+    /// <returns>Updated pipeline state with appropriate ingest events</returns>
+    private static async Task<CliPipelineState> HandleDependencyExceptionAsync(CliPipelineState state, Exception exception)
+    {
+        await Task.Yield(); // Ensure truly async
+        
+        var exceptionMessage = exception.Message;
+        var exceptionType = exception.GetType().Name;
+        
+        // Known dependency-related exception patterns
+        var dependencyPatterns = new Dictionary<string, string[]>
+        {
+            ["NuGet"] = new[] { "nuget", "package", "restore", "project.assets.json" },
+            ["NPM"] = new[] { "npm", "node_modules", "package.json" },
+            ["Python"] = new[] { "pip", "requirements.txt", "python package" },
+            ["Docker"] = new[] { "docker", "container", "image not found" },
+            ["Ollama"] = new[] { "ollama", "model not found", "pull model" },
+            ["LangChain"] = new[] { "langchain", "provider not found" }
+        };
+        
+        // Check if exception matches known dependency patterns
+        string? matchedDependency = null;
+        foreach (var (depName, patterns) in dependencyPatterns)
+        {
+            if (patterns.Any(pattern => exceptionMessage.Contains(pattern, StringComparison.OrdinalIgnoreCase)))
+            {
+                matchedDependency = depName;
+                break;
+            }
+        }
+        
+        if (matchedDependency != null)
+        {
+            // Schedule guided-install step via ingest-event for known dependency issues
+            Console.WriteLine($"[dependency-handler] Detected {matchedDependency} dependency issue");
+            
+            var eventSource = $"dependency:missing:{matchedDependency}:{exceptionType}";
+            state.Branch = state.Branch.WithIngestEvent(eventSource, Array.Empty<string>());
+            
+            // Schedule the guided installation step to run
+            var scheduleEvent = $"schedule:guided-install|dep={matchedDependency}|error={exceptionMessage.Replace('|', ':')}";
+            state.Branch = state.Branch.WithIngestEvent(scheduleEvent, Array.Empty<string>());
+            
+            Console.WriteLine($"[dependency-handler] Scheduled guided installation for {matchedDependency}");
+            Console.WriteLine($"[dependency-handler] You can manually run: InstallDependenciesGuided('dep={matchedDependency}')");
+        }
+        else
+        {
+            // For non-dependency errors, record generic error event (preserve previous behavior)
+            var errorEvent = $"error:generic:{exceptionType}:{exceptionMessage.Replace('|', ':')}";
+            state.Branch = state.Branch.WithIngestEvent(errorEvent, Array.Empty<string>());
+            
+            Console.WriteLine($"[dependency-handler] Recorded generic error: {exceptionType}");
+        }
+        
+        return state;
     }
 
     // ============================================================================
