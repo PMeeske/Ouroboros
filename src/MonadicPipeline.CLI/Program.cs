@@ -205,12 +205,10 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
     catch (Exception ex)
     {
         Console.WriteLine($"Pipeline failed: {ex.Message}");
-        if (ex.Message.Contains("Connection refused") || ex.Message.Contains("ECONNREFUSED"))
+        if ((ex.Message.Contains("Connection refused") || ex.Message.Contains("ECONNREFUSED")) &&
+            GuidedSetup.PromptYesNo("Would you like to run the guided setup for Ollama?"))
         {
-            if (GuidedSetup.PromptYesNo("Would you like to run the guided setup for Ollama?"))
-            {
-                await GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true });
-            }
+            await GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true });
         }
     }
 }
@@ -521,12 +519,10 @@ static async Task RunAskAsync(AskOptions o)
         catch (Exception ex)
         {
             Console.WriteLine($"Error: {ex.Message}");
-            if (ex.Message.Contains("Connection refused") || ex.Message.Contains("ECONNREFUSED"))
+            if ((ex.Message.Contains("Connection refused") || ex.Message.Contains("ECONNREFUSED")) &&
+                GuidedSetup.PromptYesNo("Would you like to run the guided setup for Ollama?"))
             {
-                if (GuidedSetup.PromptYesNo("Would you like to run the guided setup for Ollama?"))
-                {
-                    await GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true });
-                }
+                await GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true });
             }
             return;
         }
@@ -546,12 +542,10 @@ static async Task RunAskAsync(AskOptions o)
         error =>
         {
             Console.WriteLine($"Error: {error.Message}");
-            if (error.Message.Contains("Connection refused") || error.Message.Contains("ECONNREFUSED"))
+            if ((error.Message.Contains("Connection refused") || error.Message.Contains("ECONNREFUSED")) &&
+                GuidedSetup.PromptYesNo("Would you like to run the guided setup for Ollama?"))
             {
-                if (GuidedSetup.PromptYesNo("Would you like to run the guided setup for Ollama?"))
-                {
-                    GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true }).Wait();
-                }
+                GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true }).Wait();
             }
         }
     );

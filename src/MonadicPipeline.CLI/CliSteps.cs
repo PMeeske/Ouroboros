@@ -10,7 +10,9 @@ using LangChain.Providers.Ollama;
 using LangChain.Splitters.Text;
 using LangChainPipeline.CLI.Interop; // for ChainAdapters
 using LangChainPipeline.Interop.LangChain; // for ExternalChainRegistry (reflection-based chain integration)
+using LangChainPipeline.Options;
 using LangChainPipeline.Pipeline.Ingestion.Zip;
+using MonadicPipeline.CLI.Setup;
 
 namespace LangChainPipeline.CLI;
 
