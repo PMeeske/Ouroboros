@@ -407,6 +407,13 @@ Use 'models' to see remaining models.";
         else
         {
             status.AppendLine("Current Model: Not loaded");
+            
+            var preferredModel = Preferences.Get("preferred_model", string.Empty);
+            if (!string.IsNullOrEmpty(preferredModel))
+            {
+                status.AppendLine($"Preferred Model: {preferredModel}");
+            }
+            
             status.AppendLine("Tip: Use 'ask' to automatically load a model");
         }
         
@@ -480,10 +487,25 @@ Best Practices:
         
         try
         {
-            // Auto-select smallest model if none loaded
+            // Check for preferred model, then fall back to smallest available
             if (_currentModel == null)
             {
-                _currentModel = await _modelManager.GetSmallestAvailableModelAsync();
+                var preferredModel = Preferences.Get("preferred_model", string.Empty);
+                
+                if (!string.IsNullOrEmpty(preferredModel))
+                {
+                    var isAvailable = await _modelManager.IsModelAvailableAsync(preferredModel);
+                    if (isAvailable)
+                    {
+                        _currentModel = preferredModel;
+                    }
+                }
+                
+                // Fall back to smallest model if no preferred model or it's not available
+                if (_currentModel == null)
+                {
+                    _currentModel = await _modelManager.GetSmallestAvailableModelAsync();
+                }
                 
                 if (_currentModel == null)
                 {

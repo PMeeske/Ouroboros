@@ -175,7 +175,11 @@ public class ModelManagerView : ContentPage
         }
         else if (action == "Use for Chat")
         {
-            // Navigate back to main page with selected model
+            // Save the selected model as the preferred model
+            Preferences.Set("preferred_model", model.Name);
+            await DisplayAlert("Model Selected", $"'{model.Name}' is now your default model for chat.\n\nIt will be used for 'ask' commands.", "OK");
+            
+            // Navigate back to main page
             await Navigation.PopAsync();
         }
 
