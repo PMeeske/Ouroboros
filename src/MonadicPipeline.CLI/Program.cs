@@ -633,14 +633,31 @@ static async Task RunOrchestratorAsync(OrchestratorOptions o)
         var provider = new OllamaProvider();
         var settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false);
 
-        // Create models
-        var generalModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
-        var coderModel = o.CoderModel != null
-            ? new OllamaChatAdapter(new OllamaChatModel(provider, o.CoderModel))
-            : generalModel;
-        var reasonModel = o.ReasonModel != null
-            ? new OllamaChatAdapter(new OllamaChatModel(provider, o.ReasonModel))
-            : generalModel;
+        // Check for remote endpoint configuration
+        var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(
+            o.Endpoint,
+            o.ApiKey,
+            o.EndpointType);
+
+        // Create models - support both remote and local
+        IChatCompletionModel CreateModel(string modelName)
+        {
+            if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
+            {
+                return CreateRemoteChatModel(endpoint, apiKey, modelName, settings, endpointType);
+            }
+            return new OllamaChatAdapter(new OllamaChatModel(provider, modelName));
+        }
+
+        var generalModel = CreateModel(o.Model);
+        var coderModel = o.CoderModel != null ? CreateModel(o.CoderModel) : generalModel;
+        var reasonModel = o.ReasonModel != null ? CreateModel(o.ReasonModel) : generalModel;
+
+        // Log backend selection
+        string backend = (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
+            ? $"remote-{endpointType.ToString().ToLowerInvariant()}"
+            : "ollama-local";
+        Console.WriteLine($"[INIT] Backend={backend} Endpoint={(endpoint ?? "local")}\n");
 
         // Create tool registry
         var tools = ToolRegistry.CreateDefault();
@@ -734,12 +751,30 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
         var provider = new OllamaProvider();
         var settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false);
 
-        // Create LLM
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
-        Console.WriteLine($"✓ Using model: {o.Model}");
+        // Check for remote endpoint configuration
+        var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(
+            o.Endpoint,
+            o.ApiKey,
+            o.EndpointType);
 
-        // Create embedding model
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, o.Embed));
+        // Create chat model - support both remote and local
+        IChatCompletionModel chatModel;
+        if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
+        {
+            chatModel = CreateRemoteChatModel(endpoint, apiKey, o.Model, settings, endpointType);
+            string backend = $"remote-{endpointType.ToString().ToLowerInvariant()}";
+            Console.WriteLine($"[INIT] Backend={backend} Endpoint={endpoint}");
+            Console.WriteLine($"✓ Using remote model: {o.Model}");
+        }
+        else
+        {
+            chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
+            Console.WriteLine($"[INIT] Backend=ollama-local");
+            Console.WriteLine($"✓ Using local model: {o.Model}");
+        }
+
+        // Create embedding model - support both remote and local
+        IEmbeddingModel embedModel = CreateEmbeddingModel(endpoint, apiKey, endpointType, o.Embed, provider);
         Console.WriteLine($"✓ Using embedding model: {o.Embed}");
 
         // Build MeTTa orchestrator using the builder
