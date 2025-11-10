@@ -353,21 +353,30 @@ See [RecursiveChunking Documentation](docs/RECURSIVE_CHUNKING.md) for detailed g
 
 #### Using Remote Endpoints (Ollama Cloud, OpenAI)
 
-Configure remote AI endpoints via environment variables or CLI flags:
+Configure remote AI endpoints via environment variables or CLI flags. All CLI commands (ask, pipeline, orchestrator, metta) support remote endpoints with authentication:
 
 ```bash
 # Navigate to CLI directory
 cd src/MonadicPipeline.CLI
 
-# Set environment variables
+# Set environment variables (recommended)
 export CHAT_ENDPOINT="https://api.ollama.com"
 export CHAT_API_KEY="your-api-key"
+export CHAT_ENDPOINT_TYPE="ollama-cloud"  # or "auto", "openai"
 
-# Or use CLI flags
+# Now run any command
+dotnet run -- ask -q "Hello"
+dotnet run -- orchestrator --goal "Explain monads"
+dotnet run -- metta --goal "Plan a research task"
+
+# Or use CLI flags (overrides environment variables)
 dotnet run -- ask -q "Hello" \
   --endpoint "https://api.ollama.com" \
-  --api-key "your-key"
+  --api-key "your-key" \
+  --endpoint-type "ollama-cloud"
 ```
+
+📚 **See the [Ollama Cloud Integration Guide](docs/OLLAMA_CLOUD_INTEGRATION.md) for comprehensive documentation, examples, and troubleshooting.**
 
 #### Programmatic Usage - Convenience Layer
 
