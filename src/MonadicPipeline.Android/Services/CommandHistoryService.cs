@@ -9,6 +9,7 @@ public class CommandHistoryService
 {
     private readonly SQLiteAsyncConnection _database;
     private readonly int _maxHistorySize;
+    private readonly Task _initializationTask;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CommandHistoryService"/> class.
@@ -19,12 +20,35 @@ public class CommandHistoryService
     {
         _database = new SQLiteAsyncConnection(databasePath);
         _maxHistorySize = maxHistorySize;
-        InitializeAsync().Wait();
+        // Start initialization but don't block
+        _initializationTask = InitializeAsync();
     }
 
     private async Task InitializeAsync()
     {
-        await _database.CreateTableAsync<CommandHistoryEntry>();
+        try
+        {
+            await _database.CreateTableAsync<CommandHistoryEntry>();
+        }
+        catch
+        {
+            // Gracefully handle initialization errors
+        }
+    }
+
+    /// <summary>
+    /// Ensures the database is initialized before performing operations
+    /// </summary>
+    private async Task EnsureInitializedAsync()
+    {
+        try
+        {
+            await _initializationTask;
+        }
+        catch
+        {
+            // Initialization failed, operations will fail gracefully
+        }
     }
 
     /// <summary>
@@ -38,6 +62,8 @@ public class CommandHistoryService
         {
             return;
         }
+
+        await EnsureInitializedAsync();
 
         var entry = new CommandHistoryEntry
         {
@@ -71,6 +97,7 @@ public class CommandHistoryService
     /// <returns>List of recent commands</returns>
     public async Task<List<CommandHistoryEntry>> GetRecentHistoryAsync(int count = 50)
     {
+        await EnsureInitializedAsync();
         return await _database.Table<CommandHistoryEntry>()
             .OrderByDescending(e => e.ExecutedAt)
             .Take(count)
@@ -85,6 +112,7 @@ public class CommandHistoryService
     /// <returns>List of matching commands</returns>
     public async Task<List<CommandHistoryEntry>> SearchHistoryAsync(string query, int limit = 20)
     {
+        await EnsureInitializedAsync();
         return await _database.Table<CommandHistoryEntry>()
             .Where(e => e.Command.Contains(query))
             .OrderByDescending(e => e.ExecutedAt)
@@ -98,6 +126,7 @@ public class CommandHistoryService
     /// <returns>Dictionary of command frequency</returns>
     public async Task<Dictionary<string, int>> GetCommandStatisticsAsync()
     {
+        await EnsureInitializedAsync();
         var entries = await _database.Table<CommandHistoryEntry>().ToListAsync();
         
         // Extract first word (command name) and count frequency
@@ -113,6 +142,7 @@ public class CommandHistoryService
     /// <returns>Task representing the operation</returns>
     public async Task ClearHistoryAsync()
     {
+        await EnsureInitializedAsync();
         await _database.DeleteAllAsync<CommandHistoryEntry>();
     }
 }
