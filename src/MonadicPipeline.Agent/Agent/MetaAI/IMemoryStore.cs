@@ -1,6 +1,6 @@
-// ==========================================================
-// Persistent Memory Store - Long-term learning and experience
-// ==========================================================
+// <copyright file="IMemoryStore.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -34,16 +34,17 @@ public interface IMemoryStore
     /// <summary>
     /// Stores an experience in long-term memory.
     /// </summary>
-    /// <param name="experience">The experience to store</param>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="experience">The experience to store.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task StoreExperienceAsync(Experience experience, CancellationToken ct = default);
 
     /// <summary>
     /// Retrieves relevant experiences for a goal.
     /// </summary>
-    /// <param name="query">Memory query parameters</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>List of relevant experiences sorted by relevance</returns>
+    /// <param name="query">Memory query parameters.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>List of relevant experiences sorted by relevance.</returns>
     Task<List<Experience>> RetrieveRelevantExperiencesAsync(
         MemoryQuery query,
         CancellationToken ct = default);
@@ -51,21 +52,22 @@ public interface IMemoryStore
     /// <summary>
     /// Gets statistics about stored experiences.
     /// </summary>
-    /// <returns>Memory statistics</returns>
+    /// <returns>Memory statistics.</returns>
     Task<MemoryStatistics> GetStatisticsAsync();
 
     /// <summary>
     /// Clears all experiences from memory.
     /// </summary>
-    /// <param name="ct">Cancellation token</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task ClearAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Gets an experience by ID.
     /// </summary>
-    /// <param name="id">Experience ID</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Experience if found, null otherwise</returns>
+    /// <param name="id">Experience ID.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Experience if found, null otherwise.</returns>
     Task<Experience?> GetExperienceAsync(Guid id, CancellationToken ct = default);
 }
 

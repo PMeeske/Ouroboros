@@ -1,6 +1,10 @@
-using LangChainPipeline.Diagnostics;
+// <copyright file="AgentFactory.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent;
+
+using LangChainPipeline.Diagnostics;
 
 /// <summary>
 /// Simplified agent harness. The historical version orchestrated complex
@@ -27,51 +31,60 @@ public static class AgentFactory
             RagEnabled = ragEnabled,
             EmbedModelName = embedModelName,
             JsonTools = jsonTools,
-            Stream = stream
+            Stream = stream,
         };
     }
 }
 
 public sealed class AgentInstance
 {
-    private readonly IChatCompletionModel _chat;
-    private readonly ToolRegistry _tools;
-    private readonly int _maxSteps;
+    private readonly IChatCompletionModel chat;
+    private readonly ToolRegistry tools;
+    private readonly int maxSteps;
 
     internal AgentInstance(string mode, IChatCompletionModel chat, ToolRegistry tools, int maxSteps)
     {
-        Mode = string.IsNullOrWhiteSpace(mode) ? "simple" : mode;
-        _chat = chat;
-        _tools = tools;
-        _maxSteps = Math.Max(1, maxSteps);
+        this.Mode = string.IsNullOrWhiteSpace(mode) ? "simple" : mode;
+        this.chat = chat;
+        this.tools = tools;
+        this.maxSteps = Math.Max(1, maxSteps);
     }
 
     public string Mode { get; }
+
     public bool Debug { get; init; }
+
     public bool RagEnabled { get; init; }
+
     public string EmbedModelName { get; init; } = string.Empty;
+
     public bool JsonTools { get; init; }
+
     public bool Stream { get; init; }
 
     public async Task<string> RunAsync(string prompt, CancellationToken ct = default)
     {
         string current = prompt;
         var history = new List<string>();
-        for (int i = 0; i < _maxSteps; i++)
+        for (int i = 0; i < this.maxSteps; i++)
         {
             history.Add(current);
             Telemetry.RecordAgentIteration();
-            string response = await _chat.GenerateTextAsync(current, ct).ConfigureAwait(false);
-            var (text, toolCalls) = await new ToolAwareChatModel(_chat, _tools).GenerateWithToolsAsync(response, ct).ConfigureAwait(false);
+            string response = await this.chat.GenerateTextAsync(current, ct).ConfigureAwait(false);
+            var (text, toolCalls) = await new ToolAwareChatModel(this.chat, this.tools).GenerateWithToolsAsync(response, ct).ConfigureAwait(false);
             foreach (var call in toolCalls)
             {
                 Telemetry.RecordAgentToolCalls(1);
                 Telemetry.RecordToolName(call.ToolName);
             }
+
             current = text;
             if (!current.Contains("[AGENT-CONTINUE]", StringComparison.OrdinalIgnoreCase))
+            {
                 return current;
+            }
         }
+
         Telemetry.RecordAgentRetry();
         return current;
     }

@@ -1,9 +1,13 @@
-using CommandLine;
+// <copyright file="AskOptions.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Options;
 
+using CommandLine;
+
 [Verb("ask", HelpText = "Ask the LLM. Use --rag to enable minimal RAG.")]
-sealed class AskOptions
+internal sealed class AskOptions
 {
     [Option('r', "rag", Required = false, HelpText = "Enable minimal RAG context.")]
     public bool Rag { get; set; }

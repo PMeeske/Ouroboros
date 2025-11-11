@@ -1,3 +1,7 @@
+// <copyright file="DocumentRevision.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Domain.States;
 
 /// <summary>

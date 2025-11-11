@@ -1,44 +1,46 @@
-// ==========================================================
-// Uncertainty Router Implementation
-// Routes based on confidence with fallback strategies
-// ==========================================================
-
-using System.Collections.Concurrent;
+// <copyright file="UncertaintyRouter.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
+
+using System.Collections.Concurrent;
 
 /// <summary>
 /// Implementation of uncertainty-aware routing with fallback strategies.
 /// </summary>
 public sealed class UncertaintyRouter : IUncertaintyRouter
 {
-    private readonly IModelOrchestrator _orchestrator;
-    private readonly ConcurrentDictionary<string, List<(RoutingDecision decision, bool success)>> _routingHistory = new();
+    private readonly IModelOrchestrator orchestrator;
+    private readonly ConcurrentDictionary<string, List<(RoutingDecision decision, bool success)>> routingHistory = new();
 
     /// <inheritdoc/>
     public double MinimumConfidenceThreshold { get; }
 
     public UncertaintyRouter(IModelOrchestrator orchestrator, double minConfidenceThreshold = 0.7)
     {
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
-        MinimumConfidenceThreshold = Math.Clamp(minConfidenceThreshold, 0.0, 1.0);
+        this.orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        this.MinimumConfidenceThreshold = Math.Clamp(minConfidenceThreshold, 0.0, 1.0);
     }
 
     /// <summary>
     /// Routes a task based on confidence analysis.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<RoutingDecision, string>> RouteAsync(
         string task,
         Dictionary<string, object>? context = null,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(task))
+        {
             return Result<RoutingDecision, string>.Failure("Task cannot be empty");
+        }
 
         try
         {
             // Use orchestrator to determine best route
-            var orchestratorDecision = await _orchestrator.SelectModelAsync(task, context, ct);
+            var orchestratorDecision = await this.orchestrator.SelectModelAsync(task, context, ct);
 
             return orchestratorDecision.Match(
                 decision =>
@@ -46,18 +48,18 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
                     var confidence = decision.ConfidenceScore;
 
                     // If confidence is below threshold, apply fallback strategy
-                    if (confidence < MinimumConfidenceThreshold)
+                    if (confidence < this.MinimumConfidenceThreshold)
                     {
-                        var fallback = DetermineFallback(task, confidence);
+                        var fallback = this.DetermineFallback(task, confidence);
                         var metadata = new Dictionary<string, object>
                         {
                             ["original_route"] = decision.ModelName,
                             ["fallback_strategy"] = fallback.ToString(),
-                            ["original_confidence"] = confidence
+                            ["original_confidence"] = confidence,
                         };
 
                         var routingDecision = new RoutingDecision(
-                            ApplyFallbackRoute(decision.ModelName, fallback),
+                            this.ApplyFallbackRoute(decision.ModelName, fallback),
                             $"Low confidence ({confidence:P0}), using {fallback}",
                             confidence,
                             metadata);
@@ -73,7 +75,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
                         new Dictionary<string, object>
                         {
                             ["strategy"] = "direct",
-                            ["use_case"] = context?.GetValueOrDefault("use_case", "unknown")?.ToString() ?? "unknown"
+                            ["use_case"] = context?.GetValueOrDefault("use_case", "unknown")?.ToString() ?? "unknown",
                         });
 
                     return Result<RoutingDecision, string>.Success(directDecision);
@@ -89,6 +91,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
     /// <summary>
     /// Determines fallback strategy based on confidence.
     /// </summary>
+    /// <returns></returns>
     public FallbackStrategy DetermineFallback(string task, double confidence)
     {
         // Very low confidence - need more information
@@ -108,7 +111,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
         }
 
         // Moderate confidence - use ensemble for better results
-        if (confidence < MinimumConfidenceThreshold)
+        if (confidence < this.MinimumConfidenceThreshold)
         {
             return FallbackStrategy.UseEnsemble;
         }
@@ -120,16 +123,19 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
     /// <summary>
     /// Calculates confidence for a routing decision.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<double> CalculateConfidenceAsync(
         string task,
         string route,
         Dictionary<string, object>? context = null)
     {
         if (string.IsNullOrWhiteSpace(task) || string.IsNullOrWhiteSpace(route))
+        {
             return 0.0;
+        }
 
         // Get historical performance for this route
-        var history = GetRouteHistory(route);
+        var history = this.GetRouteHistory(route);
         var baseConfidence = history.Any()
             ? history.Count(h => h.success) / (double)history.Count
             : 0.5;
@@ -152,12 +158,13 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
     {
         ArgumentNullException.ThrowIfNull(decision);
 
-        _routingHistory.AddOrUpdate(
+        this.routingHistory.AddOrUpdate(
             decision.Route,
             _ => new List<(RoutingDecision, bool)> { (decision, success) },
             (_, existing) =>
             {
                 existing.Add((decision, success));
+
                 // Keep only recent history (last 100 entries)
                 return existing.TakeLast(100).ToList();
             });
@@ -165,7 +172,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
 
     private List<(RoutingDecision decision, bool success)> GetRouteHistory(string route)
     {
-        return _routingHistory.TryGetValue(route, out var history)
+        return this.routingHistory.TryGetValue(route, out var history)
             ? history
             : new List<(RoutingDecision, bool)>();
     }
@@ -179,7 +186,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
             FallbackStrategy.UseEnsemble => $"ensemble:{originalRoute}",
             FallbackStrategy.DecomposeTask => "task_decomposer",
             FallbackStrategy.GatherMoreContext => "context_gatherer",
-            _ => originalRoute
+            _ => originalRoute,
         };
     }
 }

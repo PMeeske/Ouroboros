@@ -1,7 +1,11 @@
-using CommandLine;
+// <copyright file="SetupOptions.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Options
 {
+    using CommandLine;
+
     /// <summary>
     /// Command line options for the guided setup wizard.
     /// </summary>

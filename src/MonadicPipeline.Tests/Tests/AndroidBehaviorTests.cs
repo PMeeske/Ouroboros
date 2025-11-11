@@ -1,50 +1,54 @@
+// <copyright file="AndroidBehaviorTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests.Android;
+
 using System.Text;
 using FluentAssertions;
 using Xunit;
 
-namespace LangChainPipeline.Tests.Android;
-
 /// <summary>
 /// Integration tests for Android Services used by MainPage
-/// Tests the actual service implementations to verify they handle initialization gracefully
+/// Tests the actual service implementations to verify they handle initialization gracefully.
 /// </summary>
 public class AndroidServicesIntegrationTests
 {
     /// <summary>
-    /// Mock CliExecutor that simulates the real implementation's initialization behavior
+    /// Mock CliExecutor that simulates the real implementation's initialization behavior.
     /// </summary>
     private class TestCliExecutor
     {
-        private readonly bool _shouldFailInit;
-        private readonly bool _shouldFailWithDatabase;
-        private bool _isInitialized;
+        private readonly bool shouldFailInit;
+        private readonly bool shouldFailWithDatabase;
+        private bool isInitialized;
 
         public TestCliExecutor(bool shouldFailInit = false, bool shouldFailWithDatabase = false)
         {
-            _shouldFailInit = shouldFailInit;
-            _shouldFailWithDatabase = shouldFailWithDatabase;
+            this.shouldFailInit = shouldFailInit;
+            this.shouldFailWithDatabase = shouldFailWithDatabase;
         }
 
-        public bool IsInitialized => _isInitialized;
+        public bool IsInitialized => this.isInitialized;
 
         public void Initialize(string? databasePath)
         {
-            if (_shouldFailInit)
+            if (this.shouldFailInit)
             {
                 throw new InvalidOperationException("CliExecutor initialization failed");
             }
 
-            if (_shouldFailWithDatabase && !string.IsNullOrEmpty(databasePath))
+            if (this.shouldFailWithDatabase && !string.IsNullOrEmpty(databasePath))
             {
                 throw new InvalidOperationException("Database initialization failed");
             }
 
-            _isInitialized = true;
+            this.isInitialized = true;
         }
 
         public Task<string> ExecuteCommandAsync(string command)
         {
-            if (!_isInitialized)
+            if (!this.isInitialized)
             {
                 throw new InvalidOperationException("Executor not initialized");
             }
@@ -115,7 +119,7 @@ public class AndroidServicesIntegrationTests
 
 /// <summary>
 /// UI State tests for MainPage using Android Activity lifecycle patterns
-/// Simulates the Android Activity lifecycle (onCreate, onStart, onResume, onPause, onStop, onDestroy)
+/// Simulates the Android Activity lifecycle (onCreate, onStart, onResume, onPause, onStop, onDestroy).
 /// </summary>
 public class AndroidMainPageLifecycleTests
 {
@@ -126,127 +130,130 @@ public class AndroidMainPageLifecycleTests
         Resumed,
         Paused,
         Stopped,
-        Destroyed
+        Destroyed,
     }
 
     /// <summary>
-    /// Simulates an Android Activity hosting the MainPage
+    /// Simulates an Android Activity hosting the MainPage.
     /// </summary>
     private class TestMainPageActivity
     {
-        private ActivityState _state = ActivityState.Created;
-        private readonly StringBuilder _outputHistory = new();
-        private object? _cliExecutor;
-        private readonly bool _initializationShouldFail;
-        private bool _uiRendered;
+        private ActivityState state = ActivityState.Created;
+        private readonly StringBuilder outputHistory = new();
+        private object? cliExecutor;
+        private readonly bool initializationShouldFail;
+        private bool uiRendered;
 
-        public ActivityState State => _state;
-        public string Output => _outputHistory.ToString();
-        public bool IsUiRendered => _uiRendered;
-        public bool IsCliExecutorInitialized => _cliExecutor != null;
+        public ActivityState State => this.state;
+
+        public string Output => this.outputHistory.ToString();
+
+        public bool IsUiRendered => this.uiRendered;
+
+        public bool IsCliExecutorInitialized => this.cliExecutor != null;
 
         public TestMainPageActivity(bool initializationShouldFail = false)
         {
-            _initializationShouldFail = initializationShouldFail;
+            this.initializationShouldFail = initializationShouldFail;
         }
 
         /// <summary>
-        /// Simulates Android onCreate() - Activity is created
+        /// Simulates Android onCreate() - Activity is created.
         /// </summary>
         public void OnCreate()
         {
-            _state = ActivityState.Created;
-            
+            this.state = ActivityState.Created;
+
             // Initialize basic state
-            _outputHistory.AppendLine("MonadicPipeline CLI v1.0");
-            _outputHistory.AppendLine("Enhanced with AI-powered suggestions and Ollama integration");
-            _outputHistory.AppendLine("Type 'help' to see available commands");
-            _outputHistory.AppendLine();
+            this.outputHistory.AppendLine("MonadicPipeline CLI v1.0");
+            this.outputHistory.AppendLine("Enhanced with AI-powered suggestions and Ollama integration");
+            this.outputHistory.AppendLine("Type 'help' to see available commands");
+            this.outputHistory.AppendLine();
 
             // Try to initialize services (like MainPage constructor)
             try
             {
-                if (_initializationShouldFail)
+                if (this.initializationShouldFail)
                 {
                     throw new Exception("Service initialization failed");
                 }
 
-                _cliExecutor = new object();
+                this.cliExecutor = new object();
             }
             catch (Exception ex)
             {
-                _outputHistory.AppendLine($"⚠ Initialization error: {ex.Message}");
-                _outputHistory.AppendLine("Some features may be unavailable.");
-                _outputHistory.AppendLine();
+                this.outputHistory.AppendLine($"⚠ Initialization error: {ex.Message}");
+                this.outputHistory.AppendLine("Some features may be unavailable.");
+                this.outputHistory.AppendLine();
 
                 // Fallback
                 try
                 {
-                    _cliExecutor = new object();
+                    this.cliExecutor = new object();
                 }
                 catch
                 {
-                    _cliExecutor = null;
+                    this.cliExecutor = null;
                 }
             }
 
-            _outputHistory.Append("> ");
-            _uiRendered = true; // UI is always rendered, even with errors
+            this.outputHistory.Append("> ");
+            this.uiRendered = true; // UI is always rendered, even with errors
         }
 
         /// <summary>
-        /// Simulates Android onStart() - Activity becomes visible
+        /// Simulates Android onStart() - Activity becomes visible.
         /// </summary>
         public void OnStart()
         {
-            _state = ActivityState.Started;
+            this.state = ActivityState.Started;
         }
 
         /// <summary>
-        /// Simulates Android onResume() - Activity starts interacting with user
+        /// Simulates Android onResume() - Activity starts interacting with user.
         /// </summary>
         public void OnResume()
         {
-            _state = ActivityState.Resumed;
+            this.state = ActivityState.Resumed;
         }
 
         /// <summary>
-        /// Simulates Android onPause() - Activity about to lose focus
+        /// Simulates Android onPause() - Activity about to lose focus.
         /// </summary>
         public void OnPause()
         {
-            _state = ActivityState.Paused;
+            this.state = ActivityState.Paused;
         }
 
         /// <summary>
-        /// Simulates Android onStop() - Activity no longer visible
+        /// Simulates Android onStop() - Activity no longer visible.
         /// </summary>
         public void OnStop()
         {
-            _state = ActivityState.Stopped;
+            this.state = ActivityState.Stopped;
         }
 
         /// <summary>
-        /// Simulates Android onDestroy() - Activity is destroyed
+        /// Simulates Android onDestroy() - Activity is destroyed.
         /// </summary>
         public void OnDestroy()
         {
-            _state = ActivityState.Destroyed;
-            _cliExecutor = null;
-            _uiRendered = false;
+            this.state = ActivityState.Destroyed;
+            this.cliExecutor = null;
+            this.uiRendered = false;
         }
 
         /// <summary>
-        /// Simulates executing a command in the resumed state
+        /// Simulates executing a command in the resumed state.
         /// </summary>
         public string ExecuteCommand(string command)
         {
-            if (_state != ActivityState.Resumed)
+            if (this.state != ActivityState.Resumed)
             {
                 throw new InvalidOperationException("Activity must be in Resumed state");
             }
 
-            if (_cliExecutor == null)
+            if (this.cliExecutor == null)
             {
                 return "Error: CLI executor not initialized. App may be in degraded state.";
             }
@@ -339,6 +346,7 @@ public class AndroidMainPageLifecycleTests
         var activity = new TestMainPageActivity();
         activity.OnCreate();
         activity.OnStart();
+
         // Not calling OnResume()
 
         // Act & Assert
@@ -396,7 +404,7 @@ public class AndroidMainPageLifecycleTests
 
 /// <summary>
 /// Behavior-Driven Development (BDD) style tests for the purple screen issue
-/// Uses Given-When-Then pattern common in Android testing
+/// Uses Given-When-Then pattern common in Android testing.
 /// </summary>
 public class AndroidPurpleScreenBehaviorTests
 {
@@ -449,6 +457,7 @@ public class AndroidPurpleScreenBehaviorTests
             {
                 cliExecutor = new object(); // Successful initialization
             }
+
             outputBuilder.AppendLine("> ");
         }
         catch (Exception ex)
@@ -481,6 +490,7 @@ public class AndroidPurpleScreenBehaviorTests
             {
                 throw new Exception("Primary initialization failed");
             }
+
             cliExecutor = new object();
         }
         catch (Exception ex)
@@ -491,6 +501,7 @@ public class AndroidPurpleScreenBehaviorTests
                 cliExecutor = new object(); // Fallback
             }
         }
+
         outputBuilder.AppendLine("> ");
 
         // Then: Degraded mode should be functional
@@ -521,6 +532,7 @@ public class AndroidPurpleScreenBehaviorTests
             outputBuilder.AppendLine($"⚠ Initialization error: {ex.Message}");
             outputBuilder.AppendLine("Some features may be unavailable.");
         }
+
         outputBuilder.AppendLine("> ");
 
         // Then: Specific error should be shown to user

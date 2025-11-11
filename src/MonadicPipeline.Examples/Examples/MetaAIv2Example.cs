@@ -1,15 +1,13 @@
-// ==========================================================
-// Meta-AI v2 Example
-// Demonstrates planner/executor/verifier orchestrator
-// with continual learning and self-improvement
-// ==========================================================
+// <copyright file="MetaAIv2Example.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Examples;
 
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
-
-namespace LangChainPipeline.Examples;
 
 /// <summary>
 /// Demonstrates Meta-AI v2 capabilities with plan-execute-verify loop,
@@ -20,6 +18,7 @@ public static class MetaAIv2Example
     /// <summary>
     /// Demonstrates basic Meta-AI v2 orchestration with plan-execute-verify.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunBasicOrchestrationExample()
     {
         Console.WriteLine("=== Meta-AI v2 Basic Orchestration Example ===\n");
@@ -71,7 +70,10 @@ public static class MetaAIv2Example
                     return;
                 });
 
-            if (plan == null) return;
+            if (plan == null)
+            {
+                return;
+            }
 
             // Step 2: Execute
             Console.WriteLine("\n=== EXECUTING ===");
@@ -93,7 +95,10 @@ public static class MetaAIv2Example
                     return;
                 });
 
-            if (execution == null) return;
+            if (execution == null)
+            {
+                return;
+            }
 
             // Step 3: Verify
             Console.WriteLine("\n=== VERIFYING ===");
@@ -111,6 +116,7 @@ public static class MetaAIv2Example
                     {
                         Console.WriteLine($"  Issues: {string.Join(", ", v.Issues)}");
                     }
+
                     if (v.Improvements.Any())
                     {
                         Console.WriteLine($"  Improvements: {string.Join(", ", v.Improvements)}");
@@ -122,7 +128,10 @@ public static class MetaAIv2Example
                     return;
                 });
 
-            if (verification == null) return;
+            if (verification == null)
+            {
+                return;
+            }
 
             // Step 4: Learn
             Console.WriteLine("\n=== LEARNING ===");
@@ -157,6 +166,7 @@ public static class MetaAIv2Example
     /// <summary>
     /// Demonstrates skill acquisition and reuse.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunSkillAcquisitionExample()
     {
         Console.WriteLine("\n=== Meta-AI v2 Skill Acquisition Example ===\n");
@@ -234,6 +244,7 @@ public static class MetaAIv2Example
     /// <summary>
     /// Demonstrates evaluation harness for benchmarking.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunEvaluationExample()
     {
         Console.WriteLine("\n=== Meta-AI v2 Evaluation Example ===\n");
@@ -292,19 +303,34 @@ public static class MetaAIv2Example
         string goal)
     {
         var planResult = await orchestrator.PlanAsync(goal);
-        if (!planResult.IsSuccess) return null;
+        if (!planResult.IsSuccess)
+        {
+            return null;
+        }
 
         var plan = planResult.Match(p => p, _ => (Plan?)null);
-        if (plan == null) return null;
+        if (plan == null)
+        {
+            return null;
+        }
 
         var execResult = await orchestrator.ExecuteAsync(plan);
-        if (!execResult.IsSuccess) return null;
+        if (!execResult.IsSuccess)
+        {
+            return null;
+        }
 
         var execution = execResult.Match(e => e, _ => (ExecutionResult?)null);
-        if (execution == null) return null;
+        if (execution == null)
+        {
+            return null;
+        }
 
         var verifyResult = await orchestrator.VerifyAsync(execution);
-        if (!verifyResult.IsSuccess) return null;
+        if (!verifyResult.IsSuccess)
+        {
+            return null;
+        }
 
         var verification = verifyResult.Match(v => v, _ => (VerificationResult?)null);
         if (verification != null)
@@ -318,6 +344,7 @@ public static class MetaAIv2Example
     /// <summary>
     /// Runs all Meta-AI v2 examples.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllExamples()
     {
         await RunBasicOrchestrationExample();

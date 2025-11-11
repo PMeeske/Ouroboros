@@ -1,10 +1,14 @@
+// <copyright file="ChainAdapters.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.CLI.Interop;
+
 using LangChain.Abstractions.Schema;            // IChainValues
 // BaseStackableChain (namespace assumption)
 using LangChain.Chains.HelperChains;            // StackChain (optional)
 using LangChain.Chains.StackableChains.Context; // StackableChainValues
 using LangChainPipeline.Core.Steps;
-
-namespace LangChainPipeline.CLI.Interop;
 
 /// <summary>
 /// Adapters to interoperate NuGet LangChain <c>BaseStackableChain</c> / <c>StackChain</c> with the functional <c>Step&lt;CliPipelineState,CliPipelineState&gt;</c> pipeline.
@@ -17,7 +21,7 @@ public static class ChainAdapters
         ["Query"] = (s, v) => v.Value["Query"] = s.Query,
         ["Topic"] = (s, v) => v.Value["Topic"] = s.Topic,
         ["Context"] = (s, v) => v.Value["Context"] = s.Context,
-        ["Output"] = (s, v) => v.Value["Output"] = s.Output
+        ["Output"] = (s, v) => v.Value["Output"] = s.Output,
     };
 
     private static readonly Dictionary<string, Action<StackableChainValues, CliPipelineState>> Import = new(StringComparer.OrdinalIgnoreCase)
@@ -26,7 +30,7 @@ public static class ChainAdapters
         ["Query"] = (v, s) => s.Query = v.Value.TryGetValue("Query", out var o) ? o?.ToString() ?? string.Empty : s.Query,
         ["Topic"] = (v, s) => s.Topic = v.Value.TryGetValue("Topic", out var o) ? o?.ToString() ?? string.Empty : s.Topic,
         ["Context"] = (v, s) => s.Context = v.Value.TryGetValue("Context", out var o) ? o?.ToString() ?? string.Empty : s.Context,
-        ["Output"] = (v, s) => s.Output = v.Value.TryGetValue("Output", out var o) ? o?.ToString() ?? string.Empty : s.Output
+        ["Output"] = (v, s) => s.Output = v.Value.TryGetValue("Output", out var o) ? o?.ToString() ?? string.Empty : s.Output,
     };
 
     /// <summary>
@@ -36,6 +40,7 @@ public static class ChainAdapters
     /// <param name="inputKeys">State property names to export into the chain value dictionary.</param>
     /// <param name="outputKeys">Property names to import back after execution.</param>
     /// <param name="trace">Optional trace flag for console diagnostics.</param>
+    /// <returns></returns>
     public static Step<CliPipelineState, CliPipelineState> ToStep(
         this BaseStackableChain chain,
         IEnumerable<string>? inputKeys = null,
@@ -48,18 +53,38 @@ public static class ChainAdapters
         return async state =>
         {
             var values = new StackableChainValues();
+
             // export selected keys
             foreach (var k in inKeys)
-                if (Export.TryGetValue(k, out var exporter)) exporter(state, values);
-            if (trace) Console.WriteLine($"[chain] export keys={string.Join(',', inKeys)} -> values={values.Value.Count}");
+            {
+                if (Export.TryGetValue(k, out var exporter))
+                {
+                    exporter(state, values);
+                }
+            }
+
+            if (trace)
+            {
+                Console.WriteLine($"[chain] export keys={string.Join(',', inKeys)} -> values={values.Value.Count}");
+            }
 
             // execute chain
             IChainValues _ = await chain.CallAsync(values).ConfigureAwait(false); // return value often same ref
 
             // import back
             foreach (var k in outKeys)
-                if (Import.TryGetValue(k, out var importer)) importer(values, state);
-            if (trace) Console.WriteLine($"[chain] import keys={string.Join(',', outKeys)}");
+            {
+                if (Import.TryGetValue(k, out var importer))
+                {
+                    importer(values, state);
+                }
+            }
+
+            if (trace)
+            {
+                Console.WriteLine($"[chain] import keys={string.Join(',', outKeys)}");
+            }
+
             return state;
         };
     }
@@ -67,6 +92,7 @@ public static class ChainAdapters
     /// <summary>
     /// Compose two stackable chains as a single Step with isolation (syntactic sugar for StackChain + ToStep).
     /// </summary>
+    /// <returns></returns>
     public static Step<CliPipelineState, CliPipelineState> StackToStep(
         BaseStackableChain first,
         BaseStackableChain second,

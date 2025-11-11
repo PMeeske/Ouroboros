@@ -1,27 +1,31 @@
+// <copyright file="ApiResponse.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.WebApi.Models;
 
 /// <summary>
-/// Generic response wrapper for API endpoints
+/// Generic response wrapper for API endpoints.
 /// </summary>
 public sealed record ApiResponse<T>
 {
     /// <summary>
-    /// Indicates if the request was successful
+    /// Gets a value indicating whether indicates if the request was successful.
     /// </summary>
     public bool Success { get; init; }
 
     /// <summary>
-    /// Response data (null if request failed)
+    /// Gets response data (null if request failed).
     /// </summary>
     public T? Data { get; init; }
 
     /// <summary>
-    /// Error message (null if request succeeded)
+    /// Gets error message (null if request succeeded).
     /// </summary>
     public string? Error { get; init; }
 
     /// <summary>
-    /// Execution time in milliseconds
+    /// Gets execution time in milliseconds.
     /// </summary>
     public long? ExecutionTimeMs { get; init; }
 
@@ -33,19 +37,21 @@ public sealed record ApiResponse<T>
 }
 
 /// <summary>
-/// Response model for ask endpoint
+/// Response model for ask endpoint.
 /// </summary>
 public sealed record AskResponse
 {
     public required string Answer { get; init; }
+
     public string? Model { get; init; }
 }
 
 /// <summary>
-/// Response model for pipeline endpoint
+/// Response model for pipeline endpoint.
 /// </summary>
 public sealed record PipelineResponse
 {
     public required string Result { get; init; }
+
     public string? FinalState { get; init; }
 }

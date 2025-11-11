@@ -1,24 +1,29 @@
-using LangChainPipeline.Agent.MetaAI;
+// <copyright file="MeTTaMemoryBridge.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Tools.MeTTa;
+
+using LangChainPipeline.Agent.MetaAI;
 
 /// <summary>
 /// Bridges orchestrator memory/experience to MeTTa symbolic facts.
 /// </summary>
 public sealed class MeTTaMemoryBridge
 {
-    private readonly IMeTTaEngine _engine;
-    private readonly MemoryStore _memory;
+    private readonly IMeTTaEngine engine;
+    private readonly MemoryStore memory;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="MeTTaMemoryBridge"/> class.
     /// Creates a new MeTTa memory bridge.
     /// </summary>
     /// <param name="engine">The MeTTa engine to populate with facts.</param>
     /// <param name="memory">The memory store to extract facts from.</param>
     public MeTTaMemoryBridge(IMeTTaEngine engine, MemoryStore memory)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        this.memory = memory ?? throw new ArgumentNullException(nameof(memory));
     }
 
     /// <summary>
@@ -30,7 +35,7 @@ public sealed class MeTTaMemoryBridge
     {
         try
         {
-            var stats = await _memory.GetStatisticsAsync();
+            var stats = await this.memory.GetStatisticsAsync();
             var experiences = new List<Experience>();
 
             // Retrieve all experiences (this is a simplified approach)
@@ -45,7 +50,7 @@ public sealed class MeTTaMemoryBridge
 
             // For now, sync memory statistics as facts
             var statsFact = $"(memory-stats (total {stats.TotalExperiences}) (avg-quality {stats.AverageQualityScore}))";
-            var result = await _engine.AddFactAsync(statsFact, ct);
+            var result = await this.engine.AddFactAsync(statsFact, ct);
 
             if (result.IsFailure)
             {
@@ -84,9 +89,9 @@ public sealed class MeTTaMemoryBridge
 
             var results = new[]
             {
-                await _engine.AddFactAsync(goalFact, ct),
-                await _engine.AddFactAsync(qualityFact, ct),
-                await _engine.AddFactAsync(successFact, ct)
+                await this.engine.AddFactAsync(goalFact, ct),
+                await this.engine.AddFactAsync(qualityFact, ct),
+                await this.engine.AddFactAsync(successFact, ct),
             };
 
             var failures = results.Where(r => r.IsFailure).ToList();
@@ -111,7 +116,7 @@ public sealed class MeTTaMemoryBridge
     /// <returns>Query results as a string.</returns>
     public async Task<Result<string, string>> QueryExperiencesAsync(string query, CancellationToken ct = default)
     {
-        return await _engine.ExecuteQueryAsync(query, ct);
+        return await this.engine.ExecuteQueryAsync(query, ct);
     }
 
     /// <summary>
@@ -122,7 +127,7 @@ public sealed class MeTTaMemoryBridge
     /// <returns>A Result indicating success or failure.</returns>
     public async Task<Result<string, string>> AddVerificationRuleAsync(string rule, CancellationToken ct = default)
     {
-        return await _engine.ApplyRuleAsync(rule, ct);
+        return await this.engine.ApplyRuleAsync(rule, ct);
     }
 
     private static string EscapeString(string input)

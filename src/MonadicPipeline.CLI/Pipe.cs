@@ -1,6 +1,10 @@
-using LangChainPipeline.Core.Steps;
+// <copyright file="Pipe.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.CLI.Interop;
+
+using LangChainPipeline.Core.Steps;
 
 /// <summary>
 /// Provides static methods for creating pipe operations.
@@ -25,27 +29,35 @@ public static class Pipe
     /// Creates a Set step that sets a value in the pipeline state.
     /// Mirrors LangChain's Chain.Set() operator.
     /// </summary>
-    /// <param name="value">The value to set</param>
-    /// <param name="key">Optional key name (defaults to setting prompt)</param>
-    /// <returns>A CLI pipeline step</returns>
+    /// <param name="value">The value to set.</param>
+    /// <param name="key">Optional key name (defaults to setting prompt).</param>
+    /// <returns>A CLI pipeline step.</returns>
     public static Step<CliPipelineState, CliPipelineState> Set(string value, string? key = null)
     {
         if (key == null || key == "text" || key == "prompt")
+        {
             return CliSteps.SetPrompt($"'{value}'");
+        }
         else if (key == "topic")
+        {
             return CliSteps.SetTopic($"'{value}'");
+        }
         else if (key == "query")
+        {
             return CliSteps.SetQuery($"'{value}'");
+        }
         else
+        {
             return CliSteps.SetPrompt($"'{value}'");
+        }
     }
 
     /// <summary>
     /// Creates a RetrieveSimilarDocuments step.
     /// Mirrors LangChain's Chain.RetrieveSimilarDocuments() operator.
     /// </summary>
-    /// <param name="amount">Number of documents to retrieve</param>
-    /// <returns>A CLI pipeline step</returns>
+    /// <param name="amount">Number of documents to retrieve.</param>
+    /// <returns>A CLI pipeline step.</returns>
     public static Step<CliPipelineState, CliPipelineState> RetrieveSimilarDocuments(int amount = 5)
         => CliSteps.LangChainRetrieveStep($"amount={amount}");
 
@@ -53,22 +65,26 @@ public static class Pipe
     /// Creates a CombineDocuments step.
     /// Mirrors LangChain's Chain.CombineDocuments() operator.
     /// </summary>
-    /// <param name="separator">Optional separator between documents</param>
-    /// <returns>A CLI pipeline step</returns>
+    /// <param name="separator">Optional separator between documents.</param>
+    /// <returns>A CLI pipeline step.</returns>
     public static Step<CliPipelineState, CliPipelineState> CombineDocuments(string? separator = null)
     {
         if (separator == null)
+        {
             return CliSteps.LangChainCombineStep();
+        }
         else
+        {
             return CliSteps.CombineDocuments($"separator={separator}");
+        }
     }
 
     /// <summary>
     /// Creates a Template step that applies a prompt template.
     /// Mirrors LangChain's Chain.Template() operator.
     /// </summary>
-    /// <param name="template">The prompt template with {placeholders}</param>
-    /// <returns>A CLI pipeline step</returns>
+    /// <param name="template">The prompt template with {placeholders}.</param>
+    /// <returns>A CLI pipeline step.</returns>
     public static Step<CliPipelineState, CliPipelineState> Template(string template)
         => CliSteps.LangChainTemplateStep($"'{template}'");
 
@@ -76,7 +92,7 @@ public static class Pipe
     /// Creates an LLM step that sends the prompt to the language model.
     /// Mirrors LangChain's Chain.LLM() operator.
     /// </summary>
-    /// <returns>A CLI pipeline step</returns>
+    /// <returns>A CLI pipeline step.</returns>
     public static Step<CliPipelineState, CliPipelineState> LLM()
         => CliSteps.LangChainLlmStep();
 }

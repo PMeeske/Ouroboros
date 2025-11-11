@@ -1,11 +1,10 @@
-// ==========================================================
-// Capability Registry Implementation
-// Agent self-model with capability tracking and assessment
-// ==========================================================
-
-using System.Collections.Concurrent;
+// <copyright file="CapabilityRegistry.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
+
+using System.Collections.Concurrent;
 
 /// <summary>
 /// Configuration for capability registry behavior.
@@ -21,29 +20,30 @@ public sealed record CapabilityRegistryConfig(
 /// </summary>
 public sealed class CapabilityRegistry : ICapabilityRegistry
 {
-    private readonly ConcurrentDictionary<string, AgentCapability> _capabilities = new();
-    private readonly IChatCompletionModel _llm;
-    private readonly ToolRegistry _tools;
-    private readonly CapabilityRegistryConfig _config;
+    private readonly ConcurrentDictionary<string, AgentCapability> capabilities = new();
+    private readonly IChatCompletionModel llm;
+    private readonly ToolRegistry tools;
+    private readonly CapabilityRegistryConfig config;
 
     public CapabilityRegistry(
         IChatCompletionModel llm,
         ToolRegistry tools,
         CapabilityRegistryConfig? config = null)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _tools = tools ?? throw new ArgumentNullException(nameof(tools));
-        _config = config ?? new CapabilityRegistryConfig(
+        this.llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        this.tools = tools ?? throw new ArgumentNullException(nameof(tools));
+        this.config = config ?? new CapabilityRegistryConfig(
             CapabilityExpirationTime: TimeSpan.FromDays(30));
     }
 
     /// <summary>
     /// Gets all capabilities the agent possesses.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<List<AgentCapability>> GetCapabilitiesAsync(CancellationToken ct = default)
     {
         await Task.CompletedTask;
-        return _capabilities.Values
+        return this.capabilities.Values
             .OrderByDescending(c => c.SuccessRate)
             .ThenByDescending(c => c.UsageCount)
             .ToList();
@@ -52,31 +52,36 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
     /// <summary>
     /// Checks if the agent can handle a given task.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<bool> CanHandleAsync(
         string task,
         Dictionary<string, object>? context = null,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(task))
+        {
             return false;
+        }
 
         // Check against known capabilities
-        var relevantCapabilities = await FindRelevantCapabilitiesAsync(task, ct);
+        var relevantCapabilities = await this.FindRelevantCapabilitiesAsync(task, ct);
 
         if (relevantCapabilities.Any())
         {
             // If we have capabilities with good success rates, we can handle it
             var reliableCapabilities = relevantCapabilities
-                .Where(c => c.SuccessRate >= _config.MinSuccessRateThreshold
-                         || c.UsageCount < _config.MinUsageCountForReliability);
+                .Where(c => c.SuccessRate >= this.config.MinSuccessRateThreshold
+                         || c.UsageCount < this.config.MinUsageCountForReliability);
 
             if (reliableCapabilities.Any())
+            {
                 return true;
+            }
         }
 
         // Check if we have the required tools
-        var requiredTools = await AnalyzeRequiredToolsAsync(task, ct);
-        var availableTools = _tools.All.Select(t => t.Name).ToHashSet();
+        var requiredTools = await this.AnalyzeRequiredToolsAsync(task, ct);
+        var availableTools = this.tools.All.Select(t => t.Name).ToHashSet();
 
         return requiredTools.All(t => availableTools.Contains(t));
     }
@@ -84,15 +89,17 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
     /// <summary>
     /// Gets a specific capability by name.
     /// </summary>
+    /// <returns></returns>
     public AgentCapability? GetCapability(string name)
     {
-        _capabilities.TryGetValue(name, out var capability);
+        this.capabilities.TryGetValue(name, out var capability);
         return capability;
     }
 
     /// <summary>
     /// Updates capability metrics after execution.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task UpdateCapabilityAsync(
         string name,
         ExecutionResult result,
@@ -100,8 +107,10 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
     {
         await Task.CompletedTask;
 
-        if (!_capabilities.TryGetValue(name, out var existing))
+        if (!this.capabilities.TryGetValue(name, out var existing))
+        {
             return;
+        }
 
         var newUsageCount = existing.UsageCount + 1;
         var newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (result.Success ? 1.0 : 0.0)) / newUsageCount;
@@ -112,10 +121,10 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
             SuccessRate = newSuccessRate,
             AverageLatency = newAvgLatency,
             UsageCount = newUsageCount,
-            LastUsed = DateTime.UtcNow
+            LastUsed = DateTime.UtcNow,
         };
 
-        _capabilities[name] = updated;
+        this.capabilities[name] = updated;
     }
 
     /// <summary>
@@ -124,14 +133,17 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
     public void RegisterCapability(AgentCapability capability)
     {
         if (capability == null)
+        {
             throw new ArgumentNullException(nameof(capability));
+        }
 
-        _capabilities[capability.Name] = capability;
+        this.capabilities[capability.Name] = capability;
     }
 
     /// <summary>
     /// Identifies capability gaps for a given task.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<List<string>> IdentifyCapabilityGapsAsync(
         string task,
         CancellationToken ct = default)
@@ -139,8 +151,8 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         var gaps = new List<string>();
 
         // Analyze what the task requires
-        var requiredTools = await AnalyzeRequiredToolsAsync(task, ct);
-        var availableTools = _tools.All.Select(t => t.Name).ToHashSet();
+        var requiredTools = await this.AnalyzeRequiredToolsAsync(task, ct);
+        var availableTools = this.tools.All.Select(t => t.Name).ToHashSet();
 
         // Identify missing tools
         var missingTools = requiredTools.Where(t => !availableTools.Contains(t)).ToList();
@@ -150,7 +162,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         }
 
         // Check if task complexity exceeds current capabilities
-        var relevantCapabilities = await FindRelevantCapabilitiesAsync(task, ct);
+        var relevantCapabilities = await this.FindRelevantCapabilitiesAsync(task, ct);
         if (!relevantCapabilities.Any())
         {
             gaps.Add("No experience with similar tasks");
@@ -158,8 +170,8 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         else
         {
             var lowPerformingCapabilities = relevantCapabilities
-                .Where(c => c.SuccessRate < _config.MinSuccessRateThreshold
-                         && c.UsageCount >= _config.MinUsageCountForReliability);
+                .Where(c => c.SuccessRate < this.config.MinSuccessRateThreshold
+                         && c.UsageCount >= this.config.MinUsageCountForReliability);
 
             if (lowPerformingCapabilities.Any())
             {
@@ -173,6 +185,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
     /// <summary>
     /// Suggests alternatives when a task cannot be handled.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<List<string>> SuggestAlternativesAsync(
         string task,
         CancellationToken ct = default)
@@ -180,7 +193,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         var suggestions = new List<string>();
 
         // Identify what's missing
-        var gaps = await IdentifyCapabilityGapsAsync(task, ct);
+        var gaps = await this.IdentifyCapabilityGapsAsync(task, ct);
 
         if (gaps.Any())
         {
@@ -191,12 +204,12 @@ The agent has identified these capability gaps:
 {string.Join("\n", gaps.Select(g => $"- {g}"))}
 
 Available capabilities:
-{string.Join("\n", _capabilities.Values.Take(5).Select(c => $"- {c.Name}: {c.Description} (Success: {c.SuccessRate:P0})"))}
+{string.Join("\n", this.capabilities.Values.Take(5).Select(c => $"- {c.Name}: {c.Description} (Success: {c.SuccessRate:P0})"))}
 
 Suggest 3-5 alternative approaches to accomplish this task or similar outcomes with available capabilities.
 Format each suggestion on a new line starting with '- '";
 
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            var response = await this.llm.GenerateTextAsync(prompt, ct);
 
             // Parse suggestions
             var lines = response.Split('\n')
@@ -212,7 +225,6 @@ Format each suggestion on a new line starting with '- '";
     }
 
     // Private helper methods
-
     private async Task<List<AgentCapability>> FindRelevantCapabilitiesAsync(
         string task,
         CancellationToken ct)
@@ -221,7 +233,7 @@ Format each suggestion on a new line starting with '- '";
         var taskLower = task.ToLowerInvariant();
         var keywords = taskLower.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-        var relevant = _capabilities.Values
+        var relevant = this.capabilities.Values
             .Where(c => keywords.Any(k =>
                 c.Name.Contains(k, StringComparison.OrdinalIgnoreCase) ||
                 c.Description.Contains(k, StringComparison.OrdinalIgnoreCase)))
@@ -236,7 +248,7 @@ Format each suggestion on a new line starting with '- '";
         CancellationToken ct)
     {
         // Use LLM to analyze what tools are needed
-        var availableTools = string.Join("\n", _tools.All.Select(t => $"- {t.Name}: {t.Description}"));
+        var availableTools = string.Join("\n", this.tools.All.Select(t => $"- {t.Name}: {t.Description}"));
 
         var prompt = $@"Analyze this task and identify which tools would be needed:
 
@@ -249,7 +261,7 @@ List only the tool names that are required, one per line.";
 
         try
         {
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            var response = await this.llm.GenerateTextAsync(prompt, ct);
             var toolNames = response.Split('\n', StringSplitOptions.RemoveEmptyEntries)
                 .Select(l => l.Trim())
                 .Where(l => !string.IsNullOrWhiteSpace(l) && !l.StartsWith("#"))

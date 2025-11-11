@@ -1,6 +1,10 @@
-using LangChain.DocumentLoaders;
+// <copyright file="VectorStoreExtensions.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Domain.Vectors;
+
+using LangChain.DocumentLoaders;
 
 public static class VectorStoreExtensions
 {
@@ -11,9 +15,20 @@ public static class VectorStoreExtensions
         int amount = 5,
         CancellationToken cancellationToken = default)
     {
-        if (store is null) throw new ArgumentNullException(nameof(store));
-        if (embeddingModel is null) throw new ArgumentNullException(nameof(embeddingModel));
-        if (query is null) query = string.Empty;
+        if (store is null)
+        {
+            throw new ArgumentNullException(nameof(store));
+        }
+
+        if (embeddingModel is null)
+        {
+            throw new ArgumentNullException(nameof(embeddingModel));
+        }
+
+        if (query is null)
+        {
+            query = string.Empty;
+        }
 
         var embedding = await embeddingModel.CreateEmbeddingsAsync(query, cancellationToken).ConfigureAwait(false);
         return await store.GetSimilarDocumentsAsync(embedding, amount, cancellationToken).ConfigureAwait(false);

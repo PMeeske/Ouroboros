@@ -1,6 +1,10 @@
-using LangChainPipeline.Diagnostics;
+// <copyright file="EmbeddingExtensions.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Providers;
+
+using LangChainPipeline.Diagnostics;
 
 public static class EmbeddingExtensions
 {

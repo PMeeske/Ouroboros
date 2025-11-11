@@ -1,3 +1,7 @@
+// <copyright file="ChatConfig.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Providers;
 
 /// <summary>
@@ -6,17 +10,19 @@ namespace LangChainPipeline.Providers;
 public enum ChatEndpointType
 {
     /// <summary>
-    /// Auto-detect endpoint type based on URL or use OpenAI-compatible as default
+    /// Auto-detect endpoint type based on URL or use OpenAI-compatible as default.
     /// </summary>
     Auto,
+
     /// <summary>
-    /// OpenAI-compatible API (original behavior)
+    /// OpenAI-compatible API (original behavior).
     /// </summary>
     OpenAiCompatible,
+
     /// <summary>
-    /// Ollama Cloud API format
+    /// Ollama Cloud API format.
     /// </summary>
-    OllamaCloud
+    OllamaCloud,
 }
 
 /// <summary>

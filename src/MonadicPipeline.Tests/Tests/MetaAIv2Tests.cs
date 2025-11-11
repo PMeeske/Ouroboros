@@ -1,13 +1,12 @@
-// ==========================================================
-// Meta-AI Layer v2 Tests
-// Tests for planner/executor/verifier orchestrator
-// ==========================================================
+// <copyright file="MetaAIv2Tests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
 
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for Meta-AI v2 planner/executor/verifier orchestrator.
@@ -47,6 +46,7 @@ public static class MetaAIv2Tests
     /// <summary>
     /// Tests plan generation.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestPlanGeneration()
     {
         Console.WriteLine("=== Test: Plan Generation ===");
@@ -73,6 +73,7 @@ public static class MetaAIv2Tests
                     {
                         throw new Exception("Plan should have at least one step");
                     }
+
                     Console.WriteLine($"✓ Plan generated with {plan.Steps.Count} steps");
                     Console.WriteLine($"  Goal: {plan.Goal}");
                     foreach (var step in plan.Steps)
@@ -100,6 +101,7 @@ public static class MetaAIv2Tests
     /// <summary>
     /// Tests skill registry functionality.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestSkillRegistry()
     {
         Console.WriteLine("=== Test: Skill Registry ===");
@@ -112,7 +114,7 @@ public static class MetaAIv2Tests
             new List<string> { "math" },
             new List<PlanStep>
             {
-                new PlanStep("math", new Dictionary<string, object> { ["operation"] = "add" }, "Result", 0.9)
+                new PlanStep("math", new Dictionary<string, object> { ["operation"] = "add" }, "Result", 0.9),
             },
             SuccessRate: 1.0,
             UsageCount: 0,
@@ -126,6 +128,7 @@ public static class MetaAIv2Tests
         {
             throw new Exception("Skill should be retrievable after registration");
         }
+
         Console.WriteLine($"✓ Skill registered and retrieved: {retrieved.Name}");
 
         var matching = await skillRegistry.FindMatchingSkillsAsync("do a math calculation");
@@ -144,6 +147,7 @@ public static class MetaAIv2Tests
         {
             throw new Exception("Skill usage count should be updated");
         }
+
         Console.WriteLine($"✓ Skill execution recorded: usage count = {updated.UsageCount}");
 
         Console.WriteLine("✓ Skill registry test passed!\n");
@@ -152,6 +156,7 @@ public static class MetaAIv2Tests
     /// <summary>
     /// Tests uncertainty router.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestUncertaintyRouter()
     {
         Console.WriteLine("=== Test: Uncertainty Router ===");
@@ -204,6 +209,7 @@ public static class MetaAIv2Tests
         {
             throw new Exception("Read operation should be safe");
         }
+
         Console.WriteLine("✓ Safe operation passed safety check");
 
         // Test unsafe operation
@@ -216,6 +222,7 @@ public static class MetaAIv2Tests
         {
             throw new Exception("Delete operation should fail safety check with ReadOnly permission");
         }
+
         Console.WriteLine($"✓ Unsafe operation blocked: {string.Join(", ", unsafeResult.Violations)}");
 
         // Test tool permission
@@ -224,6 +231,7 @@ public static class MetaAIv2Tests
         {
             throw new Exception("Math tool should be allowed with ReadOnly permission");
         }
+
         Console.WriteLine("✓ Tool permission check passed");
 
         // Test sandboxing
@@ -239,6 +247,7 @@ public static class MetaAIv2Tests
         {
             throw new Exception("Sandboxing should sanitize dangerous content");
         }
+
         Console.WriteLine($"✓ Step sandboxed successfully: {sanitizedData}");
 
         Console.WriteLine("✓ Safety guard test passed!\n");
@@ -247,6 +256,7 @@ public static class MetaAIv2Tests
     /// <summary>
     /// Tests memory store.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestMemoryStore()
     {
         Console.WriteLine("=== Test: Memory Store ===");
@@ -288,6 +298,7 @@ public static class MetaAIv2Tests
         {
             throw new Exception("Experience should be retrievable after storage");
         }
+
         Console.WriteLine($"✓ Experience retrieved: {retrieved.Goal}");
 
         var stats = await memory.GetStatisticsAsync();
@@ -295,6 +306,7 @@ public static class MetaAIv2Tests
         {
             throw new Exception($"Expected 1 experience, got {stats.TotalExperiences}");
         }
+
         Console.WriteLine($"✓ Memory statistics: {stats.TotalExperiences} experiences, {stats.AverageQualityScore:P0} avg quality");
 
         Console.WriteLine("✓ Memory store test passed!\n");
@@ -303,6 +315,7 @@ public static class MetaAIv2Tests
     /// <summary>
     /// Tests evaluation harness.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestEvaluationHarness()
     {
         Console.WriteLine("=== Test: Evaluation Harness ===");
@@ -351,6 +364,7 @@ public static class MetaAIv2Tests
     /// <summary>
     /// Runs all Meta-AI v2 tests.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllTests()
     {
         Console.WriteLine("\n" + new string('=', 60));

@@ -1,24 +1,25 @@
-// ============================================================================
-// Memory-Aware Kleisli Pipeline Integration
-// Extension methods to integrate memory functionality with existing pipes
-// ============================================================================
+// <copyright file="MemoryPipeExtensions.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Core.Memory;
 
 /// <summary>
-/// Extension methods to integrate memory-aware operations with the existing Kleisli pipe system
+/// Extension methods to integrate memory-aware operations with the existing Kleisli pipe system.
 /// </summary>
 public static class MemoryPipeExtensions
 {
     /// <summary>
-    /// Create a memory context from a plain value
+    /// Create a memory context from a plain value.
     /// </summary>
+    /// <returns></returns>
     public static MemoryContext<T> WithMemory<T>(this T value, ConversationMemory? memory = null)
         => new(value, memory ?? new ConversationMemory());
 
     /// <summary>
-    /// Lift a regular Step into a memory-aware Step
+    /// Lift a regular Step into a memory-aware Step.
     /// </summary>
+    /// <returns></returns>
     public static Step<MemoryContext<TIn>, MemoryContext<TOut>> LiftToMemory<TIn, TOut>(
         this Step<TIn, TOut> step)
     {
@@ -30,8 +31,9 @@ public static class MemoryPipeExtensions
     }
 
     /// <summary>
-    /// Convert a memory-aware step to a compatible node for interop
+    /// Convert a memory-aware step to a compatible node for interop.
     /// </summary>
+    /// <returns></returns>
     public static PipeNode<MemoryContext<TIn>, MemoryContext<TOut>> ToMemoryNode<TIn, TOut>(
         this Step<MemoryContext<TIn>, MemoryContext<TOut>> step,
         string? name = null)
@@ -40,8 +42,9 @@ public static class MemoryPipeExtensions
     }
 
     /// <summary>
-    /// Create a conversational chain builder similar to LangChain's approach
+    /// Create a conversational chain builder similar to LangChain's approach.
     /// </summary>
+    /// <returns></returns>
     public static ConversationChainBuilder<T> StartConversation<T>(
         this T initialData,
         ConversationMemory? memory = null)
@@ -51,90 +54,98 @@ public static class MemoryPipeExtensions
     }
 
     /// <summary>
-    /// Extract the final result from a memory context
+    /// Extract the final result from a memory context.
     /// </summary>
+    /// <returns></returns>
     public static T ExtractData<T>(this MemoryContext<T> context) => context.Data;
 
     /// <summary>
-    /// Extract a specific property from a memory context
+    /// Extract a specific property from a memory context.
     /// </summary>
+    /// <returns></returns>
     public static TValue? ExtractProperty<TValue>(this MemoryContext<object> context, string key)
         => context.GetProperty<TValue>(key);
 }
 
 /// <summary>
 /// Fluent builder for conversational chains that mirrors LangChain's approach
-/// but uses our Kleisli pipe system
+/// but uses our Kleisli pipe system.
 /// </summary>
 public class ConversationChainBuilder<T>
 {
-    private readonly MemoryContext<T> _initialContext;
-    private readonly List<Step<MemoryContext<object>, MemoryContext<object>>> _steps = [];
+    private readonly MemoryContext<T> initialContext;
+    private readonly List<Step<MemoryContext<object>, MemoryContext<object>>> steps = [];
 
     public ConversationChainBuilder(MemoryContext<T> initialContext)
     {
-        _initialContext = initialContext;
+        this.initialContext = initialContext;
     }
 
     /// <summary>
-    /// Add a step to load memory (similar to LangChain's LoadMemory)
+    /// Add a step to load memory (similar to LangChain's LoadMemory).
     /// </summary>
+    /// <returns></returns>
     public ConversationChainBuilder<T> LoadMemory(
         string outputKey = "history",
         string humanPrefix = "Human",
         string aiPrefix = "AI")
     {
-        _steps.Add(MemoryArrows.LoadMemory<object>(outputKey, humanPrefix, aiPrefix));
+        this.steps.Add(MemoryArrows.LoadMemory<object>(outputKey, humanPrefix, aiPrefix));
         return this;
     }
 
     /// <summary>
-    /// Add a template processing step (similar to LangChain's Template)
+    /// Add a template processing step (similar to LangChain's Template).
     /// </summary>
+    /// <returns></returns>
     public ConversationChainBuilder<T> Template(string template)
     {
-        _steps.Add(MemoryArrows.Template<object>(template));
+        this.steps.Add(MemoryArrows.Template<object>(template));
         return this;
     }
 
     /// <summary>
-    /// Add a mock LLM step (similar to LangChain's LLM)
+    /// Add a mock LLM step (similar to LangChain's LLM).
     /// </summary>
+    /// <returns></returns>
     public ConversationChainBuilder<T> Llm(string mockPrefix = "AI Response:")
     {
-        _steps.Add(MemoryArrows.MockLlm<object>(mockPrefix));
+        this.steps.Add(MemoryArrows.MockLlm<object>(mockPrefix));
         return this;
     }
 
     /// <summary>
-    /// Add a step to update memory (similar to LangChain's UpdateMemory)
+    /// Add a step to update memory (similar to LangChain's UpdateMemory).
     /// </summary>
+    /// <returns></returns>
     public ConversationChainBuilder<T> UpdateMemory(
         string inputKey = "input",
         string responseKey = "text")
     {
-        _steps.Add(MemoryArrows.UpdateMemory<object>(inputKey, responseKey));
+        this.steps.Add(MemoryArrows.UpdateMemory<object>(inputKey, responseKey));
         return this;
     }
 
     /// <summary>
-    /// Add a step to set a value (similar to LangChain's Set)
+    /// Add a step to set a value (similar to LangChain's Set).
     /// </summary>
+    /// <returns></returns>
     public ConversationChainBuilder<T> Set(object value, string key)
     {
-        _steps.Add(MemoryArrows.Set<object>(value, key));
+        this.steps.Add(MemoryArrows.Set<object>(value, key));
         return this;
     }
 
     /// <summary>
-    /// Build and execute the conversational chain
+    /// Build and execute the conversational chain.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<MemoryContext<object>> RunAsync()
     {
-        var initialData = _initialContext.Data ?? (object)string.Empty;
-        var context = _initialContext.WithData<object>(initialData);
+        var initialData = this.initialContext.Data ?? (object)string.Empty;
+        var context = this.initialContext.WithData<object>(initialData);
 
-        foreach (var step in _steps)
+        foreach (var step in this.steps)
         {
             context = await step(context);
         }
@@ -143,11 +154,12 @@ public class ConversationChainBuilder<T>
     }
 
     /// <summary>
-    /// Build and extract a specific property value
+    /// Build and extract a specific property value.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<TResult?> RunAsync<TResult>(string propertyKey)
     {
-        var result = await RunAsync();
+        var result = await this.RunAsync();
         return result.GetProperty<TResult>(propertyKey);
     }
 }

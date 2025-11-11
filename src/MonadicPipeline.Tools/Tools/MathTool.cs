@@ -1,7 +1,11 @@
-using System.Data;
-using System.Globalization;
+// <copyright file="MathTool.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Tools;
+
+using System.Data;
+using System.Globalization;
 
 /// <summary>
 /// A tool for evaluating simple arithmetic expressions using DataTable.Compute.
@@ -29,6 +33,7 @@ public sealed class MathTool : ITool
         {
             var dataTable = new DataTable();
             var result = dataTable.Compute(input, string.Empty);
+
             // Use InvariantCulture to ensure consistent decimal separator (always '.')
             var resultString = Convert.ToString(result, CultureInfo.InvariantCulture) ?? "null";
             return Task.FromResult(Result<string, string>.Success(resultString));

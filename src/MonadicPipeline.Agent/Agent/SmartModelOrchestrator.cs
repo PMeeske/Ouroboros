@@ -1,13 +1,11 @@
-// ==========================================================
-// Smart Model Orchestrator
-// Performance-aware AI orchestrator that selects optimal
-// models and tools based on use case analysis
-// ==========================================================
+// <copyright file="SmartModelOrchestrator.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Agent;
 
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-
-namespace LangChainPipeline.Agent;
 
 /// <summary>
 /// Smart orchestrator that analyzes prompts and selects optimal models and tools
@@ -16,16 +14,16 @@ namespace LangChainPipeline.Agent;
 /// </summary>
 public sealed class SmartModelOrchestrator : IModelOrchestrator
 {
-    private readonly ConcurrentDictionary<string, IChatCompletionModel> _models = new();
-    private readonly ConcurrentDictionary<string, ModelCapability> _capabilities = new();
-    private readonly ConcurrentDictionary<string, PerformanceMetrics> _metrics = new();
-    private readonly ToolRegistry _baseTools;
-    private readonly string _fallbackModel;
+    private readonly ConcurrentDictionary<string, IChatCompletionModel> models = new();
+    private readonly ConcurrentDictionary<string, ModelCapability> capabilities = new();
+    private readonly ConcurrentDictionary<string, PerformanceMetrics> metrics = new();
+    private readonly ToolRegistry baseTools;
+    private readonly string fallbackModel;
 
     public SmartModelOrchestrator(ToolRegistry baseTools, string fallbackModel = "default")
     {
-        _baseTools = baseTools ?? throw new ArgumentNullException(nameof(baseTools));
-        _fallbackModel = fallbackModel;
+        this.baseTools = baseTools ?? throw new ArgumentNullException(nameof(baseTools));
+        this.fallbackModel = fallbackModel;
     }
 
     /// <summary>
@@ -33,14 +31,21 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
     /// </summary>
     public void RegisterModel(ModelCapability capability, IChatCompletionModel model)
     {
-        if (capability is null) throw new ArgumentNullException(nameof(capability));
-        if (model is null) throw new ArgumentNullException(nameof(model));
+        if (capability is null)
+        {
+            throw new ArgumentNullException(nameof(capability));
+        }
 
-        _capabilities[capability.ModelName] = capability;
-        _models[capability.ModelName] = model;
+        if (model is null)
+        {
+            throw new ArgumentNullException(nameof(model));
+        }
+
+        this.capabilities[capability.ModelName] = capability;
+        this.models[capability.ModelName] = model;
 
         // Initialize metrics if not present
-        _metrics.TryAdd(capability.ModelName, new PerformanceMetrics(
+        this.metrics.TryAdd(capability.ModelName, new PerformanceMetrics(
             capability.ModelName,
             ExecutionCount: 0,
             AverageLatencyMs: capability.AverageLatencyMs,
@@ -54,11 +59,15 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
     /// </summary>
     public void RegisterModel(ModelCapability capability)
     {
-        if (capability is null) throw new ArgumentNullException(nameof(capability));
-        _capabilities[capability.ModelName] = capability;
+        if (capability is null)
+        {
+            throw new ArgumentNullException(nameof(capability));
+        }
+
+        this.capabilities[capability.ModelName] = capability;
 
         // Initialize metrics if not present
-        _metrics.TryAdd(capability.ModelName, new PerformanceMetrics(
+        this.metrics.TryAdd(capability.ModelName, new PerformanceMetrics(
             capability.ModelName,
             ExecutionCount: 0,
             AverageLatencyMs: capability.AverageLatencyMs,
@@ -70,19 +79,22 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
     /// <summary>
     /// Analyzes prompt and selects optimal model with recommended tools.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<OrchestratorDecision, string>> SelectModelAsync(
         string prompt,
         Dictionary<string, object>? context = null,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(prompt))
+        {
             return Result<OrchestratorDecision, string>.Failure("Prompt cannot be empty");
+        }
 
         // Classify the use case
-        var useCase = ClassifyUseCase(prompt);
+        var useCase = this.ClassifyUseCase(prompt);
 
         // Find best matching model
-        var modelResult = await SelectBestModelAsync(useCase, context, ct);
+        var modelResult = await this.SelectBestModelAsync(useCase, context, ct);
 
         return modelResult.Match(
             model => Result<OrchestratorDecision, string>.Success(model),
@@ -92,6 +104,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
     /// <summary>
     /// Classifies a prompt into a specific use case.
     /// </summary>
+    /// <returns></returns>
     public UseCase ClassifyUseCase(string prompt)
     {
         var lowerPrompt = prompt.ToLowerInvariant();
@@ -99,7 +112,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         // Code generation patterns
         if (Regex.IsMatch(lowerPrompt, @"\b(code|implement|function|class|method|debug|fix|refactor)\b"))
         {
-            var complexity = EstimateComplexity(prompt);
+            var complexity = this.EstimateComplexity(prompt);
             return new UseCase(
                 UseCaseType.CodeGeneration,
                 complexity,
@@ -111,7 +124,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         // Reasoning patterns
         if (Regex.IsMatch(lowerPrompt, @"\b(analyze|reason|explain|why|how|cause|logic|deduce)\b"))
         {
-            var complexity = EstimateComplexity(prompt);
+            var complexity = this.EstimateComplexity(prompt);
             return new UseCase(
                 UseCaseType.Reasoning,
                 complexity,
@@ -125,7 +138,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         {
             return new UseCase(
                 UseCaseType.Creative,
-                EstimateComplexity(prompt),
+                this.EstimateComplexity(prompt),
                 new[] { "creative", "generation" },
                 PerformanceWeight: 0.4,
                 CostWeight: 0.6);
@@ -136,7 +149,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         {
             return new UseCase(
                 UseCaseType.Summarization,
-                EstimateComplexity(prompt),
+                this.EstimateComplexity(prompt),
                 new[] { "summarization", "compression" },
                 PerformanceWeight: 0.8,
                 CostWeight: 0.2);
@@ -147,7 +160,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         {
             return new UseCase(
                 UseCaseType.ToolUse,
-                EstimateComplexity(prompt),
+                this.EstimateComplexity(prompt),
                 new[] { "tool-use", "function-calling" },
                 PerformanceWeight: 0.6,
                 CostWeight: 0.4);
@@ -156,7 +169,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         // Default: conversation
         return new UseCase(
             UseCaseType.Conversation,
-            EstimateComplexity(prompt),
+            this.EstimateComplexity(prompt),
             new[] { "general", "conversation" },
             PerformanceWeight: 0.6,
             CostWeight: 0.4);
@@ -170,18 +183,18 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         Dictionary<string, object>? context,
         CancellationToken ct)
     {
-        if (_capabilities.IsEmpty)
+        if (this.capabilities.IsEmpty)
         {
             return Result<OrchestratorDecision, string>.Failure(
                 "No models registered with orchestrator");
         }
 
         // Score each model
-        var scoredModels = _capabilities.Values
+        var scoredModels = this.capabilities.Values
             .Select(cap => new
             {
                 Capability = cap,
-                Score = ScoreModel(cap, useCase)
+                Score = this.ScoreModel(cap, useCase),
             })
             .OrderByDescending(x => x.Score)
             .ToList();
@@ -195,10 +208,10 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         var best = scoredModels.First();
 
         // Get model instance or create fallback
-        if (!_models.TryGetValue(best.Capability.ModelName, out var model))
+        if (!this.models.TryGetValue(best.Capability.ModelName, out var model))
         {
             // If model not registered, try fallback
-            if (_models.TryGetValue(_fallbackModel, out var fallback))
+            if (this.models.TryGetValue(this.fallbackModel, out var fallback))
             {
                 model = fallback;
             }
@@ -210,12 +223,12 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         }
 
         // Select appropriate tools for the use case
-        var recommendedTools = SelectToolsForUseCase(useCase);
+        var recommendedTools = this.SelectToolsForUseCase(useCase);
 
         var decision = new OrchestratorDecision(
             SelectedModel: model,
             ModelName: best.Capability.ModelName,
-            Reason: GenerateSelectionReason(best.Capability, useCase, best.Score),
+            Reason: this.GenerateSelectionReason(best.Capability, useCase, best.Score),
             RecommendedTools: recommendedTools,
             ConfidenceScore: best.Score);
 
@@ -238,7 +251,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
             UseCaseType.Creative => capability.Type == ModelType.Creative ? 1.0 : 0.5,
             UseCaseType.Summarization => capability.Type == ModelType.Summary ? 1.0 : 0.5,
             UseCaseType.Analysis => capability.Type == ModelType.Analysis ? 1.0 : 0.4,
-            _ => capability.Type == ModelType.General ? 1.0 : 0.6
+            _ => capability.Type == ModelType.General ? 1.0 : 0.6,
         };
         score += typeScore * 0.4;
 
@@ -250,7 +263,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         score += capabilityScore * 0.3;
 
         // Performance metrics
-        if (_metrics.TryGetValue(capability.ModelName, out var metrics))
+        if (this.metrics.TryGetValue(capability.ModelName, out var metrics))
         {
             var performanceScore = metrics.SuccessRate *
                 (1.0 - Math.Min(metrics.AverageLatencyMs / 10000.0, 0.9));
@@ -266,7 +279,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
     private ToolRegistry SelectToolsForUseCase(UseCase useCase)
     {
         // Start with base tools
-        var tools = _baseTools;
+        var tools = this.baseTools;
 
         // Add specialized tools based on use case
         return useCase.Type switch
@@ -276,7 +289,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
             UseCaseType.Creative => tools,
             UseCaseType.Summarization => tools,
             UseCaseType.ToolUse => tools,
-            _ => tools
+            _ => tools,
         };
     }
 
@@ -292,10 +305,10 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         {
             $"Use case: {useCase.Type}",
             $"Model type: {capability.Type}",
-            $"Confidence: {score:P0}"
+            $"Confidence: {score:P0}",
         };
 
-        if (_metrics.TryGetValue(capability.ModelName, out var metrics))
+        if (this.metrics.TryGetValue(capability.ModelName, out var metrics))
         {
             reasons.Add($"Success rate: {metrics.SuccessRate:P0}");
             reasons.Add($"Avg latency: {metrics.AverageLatencyMs:F0}ms");
@@ -324,8 +337,9 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
     /// </summary>
     public void RecordMetric(string resourceName, double latencyMs, bool success)
     {
-        _metrics.AddOrUpdate(
+        this.metrics.AddOrUpdate(
             resourceName,
+
             // Add new
             _ => new PerformanceMetrics(
                 resourceName,
@@ -334,6 +348,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
                 SuccessRate: success ? 1.0 : 0.0,
                 LastUsed: DateTime.UtcNow,
                 CustomMetrics: new Dictionary<string, double>()),
+
             // Update existing
             (_, existing) =>
             {
@@ -354,6 +369,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
     /// <summary>
     /// Gets all current performance metrics.
     /// </summary>
+    /// <returns></returns>
     public IReadOnlyDictionary<string, PerformanceMetrics> GetMetrics()
-        => new Dictionary<string, PerformanceMetrics>(_metrics);
+        => new Dictionary<string, PerformanceMetrics>(this.metrics);
 }

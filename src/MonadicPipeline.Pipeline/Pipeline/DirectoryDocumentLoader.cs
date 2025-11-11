@@ -1,6 +1,10 @@
-using LangChain.DocumentLoaders;
+// <copyright file="DirectoryDocumentLoader.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Pipeline.Ingestion;
+
+using LangChain.DocumentLoaders;
 
 /// <summary>
 /// Directory-aware document loader that enumerates all files under a directory (optionally recursively)
@@ -8,28 +12,31 @@ namespace LangChainPipeline.Pipeline.Ingestion;
 /// This works around loaders that only accept a single file DataSource.
 /// </summary>
 /// <typeparam name="TInner">Concrete file loader implementing IDocumentLoader for single files.</typeparam>
-public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInner : IDocumentLoader, new()
+public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader
+    where TInner : IDocumentLoader, new()
 {
-    private readonly bool _recursive;
-    private readonly string[] _fileGlobs;
-    private readonly HashSet<string>? _allowedExtensions;
-    private readonly HashSet<string>? _excludeDirs;
-    private readonly long? _maxFileBytes;
-    private readonly bool _useCache;
-    private readonly DirectoryIngestionCache? _cache;
+    private readonly bool recursive;
+    private readonly string[] fileGlobs;
+    private readonly HashSet<string>? allowedExtensions;
+    private readonly HashSet<string>? excludeDirs;
+    private readonly long? maxFileBytes;
+    private readonly bool useCache;
+    private readonly DirectoryIngestionCache? cache;
 
     public DirectoryDocumentLoader(bool recursive = true, params string[] fileGlobs)
-        : this(new DirectoryIngestionOptions { Recursive = recursive, Patterns = fileGlobs }) { }
+        : this(new DirectoryIngestionOptions { Recursive = recursive, Patterns = fileGlobs })
+    {
+    }
 
     public DirectoryDocumentLoader(DirectoryIngestionOptions options)
     {
-        _recursive = options.Recursive;
-        _fileGlobs = (options.Patterns is { Length: > 0 }) ? options.Patterns : ["*"];
-        _allowedExtensions = options.Extensions?.Length > 0 ? [.. options.Extensions.Select(e => e.StartsWith('.') ? e.ToLowerInvariant() : "." + e.ToLowerInvariant())] : null;
-        _excludeDirs = options.ExcludeDirectories?.Length > 0 ? [.. options.ExcludeDirectories.Select(d => d.ToLowerInvariant())] : null;
-        _maxFileBytes = options.MaxFileBytes > 0 ? options.MaxFileBytes : null;
-        _useCache = !options.DisableCache;
-        _cache = _useCache ? new DirectoryIngestionCache(options.CacheFilePath) : null;
+        this.recursive = options.Recursive;
+        this.fileGlobs = (options.Patterns is { Length: > 0 }) ? options.Patterns : ["*"];
+        this.allowedExtensions = options.Extensions?.Length > 0 ? [.. options.Extensions.Select(e => e.StartsWith('.') ? e.ToLowerInvariant() : "." + e.ToLowerInvariant())] : null;
+        this.excludeDirs = options.ExcludeDirectories?.Length > 0 ? [.. options.ExcludeDirectories.Select(d => d.ToLowerInvariant())] : null;
+        this.maxFileBytes = options.MaxFileBytes > 0 ? options.MaxFileBytes : null;
+        this.useCache = !options.DisableCache;
+        this.cache = this.useCache ? new DirectoryIngestionCache(options.CacheFilePath) : null;
     }
 
     /// <inheritdoc/>
@@ -39,7 +46,9 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
         CancellationToken cancellationToken = default)
     {
         if (source.Value is not string path)
+        {
             throw new ArgumentException("DataSource must contain a path string for directory loading");
+        }
 
         if (File.Exists(path))
         {
@@ -48,46 +57,73 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
         }
 
         if (!Directory.Exists(path))
+        {
             throw new DirectoryNotFoundException($"Directory '{path}' not found");
+        }
 
         var docs = new List<Document>();
         var debug = Environment.GetEnvironmentVariable("MONADIC_DEBUG") == "1";
         var start = DateTime.UtcNow;
-        var dirEnumOption = _recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var stats = _optionsStats ?? new DirectoryIngestionStats();
-        foreach (var pattern in _fileGlobs)
+        var dirEnumOption = this.recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        var stats = this.optionsStats ?? new DirectoryIngestionStats();
+        foreach (var pattern in this.fileGlobs)
         {
             foreach (var file in Directory.EnumerateFiles(path, pattern, dirEnumOption))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+
                 // Directory exclusion
-                if (_excludeDirs is not null)
+                if (this.excludeDirs is not null)
                 {
                     var rel = Path.GetRelativePath(path, Path.GetDirectoryName(file)!);
                     var parts = rel.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                    if (parts.Any(p => _excludeDirs.Contains(p.ToLowerInvariant()))) continue;
+                    if (parts.Any(p => this.excludeDirs.Contains(p.ToLowerInvariant())))
+                    {
+                        continue;
+                    }
                 }
+
                 // Size filter
-                if (_maxFileBytes is not null)
+                if (this.maxFileBytes is not null)
                 {
                     try
                     {
                         var info = new FileInfo(file);
-                        if (info.Length > _maxFileBytes) continue;
+                        if (info.Length > this.maxFileBytes)
+                        {
+                            continue;
+                        }
                     }
-                    catch { /* ignore */ }
+                    catch
+                    { /* ignore */
+                    }
                 }
+
                 // Extension filter
-                if (_allowedExtensions is not null)
+                if (this.allowedExtensions is not null)
                 {
                     var ext = Path.GetExtension(file).ToLowerInvariant();
-                    if (!_allowedExtensions.Contains(ext)) continue;
+                    if (!this.allowedExtensions.Contains(ext))
+                    {
+                        continue;
+                    }
                 }
+
                 bool skipByCache = false;
-                if (_useCache && _cache is not null)
+                if (this.useCache && this.cache is not null)
                 {
-                    if (_cache.IsUnchanged(file)) { stats.SkippedUnchanged++; if (debug) Console.WriteLine($"[ingest] skip unchanged {file}"); continue; }
+                    if (this.cache.IsUnchanged(file))
+                    {
+                        stats.SkippedUnchanged++;
+                        if (debug)
+                        {
+                            Console.WriteLine($"[ingest] skip unchanged {file}");
+                        }
+
+                        continue;
+                    }
                 }
+
                 try
                 {
                     var fileSource = DataSource.FromPath(file);
@@ -99,21 +135,33 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
                         var meta = new Dictionary<string, object>(metaBase)
                         {
                             ["directoryRoot"] = path,
-                            ["relativePath"] = Path.GetRelativePath(path, file)
+                            ["relativePath"] = Path.GetRelativePath(path, file),
                         };
                         docs.Add(new Document
                         {
                             PageContent = d.PageContent,
-                            Metadata = meta
+                            Metadata = meta,
                         });
                         stats.FilesLoaded++;
                     }
-                    if (_useCache && _cache is not null && !skipByCache) _cache.UpdateHash(file);
-                    if (debug) Console.WriteLine($"[ingest] loaded {file} docs={loaded.Count}");
+
+                    if (this.useCache && this.cache is not null && !skipByCache)
+                    {
+                        this.cache.UpdateHash(file);
+                    }
+
+                    if (debug)
+                    {
+                        Console.WriteLine($"[ingest] loaded {file} docs={loaded.Count}");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    if (debug) Console.WriteLine($"[ingest] error {file} {ex.Message}");
+                    if (debug)
+                    {
+                        Console.WriteLine($"[ingest] error {file} {ex.Message}");
+                    }
+
                     docs.Add(new Document
                     {
                         PageContent = string.Empty,
@@ -121,71 +169,100 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
                         {
                             ["error"] = ex.Message,
                             ["path"] = file
-                        }
+                        },
                     });
                     stats.Errors++;
                 }
             }
         }
-        if (_useCache) _cache?.Persist();
+
+        if (this.useCache)
+        {
+            this.cache?.Persist();
+        }
+
         if (stats != null)
         {
             stats.Elapsed = DateTime.UtcNow - start;
-            if (debug) Console.WriteLine($"[ingest] summary {stats}");
+            if (debug)
+            {
+                Console.WriteLine($"[ingest] summary {stats}");
+            }
         }
+
         return docs;
     }
 
     // internal hook to pass stats object without altering interface signature
-    private DirectoryIngestionStats? _optionsStats;
-    public void AttachStats(DirectoryIngestionStats stats) => _optionsStats = stats;
+    private DirectoryIngestionStats? optionsStats;
+
+    public void AttachStats(DirectoryIngestionStats stats) => this.optionsStats = stats;
 }
 
 public sealed class DirectoryIngestionOptions
 {
     public bool Recursive { get; set; } = true;
+
     public string[] Patterns { get; set; } = Array.Empty<string>();
+
     public string[]? Extensions { get; set; }
+
     public string[]? ExcludeDirectories { get; set; }
+
     public long MaxFileBytes { get; set; } = 0;
+
     public bool DisableCache { get; set; }
+
     public string CacheFilePath { get; set; } = ".monadic_ingest_cache.json";
+
     public int ChunkSize { get; set; } = 2000;
+
     public int ChunkOverlap { get; set; } = 200;
 }
 
 public sealed class DirectoryIngestionStats
 {
     public int FilesLoaded { get; set; }
+
     public int SkippedUnchanged { get; set; }
+
     public int Errors { get; set; }
+
     public int VectorsProduced { get; set; }
+
     public TimeSpan Elapsed { get; set; }
+
     /// <inheritdoc/>
-    public override string ToString() => $"files={FilesLoaded} skipped={SkippedUnchanged} errors={Errors} vectors={VectorsProduced} elapsed={Elapsed.TotalMilliseconds:F0}ms";
+    public override string ToString() => $"files={this.FilesLoaded} skipped={this.SkippedUnchanged} errors={this.Errors} vectors={this.VectorsProduced} elapsed={this.Elapsed.TotalMilliseconds:F0}ms";
 }
 
 internal sealed class DirectoryIngestionCache
 {
-    private readonly string _path;
-    private readonly Dictionary<string, string> _hashes = new(StringComparer.OrdinalIgnoreCase);
-    private bool _dirty;
+    private readonly string path;
+    private readonly Dictionary<string, string> hashes = new(StringComparer.OrdinalIgnoreCase);
+    private bool dirty;
+
     public DirectoryIngestionCache(string path)
     {
-        _path = Path.GetFullPath(path);
+        this.path = Path.GetFullPath(path);
         try
         {
-            if (File.Exists(_path))
+            if (File.Exists(this.path))
             {
-                var json = File.ReadAllText(_path);
+                var json = File.ReadAllText(this.path);
                 var loaded = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
                 if (loaded is not null)
                 {
-                    foreach (var kv in loaded) _hashes[kv.Key] = kv.Value;
+                    foreach (var kv in loaded)
+                    {
+                        this.hashes[kv.Key] = kv.Value;
+                    }
                 }
             }
         }
-        catch { /* ignore cache load issues */ }
+        catch
+        { /* ignore cache load issues */
+        }
     }
 
     public bool IsUnchanged(string file)
@@ -193,10 +270,17 @@ internal sealed class DirectoryIngestionCache
         try
         {
             var h = ComputeHash(file);
-            if (_hashes.TryGetValue(file, out var existing) && existing == h) return true;
+            if (this.hashes.TryGetValue(file, out var existing) && existing == h)
+            {
+                return true;
+            }
+
             return false;
         }
-        catch { return false; }
+        catch
+        {
+            return false;
+        }
     }
 
     public void UpdateHash(string file)
@@ -204,22 +288,30 @@ internal sealed class DirectoryIngestionCache
         try
         {
             var h = ComputeHash(file);
-            _hashes[file] = h;
-            _dirty = true;
+            this.hashes[file] = h;
+            this.dirty = true;
         }
-        catch { }
+        catch
+        {
+        }
     }
 
     public void Persist()
     {
-        if (!_dirty) return;
+        if (!this.dirty)
+        {
+            return;
+        }
+
         try
         {
-            var json = System.Text.Json.JsonSerializer.Serialize(_hashes);
-            File.WriteAllText(_path, json);
-            _dirty = false;
+            var json = System.Text.Json.JsonSerializer.Serialize(this.hashes);
+            File.WriteAllText(this.path, json);
+            this.dirty = false;
         }
-        catch { }
+        catch
+        {
+        }
     }
 
     private static string ComputeHash(string file)

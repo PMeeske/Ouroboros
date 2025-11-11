@@ -1,6 +1,6 @@
-// ==========================================================
-// Safety Guard - Permission-based safe execution
-// ==========================================================
+// <copyright file="ISafetyGuard.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -46,7 +46,7 @@ public enum PermissionLevel
     /// <summary>
     /// Unrestricted access (use with extreme caution).
     /// </summary>
-    Unrestricted
+    Unrestricted,
 }
 
 /// <summary>
@@ -67,10 +67,10 @@ public interface ISafetyGuard
     /// <summary>
     /// Checks if an operation is safe to execute.
     /// </summary>
-    /// <param name="operation">The operation to check</param>
-    /// <param name="parameters">Operation parameters</param>
-    /// <param name="currentLevel">Current permission level</param>
-    /// <returns>Safety check result</returns>
+    /// <param name="operation">The operation to check.</param>
+    /// <param name="parameters">Operation parameters.</param>
+    /// <param name="currentLevel">Current permission level.</param>
+    /// <returns>Safety check result.</returns>
     SafetyCheckResult CheckSafety(
         string operation,
         Dictionary<string, object> parameters,
@@ -79,10 +79,10 @@ public interface ISafetyGuard
     /// <summary>
     /// Validates tool execution is permitted.
     /// </summary>
-    /// <param name="toolName">The tool to execute</param>
-    /// <param name="arguments">Tool arguments</param>
-    /// <param name="currentLevel">Current permission level</param>
-    /// <returns>True if permitted, false otherwise</returns>
+    /// <param name="toolName">The tool to execute.</param>
+    /// <param name="arguments">Tool arguments.</param>
+    /// <param name="currentLevel">Current permission level.</param>
+    /// <returns>True if permitted, false otherwise.</returns>
     bool IsToolExecutionPermitted(
         string toolName,
         string arguments,
@@ -91,25 +91,26 @@ public interface ISafetyGuard
     /// <summary>
     /// Sandboxes a plan step for safe execution.
     /// </summary>
-    /// <param name="step">The plan step to sandbox</param>
-    /// <returns>Sandboxed step with safety restrictions applied</returns>
+    /// <param name="step">The plan step to sandbox.</param>
+    /// <returns>Sandboxed step with safety restrictions applied.</returns>
     PlanStep SandboxStep(PlanStep step);
 
     /// <summary>
     /// Gets required permission level for an action.
     /// </summary>
-    /// <param name="action">The action to check</param>
-    /// <returns>Required permission level</returns>
+    /// <param name="action">The action to check.</param>
+    /// <returns>Required permission level.</returns>
     PermissionLevel GetRequiredPermission(string action);
 
     /// <summary>
     /// Registers a permission policy.
     /// </summary>
-    /// <param name="permission">The permission to register</param>
+    /// <param name="permission">The permission to register.</param>
     void RegisterPermission(Permission permission);
 
     /// <summary>
     /// Gets all registered permissions.
     /// </summary>
+    /// <returns></returns>
     IReadOnlyList<Permission> GetPermissions();
 }

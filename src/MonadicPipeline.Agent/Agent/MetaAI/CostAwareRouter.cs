@@ -1,6 +1,6 @@
-// ==========================================================
-// Cost-Aware Router - Balance quality vs. cost
-// ==========================================================
+// <copyright file="CostAwareRouter.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -39,7 +39,7 @@ public enum CostOptimizationStrategy
     MinimizeCost,
     MaximizeQuality,
     Balanced,
-    MaximizeValue // Best quality per cost
+    MaximizeValue, // Best quality per cost
 }
 
 /// <summary>
@@ -50,6 +50,7 @@ public interface ICostAwareRouter
     /// <summary>
     /// Routes a task considering cost and quality tradeoffs.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<CostBenefitAnalysis, string>> RouteWithCostAwarenessAsync(
         string task,
         Dictionary<string, object>? context = null,
@@ -59,11 +60,13 @@ public interface ICostAwareRouter
     /// <summary>
     /// Estimates the cost of executing a plan.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<double> EstimatePlanCostAsync(Plan plan, CancellationToken ct = default);
 
     /// <summary>
     /// Optimizes a plan to reduce cost while maintaining quality.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<Plan, string>> OptimizePlanForCostAsync(
         Plan plan,
         CostAwareRoutingConfig config,
@@ -80,24 +83,25 @@ public interface ICostAwareRouter
 /// </summary>
 public sealed class CostAwareRouter : ICostAwareRouter
 {
-    private readonly IUncertaintyRouter _uncertaintyRouter;
-    private readonly IMetaAIPlannerOrchestrator _orchestrator;
-    private readonly Dictionary<string, CostInfo> _costRegistry = new();
+    private readonly IUncertaintyRouter uncertaintyRouter;
+    private readonly IMetaAIPlannerOrchestrator orchestrator;
+    private readonly Dictionary<string, CostInfo> costRegistry = new();
 
     public CostAwareRouter(
         IUncertaintyRouter uncertaintyRouter,
         IMetaAIPlannerOrchestrator orchestrator)
     {
-        _uncertaintyRouter = uncertaintyRouter ?? throw new ArgumentNullException(nameof(uncertaintyRouter));
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        this.uncertaintyRouter = uncertaintyRouter ?? throw new ArgumentNullException(nameof(uncertaintyRouter));
+        this.orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
 
         // Register default costs
-        RegisterDefaultCosts();
+        this.RegisterDefaultCosts();
     }
 
     /// <summary>
     /// Routes a task considering cost and quality tradeoffs.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<CostBenefitAnalysis, string>> RouteWithCostAwarenessAsync(
         string task,
         Dictionary<string, object>? context = null,
@@ -109,7 +113,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
         try
         {
             // Get uncertainty-based routing
-            var routingResult = await _uncertaintyRouter.RouteAsync(task, context, ct);
+            var routingResult = await this.uncertaintyRouter.RouteAsync(task, context, ct);
 
             if (!routingResult.IsSuccess)
             {
@@ -119,21 +123,21 @@ public sealed class CostAwareRouter : ICostAwareRouter
             var decision = routingResult.Value;
 
             // Get cost info for the route
-            var costInfo = GetCostInfoForRoute(decision.Route);
+            var costInfo = this.GetCostInfoForRoute(decision.Route);
 
             // Estimate cost and quality
-            var estimatedCost = CalculateEstimatedCost(task, costInfo);
+            var estimatedCost = this.CalculateEstimatedCost(task, costInfo);
             var estimatedQuality = decision.Confidence * costInfo.EstimatedQuality;
 
             // Check constraints
             if (estimatedCost > config.MaxCostPerPlan)
             {
                 // Try to find cheaper alternative
-                var cheaperRoute = FindCheaperRoute(config.MaxCostPerPlan, config.MinAcceptableQuality);
+                var cheaperRoute = this.FindCheaperRoute(config.MaxCostPerPlan, config.MinAcceptableQuality);
                 if (cheaperRoute != null)
                 {
                     costInfo = cheaperRoute;
-                    estimatedCost = CalculateEstimatedCost(task, costInfo);
+                    estimatedCost = this.CalculateEstimatedCost(task, costInfo);
                     estimatedQuality = costInfo.EstimatedQuality;
                 }
                 else
@@ -150,7 +154,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
             }
 
             // Calculate value score based on strategy
-            var valueScore = CalculateValueScore(estimatedCost, estimatedQuality, config.Strategy);
+            var valueScore = this.CalculateValueScore(estimatedCost, estimatedQuality, config.Strategy);
 
             var analysis = new CostBenefitAnalysis(
                 costInfo.ResourceId,
@@ -170,16 +174,17 @@ public sealed class CostAwareRouter : ICostAwareRouter
     /// <summary>
     /// Estimates the cost of executing a plan.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<double> EstimatePlanCostAsync(Plan plan, CancellationToken ct = default)
     {
         double totalCost = 0;
 
         foreach (var step in plan.Steps)
         {
-            var costInfo = GetCostInfoForRoute(step.Action);
+            var costInfo = this.GetCostInfoForRoute(step.Action);
 
             // Estimate tokens (simplified)
-            var estimatedTokens = EstimateTokenCount(step);
+            var estimatedTokens = this.EstimateTokenCount(step);
 
             totalCost += costInfo.CostPerRequest;
             totalCost += costInfo.CostPerToken * estimatedTokens;
@@ -191,6 +196,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
     /// <summary>
     /// Optimizes a plan to reduce cost while maintaining quality.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<Plan, string>> OptimizePlanForCostAsync(
         Plan plan,
         CostAwareRoutingConfig config,
@@ -198,7 +204,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
     {
         try
         {
-            var currentCost = await EstimatePlanCostAsync(plan, ct);
+            var currentCost = await this.EstimatePlanCostAsync(plan, ct);
 
             if (currentCost <= config.MaxCostPerPlan)
             {
@@ -212,8 +218,8 @@ public sealed class CostAwareRouter : ICostAwareRouter
             foreach (var step in plan.Steps)
             {
                 // Check if we can use a cheaper alternative
-                var currentCostInfo = GetCostInfoForRoute(step.Action);
-                var cheaperInfo = FindCheaperRoute(
+                var currentCostInfo = this.GetCostInfoForRoute(step.Action);
+                var cheaperInfo = this.FindCheaperRoute(
                     currentCostInfo.CostPerRequest * 0.8, // 20% cheaper
                     config.MinAcceptableQuality);
 
@@ -223,7 +229,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
                     optimizedSteps.Add(step with
                     {
                         Action = cheaperInfo.ResourceId,
-                        ConfidenceScore = step.ConfidenceScore * 0.9 // Slight confidence reduction
+                        ConfidenceScore = step.ConfidenceScore * 0.9, // Slight confidence reduction
                     });
                 }
                 else
@@ -238,7 +244,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
                 plan.ConfidenceScores,
                 DateTime.UtcNow);
 
-            var newCost = await EstimatePlanCostAsync(optimizedPlan, ct);
+            var newCost = await this.EstimatePlanCostAsync(optimizedPlan, ct);
 
             if (newCost > config.MaxCostPerPlan)
             {
@@ -260,29 +266,29 @@ public sealed class CostAwareRouter : ICostAwareRouter
     public void RegisterCostInfo(CostInfo costInfo)
     {
         ArgumentNullException.ThrowIfNull(costInfo);
-        _costRegistry[costInfo.ResourceId] = costInfo;
+        this.costRegistry[costInfo.ResourceId] = costInfo;
     }
 
     private void RegisterDefaultCosts()
     {
         // Default cost information (example values)
-        RegisterCostInfo(new CostInfo("gpt-4", 0.00003, 0.01, 0.95));
-        RegisterCostInfo(new CostInfo("gpt-3.5-turbo", 0.000001, 0.001, 0.80));
-        RegisterCostInfo(new CostInfo("llama3", 0.0000005, 0.0001, 0.75));
-        RegisterCostInfo(new CostInfo("codellama", 0.0000005, 0.0001, 0.85));
-        RegisterCostInfo(new CostInfo("default", 0.000001, 0.001, 0.70));
+        this.RegisterCostInfo(new CostInfo("gpt-4", 0.00003, 0.01, 0.95));
+        this.RegisterCostInfo(new CostInfo("gpt-3.5-turbo", 0.000001, 0.001, 0.80));
+        this.RegisterCostInfo(new CostInfo("llama3", 0.0000005, 0.0001, 0.75));
+        this.RegisterCostInfo(new CostInfo("codellama", 0.0000005, 0.0001, 0.85));
+        this.RegisterCostInfo(new CostInfo("default", 0.000001, 0.001, 0.70));
     }
 
     private CostInfo GetCostInfoForRoute(string route)
     {
-        return _costRegistry.TryGetValue(route, out var info)
+        return this.costRegistry.TryGetValue(route, out var info)
             ? info
-            : _costRegistry["default"];
+            : this.costRegistry["default"];
     }
 
     private CostInfo? FindCheaperRoute(double maxCost, double minQuality)
     {
-        return _costRegistry.Values
+        return this.costRegistry.Values
             .Where(ci => ci.CostPerRequest <= maxCost && ci.EstimatedQuality >= minQuality)
             .OrderBy(ci => ci.CostPerRequest)
             .FirstOrDefault();
@@ -313,7 +319,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
             CostOptimizationStrategy.MaximizeQuality => quality,
             CostOptimizationStrategy.MaximizeValue => quality / (cost + 0.001), // Quality per cost
             CostOptimizationStrategy.Balanced => (quality + (1.0 / (cost + 0.001))) / 2.0,
-            _ => quality / (cost + 0.001)
+            _ => quality / (cost + 0.001),
         };
     }
 }

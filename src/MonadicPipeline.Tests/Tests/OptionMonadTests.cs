@@ -1,8 +1,12 @@
+// <copyright file="OptionMonadTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChainPipeline.Core.Monads;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for the Option monad implementation.
@@ -120,8 +124,7 @@ public class OptionMonadTests
         // Act
         var output = option.Match(
             func: x => $"Value: {x}",
-            defaultValue: "No value"
-        );
+            defaultValue: "No value");
 
         // Assert
         output.Should().Be("Value: 42");
@@ -136,8 +139,7 @@ public class OptionMonadTests
         // Act
         var output = option.Match(
             func: x => $"Value: {x}",
-            defaultValue: "No value"
-        );
+            defaultValue: "No value");
 
         // Assert
         output.Should().Be("No value");
@@ -153,9 +155,9 @@ public class OptionMonadTests
 
         // Act
         option.Match(
-            onSome: x => { wasCalled = true; value = x; },
-            onNone: () => { wasCalled = false; }
-        );
+            onSome: x => { wasCalled = true;
+                value = x; },
+            onNone: () => { wasCalled = false; });
 
         // Assert
         wasCalled.Should().BeTrue();
@@ -172,8 +174,7 @@ public class OptionMonadTests
         // Act
         option.Match(
             onSome: x => { },
-            onNone: () => { wasNoneCalled = true; }
-        );
+            onNone: () => { wasNoneCalled = true; });
 
         // Assert
         wasNoneCalled.Should().BeTrue();
@@ -233,7 +234,9 @@ public class OptionMonadTests
 
         left.HasValue.Should().Be(right.HasValue);
         if (left.HasValue)
+        {
             left.Value.Should().Be(right.Value);
+        }
     }
 
     [Fact]
@@ -249,6 +252,8 @@ public class OptionMonadTests
 
         left.HasValue.Should().Be(right.HasValue);
         if (left.HasValue)
+        {
             left.Value.Should().Be(right.Value);
+        }
     }
 }

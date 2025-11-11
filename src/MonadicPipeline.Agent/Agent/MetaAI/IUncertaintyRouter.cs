@@ -1,6 +1,6 @@
-// ==========================================================
-// Uncertainty-Aware Router - Route based on confidence
-// ==========================================================
+// <copyright file="IUncertaintyRouter.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -41,7 +41,7 @@ public enum FallbackStrategy
     /// <summary>
     /// Retrieve more context before deciding.
     /// </summary>
-    GatherMoreContext
+    GatherMoreContext,
 }
 
 /// <summary>
@@ -53,10 +53,10 @@ public interface IUncertaintyRouter
     /// <summary>
     /// Routes a task based on confidence analysis.
     /// </summary>
-    /// <param name="task">The task to route</param>
-    /// <param name="context">Optional context information</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Routing decision with confidence score</returns>
+    /// <param name="task">The task to route.</param>
+    /// <param name="context">Optional context information.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Routing decision with confidence score.</returns>
     Task<Result<RoutingDecision, string>> RouteAsync(
         string task,
         Dictionary<string, object>? context = null,
@@ -65,18 +65,18 @@ public interface IUncertaintyRouter
     /// <summary>
     /// Determines fallback strategy for low-confidence scenarios.
     /// </summary>
-    /// <param name="task">The task being routed</param>
-    /// <param name="confidence">The confidence score (0-1)</param>
-    /// <returns>Recommended fallback strategy</returns>
+    /// <param name="task">The task being routed.</param>
+    /// <param name="confidence">The confidence score (0-1).</param>
+    /// <returns>Recommended fallback strategy.</returns>
     FallbackStrategy DetermineFallback(string task, double confidence);
 
     /// <summary>
     /// Calculates confidence for a given decision.
     /// </summary>
-    /// <param name="task">The task to assess</param>
-    /// <param name="route">The proposed route</param>
-    /// <param name="context">Optional context</param>
-    /// <returns>Confidence score between 0 and 1</returns>
+    /// <param name="task">The task to assess.</param>
+    /// <param name="route">The proposed route.</param>
+    /// <param name="context">Optional context.</param>
+    /// <returns>Confidence score between 0 and 1.</returns>
     Task<double> CalculateConfidenceAsync(
         string task,
         string route,
@@ -91,7 +91,7 @@ public interface IUncertaintyRouter
     /// <summary>
     /// Updates routing performance metrics.
     /// </summary>
-    /// <param name="decision">The routing decision made</param>
-    /// <param name="success">Whether the routing was successful</param>
+    /// <param name="decision">The routing decision made.</param>
+    /// <param name="success">Whether the routing was successful.</param>
     void RecordRoutingOutcome(RoutingDecision decision, bool success);
 }

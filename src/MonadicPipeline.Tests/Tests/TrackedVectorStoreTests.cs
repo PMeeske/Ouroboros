@@ -1,8 +1,12 @@
+// <copyright file="TrackedVectorStoreTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChain.Databases;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for the TrackedVectorStore fix to verify the PR issues are resolved.
@@ -21,7 +25,7 @@ public class TrackedVectorStoreTests
                 Id = "test1",
                 Text = "This is a test document",
                 Embedding = [1f, 0f, 0f],
-                Metadata = new Dictionary<string, object> { ["type"] = "test" }
+                Metadata = new Dictionary<string, object> { ["type"] = "test" },
             },
             new()
             {
@@ -29,7 +33,7 @@ public class TrackedVectorStoreTests
                 Text = "Another test document",
                 Embedding = [0f, 1f, 0f],
                 Metadata = new Dictionary<string, object> { ["type"] = "test" }
-            }
+            },
         };
 
         // Act
@@ -54,7 +58,7 @@ public class TrackedVectorStoreTests
                 Id = "doc1",
                 Text = "Machine learning is fascinating",
                 Embedding = [1f, 0.5f, 0f],
-                Metadata = new Dictionary<string, object> { ["category"] = "ai" }
+                Metadata = new Dictionary<string, object> { ["category"] = "ai" },
             },
             new()
             {
@@ -62,7 +66,7 @@ public class TrackedVectorStoreTests
                 Text = "Cooking recipes are useful",
                 Embedding = [0f, 0f, 1f],
                 Metadata = new Dictionary<string, object> { ["category"] = "cooking" }
-            }
+            },
         };
 
         await store.AddAsync(vectors);
@@ -85,7 +89,7 @@ public class TrackedVectorStoreTests
         {
             Id = "clear-test",
             Text = "Document to be cleared",
-            Embedding = [1f, 1f, 1f]
+            Embedding = [1f, 1f, 1f],
         };
 
         await store.AddAsync(new[] { vector });

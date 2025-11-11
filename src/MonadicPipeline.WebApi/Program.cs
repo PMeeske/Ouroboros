@@ -1,3 +1,7 @@
+// <copyright file="Program.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 using System.Diagnostics;
 using Microsoft.OpenApi.Models;
 
@@ -11,7 +15,7 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "MonadicPipeline API",
         Version = "v1",
-        Description = "Kubernetes-friendly ASP.NET Core Web API for MonadicPipeline - A functional programming-based AI pipeline system"
+        Description = "Kubernetes-friendly ASP.NET Core Web API for MonadicPipeline - A functional programming-based AI pipeline system",
     });
 });
 
@@ -73,7 +77,7 @@ app.MapGet("/", () => Results.Ok(new
         isLocalDevelopment = LangChainPipeline.Core.EnvironmentDetector.IsLocalDevelopment(),
         isProduction = LangChainPipeline.Core.EnvironmentDetector.IsProduction(),
         isStaging = LangChainPipeline.Core.EnvironmentDetector.IsStaging(),
-        isKubernetes = LangChainPipeline.Core.EnvironmentDetector.IsRunningInKubernetes()
+        isKubernetes = LangChainPipeline.Core.EnvironmentDetector.IsRunningInKubernetes(),
     },
     endpoints = new[]
     {
@@ -82,7 +86,7 @@ app.MapGet("/", () => Results.Ok(new
         "/api/ask - Ask a question to the AI",
         "/api/pipeline - Execute a pipeline DSL",
         "/swagger - API documentation"
-    }
+    },
 }))
 .WithName("Root")
 .WithTags("System")
@@ -101,7 +105,7 @@ app.MapPost("/api/ask", async (AskRequest request, IPipelineService service, Can
             new AskResponse
             {
                 Answer = answer,
-                Model = request.Model ?? "llama3"
+                Model = request.Model ?? "llama3",
             },
             sw.ElapsedMilliseconds));
     }
@@ -134,7 +138,7 @@ app.MapPost("/api/pipeline", async (PipelineRequest request, IPipelineService se
             new PipelineResponse
             {
                 Result = result,
-                FinalState = "Completed"
+                FinalState = "Completed",
             },
             sw.ElapsedMilliseconds));
     }
@@ -155,4 +159,3 @@ app.MapPost("/api/pipeline", async (PipelineRequest request, IPipelineService se
 .Produces<ApiResponse<PipelineResponse>>(400);
 
 app.Run();
-

@@ -1,3 +1,7 @@
+// <copyright file="CSharpHashVectorizer.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Infrastructure.FeatureEngineering;
 
 using System;
@@ -16,8 +20,8 @@ using System.Threading.Tasks;
 /// </summary>
 public sealed class CSharpHashVectorizer
 {
-    private readonly int _dimension;
-    private readonly bool _lowercase;
+    private readonly int dimension;
+    private readonly bool lowercase;
     private static readonly Regex TokenPattern = new(@"\b\w+\b", RegexOptions.Compiled);
     private static readonly HashSet<string> CSharpKeywords = new()
     {
@@ -30,7 +34,7 @@ public sealed class CSharpHashVectorizer
         "protected", "public", "readonly", "ref", "return", "sbyte", "sealed",
         "short", "sizeof", "stackalloc", "static", "string", "struct", "switch",
         "this", "throw", "true", "try", "typeof", "uint", "ulong", "unchecked",
-        "unsafe", "ushort", "using", "virtual", "void", "volatile", "while"
+        "unsafe", "ushort", "using", "virtual", "void", "volatile", "while",
     };
 
     /// <summary>
@@ -54,15 +58,15 @@ public sealed class CSharpHashVectorizer
                 nameof(dimension));
         }
 
-        _dimension = dimension;
-        _lowercase = lowercase;
+        this.dimension = dimension;
+        this.lowercase = lowercase;
     }
 
     /// <summary>
     /// Transforms a C# source file into a dense hash vector.
     /// </summary>
     /// <param name="path">Path to the C# source file.</param>
-    /// <returns>A dense float vector of length <see cref="_dimension"/>.</returns>
+    /// <returns>A dense float vector of length <see cref="dimension"/>.</returns>
     /// <exception cref="FileNotFoundException">Thrown when the file does not exist.</exception>
     /// <exception cref="IOException">Thrown when the file cannot be read.</exception>
     public float[] TransformFile(string path)
@@ -73,7 +77,7 @@ public sealed class CSharpHashVectorizer
         }
 
         var code = File.ReadAllText(path);
-        return TransformCode(code);
+        return this.TransformCode(code);
     }
 
     /// <summary>
@@ -88,14 +92,14 @@ public sealed class CSharpHashVectorizer
             throw new ArgumentNullException(nameof(paths));
         }
 
-        return paths.Select(TransformFile).ToList();
+        return paths.Select(this.TransformFile).ToList();
     }
 
     /// <summary>
     /// Transforms C# source code string into a dense hash vector.
     /// </summary>
     /// <param name="code">C# source code as string.</param>
-    /// <returns>A dense float vector of length <see cref="_dimension"/>.</returns>
+    /// <returns>A dense float vector of length <see cref="dimension"/>.</returns>
     public float[] TransformCode(string code)
     {
         if (code is null)
@@ -103,8 +107,8 @@ public sealed class CSharpHashVectorizer
             code = string.Empty;
         }
 
-        var tokens = ExtractTokens(code);
-        return BuildVector(tokens);
+        var tokens = this.ExtractTokens(code);
+        return this.BuildVector(tokens);
     }
 
     /// <summary>
@@ -114,7 +118,7 @@ public sealed class CSharpHashVectorizer
     /// <returns>A task that represents the asynchronous operation. The task result contains a dense float vector.</returns>
     public Task<float[]> TransformCodeAsync(string code)
     {
-        return Task.Run(() => TransformCode(code));
+        return Task.Run(() => this.TransformCode(code));
     }
 
     /// <summary>
@@ -137,7 +141,7 @@ public sealed class CSharpHashVectorizer
             }
 
             var code = await File.ReadAllTextAsync(path).ConfigureAwait(false);
-            return TransformCode(code);
+            return this.TransformCode(code);
         });
 
         return (await Task.WhenAll(tasks).ConfigureAwait(false)).ToList();
@@ -185,7 +189,7 @@ public sealed class CSharpHashVectorizer
             {
                 tokens.Add(token.ToLowerInvariant());
             }
-            else if (_lowercase)
+            else if (this.lowercase)
             {
                 tokens.Add(token.ToLowerInvariant());
             }
@@ -200,7 +204,7 @@ public sealed class CSharpHashVectorizer
 
     private float[] BuildVector(List<string> tokens)
     {
-        var vector = new float[_dimension];
+        var vector = new float[this.dimension];
 
         if (tokens.Count == 0)
         {
@@ -219,7 +223,7 @@ public sealed class CSharpHashVectorizer
         foreach (var (token, count) in tokenCounts)
         {
             var hash = ComputeHash(token);
-            var index = (int)(hash % (uint)_dimension);
+            var index = (int)(hash % (uint)this.dimension);
 
             // Use signed hashing for better distribution
             var sign = (hash & 0x80000000) == 0 ? 1f : -1f;
@@ -230,7 +234,7 @@ public sealed class CSharpHashVectorizer
 
         // L2 normalization
         var norm = 0f;
-        for (int i = 0; i < _dimension; i++)
+        for (int i = 0; i < this.dimension; i++)
         {
             norm += vector[i] * vector[i];
         }
@@ -238,7 +242,7 @@ public sealed class CSharpHashVectorizer
         if (norm > 0f)
         {
             norm = MathF.Sqrt(norm);
-            for (int i = 0; i < _dimension; i++)
+            for (int i = 0; i < this.dimension; i++)
             {
                 vector[i] /= norm;
             }

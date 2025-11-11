@@ -1,7 +1,6 @@
-// ==========================================================
-// Contextual Step Definition - Append-only Builder Pattern
-// Implements the Reader/Writer monad pattern with fluent composition
-// ==========================================================
+// <copyright file="ContextualStepDefinition.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Core.Steps;
 
@@ -11,14 +10,15 @@ namespace LangChainPipeline.Core.Steps;
 /// </summary>
 public struct ContextualStepDefinition<TIn, TOut, TContext>
 {
-    private ContextualStep<TIn, TOut, TContext> _compiled;
+    private readonly ContextualStep<TIn, TOut, TContext> compiled;
 
     /// <summary>
-    /// Constructor: from "context → pure step"
+    /// Initializes a new instance of the <see cref="ContextualStepDefinition{TIn, TOut, TContext}"/> struct.
+    /// Constructor: from "context → pure step".
     /// </summary>
     public ContextualStepDefinition(Step<TContext, Step<TIn, TOut>> pure)
     {
-        this._compiled = async (input, context) =>
+        this.compiled = async (input, context) =>
         {
             var innerStep = await pure(context);  // Step<TIn,TOut>
             var result = await innerStep(input);  // apply inner step
@@ -27,34 +27,38 @@ public struct ContextualStepDefinition<TIn, TOut, TContext>
     }
 
     /// <summary>
-    /// Constructor: from compiled contextual step
+    /// Initializes a new instance of the <see cref="ContextualStepDefinition{TIn, TOut, TContext}"/> struct.
+    /// Constructor: from compiled contextual step.
     /// </summary>
     public ContextualStepDefinition(ContextualStep<TIn, TOut, TContext> step)
     {
-        this._compiled = step;
+        this.compiled = step;
     }
 
     /// <summary>
-    /// Constructor: from pure function
+    /// Initializes a new instance of the <see cref="ContextualStepDefinition{TIn, TOut, TContext}"/> struct.
+    /// Constructor: from pure function.
     /// </summary>
     public ContextualStepDefinition(Func<TIn, TOut> func, string? log = null)
     {
-        this._compiled = ContextualStep.LiftPure<TIn, TOut, TContext>(func, log);
+        this.compiled = ContextualStep.LiftPure<TIn, TOut, TContext>(func, log);
     }
 
     /// <summary>
-    /// Constructor: from pure Step{TIn,TOut}
+    /// Initializes a new instance of the <see cref="ContextualStepDefinition{TIn, TOut, TContext}"/> struct.
+    /// Constructor: from pure Step{TIn,TOut}.
     /// </summary>
     /// <param name="pure">The pure step to lift.</param>
     /// <param name="log">Optional logging string.</param>
     public ContextualStepDefinition(Step<TIn, TOut> pure, string? log = null)
     {
-        this._compiled = ContextualStep.FromPure<TIn, TOut, TContext>(pure, log);
+        this.compiled = ContextualStep.FromPure<TIn, TOut, TContext>(pure, log);
     }
 
     /// <summary>
-    /// Static Lift helpers
+    /// Static Lift helpers.
     /// </summary>
+    /// <returns></returns>
     public static ContextualStepDefinition<TIn, TOut, TContext> LiftPure(Func<TIn, TOut> func, string? log = null)
         => new(func, log);
 
@@ -63,130 +67,145 @@ public struct ContextualStepDefinition<TIn, TOut, TContext>
     public static ContextualStepDefinition<TIn, TOut, TContext> FromContext(Step<TContext, Step<TIn, TOut>> ctxStep) => new(ctxStep);
 
     /// <summary>
-    /// Implicit conversion to compiled step
+    /// Implicit conversion to compiled step.
     /// </summary>
     public static implicit operator ContextualStep<TIn, TOut, TContext>(ContextualStepDefinition<TIn, TOut, TContext> d)
-        => d._compiled;
+        => d.compiled;
 
     /// <summary>
-    /// Pipe method: append contextual step
+    /// Pipe method: append contextual step.
     /// </summary>
+    /// <returns></returns>
     public ContextualStepDefinition<TIn, TNext, TContext> Pipe<TNext>(ContextualStep<TOut, TNext, TContext> next)
     {
-        var newCompiled = _compiled.Then(next);
+        var newCompiled = this.compiled.Then(next);
         return new ContextualStepDefinition<TIn, TNext, TContext>(newCompiled);
     }
 
     /// <summary>
-    /// Pipe method: append pure step
+    /// Pipe method: append pure step.
     /// </summary>
+    /// <returns></returns>
     public ContextualStepDefinition<TIn, TNext, TContext> Pipe<TNext>(Step<TOut, TNext> pure, string? log = null)
     {
         var contextualNext = ContextualStep.FromPure<TOut, TNext, TContext>(pure, log);
-        return Pipe(contextualNext);
+        return this.Pipe(contextualNext);
     }
 
     /// <summary>
-    /// Pipe method: append pure function
+    /// Pipe method: append pure function.
     /// </summary>
+    /// <returns></returns>
     public ContextualStepDefinition<TIn, TNext, TContext> Pipe<TNext>(Func<TOut, TNext> func, string? log = null)
     {
         var contextualNext = ContextualStep.LiftPure<TOut, TNext, TContext>(func, log);
-        return Pipe(contextualNext);
+        return this.Pipe(contextualNext);
     }
 
     /// <summary>
-    /// Execute pipeline (synchronous convenience method)
+    /// Execute pipeline (synchronous convenience method).
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<(TOut result, List<string> logs)> InvokeAsync(TIn input, TContext context)
-        => await _compiled(input, context);
+        => await this.compiled(input, context);
 
     /// <summary>
-    /// Execute pipeline (synchronous convenience method)
+    /// Execute pipeline (synchronous convenience method).
     /// </summary>
+    /// <returns></returns>
     public (TOut result, List<string> logs) Invoke(TIn input, TContext context)
-        => InvokeAsync(input, context).GetAwaiter().GetResult();
+        => this.InvokeAsync(input, context).GetAwaiter().GetResult();
 
     /// <summary>
-    /// Forget context: collapse into pure Step
+    /// Forget context: collapse into pure Step.
     /// </summary>
+    /// <returns></returns>
     public Step<TIn, (TOut result, List<string> logs)> Forget(TContext context)
-        => _compiled.Forget(context);
+        => this.compiled.Forget(context);
 
     /// <summary>
-    /// Forget context and logs: collapse to pure result Step
+    /// Forget context and logs: collapse to pure result Step.
     /// </summary>
+    /// <returns></returns>
     public Step<TIn, TOut> ForgetAll(TContext context)
-        => _compiled.ForgetAll(context);
+        => this.compiled.ForgetAll(context);
 
     /// <summary>
-    /// Add logging to the current step
+    /// Add logging to the current step.
     /// </summary>
+    /// <returns></returns>
     public ContextualStepDefinition<TIn, TOut, TContext> WithLog(string logMessage)
     {
-        var newCompiled = _compiled.WithLog(logMessage);
+        var newCompiled = this.compiled.WithLog(logMessage);
         return new ContextualStepDefinition<TIn, TOut, TContext>(newCompiled);
     }
 
     /// <summary>
-    /// Add conditional logging based on result
+    /// Add conditional logging based on result.
     /// </summary>
+    /// <returns></returns>
     public ContextualStepDefinition<TIn, TOut, TContext> WithConditionalLog(Func<TOut, string?> logFunction)
     {
-        var newCompiled = _compiled.WithConditionalLog(logFunction);
+        var newCompiled = this.compiled.WithConditionalLog(logFunction);
         return new ContextualStepDefinition<TIn, TOut, TContext>(newCompiled);
     }
 
     /// <summary>
-    /// Convert to Result-based contextual step for error handling
+    /// Convert to Result-based contextual step for error handling.
     /// </summary>
+    /// <returns></returns>
     public ContextualStepDefinition<TIn, Result<TOut, Exception>, TContext> TryStep()
     {
-        var newCompiled = _compiled.TryStep();
+        var newCompiled = this.compiled.TryStep();
         return new ContextualStepDefinition<TIn, Result<TOut, Exception>, TContext>(newCompiled);
     }
 
     /// <summary>
-    /// Convert to Option-based contextual step
+    /// Convert to Option-based contextual step.
     /// </summary>
+    /// <returns></returns>
     public ContextualStepDefinition<TIn, Option<TOut>, TContext> TryOption(Func<TOut, bool> predicate)
     {
-        var newCompiled = _compiled.TryOption(predicate);
+        var newCompiled = this.compiled.TryOption(predicate);
         return new ContextualStepDefinition<TIn, Option<TOut>, TContext>(newCompiled);
     }
 }
 
 /// <summary>
-/// Helper class for creating contextual step definitions
+/// Helper class for creating contextual step definitions.
 /// </summary>
 public static class ContextualDef
 {
     /// <summary>
-    /// Create from pure function
+    /// Create from pure function.
     /// </summary>
+    /// <returns></returns>
     public static ContextualStepDefinition<TIn, TOut, TContext> LiftPure<TIn, TOut, TContext>(
         Func<TIn, TOut> func,
         string? log = null)
         => ContextualStepDefinition<TIn, TOut, TContext>.LiftPure(func, log);
 
     /// <summary>
-    /// Create from pure Step
+    /// Create from pure Step.
     /// </summary>
+    /// <returns></returns>
     public static ContextualStepDefinition<TIn, TOut, TContext> FromPure<TIn, TOut, TContext>(
         Step<TIn, TOut> step,
         string? log = null)
         => ContextualStepDefinition<TIn, TOut, TContext>.FromPure(step, log);
 
     /// <summary>
-    /// Create from context-dependent step factory
+    /// Create from context-dependent step factory.
     /// </summary>
+    /// <returns></returns>
     public static ContextualStepDefinition<TIn, TOut, TContext> FromContext<TIn, TOut, TContext>(
         Step<TContext, Step<TIn, TOut>> ctxStep)
         => ContextualStepDefinition<TIn, TOut, TContext>.FromContext(ctxStep);
 
     /// <summary>
-    /// Identity contextual step
+    /// Identity contextual step.
     /// </summary>
+    /// <returns></returns>
     public static ContextualStepDefinition<TIn, TIn, TContext> Identity<TIn, TContext>(string? log = null)
         => LiftPure<TIn, TIn, TContext>(x => x, log);
 }

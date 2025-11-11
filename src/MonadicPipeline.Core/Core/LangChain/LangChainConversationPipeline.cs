@@ -1,70 +1,78 @@
-// LangChain-integrated conversation pipeline builder
+// <copyright file="LangChainConversationPipeline.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Core.LangChain;
 
 using LangChain.Prompts.Base;
 using LangChain.Providers;
 
-namespace LangChainPipeline.Core.LangChain;
-
 /// <summary>
 /// LangChain-integrated conversation pipeline that properly uses official LangChain chains
-/// integrated with the existing monadic pipeline patterns
+/// integrated with the existing monadic pipeline patterns.
 /// </summary>
 public class LangChainConversationPipeline
 {
-    private readonly List<Func<LangChainConversationContext, Task<LangChainConversationContext>>> _steps = [];
+    private readonly List<Func<LangChainConversationContext, Task<LangChainConversationContext>>> steps = [];
 
     /// <summary>
-    /// Adds a processing step to the pipeline using LangChain patterns
+    /// Adds a processing step to the pipeline using LangChain patterns.
     /// </summary>
+    /// <returns></returns>
     public LangChainConversationPipeline AddStep(
         Func<LangChainConversationContext, Task<LangChainConversationContext>> step)
     {
-        _steps.Add(step);
+        this.steps.Add(step);
         return this;
     }
 
     /// <summary>
-    /// Adds a simple transformation step
+    /// Adds a simple transformation step.
     /// </summary>
+    /// <returns></returns>
     public LangChainConversationPipeline AddTransformation(
         Func<LangChainConversationContext, LangChainConversationContext> transformation)
     {
-        _steps.Add(context => Task.FromResult(transformation(context)));
+        this.steps.Add(context => Task.FromResult(transformation(context)));
         return this;
     }
 
     /// <summary>
-    /// Adds a property setter step
+    /// Adds a property setter step.
     /// </summary>
+    /// <returns></returns>
     public LangChainConversationPipeline SetProperty(string key, object value)
     {
-        return AddTransformation(context => context.SetProperty(key, value));
+        return this.AddTransformation(context => context.SetProperty(key, value));
     }
 
     /// <summary>
-    /// Adds conversation history to the context
+    /// Adds conversation history to the context.
     /// </summary>
+    /// <returns></returns>
     public LangChainConversationPipeline WithConversationHistory()
     {
-        return AddTransformation(context =>
+        return this.AddTransformation(context =>
         {
             var history = context.GetConversationHistory();
             if (!string.IsNullOrEmpty(history))
             {
                 context.SetProperty("conversation_history", history);
             }
+
             return context;
         });
     }
 
     /// <summary>
-    /// Runs the pipeline and returns the processed context
+    /// Runs the pipeline and returns the processed context.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<LangChainConversationContext> RunAsync(LangChainConversationContext initialContext)
     {
         var currentContext = initialContext;
 
-        foreach (var step in _steps)
+        foreach (var step in this.steps)
         {
             currentContext = await step(currentContext);
         }
@@ -73,27 +81,30 @@ public class LangChainConversationPipeline
     }
 
     /// <summary>
-    /// Factory method to create a new pipeline
+    /// Factory method to create a new pipeline.
     /// </summary>
+    /// <returns></returns>
     public static LangChainConversationPipeline Create() => new();
 }
 
 /// <summary>
-/// Builder extensions to create LangChain-integrated conversational flows using official LangChain chains
+/// Builder extensions to create LangChain-integrated conversational flows using official LangChain chains.
 /// </summary>
 public static class LangChainConversationBuilder
 {
     /// <summary>
-    /// Creates a conversational pipeline builder using proper LangChain integration
+    /// Creates a conversational pipeline builder using proper LangChain integration.
     /// </summary>
+    /// <returns></returns>
     public static LangChainConversationPipeline CreateConversationPipeline()
     {
         return new LangChainConversationPipeline();
     }
 
     /// <summary>
-    /// Extension to add AI response generation step using proper LangChain LLMChain
+    /// Extension to add AI response generation step using proper LangChain LLMChain.
     /// </summary>
+    /// <returns></returns>
     public static LangChainConversationPipeline AddAiResponseGeneration(
         this LangChainConversationPipeline pipeline,
         IChatModel llm,
@@ -104,15 +115,16 @@ public static class LangChainConversationBuilder
     }
 
     /// <summary>
-    /// Extension to add AI response generation step (backward compatibility with function generator)
+    /// Extension to add AI response generation step (backward compatibility with function generator).
     /// </summary>
+    /// <returns></returns>
     public static LangChainConversationPipeline AddAiResponseGeneration(
         this LangChainConversationPipeline pipeline,
         Func<string, Task<string>> responseGenerator)
     {
         return pipeline.AddStep(async context =>
         {
-            var input = context.GetProperty<string>("input") ?? "";
+            var input = context.GetProperty<string>("input") ?? string.Empty;
             var aiResponse = await responseGenerator(input);
             context.SetProperty("text", aiResponse);
             return context;

@@ -1,13 +1,12 @@
-// ==========================================================
-// Self-Improving Agent Example
-// Demonstrates automatic skill extraction and learning
-// ==========================================================
+// <copyright file="SelfImprovingAgentExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Examples;
 
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
-
-namespace LangChainPipeline.Examples;
 
 /// <summary>
 /// Example demonstrating self-improving agent capabilities with automatic skill learning.
@@ -17,6 +16,7 @@ public static class SelfImprovingAgentExample
     /// <summary>
     /// Demonstrates the complete skill learning cycle.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunCompleteLearningCycle()
     {
         Console.WriteLine("=== Self-Improving Agent Example ===\n");
@@ -73,6 +73,7 @@ public static class SelfImprovingAgentExample
     /// <summary>
     /// Demonstrates skill extraction configuration.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunCustomExtractionConfig()
     {
         Console.WriteLine("=== Custom Skill Extraction Configuration ===\n");
@@ -104,7 +105,7 @@ public static class SelfImprovingAgentExample
             {
                 new PlanStep("analyze_input", new Dictionary<string, object> { ["data"] = "sample" }, "analyzed", 0.85),
                 new PlanStep("process_data", new Dictionary<string, object> { ["input"] = "analyzed" }, "processed", 0.80),
-                new PlanStep("generate_output", new Dictionary<string, object> { ["data"] = "processed" }, "output", 0.90)
+                new PlanStep("generate_output", new Dictionary<string, object> { ["data"] = "processed" }, "output", 0.90),
             },
             new Dictionary<string, double> { ["overall"] = 0.85 },
             DateTime.UtcNow);
@@ -143,6 +144,7 @@ public static class SelfImprovingAgentExample
     /// <summary>
     /// Demonstrates memory consolidation and forgetting.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunMemoryManagementDemo()
     {
         Console.WriteLine("=== Memory Management Demo ===\n");
@@ -176,6 +178,7 @@ public static class SelfImprovingAgentExample
                 Console.Write(".");
             }
         }
+
         Console.WriteLine(" Done!\n");
 
         // Wait for consolidation

@@ -1,8 +1,12 @@
+// <copyright file="IngestionArrows.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Pipeline.Ingestion;
+
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Splitters.Text;
-
-namespace LangChainPipeline.Pipeline.Ingestion;
 
 /// <summary>
 /// Provides arrow functions for data ingestion operations.

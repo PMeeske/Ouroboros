@@ -1,56 +1,63 @@
-using LangChainPipeline.Core.Configuration;
-using Microsoft.Extensions.Logging;
+// <copyright file="VectorStoreFactory.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Domain.Vectors;
+
+using LangChainPipeline.Core.Configuration;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Factory for creating vector store instances based on configuration.
 /// </summary>
 public class VectorStoreFactory
 {
-    private readonly VectorStoreConfiguration _config;
-    private readonly ILogger? _logger;
+    private readonly VectorStoreConfiguration config;
+    private readonly ILogger? logger;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="VectorStoreFactory"/> class.
     /// Initializes a new vector store factory.
     /// </summary>
     public VectorStoreFactory(VectorStoreConfiguration config, ILogger? logger = null)
     {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
-        _logger = logger;
+        this.config = config ?? throw new ArgumentNullException(nameof(config));
+        this.logger = logger;
     }
 
     /// <summary>
     /// Creates a vector store based on the configured type.
     /// </summary>
+    /// <returns></returns>
     public IVectorStore Create()
     {
-        _logger?.LogInformation("Creating vector store of type: {Type}", _config.Type);
+        this.logger?.LogInformation("Creating vector store of type: {Type}", this.config.Type);
 
-        return _config.Type.ToLowerInvariant() switch
+        return this.config.Type.ToLowerInvariant() switch
         {
-            "inmemory" => CreateInMemoryStore(),
-            "qdrant" => CreateQdrantStore(),
-            "pinecone" => CreatePineconeStore(),
-            _ => throw new NotSupportedException($"Vector store type '{_config.Type}' is not supported")
+            "inmemory" => this.CreateInMemoryStore(),
+            "qdrant" => this.CreateQdrantStore(),
+            "pinecone" => this.CreatePineconeStore(),
+            _ => throw new NotSupportedException($"Vector store type '{this.config.Type}' is not supported"),
         };
     }
 
     private IVectorStore CreateInMemoryStore()
     {
-        _logger?.LogInformation("Creating in-memory vector store");
+        this.logger?.LogInformation("Creating in-memory vector store");
         return new TrackedVectorStore();
     }
 
     private IVectorStore CreateQdrantStore()
     {
-        if (string.IsNullOrEmpty(_config.ConnectionString))
+        if (string.IsNullOrEmpty(this.config.ConnectionString))
         {
             throw new InvalidOperationException("Connection string is required for Qdrant vector store");
         }
 
-        _logger?.LogInformation("Creating Qdrant vector store with connection: {Connection}",
-            MaskConnectionString(_config.ConnectionString));
+        this.logger?.LogInformation(
+            "Creating Qdrant vector store with connection: {Connection}",
+            MaskConnectionString(this.config.ConnectionString));
 
         // FUTURE: Implement QdrantVectorStore when Qdrant package is added
         // Steps to implement:
@@ -65,13 +72,14 @@ public class VectorStoreFactory
 
     private IVectorStore CreatePineconeStore()
     {
-        if (string.IsNullOrEmpty(_config.ConnectionString))
+        if (string.IsNullOrEmpty(this.config.ConnectionString))
         {
             throw new InvalidOperationException("Connection string is required for Pinecone vector store");
         }
 
-        _logger?.LogInformation("Creating Pinecone vector store with connection: {Connection}",
-            MaskConnectionString(_config.ConnectionString));
+        this.logger?.LogInformation(
+            "Creating Pinecone vector store with connection: {Connection}",
+            MaskConnectionString(this.config.ConnectionString));
 
         // FUTURE: Implement PineconeVectorStore when Pinecone package is added
         // Steps to implement:
@@ -88,7 +96,9 @@ public class VectorStoreFactory
     {
         // Mask sensitive parts of connection string for logging
         if (connectionString.Length <= 10)
+        {
             return "***";
+        }
 
         return $"{connectionString[..5]}***{connectionString[^3..]}";
     }
@@ -102,6 +112,7 @@ public static class VectorStoreFactoryExtensions
     /// <summary>
     /// Creates a vector store factory from pipeline configuration.
     /// </summary>
+    /// <returns></returns>
     public static VectorStoreFactory CreateVectorStoreFactory(
         this PipelineConfiguration config,
         ILogger? logger = null)

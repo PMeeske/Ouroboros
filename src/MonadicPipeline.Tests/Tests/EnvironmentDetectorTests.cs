@@ -1,7 +1,11 @@
-using LangChainPipeline.Core;
-using Xunit;
+// <copyright file="EnvironmentDetectorTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Tests.Tests;
+
+using LangChainPipeline.Core;
+using Xunit;
 
 /// <summary>
 /// Tests for EnvironmentDetector utility class.

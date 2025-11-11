@@ -1,6 +1,10 @@
-using LangChainPipeline.Domain.Events;
+// <copyright file="IEventStore.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Domain.Persistence;
+
+using LangChainPipeline.Domain.Events;
 
 /// <summary>
 /// Interface for persisting and retrieving pipeline events (event sourcing).
@@ -58,6 +62,7 @@ public interface IEventStore
     /// </summary>
     /// <param name="branchId">The branch identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task DeleteBranchAsync(
         string branchId,
         CancellationToken cancellationToken = default);
@@ -69,28 +74,41 @@ public interface IEventStore
 public class ConcurrencyException : Exception
 {
     /// <summary>
-    /// Expected version.
+    /// Gets expected version.
     /// </summary>
     public long ExpectedVersion { get; }
 
     /// <summary>
-    /// Actual version.
+    /// Gets actual version.
     /// </summary>
     public long ActualVersion { get; }
 
     /// <summary>
-    /// Branch ID where concurrency conflict occurred.
+    /// Gets branch ID where concurrency conflict occurred.
     /// </summary>
     public string BranchId { get; }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ConcurrencyException"/> class.
     /// Initializes a concurrency exception.
     /// </summary>
     public ConcurrencyException(string branchId, long expectedVersion, long actualVersion)
         : base($"Concurrency conflict for branch '{branchId}': expected version {expectedVersion}, actual version {actualVersion}")
     {
-        BranchId = branchId;
-        ExpectedVersion = expectedVersion;
-        ActualVersion = actualVersion;
+        this.BranchId = branchId;
+        this.ExpectedVersion = expectedVersion;
+        this.ActualVersion = actualVersion;
+    }
+
+    public ConcurrencyException() : base()
+    {
+    }
+
+    public ConcurrencyException(string? message) : base(message)
+    {
+    }
+
+    public ConcurrencyException(string? message, Exception? innerException) : base(message, innerException)
+    {
     }
 }

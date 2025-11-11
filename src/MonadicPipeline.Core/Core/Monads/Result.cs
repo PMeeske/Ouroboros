@@ -1,3 +1,7 @@
+// <copyright file="Result.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Core.Monads;
 
 /// <summary>
@@ -8,42 +12,42 @@ namespace LangChainPipeline.Core.Monads;
 /// <typeparam name="TError">The type of the error.</typeparam>
 public readonly struct Result<TValue, TError>
 {
-    private readonly TValue? _value;
-    private readonly TError? _error;
-    private readonly bool _isSuccess;
+    private readonly TValue? value;
+    private readonly TError? error;
+    private readonly bool isSuccess;
 
     /// <summary>
     /// Gets a value indicating whether this result represents success.
     /// </summary>
-    public bool IsSuccess => _isSuccess;
+    public bool IsSuccess => this.isSuccess;
 
     /// <summary>
     /// Gets a value indicating whether this result represents failure.
     /// </summary>
-    public bool IsFailure => !_isSuccess;
+    public bool IsFailure => !this.isSuccess;
 
     /// <summary>
     /// Gets the success value (only valid when IsSuccess is true).
     /// </summary>
-    public TValue Value => _isSuccess ? _value! : throw new InvalidOperationException("Cannot access Value of a failed Result");
+    public TValue Value => this.isSuccess ? this.value! : throw new InvalidOperationException("Cannot access Value of a failed Result");
 
     /// <summary>
     /// Gets the error value (only valid when IsFailure is true).
     /// </summary>
-    public TError Error => !_isSuccess ? _error! : throw new InvalidOperationException("Cannot access Error of a successful Result");
+    public TError Error => !this.isSuccess ? this.error! : throw new InvalidOperationException("Cannot access Error of a successful Result");
 
     private Result(TValue value)
     {
-        _value = value;
-        _error = default;
-        _isSuccess = true;
+        this.value = value;
+        this.error = default;
+        this.isSuccess = true;
     }
 
     private Result(TError error)
     {
-        _value = default;
-        _error = error;
-        _isSuccess = false;
+        this.value = default;
+        this.error = error;
+        this.isSuccess = false;
     }
 
     /// <summary>
@@ -68,7 +72,7 @@ public readonly struct Result<TValue, TError>
     /// <returns>The result of the function, or the original error if this Result failed.</returns>
     public Result<TResult, TError> Bind<TResult>(Func<TValue, Result<TResult, TError>> func)
     {
-        return IsSuccess ? func(_value!) : Result<TResult, TError>.Failure(_error!);
+        return this.IsSuccess ? func(this.value!) : Result<TResult, TError>.Failure(this.error!);
     }
 
     /// <summary>
@@ -79,7 +83,7 @@ public readonly struct Result<TValue, TError>
     /// <returns>A Result containing the transformed value, or the original error.</returns>
     public Result<TResult, TError> Map<TResult>(Func<TValue, TResult> func)
     {
-        return IsSuccess ? Result<TResult, TError>.Success(func(_value!)) : Result<TResult, TError>.Failure(_error!);
+        return this.IsSuccess ? Result<TResult, TError>.Success(func(this.value!)) : Result<TResult, TError>.Failure(this.error!);
     }
 
     /// <summary>
@@ -90,7 +94,7 @@ public readonly struct Result<TValue, TError>
     /// <returns>A Result with the transformed error type.</returns>
     public Result<TValue, TNewError> MapError<TNewError>(Func<TError, TNewError> func)
     {
-        return IsSuccess ? Result<TValue, TNewError>.Success(_value!) : Result<TValue, TNewError>.Failure(func(_error!));
+        return this.IsSuccess ? Result<TValue, TNewError>.Success(this.value!) : Result<TValue, TNewError>.Failure(func(this.error!));
     }
 
     /// <summary>
@@ -102,7 +106,7 @@ public readonly struct Result<TValue, TError>
     /// <returns>The result of the appropriate function.</returns>
     public TResult Match<TResult>(Func<TValue, TResult> onSuccess, Func<TError, TResult> onFailure)
     {
-        return IsSuccess ? onSuccess(_value!) : onFailure(_error!);
+        return this.IsSuccess ? onSuccess(this.value!) : onFailure(this.error!);
     }
 
     /// <summary>
@@ -112,10 +116,14 @@ public readonly struct Result<TValue, TError>
     /// <param name="onFailure">Action to execute if Result failed.</param>
     public void Match(Action<TValue> onSuccess, Action<TError> onFailure)
     {
-        if (IsSuccess)
-            onSuccess(_value!);
+        if (this.IsSuccess)
+        {
+            onSuccess(this.value!);
+        }
         else
-            onFailure(_error!);
+        {
+            onFailure(this.error!);
+        }
     }
 
     /// <summary>
@@ -125,7 +133,7 @@ public readonly struct Result<TValue, TError>
     /// <returns>The success value or the default value.</returns>
     public TValue GetValueOrDefault(TValue defaultValue)
     {
-        return IsSuccess ? _value! : defaultValue;
+        return this.IsSuccess ? this.value! : defaultValue;
     }
 
     /// <summary>
@@ -134,7 +142,7 @@ public readonly struct Result<TValue, TError>
     /// <returns>Some(value) if successful, None if failed.</returns>
     public Option<TValue> ToOption()
     {
-        return IsSuccess ? Option<TValue>.Some(_value!) : Option<TValue>.None();
+        return this.IsSuccess ? Option<TValue>.Some(this.value!) : Option<TValue>.None();
     }
 
     /// <summary>
@@ -145,39 +153,46 @@ public readonly struct Result<TValue, TError>
     /// <summary>
     /// Returns a string representation of the Result.
     /// </summary>
+    /// <returns></returns>
     public override string ToString()
     {
-        return IsSuccess ? $"Success({_value})" : $"Failure({_error})";
+        return this.IsSuccess ? $"Success({this.value})" : $"Failure({this.error})";
     }
 
     /// <summary>
     /// Determines equality between two Results.
     /// </summary>
+    /// <returns></returns>
     public bool Equals(Result<TValue, TError> other)
     {
-        if (IsSuccess != other.IsSuccess) return false;
+        if (this.IsSuccess != other.IsSuccess)
+        {
+            return false;
+        }
 
-        return IsSuccess
-            ? EqualityComparer<TValue>.Default.Equals(_value, other._value)
-            : EqualityComparer<TError>.Default.Equals(_error, other._error);
+        return this.IsSuccess
+            ? EqualityComparer<TValue>.Default.Equals(this.value, other.value)
+            : EqualityComparer<TError>.Default.Equals(this.error, other.error);
     }
 
     /// <summary>
     /// Determines equality with an object.
     /// </summary>
+    /// <returns></returns>
     public override bool Equals(object? obj)
     {
-        return obj is Result<TValue, TError> other && Equals(other);
+        return obj is Result<TValue, TError> other && this.Equals(other);
     }
 
     /// <summary>
     /// Gets the hash code for this Result.
     /// </summary>
+    /// <returns></returns>
     public override int GetHashCode()
     {
-        return IsSuccess
-            ? HashCode.Combine(_isSuccess, _value)
-            : HashCode.Combine(_isSuccess, _error);
+        return this.IsSuccess
+            ? HashCode.Combine(this.isSuccess, this.value)
+            : HashCode.Combine(this.isSuccess, this.error);
     }
 
     /// <summary>
@@ -197,62 +212,67 @@ public readonly struct Result<TValue, TError>
 /// <typeparam name="TValue">The type of the success value.</typeparam>
 public readonly struct Result<TValue> : IEquatable<Result<TValue>>
 {
-    private readonly Result<TValue, string> _inner;
+    private readonly Result<TValue, string> inner;
 
-    private Result(Result<TValue, string> inner) => _inner = inner;
+    private Result(Result<TValue, string> inner) => this.inner = inner;
 
     /// <summary>
     /// Gets a value indicating whether this result represents success.
     /// </summary>
-    public bool IsSuccess => _inner.IsSuccess;
+    public bool IsSuccess => this.inner.IsSuccess;
 
     /// <summary>
     /// Gets a value indicating whether this result represents failure.
     /// </summary>
-    public bool IsFailure => _inner.IsFailure;
+    public bool IsFailure => this.inner.IsFailure;
 
     /// <summary>
     /// Gets the success value.
     /// </summary>
-    public TValue Value => _inner.Value;
+    public TValue Value => this.inner.Value;
 
     /// <summary>
     /// Gets the error message.
     /// </summary>
-    public string Error => _inner.Error;
+    public string Error => this.inner.Error;
 
     /// <summary>
     /// Creates a successful Result.
     /// </summary>
+    /// <returns></returns>
     public static Result<TValue> Success(TValue value) => new(Result<TValue, string>.Success(value));
 
     /// <summary>
     /// Creates a failed Result.
     /// </summary>
+    /// <returns></returns>
     public static Result<TValue> Failure(string error) => new(Result<TValue, string>.Failure(error));
 
     /// <summary>
     /// Monadic bind operation.
     /// </summary>
+    /// <returns></returns>
     public Result<TResult> Bind<TResult>(Func<TValue, Result<TResult>> func)
     {
-        return new(_inner.Bind(v => func(v)._inner));
+        return new(this.inner.Bind(v => func(v).inner));
     }
 
     /// <summary>
     /// Functor map operation.
     /// </summary>
+    /// <returns></returns>
     public Result<TResult> Map<TResult>(Func<TValue, TResult> func)
     {
-        return new(_inner.Map(func));
+        return new(this.inner.Map(func));
     }
 
     /// <summary>
     /// Pattern matching.
     /// </summary>
+    /// <returns></returns>
     public TResult Match<TResult>(Func<TValue, TResult> onSuccess, Func<string, TResult> onFailure)
     {
-        return _inner.Match(onSuccess, onFailure);
+        return this.inner.Match(onSuccess, onFailure);
     }
 
     /// <summary>
@@ -260,18 +280,20 @@ public readonly struct Result<TValue> : IEquatable<Result<TValue>>
     /// </summary>
     public void Match(Action<TValue> onSuccess, Action<string> onFailure)
     {
-        _inner.Match(onSuccess, onFailure);
+        this.inner.Match(onSuccess, onFailure);
     }
 
     /// <summary>
     /// Gets value or default.
     /// </summary>
-    public TValue GetValueOrDefault(TValue defaultValue) => _inner.GetValueOrDefault(defaultValue);
+    /// <returns></returns>
+    public TValue GetValueOrDefault(TValue defaultValue) => this.inner.GetValueOrDefault(defaultValue);
 
     /// <summary>
     /// Converts to Option.
     /// </summary>
-    public Option<TValue> ToOption() => _inner.ToOption();
+    /// <returns></returns>
+    public Option<TValue> ToOption() => this.inner.ToOption();
 
     /// <summary>
     /// Implicit conversion from value.
@@ -281,22 +303,26 @@ public readonly struct Result<TValue> : IEquatable<Result<TValue>>
     /// <summary>
     /// String representation.
     /// </summary>
-    public override string ToString() => _inner.ToString();
+    /// <returns></returns>
+    public override string ToString() => this.inner.ToString();
 
     /// <summary>
     /// Equality comparison.
     /// </summary>
-    public bool Equals(Result<TValue> other) => _inner.Equals(other._inner);
+    /// <returns></returns>
+    public bool Equals(Result<TValue> other) => this.inner.Equals(other.inner);
 
     /// <summary>
     /// Object equality.
     /// </summary>
-    public override bool Equals(object? obj) => obj is Result<TValue> other && Equals(other);
+    /// <returns></returns>
+    public override bool Equals(object? obj) => obj is Result<TValue> other && this.Equals(other);
 
     /// <summary>
     /// Hash code.
     /// </summary>
-    public override int GetHashCode() => _inner.GetHashCode();
+    /// <returns></returns>
+    public override int GetHashCode() => this.inner.GetHashCode();
 
     /// <summary>
     /// Equality operator.

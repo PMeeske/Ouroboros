@@ -1,9 +1,13 @@
+// <copyright file="ToolRegistryTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChainPipeline.Core.Monads;
 using LangChainPipeline.Tools;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for the ToolRegistry implementation.
@@ -15,14 +19,16 @@ public class ToolRegistryTests
     private class TestTool : ITool
     {
         public string Name { get; }
+
         public string Description { get; }
+
         public string? JsonSchema { get; }
 
         public TestTool(string name, string description = "Test tool", string? jsonSchema = null)
         {
-            Name = name;
-            Description = description;
-            JsonSchema = jsonSchema;
+            this.Name = name;
+            this.Description = description;
+            this.JsonSchema = jsonSchema;
         }
 
         public Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)

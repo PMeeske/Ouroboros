@@ -1,9 +1,13 @@
+// <copyright file="RecursiveChunkProcessorTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChainPipeline.Core.Monads;
 using LangChainPipeline.Core.Processing;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for RecursiveChunkProcessor functionality.
@@ -111,6 +115,7 @@ public class RecursiveChunkProcessorTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         chunkSizes.Should().NotBeEmpty();
+
         // All chunks should be similar in size (allowing for boundary conditions)
         var avgSize = chunkSizes.Average();
         chunkSizes.Should().AllSatisfy(size =>
@@ -171,6 +176,7 @@ public class RecursiveChunkProcessorTests
             {
                 return Result<string>.Failure("Simulated chunk processing failure");
             }
+
             return Result<string>.Success("success");
         };
 

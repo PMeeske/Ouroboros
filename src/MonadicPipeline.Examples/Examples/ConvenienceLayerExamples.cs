@@ -1,11 +1,11 @@
-// ==========================================================
-// Meta-AI Convenience Layer - Practical Examples
-// ==========================================================
+// <copyright file="ConvenienceLayerExamples.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Examples;
 
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
-
-namespace LangChainPipeline.Examples;
 
 /// <summary>
 /// Practical examples demonstrating the Meta-AI Convenience Layer.
@@ -14,8 +14,9 @@ namespace LangChainPipeline.Examples;
 public static class ConvenienceLayerExamples
 {
     /// <summary>
-    /// Example 1: Quick Question and Answer with Simple Orchestrator
+    /// Example 1: Quick Question and Answer with Simple Orchestrator.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task QuickQuestionAnswering()
     {
         Console.WriteLine("=== Example 1: Quick Question Answering ===\n");
@@ -39,7 +40,7 @@ public static class ConvenienceLayerExamples
         {
             "What is functional programming?",
             "Explain monads in simple terms",
-            "What are the benefits of type safety?"
+            "What are the benefits of type safety?",
         };
 
         foreach (var question in questions)
@@ -55,8 +56,9 @@ public static class ConvenienceLayerExamples
     }
 
     /// <summary>
-    /// Example 2: Code Generation Assistant
+    /// Example 2: Code Generation Assistant.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task CodeGenerationAssistant()
     {
         Console.WriteLine("=== Example 2: Code Generation Assistant ===\n");
@@ -91,8 +93,9 @@ public static class ConvenienceLayerExamples
     }
 
     /// <summary>
-    /// Example 3: Research and Analysis
+    /// Example 3: Research and Analysis.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task ResearchAnalysis()
     {
         Console.WriteLine("=== Example 3: Research and Analysis ===\n");
@@ -136,8 +139,9 @@ public static class ConvenienceLayerExamples
     }
 
     /// <summary>
-    /// Example 4: Complete Workflow with Learning
+    /// Example 4: Complete Workflow with Learning.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task CompleteWorkflowWithLearning()
     {
         Console.WriteLine("=== Example 4: Complete Workflow with Learning ===\n");
@@ -165,7 +169,7 @@ public static class ConvenienceLayerExamples
             {
                 ["scale"] = "high",
                 ["consistency"] = "eventual",
-                ["availability"] = "99.9%"
+                ["availability"] = "99.9%",
             },
             autoLearn: true); // Enable automatic learning
 
@@ -185,8 +189,9 @@ public static class ConvenienceLayerExamples
     }
 
     /// <summary>
-    /// Example 5: Batch Processing
+    /// Example 5: Batch Processing.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task BatchProcessing()
     {
         Console.WriteLine("=== Example 5: Batch Processing ===\n");
@@ -214,13 +219,13 @@ public static class ConvenienceLayerExamples
         {
             "Explain dependency injection",
             "Explain inversion of control",
-            "Compare dependency injection vs service locator pattern"
+            "Compare dependency injection vs service locator pattern",
         };
 
         var context = new Dictionary<string, object>
         {
             ["format"] = "concise",
-            ["audience"] = "intermediate developers"
+            ["audience"] = "intermediate developers",
         };
 
         Console.WriteLine("Processing batch tasks...\n");
@@ -238,8 +243,9 @@ public static class ConvenienceLayerExamples
     }
 
     /// <summary>
-    /// Example 6: Interactive Chat Session
+    /// Example 6: Interactive Chat Session.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task InteractiveChatSession()
     {
         Console.WriteLine("=== Example 6: Interactive Chat Session ===\n");
@@ -265,7 +271,7 @@ public static class ConvenienceLayerExamples
         {
             "Hello, how are you?",
             "What can you help me with?",
-            "Explain what a pipeline is"
+            "Explain what a pipeline is",
         };
 
         foreach (var userInput in interactions)
@@ -281,8 +287,9 @@ public static class ConvenienceLayerExamples
     }
 
     /// <summary>
-    /// Example 7: Comparing Presets
+    /// Example 7: Comparing Presets.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task ComparePresets()
     {
         Console.WriteLine("=== Example 7: Comparing Presets ===\n");
@@ -331,6 +338,7 @@ public static class ConvenienceLayerExamples
     /// <summary>
     /// Runs all convenience layer examples.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllExamples()
     {
         Console.WriteLine("\n" + new string('=', 60));

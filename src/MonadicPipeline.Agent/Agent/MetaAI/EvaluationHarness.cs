@@ -1,6 +1,6 @@
-// ==========================================================
-// Evaluation Harness - Measure Meta-AI performance
-// ==========================================================
+// <copyright file="EvaluationHarness.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -44,17 +44,18 @@ public sealed record TestCase(
 /// </summary>
 public sealed class EvaluationHarness
 {
-    private readonly IMetaAIPlannerOrchestrator _orchestrator;
-    private readonly List<EvaluationMetrics> _results = new();
+    private readonly IMetaAIPlannerOrchestrator orchestrator;
+    private readonly List<EvaluationMetrics> results = new();
 
     public EvaluationHarness(IMetaAIPlannerOrchestrator orchestrator)
     {
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        this.orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
     }
 
     /// <summary>
     /// Evaluates the orchestrator on a single test case.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<EvaluationMetrics> EvaluateTestCaseAsync(
         TestCase testCase,
         CancellationToken ct = default)
@@ -67,7 +68,7 @@ public sealed class EvaluationHarness
         try
         {
             // Plan
-            var planResult = await _orchestrator.PlanAsync(testCase.Goal, testCase.Context, ct);
+            var planResult = await this.orchestrator.PlanAsync(testCase.Goal, testCase.Context, ct);
 
             Plan? plan = null;
             planResult.Match(
@@ -75,10 +76,12 @@ public sealed class EvaluationHarness
                 error => throw new Exception($"Planning failed: {error}"));
 
             if (plan == null)
+            {
                 throw new Exception("Plan is null");
+            }
 
             // Execute
-            var execResult = await _orchestrator.ExecuteAsync(plan, ct);
+            var execResult = await this.orchestrator.ExecuteAsync(plan, ct);
 
             ExecutionResult? execution = null;
             execResult.Match(
@@ -86,10 +89,12 @@ public sealed class EvaluationHarness
                 error => throw new Exception($"Execution failed: {error}"));
 
             if (execution == null)
+            {
                 throw new Exception("Execution is null");
+            }
 
             // Verify
-            var verifyResult = await _orchestrator.VerifyAsync(execution, ct);
+            var verifyResult = await this.orchestrator.VerifyAsync(execution, ct);
 
             VerificationResult? verification = null;
             verifyResult.Match(
@@ -97,10 +102,12 @@ public sealed class EvaluationHarness
                 error => throw new Exception($"Verification failed: {error}"));
 
             if (verification == null)
+            {
                 throw new Exception("Verification is null");
+            }
 
             // Learn from experience
-            _orchestrator.LearnFromExecution(verification);
+            this.orchestrator.LearnFromExecution(verification);
 
             stopwatch.Stop();
 
@@ -122,10 +129,10 @@ public sealed class EvaluationHarness
                 {
                     ["steps_completed"] = execution.StepResults.Count,
                     ["steps_successful"] = execution.StepResults.Count(r => r.Success),
-                    ["verification_score"] = verification.QualityScore
+                    ["verification_score"] = verification.QualityScore,
                 });
 
-            _results.Add(metrics);
+            this.results.Add(metrics);
             return metrics;
         }
         catch (Exception ex)
@@ -142,10 +149,10 @@ public sealed class EvaluationHarness
                 new Dictionary<string, double>
                 {
                     ["error"] = 1.0,
-                    ["error_message_length"] = ex.Message.Length
+                    ["error_message_length"] = ex.Message.Length,
                 });
 
-            _results.Add(failedMetrics);
+            this.results.Add(failedMetrics);
             return failedMetrics;
         }
     }
@@ -153,6 +160,7 @@ public sealed class EvaluationHarness
     /// <summary>
     /// Evaluates the orchestrator on multiple test cases.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<EvaluationResults> EvaluateBatchAsync(
         IEnumerable<TestCase> testCases,
         CancellationToken ct = default)
@@ -165,18 +173,21 @@ public sealed class EvaluationHarness
         foreach (var testCase in testList)
         {
             if (ct.IsCancellationRequested)
+            {
                 break;
+            }
 
-            var result = await EvaluateTestCaseAsync(testCase, ct);
+            var result = await this.EvaluateTestCaseAsync(testCase, ct);
             batchResults.Add(result);
         }
 
-        return AggregateResults(batchResults);
+        return this.AggregateResults(batchResults);
     }
 
     /// <summary>
     /// Runs a benchmark suite with predefined test cases.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<EvaluationResults> RunBenchmarkAsync(CancellationToken ct = default)
     {
         var benchmarkCases = new List<TestCase>
@@ -209,21 +220,22 @@ public sealed class EvaluationHarness
                 "Error Handling",
                 "Attempt to execute an impossible task: divide by zero and handle the error",
                 null,
-                result => true) // Success is handling the error gracefully
+                result => true), // Success is handling the error gracefully
         };
 
-        return await EvaluateBatchAsync(benchmarkCases, ct);
+        return await this.EvaluateBatchAsync(benchmarkCases, ct);
     }
 
     /// <summary>
     /// Gets all evaluation results.
     /// </summary>
-    public IReadOnlyList<EvaluationMetrics> GetAllResults() => _results.AsReadOnly();
+    /// <returns></returns>
+    public IReadOnlyList<EvaluationMetrics> GetAllResults() => this.results.AsReadOnly();
 
     /// <summary>
     /// Clears all evaluation results.
     /// </summary>
-    public void ClearResults() => _results.Clear();
+    public void ClearResults() => this.results.Clear();
 
     private EvaluationResults AggregateResults(List<EvaluationMetrics> results)
     {
@@ -243,7 +255,7 @@ public sealed class EvaluationHarness
             ["avg_plan_steps"] = results.Any() ? results.Average(r => r.PlanSteps) : 0.0,
             ["avg_quality"] = avgQuality,
             ["avg_confidence"] = avgConfidence,
-            ["avg_execution_ms"] = avgTime.TotalMilliseconds
+            ["avg_execution_ms"] = avgTime.TotalMilliseconds,
         };
 
         // Add custom metric aggregations

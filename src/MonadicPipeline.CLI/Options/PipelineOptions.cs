@@ -1,9 +1,13 @@
-using CommandLine;
+// <copyright file="PipelineOptions.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Options;
 
+using CommandLine;
+
 [Verb("pipeline", HelpText = "Run a pipeline DSL.")]
-sealed class PipelineOptions
+internal sealed class PipelineOptions
 {
     [Option('d', "dsl", Required = true, HelpText = "Pipeline DSL string.")]
     public string Dsl { get; set; } = string.Empty;

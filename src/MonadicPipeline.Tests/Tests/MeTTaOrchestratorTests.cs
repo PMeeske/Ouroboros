@@ -1,12 +1,12 @@
-// ==========================================================
-// Tests for Orchestrator v3.0 MeTTa-First Representation
-// ==========================================================
+// <copyright file="MeTTaOrchestratorTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
 
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Tools;
 using LangChainPipeline.Tools.MeTTa;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for MeTTa-first orchestrator v3.0 with symbolic reasoning.
@@ -16,6 +16,7 @@ public static class MeTTaOrchestratorTests
     /// <summary>
     /// Tests MeTTa representation of a plan.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestMeTTaRepresentationPlan()
     {
         Console.WriteLine("=== Test: MeTTa Plan Representation ===");
@@ -28,18 +29,16 @@ public static class MeTTaOrchestratorTests
             Steps: new List<PlanStep>
             {
                 new PlanStep("step1", new Dictionary<string, object> { ["param1"] = "value1" }, "Expected 1", 0.9),
-                new PlanStep("step2", new Dictionary<string, object> { ["param2"] = "value2" }, "Expected 2", 0.8)
+                new PlanStep("step2", new Dictionary<string, object> { ["param2"] = "value2" }, "Expected 2", 0.8),
             },
             ConfidenceScores: new Dictionary<string, double> { ["overall"] = 0.85 },
-            CreatedAt: DateTime.UtcNow
-        );
+            CreatedAt: DateTime.UtcNow);
 
         var result = await representation.TranslatePlanAsync(plan);
 
         result.Match(
             _ => Console.WriteLine("✓ Plan successfully translated to MeTTa atoms"),
-            error => Console.WriteLine($"✗ Failed to translate plan: {error}")
-        );
+            error => Console.WriteLine($"✗ Failed to translate plan: {error}"));
 
         Console.WriteLine("✓ MeTTa plan representation test completed\n");
     }
@@ -47,6 +46,7 @@ public static class MeTTaOrchestratorTests
     /// <summary>
     /// Tests MeTTa representation of execution state.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestMeTTaRepresentationExecutionState()
     {
         Console.WriteLine("=== Test: MeTTa Execution State Representation ===");
@@ -58,11 +58,10 @@ public static class MeTTaOrchestratorTests
             Goal: "Test goal",
             Steps: new List<PlanStep>
             {
-                new PlanStep("test_step", new Dictionary<string, object>(), "Expected", 0.9)
+                new PlanStep("test_step", new Dictionary<string, object>(), "Expected", 0.9),
             },
             ConfidenceScores: new Dictionary<string, double>(),
-            CreatedAt: DateTime.UtcNow
-        );
+            CreatedAt: DateTime.UtcNow);
 
         var execution = new ExecutionResult(
             Plan: plan,
@@ -74,21 +73,18 @@ public static class MeTTaOrchestratorTests
                     Output: "test output",
                     Error: null,
                     Duration: TimeSpan.FromSeconds(1),
-                    ObservedState: new Dictionary<string, object> { ["state1"] = "value1" }
-                )
+                    ObservedState: new Dictionary<string, object> { ["state1"] = "value1" }),
             },
             Success: true,
             FinalOutput: "test output",
             Metadata: new Dictionary<string, object>(),
-            Duration: TimeSpan.FromSeconds(1)
-        );
+            Duration: TimeSpan.FromSeconds(1));
 
         var result = await representation.TranslateExecutionStateAsync(execution);
 
         result.Match(
             _ => Console.WriteLine("✓ Execution state successfully translated to MeTTa atoms"),
-            error => Console.WriteLine($"✗ Failed to translate execution state: {error}")
-        );
+            error => Console.WriteLine($"✗ Failed to translate execution state: {error}"));
 
         Console.WriteLine("✓ MeTTa execution state representation test completed\n");
     }
@@ -96,6 +92,7 @@ public static class MeTTaOrchestratorTests
     /// <summary>
     /// Tests MeTTa tool representation.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestMeTTaRepresentationTools()
     {
         Console.WriteLine("=== Test: MeTTa Tool Representation ===");
@@ -109,8 +106,7 @@ public static class MeTTaOrchestratorTests
 
         result.Match(
             _ => Console.WriteLine("✓ Tools successfully translated to MeTTa atoms"),
-            error => Console.WriteLine($"✗ Failed to translate tools: {error}")
-        );
+            error => Console.WriteLine($"✗ Failed to translate tools: {error}"));
 
         Console.WriteLine("✓ MeTTa tool representation test completed\n");
     }
@@ -118,6 +114,7 @@ public static class MeTTaOrchestratorTests
     /// <summary>
     /// Tests NextNode tool functionality.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestNextNodeTool()
     {
         Console.WriteLine("=== Test: NextNode Tool ===");
@@ -142,8 +139,7 @@ public static class MeTTaOrchestratorTests
 
         result.Match(
             output => Console.WriteLine($"✓ NextNode result: {output}"),
-            error => Console.WriteLine($"✗ NextNode failed: {error}")
-        );
+            error => Console.WriteLine($"✗ NextNode failed: {error}"));
 
         Console.WriteLine("✓ NextNode tool test completed\n");
     }
@@ -151,6 +147,7 @@ public static class MeTTaOrchestratorTests
     /// <summary>
     /// Tests NextNode tool with constraints.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestNextNodeToolWithConstraints()
     {
         Console.WriteLine("=== Test: NextNode Tool with Constraints ===");
@@ -175,8 +172,7 @@ public static class MeTTaOrchestratorTests
 
         result.Match(
             output => Console.WriteLine($"✓ NextNode with constraints result: {output}"),
-            error => Console.WriteLine($"✗ NextNode failed: {error}")
-        );
+            error => Console.WriteLine($"✗ NextNode failed: {error}"));
 
         Console.WriteLine("✓ NextNode tool with constraints test completed\n");
     }
@@ -219,6 +215,7 @@ public static class MeTTaOrchestratorTests
     /// <summary>
     /// Tests constraint addition to MeTTa knowledge base.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestMeTTaConstraints()
     {
         Console.WriteLine("=== Test: MeTTa Constraints ===");
@@ -230,7 +227,7 @@ public static class MeTTaOrchestratorTests
         {
             "(requires step_2 step_1)",
             "(forbids parallel step_1 step_2)",
-            "(capability tool_search information-retrieval)"
+            "(capability tool_search information-retrieval)",
         };
 
         foreach (var constraint in constraints)
@@ -238,8 +235,7 @@ public static class MeTTaOrchestratorTests
             var result = await representation.AddConstraintAsync(constraint);
             result.Match(
                 _ => Console.WriteLine($"✓ Added constraint: {constraint}"),
-                error => Console.WriteLine($"✗ Failed to add constraint: {error}")
-            );
+                error => Console.WriteLine($"✗ Failed to add constraint: {error}"));
         }
 
         Console.WriteLine("✓ MeTTa constraints test completed\n");
@@ -248,6 +244,7 @@ public static class MeTTaOrchestratorTests
     /// <summary>
     /// Tests querying next nodes from MeTTa.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestQueryNextNodes()
     {
         Console.WriteLine("=== Test: Query Next Nodes ===");
@@ -264,7 +261,7 @@ public static class MeTTaOrchestratorTests
 
         var context = new Dictionary<string, object>
         {
-            ["current_order"] = 0
+            ["current_order"] = 0,
         };
 
         var result = await representation.QueryNextNodesAsync("step_0", context);
@@ -278,8 +275,7 @@ public static class MeTTaOrchestratorTests
                     Console.WriteLine($"  - {candidate.NodeId}: {candidate.Action} (confidence: {candidate.Confidence})");
                 }
             },
-            error => Console.WriteLine($"✗ Query failed: {error}")
-        );
+            error => Console.WriteLine($"✗ Query failed: {error}"));
 
         Console.WriteLine("✓ Query next nodes test completed\n");
     }
@@ -287,6 +283,7 @@ public static class MeTTaOrchestratorTests
     /// <summary>
     /// Tests querying tools for a goal.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestQueryToolsForGoal()
     {
         Console.WriteLine("=== Test: Query Tools for Goal ===");
@@ -310,8 +307,7 @@ public static class MeTTaOrchestratorTests
                     Console.WriteLine($"  - {tool}");
                 }
             },
-            error => Console.WriteLine($"✗ Query failed: {error}")
-        );
+            error => Console.WriteLine($"✗ Query failed: {error}"));
 
         Console.WriteLine("✓ Query tools for goal test completed\n");
     }
@@ -319,6 +315,7 @@ public static class MeTTaOrchestratorTests
     /// <summary>
     /// Runs all MeTTa orchestrator v3.0 tests.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllTests()
     {
         Console.WriteLine("╔════════════════════════════════════════════╗");

@@ -1,7 +1,11 @@
-using System.Collections.Immutable;
-using System.Text.Json;
+// <copyright file="ToolRegistry.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Tools;
+
+using System.Collections.Immutable;
+using System.Text.Json;
 
 /// <summary>
 /// A registry for managing and organizing tools that can be invoked within the pipeline system.
@@ -9,21 +13,24 @@ namespace LangChainPipeline.Tools;
 /// </summary>
 public sealed class ToolRegistry
 {
-    private readonly ImmutableDictionary<string, ITool> _tools;
+    private readonly ImmutableDictionary<string, ITool> tools;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ToolRegistry"/> class.
     /// Creates a new empty ToolRegistry.
     /// </summary>
-    public ToolRegistry() : this(ImmutableDictionary<string, ITool>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase))
+    public ToolRegistry()
+        : this(ImmutableDictionary<string, ITool>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase))
     {
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ToolRegistry"/> class.
     /// Internal constructor for creating registries with existing tools.
     /// </summary>
     private ToolRegistry(ImmutableDictionary<string, ITool> tools)
     {
-        _tools = tools;
+        this.tools = tools;
     }
 
     /// <summary>
@@ -36,7 +43,7 @@ public sealed class ToolRegistry
     public ToolRegistry WithTool(ITool tool)
     {
         ArgumentNullException.ThrowIfNull(tool);
-        return new ToolRegistry(_tools.SetItem(tool.Name, tool));
+        return new ToolRegistry(this.tools.SetItem(tool.Name, tool));
     }
 
     /// <summary>
@@ -47,7 +54,7 @@ public sealed class ToolRegistry
     public Option<ITool> GetTool(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
-        return _tools.TryGetValue(name, out ITool? tool) ? Option<ITool>.Some(tool) : Option<ITool>.None();
+        return this.tools.TryGetValue(name, out ITool? tool) ? Option<ITool>.Some(tool) : Option<ITool>.None();
     }
 
     /// <summary>
@@ -55,24 +62,24 @@ public sealed class ToolRegistry
     /// </summary>
     /// <param name="name">The name of the tool.</param>
     /// <returns>The tool if found, otherwise null.</returns>
-    public ITool? Get(string name) => _tools.TryGetValue(name, out ITool? tool) ? tool : null;
+    public ITool? Get(string name) => this.tools.TryGetValue(name, out ITool? tool) ? tool : null;
 
     /// <summary>
     /// Gets all registered tools as an immutable collection.
     /// </summary>
-    public IEnumerable<ITool> All => _tools.Values;
+    public IEnumerable<ITool> All => this.tools.Values;
 
     /// <summary>
     /// Gets the number of registered tools.
     /// </summary>
-    public int Count => _tools.Count;
+    public int Count => this.tools.Count;
 
     /// <summary>
     /// Checks if a tool with the specified name is registered.
     /// </summary>
     /// <param name="name">The tool name to check.</param>
     /// <returns>True if the tool is registered, false otherwise.</returns>
-    public bool Contains(string name) => _tools.ContainsKey(name);
+    public bool Contains(string name) => this.tools.ContainsKey(name);
 
     /// <summary>
     /// Exports the schemas of all registered tools as JSON with Result-based error handling.
@@ -82,11 +89,11 @@ public sealed class ToolRegistry
     {
         try
         {
-            var schemas = _tools.Values.Select(t => new
+            var schemas = this.tools.Values.Select(t => new
             {
                 name = t.Name,
                 description = t.Description,
-                parameters = string.IsNullOrEmpty(t.JsonSchema) ? null : JsonSerializer.Deserialize<object>(t.JsonSchema!)
+                parameters = string.IsNullOrEmpty(t.JsonSchema) ? null : JsonSerializer.Deserialize<object>(t.JsonSchema!),
             });
 
             string json = ToolJson.Serialize(schemas);
@@ -104,7 +111,7 @@ public sealed class ToolRegistry
     /// <returns>A JSON string containing all tool schemas.</returns>
     public string ExportSchemas()
     {
-        return SafeExportSchemas().GetValueOrDefault("[]"); // Return empty array on failure
+        return this.SafeExportSchemas().GetValueOrDefault("[]"); // Return empty array on failure
     }
 
     /// <summary>
@@ -115,7 +122,7 @@ public sealed class ToolRegistry
     /// <param name="function">The function to execute.</param>
     /// <returns>A new ToolRegistry with the function registered as a tool.</returns>
     public ToolRegistry WithFunction(string name, string description, Func<string, string> function)
-        => WithTool(new DelegateTool(name, description, function));
+        => this.WithTool(new DelegateTool(name, description, function));
 
     /// <summary>
     /// Registers a delegate function as a tool (asynchronous), returning a new registry.
@@ -125,7 +132,7 @@ public sealed class ToolRegistry
     /// <param name="function">The async function to execute.</param>
     /// <returns>A new ToolRegistry with the function registered as a tool.</returns>
     public ToolRegistry WithFunction(string name, string description, Func<string, Task<string>> function)
-        => WithTool(new DelegateTool(name, description, function));
+        => this.WithTool(new DelegateTool(name, description, function));
 
     /// <summary>
     /// Registers a strongly-typed delegate function as a tool, returning a new registry.
@@ -136,7 +143,7 @@ public sealed class ToolRegistry
     /// <param name="function">The typed async function to execute.</param>
     /// <returns>A new ToolRegistry with the function registered as a tool.</returns>
     public ToolRegistry WithFunction<T>(string name, string description, Func<T, Task<string>> function)
-        => WithTool(DelegateTool.FromJson(name, description, function));
+        => this.WithTool(DelegateTool.FromJson(name, description, function));
 
     /// <summary>
     /// Creates a new ToolRegistry with multiple tools registered at once.
@@ -144,7 +151,7 @@ public sealed class ToolRegistry
     /// <param name="tools">The tools to register.</param>
     /// <returns>A new ToolRegistry with all tools registered.</returns>
     public ToolRegistry WithTools(params ITool[] tools)
-        => WithTools(tools.AsEnumerable());
+        => this.WithTools(tools.AsEnumerable());
 
     /// <summary>
     /// Creates a new ToolRegistry with multiple tools registered at once.
@@ -158,6 +165,7 @@ public sealed class ToolRegistry
         {
             newRegistry = newRegistry.WithTool(tool);
         }
+
         return newRegistry;
     }
 
@@ -169,10 +177,10 @@ public sealed class ToolRegistry
     public ToolRegistry WithoutTool(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
-        return new ToolRegistry(_tools.Remove(name));
+        return new ToolRegistry(this.tools.Remove(name));
     }
 
-    #region Legacy Methods (Obsolete)
+
     // Legacy mutable registration methods for backward compatibility.
     // These will be removed in future versions.
 
@@ -203,7 +211,6 @@ public sealed class ToolRegistry
         throw new InvalidOperationException("Use WithFunction<T>() for immutable updates.");
     }
 
-    #endregion
 
     /// <summary>
     /// Creates a default ToolRegistry with common tools pre-registered.

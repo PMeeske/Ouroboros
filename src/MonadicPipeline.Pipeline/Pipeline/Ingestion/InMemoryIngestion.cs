@@ -1,14 +1,18 @@
+// <copyright file="InMemoryIngestion.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Pipeline.Ingestion;
+
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Splitters.Text;
-
-namespace LangChainPipeline.Pipeline.Ingestion;
 
 public static class InMemoryIngestion
 {
     public static async Task<List<Vector>> LoadToMemory<TLoader>(
         TrackedVectorStore store,
-    IEmbeddingModel embedding,
+        IEmbeddingModel embedding,
         DataSource source,
         ITextSplitter splitter,
         CancellationToken ct = default)
@@ -20,7 +24,10 @@ public static class InMemoryIngestion
         foreach (Document doc in await loader.LoadAsync(source, cancellationToken: ct))
         {
             string text = doc.PageContent;
-            if (string.IsNullOrWhiteSpace(text)) continue;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                continue;
+            }
 
             IReadOnlyList<string> chunks = splitter.SplitText(text);
             int i = 0;
@@ -34,9 +41,10 @@ public static class InMemoryIngestion
                     Metadata = new Dictionary<string, object?>(doc.Metadata!)
                     {
                         ["chunkIndex"] = i,
-                        ["name"] = doc.Metadata != null && doc.Metadata.TryGetValue("name", out object? n) ? n : null
-                    }!,
-                    Embedding = resp
+                        ["name"] = doc.Metadata != null && doc.Metadata.TryGetValue("name", out object? n) ? n : null,
+                    }
+!,
+                    Embedding = resp,
                 };
                 vectors.Add(vec);
                 i++;

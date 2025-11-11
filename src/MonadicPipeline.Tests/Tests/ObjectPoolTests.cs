@@ -1,8 +1,12 @@
+// <copyright file="ObjectPoolTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using System.Text;
 using LangChainPipeline.Core.Performance;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 public class ObjectPoolTests
 {

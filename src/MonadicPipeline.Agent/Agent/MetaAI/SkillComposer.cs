@@ -1,6 +1,6 @@
-// ==========================================================
-// Skill Composition - Combine skills into higher-level skills
-// ==========================================================
+// <copyright file="SkillComposer.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -28,6 +28,7 @@ public interface ISkillComposer
     /// <summary>
     /// Composes multiple skills into a higher-level skill.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<Skill, string>> ComposeSkillsAsync(
         string compositeName,
         string description,
@@ -38,6 +39,7 @@ public interface ISkillComposer
     /// <summary>
     /// Suggests skill compositions based on usage patterns.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<List<(List<string> skills, double score)>> SuggestCompositionsAsync(
         int maxSuggestions = 5,
         CancellationToken ct = default);
@@ -45,6 +47,7 @@ public interface ISkillComposer
     /// <summary>
     /// Decomposes a composite skill into its components.
     /// </summary>
+    /// <returns></returns>
     Result<List<Skill>, string> DecomposeSkill(string compositeName);
 }
 
@@ -53,18 +56,19 @@ public interface ISkillComposer
 /// </summary>
 public sealed class SkillComposer : ISkillComposer
 {
-    private readonly ISkillRegistry _skills;
-    private readonly IMemoryStore _memory;
+    private readonly ISkillRegistry skills;
+    private readonly IMemoryStore memory;
 
     public SkillComposer(ISkillRegistry skills, IMemoryStore memory)
     {
-        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        this.skills = skills ?? throw new ArgumentNullException(nameof(skills));
+        this.memory = memory ?? throw new ArgumentNullException(nameof(memory));
     }
 
     /// <summary>
     /// Composes multiple skills into a higher-level skill.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<Skill, string>> ComposeSkillsAsync(
         string compositeName,
         string description,
@@ -75,13 +79,19 @@ public sealed class SkillComposer : ISkillComposer
         config ??= new SkillCompositionConfig();
 
         if (string.IsNullOrWhiteSpace(compositeName))
+        {
             return Result<Skill, string>.Failure("Composite name cannot be empty");
+        }
 
         if (componentSkillNames.Count == 0)
+        {
             return Result<Skill, string>.Failure("Must provide at least one component skill");
+        }
 
         if (componentSkillNames.Count > config.MaxComponentSkills)
+        {
             return Result<Skill, string>.Failure($"Too many component skills (max: {config.MaxComponentSkills})");
+        }
 
         try
         {
@@ -89,16 +99,22 @@ public sealed class SkillComposer : ISkillComposer
             var componentSkills = new List<Skill>();
             foreach (var skillName in componentSkillNames)
             {
-                var skill = _skills.GetSkill(skillName);
+                var skill = this.skills.GetSkill(skillName);
                 if (skill == null)
+                {
                     return Result<Skill, string>.Failure($"Component skill '{skillName}' not found");
+                }
 
                 if (skill.SuccessRate < config.MinComponentQuality)
+                {
                     return Result<Skill, string>.Failure($"Component skill '{skillName}' quality too low ({skill.SuccessRate:P0})");
+                }
 
                 // Check for recursive composition - use metadata to track
                 if (!config.AllowRecursiveComposition && skill.Prerequisites.Contains("__composite__"))
+                {
                     return Result<Skill, string>.Failure($"Recursive composition not allowed: '{skillName}' is already composite");
+                }
 
                 componentSkills.Add(skill);
             }
@@ -127,7 +143,7 @@ public sealed class SkillComposer : ISkillComposer
                 DateTime.UtcNow);
 
             // Register the composite skill
-            _skills.RegisterSkill(compositeSkill);
+            this.skills.RegisterSkill(compositeSkill);
 
             return await Task.FromResult(Result<Skill, string>.Success(compositeSkill));
         }
@@ -140,6 +156,7 @@ public sealed class SkillComposer : ISkillComposer
     /// <summary>
     /// Suggests skill compositions based on usage patterns.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<List<(List<string> skills, double score)>> SuggestCompositionsAsync(
         int maxSuggestions = 5,
         CancellationToken ct = default)
@@ -150,19 +167,19 @@ public sealed class SkillComposer : ISkillComposer
         {
             // Get all experiences
             var query = new MemoryQuery(
-                Goal: "",
+                Goal: string.Empty,
                 Context: null,
                 MaxResults: 100,
                 MinSimilarity: 0.0);
 
-            var experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            var experiences = await this.memory.RetrieveRelevantExperiencesAsync(query, ct);
 
             // Analyze which skills are used together
             var skillCombinations = new Dictionary<string, int>();
 
             foreach (var exp in experiences.Where(e => e.Verification.Verified))
             {
-                var usedSkills = ExtractUsedSkills(exp);
+                var usedSkills = this.ExtractUsedSkills(exp);
 
                 if (usedSkills.Count >= 2)
                 {
@@ -195,18 +212,25 @@ public sealed class SkillComposer : ISkillComposer
     /// <summary>
     /// Decomposes a composite skill into its components.
     /// </summary>
+    /// <returns></returns>
     public Result<List<Skill>, string> DecomposeSkill(string compositeName)
     {
         if (string.IsNullOrWhiteSpace(compositeName))
+        {
             return Result<List<Skill>, string>.Failure("Composite name cannot be empty");
+        }
 
-        var skill = _skills.GetSkill(compositeName);
+        var skill = this.skills.GetSkill(compositeName);
         if (skill == null)
+        {
             return Result<List<Skill>, string>.Failure($"Skill '{compositeName}' not found");
+        }
 
         // Check if it's composite by looking for the marker in prerequisites
         if (!skill.Prerequisites.Contains("__composite__"))
+        {
             return Result<List<Skill>, string>.Failure($"Skill '{compositeName}' is not a composite skill");
+        }
 
         // Component names are in prerequisites (excluding the marker)
         var componentNames = skill.Prerequisites.Where(p => p != "__composite__").ToList();
@@ -214,7 +238,7 @@ public sealed class SkillComposer : ISkillComposer
 
         foreach (var componentName in componentNames)
         {
-            var component = _skills.GetSkill(componentName);
+            var component = this.skills.GetSkill(componentName);
             if (component != null)
             {
                 components.Add(component);
@@ -229,7 +253,7 @@ public sealed class SkillComposer : ISkillComposer
         var usedSkills = new List<string>();
 
         // Check which registered skills were used in the plan
-        var allSkills = _skills.GetAllSkills();
+        var allSkills = this.skills.GetAllSkills();
 
         foreach (var skill in allSkills)
         {

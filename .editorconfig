@@ -1,455 +1,84 @@
-# EditorConfig for MonadicPipeline
-# https://editorconfig.org
+# EditorConfig is awesome: https://EditorConfig.org
 
-# Top-most EditorConfig file
+# top-most EditorConfig file
 root = true
 
-# All files
+# Unix-style newlines with a newline ending every file
 [*]
-charset = utf-8
 end_of_line = lf
 insert_final_newline = true
+charset = utf-8
 trim_trailing_whitespace = true
-indent_s# SA1137: Elements should have same indentation
-dotnet_diagnostic.SA1137.severity = suggestion
-
-# SA1136: Enum values should be on separate lines
-dotnet_diagnostic.SA1136.severity = suggestion
-
-# SA1501: Statement should not be on single line
-dotnet_diagnostic.SA1501.severity = suggestion
-
-# SA1520: Use braces consistently
-dotnet_diagnostic.SA1520.severity = suggestion
-
-# SA1500: Braces for multi-line statements should not share line
-dotnet_diagnostic.SA1500.severity = suggestion
-
-# SA1512: Single-line comments should not be followed by blank line
-dotnet_diagnostic.SA1512.severity = suggestion
-
-# SA1008: Opening parenthesis should not be preceded by space
-dotnet_diagnostic.SA1008.severity = suggestion
-
-# SA1012: Opening brace spacing
-dotnet_diagnostic.SA1012.severity = suggestion
-
-# SA1013: Closing brace spacing
-dotnet_diagnostic.SA1013.severity = suggestion
-
-# SA1015: Closing generic bracket spacing
-dotnet_diagnostic.SA1015.severity = suggestion
-
-# SA1202: Elements should be ordered by access (public before private)
-dotnet_diagnostic.SA1202.severity = suggestion
-
-# SA1519: Braces should not be omitted from multi-line child statement
-dotnet_diagnostic.SA1519.severity = suggestion
-
-# SA1407: Arithmetic expressions should declare precedence
-dotnet_diagnostic.SA1407.severity = suggestion
-
-# SA1612: Element parameter documentation should match element parameters
-dotnet_diagnostic.SA1612.severity = suggestion
-
-# SA1118: Parameter should not span multiple lines
-dotnet_diagnostic.SA1118.severity = suggestion
-
-# RCS1155: Use StringComparison when comparing strings
-dotnet_diagnostic.RCS1155.severity = suggestion
-
-# RCS1263: Invalid parameter reference in XML comment
-dotnet_diagnostic.RCS1263.severity = none
-
-# SA1400: Element should declare access modifier
-dotnet_diagnostic.SA1400.severity = suggestion
-
-# SA1025: Code should not contain multiple whitespace in a row
-dotnet_diagnostic.SA1025.severity = suggestion
-
-# S1905: Unnecessary cast
-dotnet_diagnostic.S1905.severity = suggestion
-
-# S125: Commented out code should be removed
-dotnet_diagnostic.S125.severity = none
-
-# SA1011: Closing square bracket spacing
-dotnet_diagnostic.SA1011.severity = suggestion
-
-# SA1024: Colon should be preceded by space
-dotnet_diagnostic.SA1024.severity = suggestion
-
-# SA1312: Variable naming
-dotnet_diagnostic.SA1312.severity = suggestion
-
-# S108: Empty block of code
-dotnet_diagnostic.S108.severity = suggestion
-
-# S3011: Reflection accessibility bypass
-dotnet_diagnostic.S3011.severity = suggestion
-
-# SA1119: Statement should not use unnecessary parenthesis
-dotnet_diagnostic.SA1119.severity = suggestion
-
-# S1481: Unused local variable
-dotnet_diagnostic.S1481.severity = suggestion
-
-# S3267: Loop can be simplified with LINQ
-dotnet_diagnostic.S3267.severity = suggestion
-
-# S1075: Hardcoded absolute path/URI
-dotnet_diagnostic.S1075.severity = none
-
-# S6602: Use Find instead of FirstOrDefault
-dotnet_diagnostic.S6602.severity = suggestion
-
-# S6608: Use indexing instead of First()
-dotnet_diagnostic.S6608.severity = suggestion
-
-# S6610: Use char overload for StartsWith/EndsWith
-dotnet_diagnostic.S6610.severity = suggestion
-
-# SA1505: Opening brace should not be followed by blank line
-dotnet_diagnostic.SA1505.severity = suggestion
-
-# SA1142: Refer to tuple fields by name
-dotnet_diagnostic.SA1142.severity = suggestion
-
-# S4144: Methods should not have identical implementations
-dotnet_diagnostic.S4144.severity = suggestion
-
-# S3626: Redundant jump statement
-dotnet_diagnostic.S3626.severity = suggestion
-
-# S2583: Conditionally executed code should be reachable
-dotnet_diagnostic.S2583.severity = suggestion
-
-# S1118: Utility classes should not have public constructors
-dotnet_diagnostic.S1118.severity = suggestion
-
-# RCS1102: Make class static
-dotnet_diagnostic.RCS1102.severity = suggestion
-
-# S2930: IDisposables should be disposed
-dotnet_diagnostic.S2930.severity = suggestion
-
-# S2925: Thread.Sleep in tests
-dotnet_diagnostic.S2925.severity = suggestion
-indent_size = 2
-
-# Code files
-[*.{cs,csx,vb,vbx}]
-indent_size = 4
-tab_width = 4
 
 # C# files
 [*.cs]
-# New line preferences
-csharp_new_line_before_open_brace = all
-csharp_new_line_before_else = true
-csharp_new_line_before_catch = true
-csharp_new_line_before_finally = true
-csharp_new_line_before_members_in_object_initializers = true
-csharp_new_line_before_members_in_anonymous_types = true
-csharp_new_line_between_query_expression_clauses = true
-
-# Indentation preferences
-csharp_indent_case_contents = true
-csharp_indent_switch_labels = true
-csharp_indent_labels = flush_left
-
-# Space preferences
-csharp_space_after_cast = false
-csharp_space_after_keywords_in_control_flow_statements = true
-csharp_space_between_method_call_parameter_list_parentheses = false
-csharp_space_between_method_declaration_parameter_list_parentheses = false
-csharp_space_between_parentheses = false
-csharp_space_before_colon_in_inheritance_clause = true
-csharp_space_after_colon_in_inheritance_clause = true
-csharp_space_around_binary_operators = before_and_after
-csharp_space_between_method_declaration_empty_parameter_list_parentheses = false
-csharp_space_between_method_call_name_and_opening_parenthesis = false
-csharp_space_between_method_call_empty_parameter_list_parentheses = false
-
-# Organize usings
-dotnet_sort_system_directives_first = true
-
-# StyleCop Analyzer Rules - Functional Programming Focused
-# SA1633: File header (disable - not needed for open source)
-dotnet_diagnostic.SA1633.severity = none
-
-# SA1649: File name should match first type name (disable for multiple types in one file)
-dotnet_diagnostic.SA1649.severity = none
-
-# SA1402: File may only contain a single type (disable - allow multiple related types)
-dotnet_diagnostic.SA1402.severity = none
-
-# SA1101: Prefix local calls with this
-dotnet_diagnostic.SA1101.severity = none
-
-# SA1503: Braces should not be omitted
-dotnet_diagnostic.SA1503.severity = none
-
-# SA1513: Closing brace should be followed by blank line
-dotnet_diagnostic.SA1513.severity = none
-
-# SA1507: Code should not contain multiple blank lines
-dotnet_diagnostic.SA1507.severity = none
-
-# SA1413: Use trailing comma in multi-line initializers
-dotnet_diagnostic.SA1413.severity = suggestion
-
-# SA1600: Elements should be documented (handle via CS1591)
-dotnet_diagnostic.SA1600.severity = none
-
-# SA1611: Parameter documentation missing (handled selectively)
-dotnet_diagnostic.SA1611.severity = suggestion
-
-# SA1615: Return value should be documented (handled selectively)
-dotnet_diagnostic.SA1615.severity = suggestion
-
-# SA1618: Generic type parameters should be documented (handled selectively)
-dotnet_diagnostic.SA1618.severity = suggestion
-
-# SA1623: Property summary documentation should begin with standard text
-dotnet_diagnostic.SA1623.severity = suggestion
-
-# SA1629: Documentation text should end with a period
-dotnet_diagnostic.SA1629.severity = suggestion
-
-# SA1642: Constructor summary should use standard text
-dotnet_diagnostic.SA1642.severity = none
-
-# SA1122: Use string.Empty for empty strings
-dotnet_diagnostic.SA1122.severity = suggestion
-
-# SA1111: Closing parenthesis should be on line of last parameter
-dotnet_diagnostic.SA1111.severity = suggestion
-
-# SA1009: Closing parenthesis should not be preceded by a space
-dotnet_diagnostic.SA1009.severity = suggestion
-
-# SA1108: Block statements should not contain embedded comments
-dotnet_diagnostic.SA1108.severity = none
-
-# SA1028: Code should not contain trailing whitespace
-dotnet_diagnostic.SA1028.severity = suggestion
-
-# SA1001: Commas should be followed by whitespace
-dotnet_diagnostic.SA1001.severity = suggestion
-
-# SA1003: Operator should be preceded/followed by whitespace
-dotnet_diagnostic.SA1003.severity = suggestion
-
-# SA1316: Tuple element names should use correct casing
-dotnet_diagnostic.SA1316.severity = suggestion
-
-# Sonar Analyzer Rules
-# S1172: Unused parameters (keep for interface implementations)
-dotnet_diagnostic.S1172.severity = suggestion
-
-# S2326: Unused type parameters (keep for marker interfaces)
-dotnet_diagnostic.S2326.severity = suggestion
-
-# S6603: Collection-specific methods preferred
-dotnet_diagnostic.S6603.severity = suggestion
-
-# S6605: Collection-specific methods preferred
-dotnet_diagnostic.S6605.severity = suggestion
-
-# S4487: Unused private fields
-dotnet_diagnostic.S4487.severity = suggestion
-
-# S4136: Method overloads should be adjacent
-dotnet_diagnostic.S4136.severity = suggestion
-
-# S2933: Fields should be readonly when possible
-dotnet_diagnostic.S2933.severity = suggestion
-
-# S3881: IDisposable implementation pattern
-dotnet_diagnostic.S3881.severity = suggestion
-
-# S1144: Unused private members
-dotnet_diagnostic.S1144.severity = suggestion
-
-# S2365: Properties should not copy collections
-dotnet_diagnostic.S2365.severity = suggestion
-
-# S3260: Non-derived classes should be sealed
-dotnet_diagnostic.S3260.severity = suggestion
-
-# S3358: Nested ternary operators
-dotnet_diagnostic.S3358.severity = suggestion
-
-# Additional StyleCop Rules to Suppress
-# SA1200: Using directives must be placed correctly
-dotnet_diagnostic.SA1200.severity = none
-
-# SA1309: Field names should not begin with underscore
-dotnet_diagnostic.SA1309.severity = none
-
-# SA1201: Elements should appear in correct order
-dotnet_diagnostic.SA1201.severity = suggestion
-
-# SA1204: Static elements should appear before instance elements
-dotnet_diagnostic.SA1204.severity = suggestion
-
-# SA1516: Elements should be separated by blank line
-dotnet_diagnostic.SA1516.severity = suggestion
-
-# SA1602: Enumeration items should be documented
-dotnet_diagnostic.SA1602.severity = suggestion
-
-# SA1124: Do not use regions
-dotnet_diagnostic.SA1124.severity = suggestion
-
-# SA1518: File must end with newline
-dotnet_diagnostic.SA1518.severity = suggestion
-
-# SA1214: Readonly fields should appear before non-readonly fields
-dotnet_diagnostic.SA1214.severity = suggestion
-
-# SA1203: Constants should appear before fields
-dotnet_diagnostic.SA1203.severity = suggestion
-
-# SA1127: Generic constraints should be on own line
-dotnet_diagnostic.SA1127.severity = suggestion
-
-# SA1313: Parameter names should begin with lower-case letter
-dotnet_diagnostic.SA1313.severity = suggestion
-
-# SA1414: Tuple types should have element names
-dotnet_diagnostic.SA1414.severity = suggestion
-
-# SA1208: Using directives should be ordered
-dotnet_diagnostic.SA1208.severity = suggestion
-
-# SA1210: Using directives should be ordered alphabetically
-dotnet_diagnostic.SA1210.severity = suggestion
-
-# SA1116: Parameters should begin on line after declaration when multi-line
-dotnet_diagnostic.SA1116.severity = suggestion
-
-# SA1100: Do not prefix calls with base unless local implementation exists
-dotnet_diagnostic.SA1100.severity = suggestion
-
-# Roslynator Rules
-# RCS1194: Implement exception constructors
-dotnet_diagnostic.RCS1194.severity = suggestion
-
-# Additional StyleCop Formatting Rules
-# SA1515: Single-line comment should be preceded by blank line
-dotnet_diagnostic.SA1515.severity = suggestion
-
-# SA1128: Constructor initializers should be on own line
-dotnet_diagnostic.SA1128.severity = suggestion
-
-# SA1502: Element should not be on single line
-dotnet_diagnostic.SA1502.severity = suggestion
-
-# SA1117: Parameters should be on same line or each on own line
-dotnet_diagnostic.SA1117.severity = suggestion
-
-# SA1514: Element documentation header should be preceded by blank line
-dotnet_diagnostic.SA1514.severity = suggestion
-
-# SA1107: Code should not contain multiple statements on one line
-dotnet_diagnostic.SA1107.severity = suggestion
-
-# SA1137: Elements should have the same indentation
-dotnet_diagnostic.SA1137.severity = suggestion
-dotnet_separate_import_directive_groups = false
-
-# Code quality rules
-dotnet_code_quality_unused_parameters = all:suggestion
-
-# this. preferences
-dotnet_style_qualification_for_field = false:suggestion
-dotnet_style_qualification_for_property = false:suggestion
-dotnet_style_qualification_for_method = false:suggestion
-dotnet_style_qualification_for_event = false:suggestion
-
-# Language keywords vs BCL types preferences
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+# C# formatting rules
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+
+csharp_style_qualification_for_field = false:silent
+csharp_style_qualification_for_property = false:silent
+csharp_style_qualification_for_method = false:silent
+csharp_style_qualification_for_event = false:silent
+
+dotnet_style_qualification_for_field = false:silent
+dotnet_style_qualification_for_property = false:silent
+dotnet_style_qualification_for_method = false:silent
+dotnet_style_qualification_for_event = false:silent
+
+# this. and Me. preferences
+dotnet_style_qualification_for_field = false
+dotnet_style_qualification_for_property = false
+dotnet_style_qualification_for_method = false
+dotnet_style_qualification_for_event = false
+
+# Language keywords vs BCL types
 dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
 dotnet_style_predefined_type_for_member_access = true:suggestion
 
-# Parentheses preferences
-dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity:silent
-dotnet_style_parentheses_in_other_binary_operators = always_for_clarity:silent
-dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity:silent
-dotnet_style_parentheses_in_other_operators = never_if_unnecessary:silent
-
 # Modifier preferences
-dotnet_style_require_accessibility_modifiers = for_non_interface_members:suggestion
-dotnet_style_readonly_field = true:suggestion
+csharp_preferred_modifier_order = public,private,protected,internal,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,volatile,async:suggestion
+csharp_style_require_accessibility_modifiers = for_non_interface_members:suggestion
 
-# Expression-level preferences
-dotnet_style_object_initializer = true:suggestion
-dotnet_style_collection_initializer = true:suggestion
-dotnet_style_explicit_tuple_names = true:suggestion
-dotnet_style_null_propagation = true:suggestion
-dotnet_style_coalesce_expression = true:suggestion
-dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
-dotnet_style_prefer_inferred_tuple_names = true:suggestion
-dotnet_style_prefer_inferred_anonymous_type_member_names = true:suggestion
-dotnet_style_prefer_auto_properties = true:suggestion
-dotnet_style_prefer_conditional_expression_over_assignment = true:silent
-dotnet_style_prefer_conditional_expression_over_return = true:silent
-csharp_prefer_simple_default_expression = true:suggestion
+# Expression-bodied members
+csharp_style_expression_bodied_methods = false:silent
+csharp_style_expression_bodied_constructors = false:silent
+csharp_style_expression_bodied_operators = false:silent
+csharp_style_expression_bodied_properties = true:suggestion
+csharp_style_expression_bodied_indexers = true:suggestion
+csharp_style_expression_bodied_accessors = true:suggestion
+csharp_style_expression_bodied_lambdas = true:silent
+csharp_style_expression_bodied_local_functions = false:silent
 
-# Pattern matching preferences
-csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
-csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+# Braces
+csharp_style_braces_for_single_line_control_statements = false:silent
+
+# Unused parameters
+dotnet_code_quality_unused_parameters = all:suggestion
 
 # Null-checking preferences
 csharp_style_throw_expression = true:suggestion
 csharp_style_conditional_delegate_call = true:suggestion
 
-# Expression-bodied members
-csharp_style_expression_bodied_methods = when_on_single_line:suggestion
-csharp_style_expression_bodied_constructors = when_on_single_line:suggestion
-csharp_style_expression_bodied_operators = when_on_single_line:suggestion
-csharp_style_expression_bodied_properties = when_on_single_line:suggestion
-csharp_style_expression_bodied_indexers = when_on_single_line:suggestion
-csharp_style_expression_bodied_accessors = when_on_single_line:suggestion
-
-# Pattern matching preferences
-csharp_style_pattern_local_over_anonymous_function = true:suggestion
+# Other
 csharp_style_inlined_variable_declaration = true:suggestion
 
-# C# var preferences
-csharp_style_var_for_built_in_types = true:suggestion
-csharp_style_var_when_type_is_apparent = true:suggestion
-csharp_style_var_elsewhere = true:suggestion
-
-# Expression-level preferences
-csharp_prefer_braces = true:suggestion
-csharp_prefer_simple_using_statement = true:suggestion
+# XML documentation
+xml_doc_style_include_dot_in_summary_tag = true
+xml_doc_style_include_dot_in_param_tag = true
+xml_doc_style_include_dot_in_returns_tag = true
+xml_doc_style_include_dot_in_value_tag = true
 
 # JSON files
 [*.json]
-indent_size = 2
-
-# XML files
-[*.{xml,csproj,props,targets}]
-indent_size = 2
-
-# YAML files
-[*.{yml,yaml}]
+indent_style = space
 indent_size = 2
 
 # Markdown files
 [*.md]
 trim_trailing_whitespace = false
-
-# Shell scripts
-[*.{sh,bash}]
-end_of_line = lf
-
-# PowerShell scripts
-[*.ps1]
-end_of_line = crlf
-
-# Dockerfile
-[Dockerfile*]
-indent_size = 2

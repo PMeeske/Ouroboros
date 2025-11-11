@@ -1,8 +1,12 @@
+// <copyright file="MathToolTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChainPipeline.Tools;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for the MathTool implementation.
@@ -112,7 +116,7 @@ public class MathToolTests
         var tool = new MathTool();
 
         // Act
-        var result = await tool.InvokeAsync("");
+        var result = await tool.InvokeAsync(string.Empty);
 
         // Assert
         result.IsFailure.Should().BeTrue();

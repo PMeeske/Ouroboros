@@ -1,7 +1,6 @@
-// ==========================================================
-// Meta-AI Builder - Fluent API for orchestrator configuration
-// ==========================================================
-
+// <copyright file="MetaAIBuilder.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -11,114 +10,125 @@ namespace LangChainPipeline.Agent.MetaAI;
 /// </summary>
 public sealed class MetaAIBuilder
 {
-    private IChatCompletionModel? _llm;
-    private ToolRegistry? _tools;
-    private IMemoryStore? _memory;
-    private ISkillRegistry? _skills;
-    private IUncertaintyRouter? _router;
-    private ISafetyGuard? _safety;
-    private ISkillExtractor? _skillExtractor;
-    private IEmbeddingModel? _embedding;
-    private TrackedVectorStore? _vectorStore;
-    private double _confidenceThreshold = 0.7;
-    private PermissionLevel _defaultPermissionLevel = PermissionLevel.Isolated;
+    private IChatCompletionModel? llm;
+    private ToolRegistry? tools;
+    private IMemoryStore? memory;
+    private ISkillRegistry? skills;
+    private IUncertaintyRouter? router;
+    private ISafetyGuard? safety;
+    private ISkillExtractor? skillExtractor;
+    private IEmbeddingModel? embedding;
+    private TrackedVectorStore? vectorStore;
+    private double confidenceThreshold = 0.7;
+    private PermissionLevel defaultPermissionLevel = PermissionLevel.Isolated;
 
     /// <summary>
     /// Sets the language model for the orchestrator.
     /// </summary>
+    /// <returns></returns>
     public MetaAIBuilder WithLLM(IChatCompletionModel llm)
     {
-        _llm = llm;
+        this.llm = llm;
         return this;
     }
 
     /// <summary>
     /// Sets the tool registry.
     /// </summary>
+    /// <returns></returns>
     public MetaAIBuilder WithTools(ToolRegistry tools)
     {
-        _tools = tools;
+        this.tools = tools;
         return this;
     }
 
     /// <summary>
     /// Sets the embedding model for semantic search.
     /// </summary>
+    /// <returns></returns>
     public MetaAIBuilder WithEmbedding(IEmbeddingModel embedding)
     {
-        _embedding = embedding;
+        this.embedding = embedding;
         return this;
     }
 
     /// <summary>
     /// Sets the vector store for memory.
     /// </summary>
+    /// <returns></returns>
     public MetaAIBuilder WithVectorStore(TrackedVectorStore vectorStore)
     {
-        _vectorStore = vectorStore;
+        this.vectorStore = vectorStore;
         return this;
     }
 
     /// <summary>
     /// Sets custom memory store.
     /// </summary>
+    /// <returns></returns>
     public MetaAIBuilder WithMemoryStore(IMemoryStore memory)
     {
-        _memory = memory;
+        this.memory = memory;
         return this;
     }
 
     /// <summary>
     /// Sets custom skill registry.
     /// </summary>
+    /// <returns></returns>
     public MetaAIBuilder WithSkillRegistry(ISkillRegistry skills)
     {
-        _skills = skills;
+        this.skills = skills;
         return this;
     }
 
     /// <summary>
     /// Sets custom uncertainty router.
     /// </summary>
+    /// <returns></returns>
     public MetaAIBuilder WithUncertaintyRouter(IUncertaintyRouter router)
     {
-        _router = router;
+        this.router = router;
         return this;
     }
 
     /// <summary>
     /// Sets custom safety guard.
     /// </summary>
+    /// <returns></returns>
     public MetaAIBuilder WithSafetyGuard(ISafetyGuard safety)
     {
-        _safety = safety;
+        this.safety = safety;
         return this;
     }
 
     /// <summary>
     /// Sets custom skill extractor.
     /// </summary>
+    /// <returns></returns>
     public MetaAIBuilder WithSkillExtractor(ISkillExtractor skillExtractor)
     {
-        _skillExtractor = skillExtractor;
+        this.skillExtractor = skillExtractor;
         return this;
     }
 
     /// <summary>
     /// Sets the minimum confidence threshold for routing.
     /// </summary>
+    /// <returns></returns>
     public MetaAIBuilder WithConfidenceThreshold(double threshold)
     {
-        _confidenceThreshold = Math.Clamp(threshold, 0.0, 1.0);
+        this.confidenceThreshold = Math.Clamp(threshold, 0.0, 1.0);
         return this;
     }
 
     /// <summary>
     /// Sets the default permission level.
     /// </summary>
+    /// <returns></returns>
     public MetaAIBuilder WithDefaultPermissionLevel(PermissionLevel level)
     {
-        _defaultPermissionLevel = level;
+        this.defaultPermissionLevel = level;
         return this;
     }
 
@@ -126,39 +136,43 @@ public sealed class MetaAIBuilder
     /// Builds the Meta-AI orchestrator with configured components.
     /// Creates default implementations for any components not explicitly set.
     /// </summary>
+    /// <returns></returns>
     public MetaAIPlannerOrchestrator Build()
     {
         // Validate required components
-        if (_llm == null)
+        if (this.llm == null)
+        {
             throw new InvalidOperationException("LLM must be configured using WithLLM()");
+        }
 
         // Create default implementations for optional components
-        var tools = _tools ?? ToolRegistry.CreateDefault();
-        var memory = _memory ?? new MemoryStore(_embedding, _vectorStore);
-        var skills = _skills ?? new SkillRegistry(_embedding);
+        var tools = this.tools ?? ToolRegistry.CreateDefault();
+        var memory = this.memory ?? new MemoryStore(this.embedding, this.vectorStore);
+        var skills = this.skills ?? new SkillRegistry(this.embedding);
 
         // Safety guard is required first for router
-        var safety = _safety ?? new SafetyGuard(_defaultPermissionLevel);
+        var safety = this.safety ?? new SafetyGuard(this.defaultPermissionLevel);
 
         // Router needs orchestrator - create a simple one if not provided
         IUncertaintyRouter router;
-        if (_router == null)
+        if (this.router == null)
         {
             // Create a basic orchestrator for routing
             var basicOrchestrator = new SmartModelOrchestrator(tools, "default");
-            router = new UncertaintyRouter(basicOrchestrator, _confidenceThreshold);
+            router = new UncertaintyRouter(basicOrchestrator, this.confidenceThreshold);
         }
         else
         {
-            router = _router;
+            router = this.router;
         }
 
-        return new MetaAIPlannerOrchestrator(_llm, tools, memory, skills, router, safety, _skillExtractor);
+        return new MetaAIPlannerOrchestrator(this.llm, tools, memory, skills, router, safety, this.skillExtractor);
     }
 
     /// <summary>
     /// Creates a builder with default configuration.
     /// </summary>
+    /// <returns></returns>
     public static MetaAIBuilder CreateDefault()
     {
         return new MetaAIBuilder();

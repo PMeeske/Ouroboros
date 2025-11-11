@@ -1,3 +1,7 @@
+// <copyright file="ExternalChainRegistry.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Interop.LangChain;
 
 /// <summary>
@@ -9,9 +13,15 @@ public static class ExternalChainRegistry
 
     public static void Register(string name, object chain)
     {
-        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name required", nameof(name));
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Name required", nameof(name));
+        }
+
         Chains[name] = chain;
     }
+
     public static bool TryGet(string name, out object? chain) => Chains.TryGetValue(name, out chain);
+
     public static IReadOnlyCollection<string> Names => Chains.Keys.ToArray();
 }

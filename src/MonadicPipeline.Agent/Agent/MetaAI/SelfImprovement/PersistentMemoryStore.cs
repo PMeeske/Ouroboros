@@ -1,23 +1,22 @@
-// ==========================================================
-// Persistent Memory Store Implementation
-// Enhanced memory with persistence, consolidation, and forgetting
-// ==========================================================
+// <copyright file="PersistentMemoryStore.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Agent.MetaAI;
 
 using System.Collections.Concurrent;
 using LangChain.Databases;
-
-namespace LangChainPipeline.Agent.MetaAI;
 
 /// <summary>
 /// Memory type classification.
 /// </summary>
 public enum MemoryType
 {
-    /// <summary>Specific execution instances (recent experiences)</summary>
+    /// <summary>Specific execution instances (recent experiences).</summary>
     Episodic,
 
-    /// <summary>Generalized knowledge and patterns (consolidated)</summary>
-    Semantic
+    /// <summary>Generalized knowledge and patterns (consolidated).</summary>
+    Semantic,
 }
 
 /// <summary>
@@ -37,58 +36,60 @@ public sealed record PersistentMemoryConfig(
 /// </summary>
 public sealed class PersistentMemoryStore : IMemoryStore
 {
-    private readonly ConcurrentDictionary<Guid, (Experience experience, MemoryType type, double importance)> _experiences = new();
-    private readonly IEmbeddingModel? _embedding;
-    private readonly TrackedVectorStore? _vectorStore;
-    private readonly PersistentMemoryConfig _config;
-    private DateTime _lastConsolidation = DateTime.UtcNow;
+    private readonly ConcurrentDictionary<Guid, (Experience experience, MemoryType type, double importance)> experiences = new();
+    private readonly IEmbeddingModel? embedding;
+    private readonly TrackedVectorStore? vectorStore;
+    private readonly PersistentMemoryConfig config;
+    private DateTime lastConsolidation = DateTime.UtcNow;
 
     public PersistentMemoryStore(
         IEmbeddingModel? embedding = null,
         TrackedVectorStore? vectorStore = null,
         PersistentMemoryConfig? config = null)
     {
-        _embedding = embedding;
-        _vectorStore = vectorStore;
-        _config = config ?? new PersistentMemoryConfig(
+        this.embedding = embedding;
+        this.vectorStore = vectorStore;
+        this.config = config ?? new PersistentMemoryConfig(
             ConsolidationInterval: TimeSpan.FromHours(1));
     }
 
     /// <summary>
     /// Stores an experience in memory with automatic importance scoring.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task StoreExperienceAsync(Experience experience, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(experience);
 
         // Calculate importance score
-        var importance = CalculateImportance(experience);
+        var importance = this.CalculateImportance(experience);
 
         // Store in short-term episodic memory initially
-        _experiences[experience.Id] = (experience, MemoryType.Episodic, importance);
+        this.experiences[experience.Id] = (experience, MemoryType.Episodic, importance);
 
         // Store in vector database if available
-        if (_embedding != null && _vectorStore != null)
+        if (this.embedding != null && this.vectorStore != null)
         {
-            await StoreInVectorStoreAsync(experience, MemoryType.Episodic, ct);
+            await this.StoreInVectorStoreAsync(experience, MemoryType.Episodic, ct);
         }
 
         // Check if consolidation is needed
-        if (ShouldConsolidate())
+        if (this.ShouldConsolidate())
         {
-            await ConsolidateMemoriesAsync(ct);
+            await this.ConsolidateMemoriesAsync(ct);
         }
 
         // Check if forgetting is needed
-        if (_config.EnableForgetting && _experiences.Count > _config.LongTermCapacity)
+        if (this.config.EnableForgetting && this.experiences.Count > this.config.LongTermCapacity)
         {
-            await ForgetLowImportanceMemoriesAsync();
+            await this.ForgetLowImportanceMemoriesAsync();
         }
     }
 
     /// <summary>
     /// Retrieves relevant experiences based on similarity and recency.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<List<Experience>> RetrieveRelevantExperiencesAsync(
         MemoryQuery query,
         CancellationToken ct = default)
@@ -96,13 +97,13 @@ public sealed class PersistentMemoryStore : IMemoryStore
         ArgumentNullException.ThrowIfNull(query);
 
         // If vector store available, use semantic search
-        if (_embedding != null && _vectorStore != null)
+        if (this.embedding != null && this.vectorStore != null)
         {
-            return await RetrieveViaSimilarityAsync(query, ct);
+            return await this.RetrieveViaSimilarityAsync(query, ct);
         }
 
         // Fallback to simple filtering
-        var experiences = _experiences.Values
+        var experiences = this.experiences.Values
             .Where(e => e.experience.Verification.Verified)
             .OrderByDescending(e => e.importance)
             .Take(query.MaxResults)
@@ -115,9 +116,10 @@ public sealed class PersistentMemoryStore : IMemoryStore
     /// <summary>
     /// Gets memory statistics.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task<MemoryStatistics> GetStatisticsAsync()
     {
-        var experiences = _experiences.Values.Select(v => v.experience).ToList();
+        var experiences = this.experiences.Values.Select(v => v.experience).ToList();
 
         var stats = new MemoryStatistics(
             TotalExperiences: experiences.Count,
@@ -136,11 +138,12 @@ public sealed class PersistentMemoryStore : IMemoryStore
     /// <summary>
     /// Clears all experiences from memory.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task ClearAsync(CancellationToken ct = default)
     {
-        _experiences.Clear();
+        this.experiences.Clear();
 
-        if (_vectorStore != null)
+        if (this.vectorStore != null)
         {
             // Note: TrackedVectorStore doesn't have a Clear method
             // In a real implementation with Qdrant, we would clear the collection
@@ -151,18 +154,20 @@ public sealed class PersistentMemoryStore : IMemoryStore
     /// <summary>
     /// Gets an experience by ID.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task<Experience?> GetExperienceAsync(Guid id, CancellationToken ct = default)
     {
-        var found = _experiences.TryGetValue(id, out var entry);
+        var found = this.experiences.TryGetValue(id, out var entry);
         return Task.FromResult(found ? entry.experience : null);
     }
 
     /// <summary>
     /// Gets experiences by memory type.
     /// </summary>
+    /// <returns></returns>
     public List<Experience> GetExperiencesByType(MemoryType type)
     {
-        return _experiences.Values
+        return this.experiences.Values
             .Where(e => e.type == type)
             .Select(e => e.experience)
             .ToList();
@@ -196,12 +201,14 @@ public sealed class PersistentMemoryStore : IMemoryStore
     private bool ShouldConsolidate()
     {
         // Check time-based consolidation
-        if ((DateTime.UtcNow - _lastConsolidation) < _config.ConsolidationInterval)
+        if ((DateTime.UtcNow - this.lastConsolidation) < this.config.ConsolidationInterval)
+        {
             return false;
+        }
 
         // Check capacity-based consolidation
-        var episodicCount = _experiences.Values.Count(e => e.type == MemoryType.Episodic);
-        return episodicCount > _config.ShortTermCapacity;
+        var episodicCount = this.experiences.Values.Count(e => e.type == MemoryType.Episodic);
+        return episodicCount > this.config.ShortTermCapacity;
     }
 
     /// <summary>
@@ -209,24 +216,24 @@ public sealed class PersistentMemoryStore : IMemoryStore
     /// </summary>
     private async Task ConsolidateMemoriesAsync(CancellationToken ct = default)
     {
-        _lastConsolidation = DateTime.UtcNow;
+        this.lastConsolidation = DateTime.UtcNow;
 
         // Find high-importance episodic memories to consolidate
-        var toConsolidate = _experiences.Values
-            .Where(e => e.type == MemoryType.Episodic && e.importance >= _config.ConsolidationThreshold)
+        var toConsolidate = this.experiences.Values
+            .Where(e => e.type == MemoryType.Episodic && e.importance >= this.config.ConsolidationThreshold)
             .OrderByDescending(e => e.importance)
-            .Take(_config.ShortTermCapacity / 2)
+            .Take(this.config.ShortTermCapacity / 2)
             .ToList();
 
         foreach (var (experience, _, importance) in toConsolidate)
         {
             // Mark as semantic (long-term)
-            _experiences[experience.Id] = (experience, MemoryType.Semantic, importance);
+            this.experiences[experience.Id] = (experience, MemoryType.Semantic, importance);
 
             // Update in vector store if available
-            if (_embedding != null && _vectorStore != null)
+            if (this.embedding != null && this.vectorStore != null)
             {
-                await StoreInVectorStoreAsync(experience, MemoryType.Semantic, ct);
+                await this.StoreInVectorStoreAsync(experience, MemoryType.Semantic, ct);
             }
         }
     }
@@ -236,15 +243,15 @@ public sealed class PersistentMemoryStore : IMemoryStore
     /// </summary>
     private async Task ForgetLowImportanceMemoriesAsync()
     {
-        var toForget = _experiences.Values
-            .Where(e => e.importance < _config.ForgettingThreshold)
+        var toForget = this.experiences.Values
+            .Where(e => e.importance < this.config.ForgettingThreshold)
             .OrderBy(e => e.importance)
-            .Take(_experiences.Count - _config.LongTermCapacity)
+            .Take(this.experiences.Count - this.config.LongTermCapacity)
             .ToList();
 
         foreach (var (experience, _, _) in toForget)
         {
-            _experiences.TryRemove(experience.Id, out _);
+            this.experiences.TryRemove(experience.Id, out _);
         }
 
         await Task.CompletedTask;
@@ -258,15 +265,17 @@ public sealed class PersistentMemoryStore : IMemoryStore
         MemoryType type,
         CancellationToken ct)
     {
-        if (_embedding == null || _vectorStore == null)
+        if (this.embedding == null || this.vectorStore == null)
+        {
             return;
+        }
 
         var text = $"[{type}] Goal: {experience.Goal}\n" +
                    $"Plan: {string.Join(", ", experience.Plan.Steps.Select(s => s.Action))}\n" +
                    $"Quality: {experience.Verification.QualityScore:P0}\n" +
                    $"Verified: {experience.Verification.Verified}";
 
-        var embedding = await _embedding.CreateEmbeddingsAsync(text, ct);
+        var embedding = await this.embedding.CreateEmbeddingsAsync(text, ct);
 
         var vector = new Vector
         {
@@ -281,10 +290,10 @@ public sealed class PersistentMemoryStore : IMemoryStore
                 ["verified"] = experience.Verification.Verified,
                 ["timestamp"] = experience.Timestamp,
                 ["memory_type"] = type.ToString()
-            }
+            },
         };
 
-        await _vectorStore.AddAsync(new[] { vector }, ct);
+        await this.vectorStore.AddAsync(new[] { vector }, ct);
     }
 
     /// <summary>
@@ -294,15 +303,17 @@ public sealed class PersistentMemoryStore : IMemoryStore
         MemoryQuery query,
         CancellationToken ct)
     {
-        if (_embedding == null || _vectorStore == null)
+        if (this.embedding == null || this.vectorStore == null)
+        {
             return new List<Experience>();
+        }
 
         try
         {
-            var queryEmbedding = await _embedding.CreateEmbeddingsAsync(query.Goal, ct);
+            var queryEmbedding = await this.embedding.CreateEmbeddingsAsync(query.Goal, ct);
 
-            var searchResults = await _vectorStore.GetSimilarDocuments(
-                _embedding,
+            var searchResults = await this.vectorStore.GetSimilarDocuments(
+                this.embedding,
                 query.Goal,
                 amount: query.MaxResults);
 
@@ -311,7 +322,7 @@ public sealed class PersistentMemoryStore : IMemoryStore
             {
                 if (doc.Metadata?.TryGetValue("id", out var idObj) == true &&
                     Guid.TryParse(idObj?.ToString(), out var id) &&
-                    _experiences.TryGetValue(id, out var entry))
+                    this.experiences.TryGetValue(id, out var entry))
                 {
                     experiences.Add(entry.experience);
                 }
@@ -322,7 +333,7 @@ public sealed class PersistentMemoryStore : IMemoryStore
         catch
         {
             // Fallback to simple retrieval
-            return _experiences.Values
+            return this.experiences.Values
                 .Select(e => e.experience)
                 .Take(query.MaxResults)
                 .ToList();

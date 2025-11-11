@@ -1,7 +1,11 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
+// <copyright file="MinimalHost.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Interop.Hosting;
+
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 /// <summary>
 /// Elegant minimal host builder using StepDefinition and | composition.
@@ -20,15 +24,19 @@ public static class MinimalHost
 
         // Define configuration pipeline
         var configDef = new StepDefinition<ConfigurationManager, ConfigurationManager>(c => c)
-            | HostStepExtensions.Use(c => { c.AddJsonFile("hostsettings.json", optional: true); return c; })
-            | HostStepExtensions.Use(c => { c.AddEnvironmentVariables(prefix: "PREFIX_"); return c; })
-            | HostStepExtensions.Use(c => { c.AddCommandLine(args); return c; });
+            | HostStepExtensions.Use(c => { c.AddJsonFile("hostsettings.json", optional: true);
+                return c; })
+            | HostStepExtensions.Use(c => { c.AddEnvironmentVariables(prefix: "PREFIX_");
+                return c; })
+            | HostStepExtensions.Use(c => { c.AddCommandLine(args);
+                return c; });
 
         // Apply configuration to settings
         settings.Configuration = await configDef.Build()(settings.Configuration);
 
         // Host builder pipeline (extensible)
         var hostDef = new StepDefinition<HostApplicationBuilder, HostApplicationBuilder>(b => b)
+
             // Add interchangeable model registration (OpenAI key presence => remote reflective provider else local Ollama)
             | HostStepExtensions.AddInterchangeableLlm();
 

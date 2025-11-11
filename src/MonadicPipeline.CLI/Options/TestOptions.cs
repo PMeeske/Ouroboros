@@ -1,9 +1,13 @@
-using CommandLine;
+// <copyright file="TestOptions.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Options;
 
+using CommandLine;
+
 [Verb("test", HelpText = "Run integration tests.")]
-sealed class TestOptions
+internal sealed class TestOptions
 {
     [Option("integration", Required = false, HelpText = "Run only integration tests", Default = false)]
     public bool IntegrationOnly { get; set; }

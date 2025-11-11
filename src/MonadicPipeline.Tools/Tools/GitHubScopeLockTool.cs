@@ -1,6 +1,10 @@
-using Octokit;
+// <copyright file="GitHubScopeLockTool.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Tools;
+
+using Octokit;
 
 /// <summary>
 /// A tool for locking GitHub issue scope by adding a scope-locked label and confirmation comment.
@@ -8,9 +12,9 @@ namespace LangChainPipeline.Tools;
 /// </summary>
 public sealed class GitHubScopeLockTool : ITool
 {
-    private readonly GitHubClient _client;
-    private readonly string _owner;
-    private readonly string _repo;
+    private readonly GitHubClient client;
+    private readonly string owner;
+    private readonly string repo;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GitHubScopeLockTool"/> class.
@@ -20,12 +24,12 @@ public sealed class GitHubScopeLockTool : ITool
     /// <param name="repo">Repository name.</param>
     public GitHubScopeLockTool(string token, string owner, string repo)
     {
-        _client = new GitHubClient(new ProductHeaderValue("MonadicPipeline"))
+        this.client = new GitHubClient(new ProductHeaderValue("MonadicPipeline"))
         {
-            Credentials = new Credentials(token)
+            Credentials = new Credentials(token),
         };
-        _owner = owner;
-        _repo = repo;
+        this.owner = owner;
+        this.repo = repo;
     }
 
     /// <inheritdoc />
@@ -45,14 +49,14 @@ public sealed class GitHubScopeLockTool : ITool
             GitHubScopeLockArgs args = ToolJson.Deserialize<GitHubScopeLockArgs>(input);
 
             // Step 1: Add scope-locked label to issue
-            var labelResult = await AddScopeLockedLabelAsync(args.IssueNumber, ct);
+            var labelResult = await this.AddScopeLockedLabelAsync(args.IssueNumber, ct);
             if (!labelResult.IsSuccess)
             {
                 return Result<string, string>.Failure($"Failed to add label: {labelResult.Error}");
             }
 
             // Step 2: Add confirmation comment
-            var commentResult = await AddConfirmationCommentAsync(args.IssueNumber, args.Milestone, ct);
+            var commentResult = await this.AddConfirmationCommentAsync(args.IssueNumber, args.Milestone, ct);
             if (!commentResult.IsSuccess)
             {
                 return Result<string, string>.Failure($"Failed to add comment: {commentResult.Error}");
@@ -61,7 +65,7 @@ public sealed class GitHubScopeLockTool : ITool
             // Step 3: Update milestone if provided
             if (!string.IsNullOrEmpty(args.Milestone))
             {
-                var milestoneResult = await UpdateMilestoneAsync(args.IssueNumber, args.Milestone, ct);
+                var milestoneResult = await this.UpdateMilestoneAsync(args.IssueNumber, args.Milestone, ct);
                 if (!milestoneResult.IsSuccess)
                 {
                     return Result<string, string>.Failure($"Failed to update milestone: {milestoneResult.Error}");
@@ -88,21 +92,21 @@ public sealed class GitHubScopeLockTool : ITool
             // First, ensure the label exists in the repository
             try
             {
-                await _client.Issue.Labels.Get(_owner, _repo, "scope-locked");
+                await this.client.Issue.Labels.Get(this.owner, this.repo, "scope-locked");
             }
             catch (NotFoundException)
             {
                 // Create the label if it doesn't exist
                 var newLabel = new NewLabel("scope-locked", "D4C5F9")
                 {
-                    Description = "Scope is locked to prevent uncontrolled scope creep"
+                    Description = "Scope is locked to prevent uncontrolled scope creep",
                 };
-                await _client.Issue.Labels.Create(_owner, _repo, newLabel);
+                await this.client.Issue.Labels.Create(this.owner, this.repo, newLabel);
             }
 
             // Add the label to the issue
             var issueUpdate = new IssueUpdate();
-            await _client.Issue.Labels.AddToIssue(_owner, _repo, issueNumber, new[] { "scope-locked" });
+            await this.client.Issue.Labels.AddToIssue(this.owner, this.repo, issueNumber, new[] { "scope-locked" });
 
             return Result<bool, string>.Success(true);
         }
@@ -122,12 +126,12 @@ public sealed class GitHubScopeLockTool : ITool
                                "- No new requirements can be added without explicit approval\n" +
                                "- Changes to existing requirements require scope change review\n" +
                                "- This ensures predictable delivery timelines\n\n" +
-                               (string.IsNullOrEmpty(milestone) 
-                                   ? string.Empty 
+                               (string.IsNullOrEmpty(milestone)
+                                   ? string.Empty
                                    : $"**Milestone:** {milestone}\n\n") +
                                "To request scope changes, please open a new issue and reference this locked scope.";
 
-            await _client.Issue.Comment.Create(_owner, _repo, issueNumber, commentBody);
+            await this.client.Issue.Comment.Create(this.owner, this.repo, issueNumber, commentBody);
 
             return Result<bool, string>.Success(true);
         }
@@ -142,7 +146,7 @@ public sealed class GitHubScopeLockTool : ITool
         try
         {
             // Find the milestone by name
-            var milestones = await _client.Issue.Milestone.GetAllForRepository(_owner, _repo);
+            var milestones = await this.client.Issue.Milestone.GetAllForRepository(this.owner, this.repo);
             var milestone = milestones.FirstOrDefault(m => m.Title.Equals(milestoneName, StringComparison.OrdinalIgnoreCase));
 
             if (milestone == null)
@@ -153,10 +157,10 @@ public sealed class GitHubScopeLockTool : ITool
             // Update the issue with the milestone
             var issueUpdate = new IssueUpdate
             {
-                Milestone = milestone.Number
+                Milestone = milestone.Number,
             };
 
-            await _client.Issue.Update(_owner, _repo, issueNumber, issueUpdate);
+            await this.client.Issue.Update(this.owner, this.repo, issueNumber, issueUpdate);
 
             return Result<bool, string>.Success(true);
         }

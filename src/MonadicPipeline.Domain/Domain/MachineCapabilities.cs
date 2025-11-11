@@ -1,3 +1,7 @@
+// <copyright file="MachineCapabilities.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Domain;
 
 public static class MachineCapabilities
@@ -25,7 +29,11 @@ public static class MachineCapabilities
         {
             // You can read env vars or defaults
             string? env = Environment.GetEnvironmentVariable("OLLAMA_NUM_GPU");
-            if (int.TryParse(env, out int gpus)) return gpus;
+            if (int.TryParse(env, out int gpus))
+            {
+                return gpus;
+            }
+
             return 0; // assume CPU only if unknown
         }
     }

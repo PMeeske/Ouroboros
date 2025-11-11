@@ -1,29 +1,29 @@
-// ==========================================================
-// Safety Guard Implementation
-// Permission-based safe execution
-// ==========================================================
-
-using System.Collections.Concurrent;
+// <copyright file="SafetyGuard.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
+
+using System.Collections.Concurrent;
 
 /// <summary>
 /// Implementation of safety guard for permission-based execution.
 /// </summary>
 public sealed class SafetyGuard : ISafetyGuard
 {
-    private readonly ConcurrentDictionary<string, Permission> _permissions = new();
-    private readonly PermissionLevel _defaultLevel;
+    private readonly ConcurrentDictionary<string, Permission> permissions = new();
+    private readonly PermissionLevel defaultLevel;
 
     public SafetyGuard(PermissionLevel defaultLevel = PermissionLevel.Isolated)
     {
-        _defaultLevel = defaultLevel;
-        InitializeDefaultPermissions();
+        this.defaultLevel = defaultLevel;
+        this.InitializeDefaultPermissions();
     }
 
     /// <summary>
     /// Checks if an operation is safe to execute.
     /// </summary>
+    /// <returns></returns>
     public SafetyCheckResult CheckSafety(
         string operation,
         Dictionary<string, object> parameters,
@@ -34,7 +34,7 @@ public sealed class SafetyGuard : ISafetyGuard
 
         var violations = new List<string>();
         var warnings = new List<string>();
-        var requiredLevel = GetRequiredPermission(operation);
+        var requiredLevel = this.GetRequiredPermission(operation);
 
         // Check if current permission level is sufficient
         if (currentLevel < requiredLevel)
@@ -43,7 +43,7 @@ public sealed class SafetyGuard : ISafetyGuard
         }
 
         // Check for dangerous patterns
-        if (ContainsDangerousPatterns(operation, parameters))
+        if (this.ContainsDangerousPatterns(operation, parameters))
         {
             warnings.Add("Operation contains potentially dangerous patterns");
         }
@@ -53,7 +53,7 @@ public sealed class SafetyGuard : ISafetyGuard
         {
             if (param.Value is string strValue)
             {
-                if (ContainsInjectionPatterns(strValue))
+                if (this.ContainsInjectionPatterns(strValue))
                 {
                     violations.Add($"Parameter '{param.Key}' contains potential injection patterns");
                 }
@@ -67,18 +67,23 @@ public sealed class SafetyGuard : ISafetyGuard
     /// <summary>
     /// Validates tool execution permission.
     /// </summary>
+    /// <returns></returns>
     public bool IsToolExecutionPermitted(
         string toolName,
         string arguments,
         PermissionLevel currentLevel)
     {
         if (string.IsNullOrWhiteSpace(toolName))
+        {
             return false;
+        }
 
-        var requiredLevel = GetRequiredPermission(toolName);
+        var requiredLevel = this.GetRequiredPermission(toolName);
 
         if (currentLevel < requiredLevel)
+        {
             return false;
+        }
 
         // Additional checks for specific tools
         if (toolName.Contains("delete", StringComparison.OrdinalIgnoreCase) ||
@@ -98,6 +103,7 @@ public sealed class SafetyGuard : ISafetyGuard
     /// <summary>
     /// Sandboxes a plan step for safe execution.
     /// </summary>
+    /// <returns></returns>
     public PlanStep SandboxStep(PlanStep step)
     {
         ArgumentNullException.ThrowIfNull(step);
@@ -110,7 +116,7 @@ public sealed class SafetyGuard : ISafetyGuard
             if (param.Value is string strValue)
             {
                 // Sanitize string values
-                sandboxedParams[param.Key] = SanitizeString(strValue);
+                sandboxedParams[param.Key] = this.SanitizeString(strValue);
             }
             else
             {
@@ -128,13 +134,16 @@ public sealed class SafetyGuard : ISafetyGuard
     /// <summary>
     /// Gets required permission level for an action.
     /// </summary>
+    /// <returns></returns>
     public PermissionLevel GetRequiredPermission(string action)
     {
         if (string.IsNullOrWhiteSpace(action))
-            return _defaultLevel;
+        {
+            return this.defaultLevel;
+        }
 
         // Check registered permissions
-        if (_permissions.TryGetValue(action, out var permission))
+        if (this.permissions.TryGetValue(action, out var permission))
         {
             return permission.Level;
         }
@@ -143,18 +152,26 @@ public sealed class SafetyGuard : ISafetyGuard
         var actionLower = action.ToLowerInvariant();
 
         if (actionLower.Contains("read") || actionLower.Contains("get") || actionLower.Contains("list"))
+        {
             return PermissionLevel.ReadOnly;
+        }
 
         if (actionLower.Contains("delete") || actionLower.Contains("drop") || actionLower.Contains("remove"))
+        {
             return PermissionLevel.UserDataWithConfirmation;
+        }
 
         if (actionLower.Contains("system") || actionLower.Contains("admin"))
+        {
             return PermissionLevel.System;
+        }
 
         if (actionLower.Contains("write") || actionLower.Contains("update") || actionLower.Contains("create"))
+        {
             return PermissionLevel.UserData;
+        }
 
-        return _defaultLevel;
+        return this.defaultLevel;
     }
 
     /// <summary>
@@ -163,49 +180,50 @@ public sealed class SafetyGuard : ISafetyGuard
     public void RegisterPermission(Permission permission)
     {
         ArgumentNullException.ThrowIfNull(permission);
-        _permissions[permission.Name] = permission;
+        this.permissions[permission.Name] = permission;
     }
 
     /// <summary>
     /// Gets all registered permissions.
     /// </summary>
+    /// <returns></returns>
     public IReadOnlyList<Permission> GetPermissions()
-        => _permissions.Values.OrderBy(p => p.Level).ToList();
+        => this.permissions.Values.OrderBy(p => p.Level).ToList();
 
     private void InitializeDefaultPermissions()
     {
         // Register common tool permissions
-        RegisterPermission(new Permission(
+        this.RegisterPermission(new Permission(
             "math",
             "Mathematical calculations",
             PermissionLevel.ReadOnly,
             new List<string> { "calculate", "compute", "evaluate" }));
 
-        RegisterPermission(new Permission(
+        this.RegisterPermission(new Permission(
             "search",
             "Search operations",
             PermissionLevel.ReadOnly,
             new List<string> { "search", "find", "query" }));
 
-        RegisterPermission(new Permission(
+        this.RegisterPermission(new Permission(
             "llm",
             "LLM text generation",
             PermissionLevel.Isolated,
             new List<string> { "generate", "complete", "chat" }));
 
-        RegisterPermission(new Permission(
+        this.RegisterPermission(new Permission(
             "run_usedraft",
             "Generate draft",
             PermissionLevel.Isolated,
             new List<string> { "draft" }));
 
-        RegisterPermission(new Permission(
+        this.RegisterPermission(new Permission(
             "run_usecritique",
             "Critique content",
             PermissionLevel.Isolated,
             new List<string> { "critique", "review" }));
 
-        RegisterPermission(new Permission(
+        this.RegisterPermission(new Permission(
             "file_write",
             "File write operations",
             PermissionLevel.UserDataWithConfirmation,
@@ -217,10 +235,10 @@ public sealed class SafetyGuard : ISafetyGuard
         var dangerousPatterns = new[]
         {
             "eval", "exec", "system", "shell", "subprocess",
-            "rm -rf", "delete *", "drop table", "truncate"
+            "rm -rf", "delete *", "drop table", "truncate",
         };
 
-        var combined = operation + " " + string.Join(" ", parameters.Values.Select(v => v?.ToString() ?? ""));
+        var combined = operation + " " + string.Join(" ", parameters.Values.Select(v => v?.ToString() ?? string.Empty));
         var lowerCombined = combined.ToLowerInvariant();
 
         return dangerousPatterns.Any(pattern => lowerCombined.Contains(pattern));
@@ -229,13 +247,15 @@ public sealed class SafetyGuard : ISafetyGuard
     private bool ContainsInjectionPatterns(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
+        {
             return false;
+        }
 
         var injectionPatterns = new[]
         {
             "';", "\"; ", "' OR '1'='1", "\" OR \"1\"=\"1",
             "../", "..\\", "<script", "javascript:",
-            "onload=", "onerror="
+            "onload=", "onerror=",
         };
 
         return injectionPatterns.Any(pattern =>
@@ -245,7 +265,9 @@ public sealed class SafetyGuard : ISafetyGuard
     private string SanitizeString(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
+        {
             return value;
+        }
 
         // Remove potentially dangerous characters
         var sanitized = value

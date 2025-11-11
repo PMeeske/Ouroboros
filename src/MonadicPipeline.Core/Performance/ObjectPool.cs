@@ -1,45 +1,52 @@
-using System.Collections.Concurrent;
-using System.Text;
+// <copyright file="ObjectPool.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Core.Performance;
+
+using System.Collections.Concurrent;
+using System.Text;
 
 /// <summary>
 /// Generic object pool for reducing memory allocations.
 /// </summary>
-/// <typeparam name="T">Type of objects to pool</typeparam>
-public class ObjectPool<T> where T : class
+/// <typeparam name="T">Type of objects to pool.</typeparam>
+public class ObjectPool<T>
+    where T : class
 {
-    private readonly ConcurrentBag<T> _objects = new();
-    private readonly Func<T> _objectFactory;
-    private readonly Action<T>? _resetAction;
-    private readonly int _maxPoolSize;
-    private int _currentPoolSize;
+    private readonly ConcurrentBag<T> objects = new();
+    private readonly Func<T> objectFactory;
+    private readonly Action<T>? resetAction;
+    private readonly int maxPoolSize;
+    private int currentPoolSize;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ObjectPool{T}"/> class.
     /// Initializes a new object pool.
     /// </summary>
-    /// <param name="objectFactory">Factory function to create new objects</param>
-    /// <param name="resetAction">Optional action to reset objects when returned to pool</param>
-    /// <param name="maxPoolSize">Maximum number of objects to keep in pool</param>
+    /// <param name="objectFactory">Factory function to create new objects.</param>
+    /// <param name="resetAction">Optional action to reset objects when returned to pool.</param>
+    /// <param name="maxPoolSize">Maximum number of objects to keep in pool.</param>
     public ObjectPool(Func<T> objectFactory, Action<T>? resetAction = null, int maxPoolSize = 100)
     {
-        _objectFactory = objectFactory ?? throw new ArgumentNullException(nameof(objectFactory));
-        _resetAction = resetAction;
-        _maxPoolSize = maxPoolSize;
+        this.objectFactory = objectFactory ?? throw new ArgumentNullException(nameof(objectFactory));
+        this.resetAction = resetAction;
+        this.maxPoolSize = maxPoolSize;
     }
 
     /// <summary>
     /// Rents an object from the pool or creates a new one if none available.
     /// </summary>
+    /// <returns></returns>
     public T Rent()
     {
-        if (_objects.TryTake(out var obj))
+        if (this.objects.TryTake(out var obj))
         {
-            Interlocked.Decrement(ref _currentPoolSize);
+            Interlocked.Decrement(ref this.currentPoolSize);
             return obj;
         }
 
-        return _objectFactory();
+        return this.objectFactory();
     }
 
     /// <summary>
@@ -48,32 +55,36 @@ public class ObjectPool<T> where T : class
     public void Return(T obj)
     {
         if (obj == null)
+        {
             return;
+        }
 
         // Don't add to pool if we're at capacity
-        if (_currentPoolSize >= _maxPoolSize)
+        if (this.currentPoolSize >= this.maxPoolSize)
+        {
             return;
+        }
 
         // Reset the object if a reset action is provided
-        _resetAction?.Invoke(obj);
+        this.resetAction?.Invoke(obj);
 
-        _objects.Add(obj);
-        Interlocked.Increment(ref _currentPoolSize);
+        this.objects.Add(obj);
+        Interlocked.Increment(ref this.currentPoolSize);
     }
 
     /// <summary>
     /// Gets the current number of objects in the pool.
     /// </summary>
-    public int Count => _currentPoolSize;
+    public int Count => this.currentPoolSize;
 
     /// <summary>
     /// Clears all objects from the pool.
     /// </summary>
     public void Clear()
     {
-        while (_objects.TryTake(out _))
+        while (this.objects.TryTake(out _))
         {
-            Interlocked.Decrement(ref _currentPoolSize);
+            Interlocked.Decrement(ref this.currentPoolSize);
         }
     }
 }
@@ -81,32 +92,33 @@ public class ObjectPool<T> where T : class
 /// <summary>
 /// Disposable wrapper for pooled objects that automatically returns them to the pool.
 /// </summary>
-/// <typeparam name="T">Type of pooled object</typeparam>
-public struct PooledObject<T> : IDisposable where T : class
+/// <typeparam name="T">Type of pooled object.</typeparam>
+public struct PooledObject<T> : IDisposable
+    where T : class
 {
-    private readonly ObjectPool<T> _pool;
-    private T? _object;
+    private readonly ObjectPool<T> pool;
+    private T? @object;
 
     internal PooledObject(ObjectPool<T> pool, T obj)
     {
-        _pool = pool;
-        _object = obj;
+        this.pool = pool;
+        this.@object = obj;
     }
 
     /// <summary>
     /// Gets the pooled object.
     /// </summary>
-    public T Object => _object ?? throw new ObjectDisposedException(nameof(PooledObject<T>));
+    public T Object => this.@object ?? throw new ObjectDisposedException(nameof(PooledObject<T>));
 
     /// <summary>
     /// Returns the object to the pool.
     /// </summary>
     public void Dispose()
     {
-        if (_object != null)
+        if (this.@object != null)
         {
-            _pool.Return(_object);
-            _object = null;
+            this.pool.Return(this.@object);
+            this.@object = null;
         }
     }
 }
@@ -119,7 +131,9 @@ public static class ObjectPoolExtensions
     /// <summary>
     /// Rents an object from the pool and wraps it in a disposable wrapper.
     /// </summary>
-    public static PooledObject<T> RentDisposable<T>(this ObjectPool<T> pool) where T : class
+    /// <returns></returns>
+    public static PooledObject<T> RentDisposable<T>(this ObjectPool<T> pool)
+        where T : class
     {
         return new PooledObject<T>(pool, pool.Rent());
     }
@@ -175,6 +189,7 @@ public static class PooledHelpers
     /// <summary>
     /// Executes a function with a pooled StringBuilder and returns the result.
     /// </summary>
+    /// <returns></returns>
     public static string WithStringBuilder(Action<StringBuilder> action)
     {
         using var pooled = CommonPools.StringBuilder.RentDisposable();
@@ -210,6 +225,7 @@ public static class PooledHelpers
     /// <summary>
     /// Executes a function with a pooled MemoryStream and returns the result.
     /// </summary>
+    /// <returns></returns>
     public static TResult WithMemoryStream<TResult>(Func<MemoryStream, TResult> func)
     {
         using var pooled = CommonPools.MemoryStream.RentDisposable();

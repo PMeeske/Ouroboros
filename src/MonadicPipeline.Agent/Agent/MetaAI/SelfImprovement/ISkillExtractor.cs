@@ -1,7 +1,6 @@
-// ==========================================================
-// Skill Extractor Interface
-// Automatic extraction of reusable skills from successful executions
-// ==========================================================
+// <copyright file="ISkillExtractor.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -24,11 +23,11 @@ public interface ISkillExtractor
     /// <summary>
     /// Extracts a skill from a successful execution.
     /// </summary>
-    /// <param name="execution">The successful execution result</param>
-    /// <param name="verification">The verification result with quality metrics</param>
-    /// <param name="config">Optional extraction configuration</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Extracted skill or error message</returns>
+    /// <param name="execution">The successful execution result.</param>
+    /// <param name="verification">The verification result with quality metrics.</param>
+    /// <param name="config">Optional extraction configuration.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Extracted skill or error message.</returns>
     Task<Result<Skill, string>> ExtractSkillAsync(
         ExecutionResult execution,
         VerificationResult verification,
@@ -38,9 +37,9 @@ public interface ISkillExtractor
     /// <summary>
     /// Determines if a skill should be extracted from the given verification result.
     /// </summary>
-    /// <param name="verification">The verification result to analyze</param>
-    /// <param name="config">Optional extraction configuration</param>
-    /// <returns>True if skill should be extracted, false otherwise</returns>
+    /// <param name="verification">The verification result to analyze.</param>
+    /// <param name="config">Optional extraction configuration.</param>
+    /// <returns>True if skill should be extracted, false otherwise.</returns>
     Task<bool> ShouldExtractSkillAsync(
         VerificationResult verification,
         SkillExtractionConfig? config = null);
@@ -48,9 +47,9 @@ public interface ISkillExtractor
     /// <summary>
     /// Generates a descriptive name for the extracted skill using LLM.
     /// </summary>
-    /// <param name="execution">The execution to analyze</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Generated skill name</returns>
+    /// <param name="execution">The execution to analyze.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Generated skill name.</returns>
     Task<string> GenerateSkillNameAsync(
         ExecutionResult execution,
         CancellationToken ct = default);
@@ -58,9 +57,9 @@ public interface ISkillExtractor
     /// <summary>
     /// Generates a description for the extracted skill using LLM.
     /// </summary>
-    /// <param name="execution">The execution to analyze</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Generated skill description</returns>
+    /// <param name="execution">The execution to analyze.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Generated skill description.</returns>
     Task<string> GenerateSkillDescriptionAsync(
         ExecutionResult execution,
         CancellationToken ct = default);

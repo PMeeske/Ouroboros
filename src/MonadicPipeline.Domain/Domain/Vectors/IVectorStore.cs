@@ -1,7 +1,11 @@
-using LangChain.Databases;
-using LangChain.DocumentLoaders;
+// <copyright file="IVectorStore.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Domain.Vectors;
+
+using LangChain.Databases;
+using LangChain.DocumentLoaders;
 
 /// <summary>
 /// Defines the contract for a vector store that can store and retrieve vectors with similarity search capabilities.

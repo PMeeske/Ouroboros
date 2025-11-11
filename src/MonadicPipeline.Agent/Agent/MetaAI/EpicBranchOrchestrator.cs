@@ -1,13 +1,13 @@
-// ==========================================================
-// Epic Branch Orchestration - Manage sub-issues with agents and branches
-// ==========================================================
+// <copyright file="EpicBranchOrchestrator.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Agent.MetaAI;
 
 using System.Collections.Concurrent;
 using LangChain.DocumentLoaders;
 using LangChainPipeline.Core.Monads;
 using LangChainPipeline.Pipeline.Branches;
-
-namespace LangChainPipeline.Agent.MetaAI;
 
 /// <summary>
 /// Represents a sub-issue in an epic with its assigned agent and branch.
@@ -33,7 +33,7 @@ public enum SubIssueStatus
     BranchCreated,
     InProgress,
     Completed,
-    Failed
+    Failed,
 }
 
 /// <summary>
@@ -64,6 +64,7 @@ public interface IEpicBranchOrchestrator
     /// <summary>
     /// Registers an epic and creates assignments for all sub-issues.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<Epic, string>> RegisterEpicAsync(
         int epicNumber,
         string epicTitle,
@@ -74,6 +75,7 @@ public interface IEpicBranchOrchestrator
     /// <summary>
     /// Assigns an agent to a sub-issue and creates a dedicated branch.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<SubIssueAssignment, string>> AssignSubIssueAsync(
         int epicNumber,
         int subIssueNumber,
@@ -83,16 +85,19 @@ public interface IEpicBranchOrchestrator
     /// <summary>
     /// Gets all sub-issue assignments for an epic.
     /// </summary>
+    /// <returns></returns>
     IReadOnlyList<SubIssueAssignment> GetSubIssueAssignments(int epicNumber);
 
     /// <summary>
     /// Gets a specific sub-issue assignment.
     /// </summary>
+    /// <returns></returns>
     SubIssueAssignment? GetSubIssueAssignment(int epicNumber, int subIssueNumber);
 
     /// <summary>
     /// Updates the status of a sub-issue.
     /// </summary>
+    /// <returns></returns>
     Result<SubIssueAssignment, string> UpdateSubIssueStatus(
         int epicNumber,
         int subIssueNumber,
@@ -102,6 +107,7 @@ public interface IEpicBranchOrchestrator
     /// <summary>
     /// Executes work on a sub-issue using its assigned agent and branch.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<SubIssueAssignment, string>> ExecuteSubIssueAsync(
         int epicNumber,
         int subIssueNumber,
@@ -114,22 +120,23 @@ public interface IEpicBranchOrchestrator
 /// </summary>
 public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
 {
-    private readonly ConcurrentDictionary<int, Epic> _epics = new();
-    private readonly ConcurrentDictionary<string, SubIssueAssignment> _assignments = new();
-    private readonly IDistributedOrchestrator _distributor;
-    private readonly EpicBranchConfig _config;
+    private readonly ConcurrentDictionary<int, Epic> epics = new();
+    private readonly ConcurrentDictionary<string, SubIssueAssignment> assignments = new();
+    private readonly IDistributedOrchestrator distributor;
+    private readonly EpicBranchConfig config;
 
     public EpicBranchOrchestrator(
         IDistributedOrchestrator distributor,
         EpicBranchConfig? config = null)
     {
-        _distributor = distributor ?? throw new ArgumentNullException(nameof(distributor));
-        _config = config ?? new EpicBranchConfig();
+        this.distributor = distributor ?? throw new ArgumentNullException(nameof(distributor));
+        this.config = config ?? new EpicBranchConfig();
     }
 
     /// <summary>
     /// Registers an epic and creates assignments for all sub-issues.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<Epic, string>> RegisterEpicAsync(
         int epicNumber,
         string epicTitle,
@@ -138,10 +145,14 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(epicTitle))
+        {
             return Result<Epic, string>.Failure("Epic title cannot be empty");
+        }
 
         if (subIssueNumbers == null || subIssueNumbers.Count == 0)
+        {
             return Result<Epic, string>.Failure("Epic must have at least one sub-issue");
+        }
 
         try
         {
@@ -152,14 +163,14 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
                 subIssueNumbers,
                 DateTime.UtcNow);
 
-            _epics[epicNumber] = epic;
+            this.epics[epicNumber] = epic;
 
             // Auto-assign agents to sub-issues if configured
-            if (_config.AutoAssignAgents)
+            if (this.config.AutoAssignAgents)
             {
                 var tasks = subIssueNumbers.Select(async subIssueNumber =>
                 {
-                    await AssignSubIssueAsync(epicNumber, subIssueNumber, null, ct);
+                    await this.AssignSubIssueAsync(epicNumber, subIssueNumber, null, ct);
                 });
 
                 await Task.WhenAll(tasks);
@@ -176,30 +187,35 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
     /// <summary>
     /// Assigns an agent to a sub-issue and creates a dedicated branch.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<SubIssueAssignment, string>> AssignSubIssueAsync(
         int epicNumber,
         int subIssueNumber,
         string? preferredAgentId = null,
         CancellationToken ct = default)
     {
-        if (!_epics.ContainsKey(epicNumber))
+        if (!this.epics.ContainsKey(epicNumber))
+        {
             return Result<SubIssueAssignment, string>.Failure($"Epic #{epicNumber} not found");
+        }
 
-        var epic = _epics[epicNumber];
+        var epic = this.epics[epicNumber];
         if (!epic.SubIssueNumbers.Contains(subIssueNumber))
+        {
             return Result<SubIssueAssignment, string>.Failure($"Sub-issue #{subIssueNumber} not part of epic #{epicNumber}");
+        }
 
         try
         {
             // Generate unique agent ID if not provided
-            var agentId = preferredAgentId ?? $"{_config.AgentPoolPrefix}-{epicNumber}-{subIssueNumber}";
+            var agentId = preferredAgentId ?? $"{this.config.AgentPoolPrefix}-{epicNumber}-{subIssueNumber}";
 
             // Generate branch name
-            var branchName = $"{_config.BranchPrefix}-{epicNumber}/sub-issue-{subIssueNumber}";
+            var branchName = $"{this.config.BranchPrefix}-{epicNumber}/sub-issue-{subIssueNumber}";
 
             // Create pipeline branch if configured
             PipelineBranch? branch = null;
-            if (_config.AutoCreateBranches)
+            if (this.config.AutoCreateBranches)
             {
                 var store = new TrackedVectorStore();
                 var source = DataSource.FromPath(Environment.CurrentDirectory);
@@ -214,7 +230,7 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
                 AgentStatus.Available,
                 DateTime.UtcNow);
 
-            _distributor.RegisterAgent(agent);
+            this.distributor.RegisterAgent(agent);
 
             // Create assignment
             var assignment = new SubIssueAssignment(
@@ -224,11 +240,11 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
                 agentId,
                 branchName,
                 branch,
-                _config.AutoCreateBranches ? SubIssueStatus.BranchCreated : SubIssueStatus.Pending,
+                this.config.AutoCreateBranches ? SubIssueStatus.BranchCreated : SubIssueStatus.Pending,
                 DateTime.UtcNow);
 
             var key = GetAssignmentKey(epicNumber, subIssueNumber);
-            _assignments[key] = assignment;
+            this.assignments[key] = assignment;
 
             await Task.CompletedTask; // For async compliance
             return Result<SubIssueAssignment, string>.Success(assignment);
@@ -242,25 +258,28 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
     /// <summary>
     /// Gets all sub-issue assignments for an epic.
     /// </summary>
+    /// <returns></returns>
     public IReadOnlyList<SubIssueAssignment> GetSubIssueAssignments(int epicNumber)
     {
-        return _assignments.Values
-            .Where(a => _epics.TryGetValue(epicNumber, out var epic) && epic.SubIssueNumbers.Contains(a.IssueNumber))
+        return this.assignments.Values
+            .Where(a => this.epics.TryGetValue(epicNumber, out var epic) && epic.SubIssueNumbers.Contains(a.IssueNumber))
             .ToList();
     }
 
     /// <summary>
     /// Gets a specific sub-issue assignment.
     /// </summary>
+    /// <returns></returns>
     public SubIssueAssignment? GetSubIssueAssignment(int epicNumber, int subIssueNumber)
     {
         var key = GetAssignmentKey(epicNumber, subIssueNumber);
-        return _assignments.TryGetValue(key, out var assignment) ? assignment : null;
+        return this.assignments.TryGetValue(key, out var assignment) ? assignment : null;
     }
 
     /// <summary>
     /// Updates the status of a sub-issue.
     /// </summary>
+    /// <returns></returns>
     public Result<SubIssueAssignment, string> UpdateSubIssueStatus(
         int epicNumber,
         int subIssueNumber,
@@ -268,8 +287,10 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
         string? errorMessage = null)
     {
         var key = GetAssignmentKey(epicNumber, subIssueNumber);
-        if (!_assignments.TryGetValue(key, out var assignment))
+        if (!this.assignments.TryGetValue(key, out var assignment))
+        {
             return Result<SubIssueAssignment, string>.Failure($"Assignment for sub-issue #{subIssueNumber} not found");
+        }
 
         try
         {
@@ -277,10 +298,10 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
             {
                 Status = status,
                 CompletedAt = status == SubIssueStatus.Completed ? DateTime.UtcNow : assignment.CompletedAt,
-                ErrorMessage = errorMessage
+                ErrorMessage = errorMessage,
             };
 
-            _assignments[key] = updatedAssignment;
+            this.assignments[key] = updatedAssignment;
             return Result<SubIssueAssignment, string>.Success(updatedAssignment);
         }
         catch (Exception ex)
@@ -292,6 +313,7 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
     /// <summary>
     /// Executes work on a sub-issue using its assigned agent and branch.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<SubIssueAssignment, string>> ExecuteSubIssueAsync(
         int epicNumber,
         int subIssueNumber,
@@ -299,21 +321,27 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
         CancellationToken ct = default)
     {
         var key = GetAssignmentKey(epicNumber, subIssueNumber);
-        if (!_assignments.TryGetValue(key, out var assignment))
+        if (!this.assignments.TryGetValue(key, out var assignment))
+        {
             return Result<SubIssueAssignment, string>.Failure($"Assignment for sub-issue #{subIssueNumber} not found");
+        }
 
         if (assignment.Status == SubIssueStatus.InProgress)
+        {
             return Result<SubIssueAssignment, string>.Failure($"Sub-issue #{subIssueNumber} is already in progress");
+        }
 
         try
         {
             // Update status to in progress
-            var inProgressResult = UpdateSubIssueStatus(epicNumber, subIssueNumber, SubIssueStatus.InProgress);
+            var inProgressResult = this.UpdateSubIssueStatus(epicNumber, subIssueNumber, SubIssueStatus.InProgress);
             if (!inProgressResult.IsSuccess)
+            {
                 return inProgressResult;
+            }
 
             // Update agent heartbeat
-            _distributor.UpdateHeartbeat(assignment.AssignedAgentId);
+            this.distributor.UpdateHeartbeat(assignment.AssignedAgentId);
 
             // Execute work function
             var result = await workFunc(assignment);
@@ -321,19 +349,19 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
             if (result.IsSuccess)
             {
                 // Update status to completed
-                UpdateSubIssueStatus(epicNumber, subIssueNumber, SubIssueStatus.Completed);
+                this.UpdateSubIssueStatus(epicNumber, subIssueNumber, SubIssueStatus.Completed);
                 return result;
             }
             else
             {
                 // Update status to failed
-                UpdateSubIssueStatus(epicNumber, subIssueNumber, SubIssueStatus.Failed, result.Error);
+                this.UpdateSubIssueStatus(epicNumber, subIssueNumber, SubIssueStatus.Failed, result.Error);
                 return result;
             }
         }
         catch (Exception ex)
         {
-            UpdateSubIssueStatus(epicNumber, subIssueNumber, SubIssueStatus.Failed, ex.Message);
+            this.UpdateSubIssueStatus(epicNumber, subIssueNumber, SubIssueStatus.Failed, ex.Message);
             return Result<SubIssueAssignment, string>.Failure($"Execution failed: {ex.Message}");
         }
     }

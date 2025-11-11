@@ -1,7 +1,6 @@
-// ==========================================================
-// Hypothesis Engine Interface
-// Scientific reasoning and hypothesis testing
-// ==========================================================
+// <copyright file="IHypothesisEngine.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -60,10 +59,10 @@ public interface IHypothesisEngine
     /// <summary>
     /// Generates a hypothesis to explain an observation or pattern.
     /// </summary>
-    /// <param name="observation">The observation to explain</param>
-    /// <param name="context">Optional context information</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Generated hypothesis</returns>
+    /// <param name="observation">The observation to explain.</param>
+    /// <param name="context">Optional context information.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Generated hypothesis.</returns>
     Task<Result<Hypothesis, string>> GenerateHypothesisAsync(
         string observation,
         Dictionary<string, object>? context = null,
@@ -72,9 +71,9 @@ public interface IHypothesisEngine
     /// <summary>
     /// Designs an experiment to test a hypothesis.
     /// </summary>
-    /// <param name="hypothesis">The hypothesis to test</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Designed experiment</returns>
+    /// <param name="hypothesis">The hypothesis to test.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Designed experiment.</returns>
     Task<Result<Experiment, string>> DesignExperimentAsync(
         Hypothesis hypothesis,
         CancellationToken ct = default);
@@ -82,10 +81,10 @@ public interface IHypothesisEngine
     /// <summary>
     /// Tests a hypothesis by executing an experiment.
     /// </summary>
-    /// <param name="hypothesis">The hypothesis to test</param>
-    /// <param name="experiment">The experiment to execute</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Test result with validation</returns>
+    /// <param name="hypothesis">The hypothesis to test.</param>
+    /// <param name="experiment">The experiment to execute.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Test result with validation.</returns>
     Task<Result<HypothesisTestResult, string>> TestHypothesisAsync(
         Hypothesis hypothesis,
         Experiment experiment,
@@ -94,9 +93,9 @@ public interface IHypothesisEngine
     /// <summary>
     /// Uses abductive reasoning to infer the best explanation for observations.
     /// </summary>
-    /// <param name="observations">List of observations</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Best explanation hypothesis</returns>
+    /// <param name="observations">List of observations.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Best explanation hypothesis.</returns>
     Task<Result<Hypothesis, string>> AbductiveReasoningAsync(
         List<string> observations,
         CancellationToken ct = default);
@@ -104,22 +103,22 @@ public interface IHypothesisEngine
     /// <summary>
     /// Gets all hypotheses for a specific domain.
     /// </summary>
-    /// <param name="domain">The domain to filter by</param>
-    /// <returns>List of hypotheses</returns>
+    /// <param name="domain">The domain to filter by.</param>
+    /// <returns>List of hypotheses.</returns>
     List<Hypothesis> GetHypothesesByDomain(string domain);
 
     /// <summary>
     /// Updates a hypothesis based on new evidence.
     /// </summary>
-    /// <param name="hypothesisId">ID of the hypothesis to update</param>
-    /// <param name="evidence">New evidence (supporting or counter)</param>
-    /// <param name="supports">Whether evidence supports the hypothesis</param>
+    /// <param name="hypothesisId">ID of the hypothesis to update.</param>
+    /// <param name="evidence">New evidence (supporting or counter).</param>
+    /// <param name="supports">Whether evidence supports the hypothesis.</param>
     void UpdateHypothesis(Guid hypothesisId, string evidence, bool supports);
 
     /// <summary>
     /// Gets the confidence trend for a hypothesis over time.
     /// </summary>
-    /// <param name="hypothesisId">ID of the hypothesis</param>
-    /// <returns>List of confidence values over time</returns>
+    /// <param name="hypothesisId">ID of the hypothesis.</param>
+    /// <returns>List of confidence values over time.</returns>
     List<(DateTime time, double confidence)> GetConfidenceTrend(Guid hypothesisId);
 }

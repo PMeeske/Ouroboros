@@ -1,7 +1,11 @@
-using LangChain.Databases;
-using LangChain.DocumentLoaders;
+// <copyright file="BranchOps.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Pipeline.Branches;
+
+using LangChain.Databases;
+using LangChain.DocumentLoaders;
 
 /// <summary>
 /// Provides operations for working with pipeline branches.
@@ -44,7 +48,7 @@ public static class BranchOps
                     Id = v.Id,
                     Text = v.Text,
                     Metadata = v.Metadata,
-                    Embedding = v.Embedding
+                    Embedding = v.Embedding,
                 }));
 
                 IReadOnlyCollection<Document> top = await temp.GetSimilarDocuments(embed, query, amount: topK);

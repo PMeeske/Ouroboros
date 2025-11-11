@@ -1,7 +1,11 @@
-using LangChainPipeline.Options;
+// <copyright file="DependencyChecker.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace MonadicPipeline.CLI.Setup
 {
+    using LangChainPipeline.Options;
+
     /// <summary>
     /// Provides methods for checking for required external dependencies.
     /// </summary>
@@ -19,15 +23,15 @@ namespace MonadicPipeline.CLI.Setup
                 // This will throw an exception if it can't connect.
                 var provider = new LangChain.Providers.Ollama.OllamaProvider();
                 var model = new LangChain.Providers.Ollama.OllamaChatModel(provider, "llama3");
-                
+
                 // Try to make a simple request with a timeout
                 using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
                 var stream = model.GenerateAsync("test", cancellationToken: cts.Token);
-                
+
                 // Get enumerator and move to first element - this will trigger the connection
                 await using var enumerator = stream.GetAsyncEnumerator(cts.Token);
                 await enumerator.MoveNextAsync();
-                
+
                 return true;
             }
             catch (Exception ex) when (ex.Message.Contains("Connection refused") || ex.Message.Contains("ECONNREFUSED") || ex is System.Threading.Tasks.TaskCanceledException || ex is System.OperationCanceledException)
@@ -37,6 +41,7 @@ namespace MonadicPipeline.CLI.Setup
                 {
                     await GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true });
                 }
+
                 Environment.Exit(1);
                 return false;
             }
@@ -63,6 +68,7 @@ namespace MonadicPipeline.CLI.Setup
                 {
                     await GuidedSetup.RunAsync(new SetupOptions { InstallMeTTa = true });
                 }
+
                 Environment.Exit(1);
             }
         }

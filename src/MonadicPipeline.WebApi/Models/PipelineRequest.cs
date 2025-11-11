@@ -1,42 +1,46 @@
+// <copyright file="PipelineRequest.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.WebApi.Models;
 
 /// <summary>
-/// Request model for executing pipelines
+/// Request model for executing pipelines.
 /// </summary>
 public sealed record PipelineRequest
 {
     /// <summary>
-    /// DSL expression for pipeline execution (e.g., "SetTopic('AI') | UseDraft | UseCritique")
+    /// Gets dSL expression for pipeline execution (e.g., "SetTopic('AI') | UseDraft | UseCritique").
     /// </summary>
     public required string Dsl { get; init; }
 
     /// <summary>
-    /// Model name to use (defaults to llama3)
+    /// Gets model name to use (defaults to llama3).
     /// </summary>
     public string? Model { get; init; }
 
     /// <summary>
-    /// Enable debug output
+    /// Gets a value indicating whether enable debug output.
     /// </summary>
     public bool Debug { get; init; }
 
     /// <summary>
-    /// Temperature for response generation
+    /// Gets temperature for response generation.
     /// </summary>
     public float? Temperature { get; init; }
 
     /// <summary>
-    /// Maximum tokens for response
+    /// Gets maximum tokens for response.
     /// </summary>
     public int? MaxTokens { get; init; }
 
     /// <summary>
-    /// Remote endpoint URL
+    /// Gets remote endpoint URL.
     /// </summary>
     public string? Endpoint { get; init; }
 
     /// <summary>
-    /// API key for remote endpoint
+    /// Gets aPI key for remote endpoint.
     /// </summary>
     public string? ApiKey { get; init; }
 }

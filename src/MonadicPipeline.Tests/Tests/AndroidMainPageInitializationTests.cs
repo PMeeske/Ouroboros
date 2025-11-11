@@ -1,93 +1,99 @@
+// <copyright file="AndroidMainPageInitializationTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using System.Text;
 using FluentAssertions;
 using Xunit;
 
-namespace LangChainPipeline.Tests;
-
 /// <summary>
 /// End-to-end tests for Android MainPage initialization and error handling
-/// These tests verify that the app handles initialization failures gracefully
+/// These tests verify that the app handles initialization failures gracefully.
 /// </summary>
 public class AndroidMainPageInitializationTests
 {
     /// <summary>
-    /// Test helper class that simulates MainPage initialization behavior
+    /// Test helper class that simulates MainPage initialization behavior.
     /// </summary>
     private class MainPageSimulator
     {
-        private readonly StringBuilder _outputHistory;
-        private object? _cliExecutor;
-        private object? _suggestionEngine;
-        private readonly Func<string?, object> _cliExecutorFactory;
-        private readonly Func<string, object> _suggestionEngineFactory;
+        private readonly StringBuilder outputHistory;
+        private object? cliExecutor;
+        private object? suggestionEngine;
+        private readonly Func<string?, object> cliExecutorFactory;
+        private readonly Func<string, object> suggestionEngineFactory;
 
         public MainPageSimulator(
             Func<string?, object> cliExecutorFactory,
             Func<string, object> suggestionEngineFactory)
         {
-            _outputHistory = new StringBuilder();
-            _cliExecutorFactory = cliExecutorFactory;
-            _suggestionEngineFactory = suggestionEngineFactory;
+            this.outputHistory = new StringBuilder();
+            this.cliExecutorFactory = cliExecutorFactory;
+            this.suggestionEngineFactory = suggestionEngineFactory;
         }
 
-        public string Output => _outputHistory.ToString();
-        public bool IsCliExecutorInitialized => _cliExecutor != null;
-        public bool IsSuggestionEngineInitialized => _suggestionEngine != null;
+        public string Output => this.outputHistory.ToString();
+
+        public bool IsCliExecutorInitialized => this.cliExecutor != null;
+
+        public bool IsSuggestionEngineInitialized => this.suggestionEngine != null;
 
         /// <summary>
-        /// Simulates the MainPage constructor initialization logic
+        /// Simulates the MainPage constructor initialization logic.
         /// </summary>
         public void Initialize()
         {
-            _outputHistory.AppendLine("MonadicPipeline CLI v1.0");
-            _outputHistory.AppendLine("Enhanced with AI-powered suggestions and Ollama integration");
-            _outputHistory.AppendLine("Type 'help' to see available commands");
-            _outputHistory.AppendLine();
+            this.outputHistory.AppendLine("MonadicPipeline CLI v1.0");
+            this.outputHistory.AppendLine("Enhanced with AI-powered suggestions and Ollama integration");
+            this.outputHistory.AppendLine("Type 'help' to see available commands");
+            this.outputHistory.AppendLine();
 
             // Simulate the try-catch logic from MainPage constructor
             try
             {
                 var dbPath = "/tmp/test_command_history.db";
-                _cliExecutor = _cliExecutorFactory(dbPath);
+                this.cliExecutor = this.cliExecutorFactory(dbPath);
 
                 // Initialize suggestion engine if available
                 try
                 {
-                    _suggestionEngine = _suggestionEngineFactory(dbPath);
+                    this.suggestionEngine = this.suggestionEngineFactory(dbPath);
                 }
                 catch (Exception ex)
                 {
-                    _suggestionEngine = null;
-                    _outputHistory.AppendLine($"⚠ Suggestions unavailable: {ex.Message}");
-                    _outputHistory.AppendLine();
+                    this.suggestionEngine = null;
+                    this.outputHistory.AppendLine($"⚠ Suggestions unavailable: {ex.Message}");
+                    this.outputHistory.AppendLine();
                 }
             }
             catch (Exception ex)
             {
-                _outputHistory.AppendLine($"⚠ Initialization error: {ex.Message}");
-                _outputHistory.AppendLine("Some features may be unavailable.");
-                _outputHistory.AppendLine();
+                this.outputHistory.AppendLine($"⚠ Initialization error: {ex.Message}");
+                this.outputHistory.AppendLine("Some features may be unavailable.");
+                this.outputHistory.AppendLine();
 
                 // Create a minimal fallback executor
                 try
                 {
-                    _cliExecutor = _cliExecutorFactory(null);
+                    this.cliExecutor = this.cliExecutorFactory(null);
                 }
                 catch
                 {
-                    _cliExecutor = null;
+                    this.cliExecutor = null;
                 }
             }
 
-            _outputHistory.Append("> ");
+            this.outputHistory.Append("> ");
         }
 
         /// <summary>
-        /// Simulates executing a command with null checks
+        /// Simulates executing a command with null checks.
         /// </summary>
         public string ExecuteCommand(string command)
         {
-            if (_cliExecutor == null)
+            if (this.cliExecutor == null)
             {
                 return "Error: CLI executor not initialized. App may be in degraded state.";
             }
@@ -133,6 +139,7 @@ public class AndroidMainPageInitializationTests
             {
                 throw new InvalidOperationException("Database initialization failed");
             }
+
             return new object(); // Fallback succeeds
         };
         Func<string, object> suggestionEngineFactory = (string dbPath) => throw new InvalidOperationException("Cannot create engine");
@@ -251,6 +258,7 @@ public class AndroidMainPageInitializationTests
             {
                 throw new Exception("Database error");
             }
+
             return new object(); // Fallback succeeds
         };
         Func<string, object> suggestionEngineFactory = (string dbPath) => throw new Exception("Engine failed");
@@ -290,7 +298,7 @@ public class AndroidMainPageInitializationTests
     }
 
     /// <summary>
-    /// This test verifies the exact flow that was causing the purple screen
+    /// This test verifies the exact flow that was causing the purple screen.
     /// </summary>
     [Fact]
     public void PurpleScreenScenario_DatabaseFailureOnStartup_ShouldNotCrash()
@@ -304,6 +312,7 @@ public class AndroidMainPageInitializationTests
                 // would throw an exception during CliExecutor constructor
                 throw new InvalidOperationException("SQLite Error: unable to open database file");
             }
+
             // Fallback with null dbPath
             return new object();
         };
@@ -323,13 +332,13 @@ public class AndroidMainPageInitializationTests
         simulator.Output.Should().Contain("⚠ Initialization error", "error should be shown to user");
         simulator.Output.Should().Contain("SQLite Error", "specific error should be visible");
         simulator.Output.Should().Contain("> ", "terminal prompt should appear");
-        
+
         // Most importantly: UI is rendered, not a purple screen
         simulator.IsCliExecutorInitialized.Should().BeTrue("fallback should create minimal executor");
     }
 
     /// <summary>
-    /// Verifies that multiple sequential commands work even after initialization errors
+    /// Verifies that multiple sequential commands work even after initialization errors.
     /// </summary>
     [Fact]
     public void EndToEnd_MultipleCommands_AfterPartialFailure_ShouldAllWork()
@@ -341,6 +350,7 @@ public class AndroidMainPageInitializationTests
             {
                 throw new Exception("Database initialization failed");
             }
+
             return new object(); // Fallback succeeds
         };
         Func<string, object> suggestionEngineFactory = (string dbPath) => throw new Exception("Suggestions unavailable");
@@ -353,7 +363,7 @@ public class AndroidMainPageInitializationTests
             simulator.ExecuteCommand("help"),
             simulator.ExecuteCommand("version"),
             simulator.ExecuteCommand("status"),
-            simulator.ExecuteCommand("models")
+            simulator.ExecuteCommand("models"),
         };
 
         // Assert - All commands should execute (even in degraded mode)
@@ -362,7 +372,7 @@ public class AndroidMainPageInitializationTests
             result.Should().Contain("Executed:", "command should execute");
             result.Should().NotContain("degraded state", "fallback executor should work");
         }
-        
+
         simulator.Output.Should().Contain("⚠ Initialization error");
         simulator.IsCliExecutorInitialized.Should().BeTrue();
     }

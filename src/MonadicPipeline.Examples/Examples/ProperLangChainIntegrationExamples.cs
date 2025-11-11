@@ -1,6 +1,10 @@
-using LangChain.Chains.HelperChains;
+// <copyright file="ProperLangChainIntegrationExamples.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Examples;
+
+using LangChain.Chains.HelperChains;
 
 /// <summary>
 /// Examples demonstrating proper integration between LangChain official chains
@@ -9,8 +13,9 @@ namespace LangChainPipeline.Examples;
 public static class ProperLangChainIntegrationExamples
 {
     /// <summary>
-    /// Demonstrates all LangChain integration examples
+    /// Demonstrates all LangChain integration examples.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllExamples()
     {
         Console.WriteLine("=== PROPER LANGCHAIN INTEGRATION EXAMPLES ===\n");
@@ -24,8 +29,9 @@ public static class ProperLangChainIntegrationExamples
     }
 
     /// <summary>
-    /// Demonstrates how to use LangChain's StackableChain system with monadic operations
+    /// Demonstrates how to use LangChain's StackableChain system with monadic operations.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateStackableChainIntegration()
     {
         Console.WriteLine("=== Stackable Chain Integration Example ===");
@@ -53,15 +59,15 @@ public static class ProperLangChainIntegrationExamples
                     Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
                 }
             },
-            error => Console.WriteLine($"✗ Error: {error}")
-        );
+            error => Console.WriteLine($"✗ Error: {error}"));
 
         Console.WriteLine();
     }
 
     /// <summary>
-    /// Demonstrates LangChain LLMChain integration (without actual LLM execution)
+    /// Demonstrates LangChain LLMChain integration (without actual LLM execution).
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static Task DemonstrateLlmChainIntegration()
     {
         Console.WriteLine("=== LLM Chain Integration Example ===");
@@ -85,8 +91,9 @@ public static class ProperLangChainIntegrationExamples
     }
 
     /// <summary>
-    /// Demonstrates complex monadic pipeline using LangChain chains
+    /// Demonstrates complex monadic pipeline using LangChain chains.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static Task DemonstrateMonadicLangChainPipeline()
     {
         Console.WriteLine("=== Monadic LangChain Pipeline Example ===");
@@ -110,8 +117,9 @@ public static class ProperLangChainIntegrationExamples
     }
 
     /// <summary>
-    /// Demonstrates conversational pipeline using proper LangChain integration
+    /// Demonstrates conversational pipeline using proper LangChain integration.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static Task DemonstrateConversationalLangChain()
     {
         Console.WriteLine("=== Conversational LangChain Pipeline Example ===");

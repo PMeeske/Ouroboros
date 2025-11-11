@@ -1,12 +1,11 @@
-// ==========================================================
-// Memory Store Implementation
-// Persistent long-term learning storage
-// ==========================================================
+// <copyright file="MemoryStore.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Agent.MetaAI;
 
 using System.Collections.Concurrent;
 using LangChain.Databases;
-
-namespace LangChainPipeline.Agent.MetaAI;
 
 /// <summary>
 /// Implementation of persistent memory store for continual learning.
@@ -14,30 +13,31 @@ namespace LangChainPipeline.Agent.MetaAI;
 /// </summary>
 public sealed class MemoryStore : IMemoryStore
 {
-    private readonly ConcurrentDictionary<Guid, Experience> _experiences = new();
-    private readonly IEmbeddingModel? _embedding;
-    private readonly TrackedVectorStore? _vectorStore;
+    private readonly ConcurrentDictionary<Guid, Experience> experiences = new();
+    private readonly IEmbeddingModel? embedding;
+    private readonly TrackedVectorStore? vectorStore;
 
     public MemoryStore(IEmbeddingModel? embedding = null, TrackedVectorStore? vectorStore = null)
     {
-        _embedding = embedding;
-        _vectorStore = vectorStore;
+        this.embedding = embedding;
+        this.vectorStore = vectorStore;
     }
 
     /// <summary>
     /// Stores an experience in long-term memory.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task StoreExperienceAsync(Experience experience, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(experience);
 
-        _experiences[experience.Id] = experience;
+        this.experiences[experience.Id] = experience;
 
         // If vector store available, store for similarity search
-        if (_embedding != null && _vectorStore != null)
+        if (this.embedding != null && this.vectorStore != null)
         {
             var text = $"Goal: {experience.Goal}\nPlan: {string.Join(", ", experience.Plan.Steps.Select(s => s.Action))}\nQuality: {experience.Verification.QualityScore}";
-            var embedding = await _embedding.CreateEmbeddingsAsync(text, ct);
+            var embedding = await this.embedding.CreateEmbeddingsAsync(text, ct);
 
             var vector = new Vector
             {
@@ -50,16 +50,17 @@ public sealed class MemoryStore : IMemoryStore
                     ["quality"] = experience.Verification.QualityScore,
                     ["verified"] = experience.Verification.Verified,
                     ["timestamp"] = experience.Timestamp
-                }
+                },
             };
 
-            await _vectorStore.AddAsync(new[] { vector }, ct);
+            await this.vectorStore.AddAsync(new[] { vector }, ct);
         }
     }
 
     /// <summary>
     /// Retrieves relevant experiences based on similarity.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<List<Experience>> RetrieveRelevantExperiencesAsync(
         MemoryQuery query,
         CancellationToken ct = default)
@@ -67,11 +68,11 @@ public sealed class MemoryStore : IMemoryStore
         ArgumentNullException.ThrowIfNull(query);
 
         // If vector store available, use semantic search
-        if (_embedding != null && _vectorStore != null)
+        if (this.embedding != null && this.vectorStore != null)
         {
-            var queryEmbedding = await _embedding.CreateEmbeddingsAsync(query.Goal, ct);
-            var similarDocs = await _vectorStore.GetSimilarDocuments(
-                _embedding,
+            var queryEmbedding = await this.embedding.CreateEmbeddingsAsync(query.Goal, ct);
+            var similarDocs = await this.vectorStore.GetSimilarDocuments(
+                this.embedding,
                 query.Goal,
                 amount: query.MaxResults);
 
@@ -80,7 +81,7 @@ public sealed class MemoryStore : IMemoryStore
             {
                 if (doc.Metadata?.TryGetValue("id", out var idObj) == true &&
                     Guid.TryParse(idObj?.ToString(), out var id) &&
-                    _experiences.TryGetValue(id, out var exp))
+                    this.experiences.TryGetValue(id, out var exp))
                 {
                     experiences.Add(exp);
                 }
@@ -91,7 +92,7 @@ public sealed class MemoryStore : IMemoryStore
 
         // Fallback to keyword-based search
         var goalLower = query.Goal.ToLowerInvariant();
-        var matches = _experiences.Values
+        var matches = this.experiences.Values
             .Where(exp => exp.Goal.ToLowerInvariant().Contains(goalLower))
             .OrderByDescending(exp => exp.Verification.QualityScore)
             .Take(query.MaxResults)
@@ -103,9 +104,10 @@ public sealed class MemoryStore : IMemoryStore
     /// <summary>
     /// Gets memory statistics.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<MemoryStatistics> GetStatisticsAsync()
     {
-        var experiences = _experiences.Values.ToList();
+        var experiences = this.experiences.Values.ToList();
 
         var totalCount = experiences.Count;
         var successCount = experiences.Count(e => e.Execution.Success);
@@ -131,22 +133,24 @@ public sealed class MemoryStore : IMemoryStore
     /// <summary>
     /// Clears all experiences from memory.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task ClearAsync(CancellationToken ct = default)
     {
-        _experiences.Clear();
+        this.experiences.Clear();
 
-        if (_vectorStore != null)
+        if (this.vectorStore != null)
         {
-            await _vectorStore.ClearAsync(ct);
+            await this.vectorStore.ClearAsync(ct);
         }
     }
 
     /// <summary>
     /// Gets an experience by ID.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Experience?> GetExperienceAsync(Guid id, CancellationToken ct = default)
     {
-        _experiences.TryGetValue(id, out var experience);
+        this.experiences.TryGetValue(id, out var experience);
         return await Task.FromResult(experience);
     }
 }

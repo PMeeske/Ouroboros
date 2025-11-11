@@ -1,45 +1,49 @@
-using System.Collections.Concurrent;
+// <copyright file="Telemetry.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Diagnostics;
+
+using System.Collections.Concurrent;
 
 /// <summary>
 /// Telemetry collector for tracking pipeline execution metrics and performance data.
 /// </summary>
 public static class Telemetry
 {
-    private static long _embeddings;
-    private static long _embFailures;
-    private static long _vectors;
-    private static long _approxTokens;
+    private static long embeddings;
+    private static long embFailures;
+    private static long vectors;
+    private static long approxTokens;
     private static readonly ConcurrentDictionary<int, long> Dims = new();
-    private static long _agentIterations;
-    private static long _agentToolCalls;
-    private static long _agentRetries;
-    private static long _streamChunks;
-    private static long _toolLatencyMicros;
-    private static long _toolLatencySamples;
+    private static long agentIterations;
+    private static long agentToolCalls;
+    private static long agentRetries;
+    private static long streamChunks;
+    private static long toolLatencyMicros;
+    private static long toolLatencySamples;
     private static readonly ConcurrentDictionary<string, long> ToolNameCounts = new();
 
     /// <summary>
     /// Records a single agent iteration.
     /// </summary>
-    public static void RecordAgentIteration() => Interlocked.Increment(ref _agentIterations);
+    public static void RecordAgentIteration() => Interlocked.Increment(ref agentIterations);
 
     /// <summary>
     /// Records the number of tool calls made by the agent.
     /// </summary>
     /// <param name="n">Number of tool calls.</param>
-    public static void RecordAgentToolCalls(int n) => Interlocked.Add(ref _agentToolCalls, n);
+    public static void RecordAgentToolCalls(int n) => Interlocked.Add(ref agentToolCalls, n);
 
     /// <summary>
     /// Records a single agent retry attempt.
     /// </summary>
-    public static void RecordAgentRetry() => Interlocked.Increment(ref _agentRetries);
+    public static void RecordAgentRetry() => Interlocked.Increment(ref agentRetries);
 
     /// <summary>
     /// Records a single stream chunk received.
     /// </summary>
-    public static void RecordStreamChunk() => Interlocked.Increment(ref _streamChunks);
+    public static void RecordStreamChunk() => Interlocked.Increment(ref streamChunks);
 
     /// <summary>
     /// Records the latency of a tool execution.
@@ -47,8 +51,8 @@ public static class Telemetry
     /// <param name="elapsed">The elapsed time for tool execution.</param>
     public static void RecordToolLatency(TimeSpan elapsed)
     {
-        Interlocked.Add(ref _toolLatencyMicros, (long)(elapsed.TotalMilliseconds * 1000));
-        Interlocked.Increment(ref _toolLatencySamples);
+        Interlocked.Add(ref toolLatencyMicros, (long)(elapsed.TotalMilliseconds * 1000));
+        Interlocked.Increment(ref toolLatencySamples);
     }
 
     /// <summary>
@@ -64,10 +68,14 @@ public static class Telemetry
     public static void RecordEmbeddingInput(IEnumerable<string> inputs)
     {
         var list = inputs as ICollection<string> ?? inputs.ToList();
-        Interlocked.Increment(ref _embeddings);
+        Interlocked.Increment(ref embeddings);
         long t = 0;
-        foreach (var s in list) t += s.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-        Interlocked.Add(ref _approxTokens, t);
+        foreach (var s in list)
+        {
+            t += s.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        }
+
+        Interlocked.Add(ref approxTokens, t);
     }
 
     /// <summary>
@@ -80,13 +88,13 @@ public static class Telemetry
     /// <summary>
     /// Records a failed embedding operation.
     /// </summary>
-    public static void RecordEmbeddingFailure() => Interlocked.Increment(ref _embFailures);
+    public static void RecordEmbeddingFailure() => Interlocked.Increment(ref embFailures);
 
     /// <summary>
     /// Records the number of vectors stored or processed.
     /// </summary>
     /// <param name="count">Number of vectors.</param>
-    public static void RecordVectors(int count) => Interlocked.Add(ref _vectors, count);
+    public static void RecordVectors(int count) => Interlocked.Add(ref vectors, count);
 
     /// <summary>
     /// Prints a summary of all collected telemetry data to the console.
@@ -94,10 +102,14 @@ public static class Telemetry
     /// </summary>
     public static void PrintSummary()
     {
-        if (Environment.GetEnvironmentVariable("MONADIC_DEBUG") != "1") return;
+        if (Environment.GetEnvironmentVariable("MONADIC_DEBUG") != "1")
+        {
+            return;
+        }
+
         var dims = string.Join(';', Dims.OrderBy(kv => kv.Key).Select(kv => $"d{kv.Key}={kv.Value}"));
-        double avgToolMicros = _toolLatencySamples == 0 ? 0 : (double)_toolLatencyMicros / _toolLatencySamples;
+        double avgToolMicros = toolLatencySamples == 0 ? 0 : (double)toolLatencyMicros / toolLatencySamples;
         var toolTop = string.Join(',', ToolNameCounts.OrderByDescending(kv => kv.Value).Take(5).Select(kv => $"{kv.Key}={kv.Value}"));
-        Console.WriteLine($"[telemetry] embReq={_embeddings} embFail={_embFailures} vectors={_vectors} approxTokens={_approxTokens} agentIters={_agentIterations} agentTools={_agentToolCalls} agentRetries={_agentRetries} streamChunks={_streamChunks} avgToolUs={avgToolMicros:F1} tools[{toolTop}] {dims}");
+        Console.WriteLine($"[telemetry] embReq={embeddings} embFail={embFailures} vectors={vectors} approxTokens={approxTokens} agentIters={agentIterations} agentTools={agentToolCalls} agentRetries={agentRetries} streamChunks={streamChunks} avgToolUs={avgToolMicros:F1} tools[{toolTop}] {dims}");
     }
 }

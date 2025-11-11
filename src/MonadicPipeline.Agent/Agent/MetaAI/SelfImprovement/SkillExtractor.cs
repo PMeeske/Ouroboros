@@ -1,11 +1,10 @@
-// ==========================================================
-// Skill Extractor Implementation
-// Automatic extraction of reusable skills from successful executions
-// ==========================================================
-
-using LangChain.Providers;
+// <copyright file="SkillExtractor.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
+
+using LangChain.Providers;
 
 /// <summary>
 /// Implementation of automatic skill extraction from successful executions.
@@ -13,18 +12,19 @@ namespace LangChainPipeline.Agent.MetaAI;
 /// </summary>
 public sealed class SkillExtractor : ISkillExtractor
 {
-    private readonly IChatCompletionModel _llm;
-    private readonly ISkillRegistry _skillRegistry;
+    private readonly IChatCompletionModel llm;
+    private readonly ISkillRegistry skillRegistry;
 
     public SkillExtractor(IChatCompletionModel llm, ISkillRegistry skillRegistry)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _skillRegistry = skillRegistry ?? throw new ArgumentNullException(nameof(skillRegistry));
+        this.llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        this.skillRegistry = skillRegistry ?? throw new ArgumentNullException(nameof(skillRegistry));
     }
 
     /// <summary>
     /// Determines if a skill should be extracted from the given verification result.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<bool> ShouldExtractSkillAsync(
         VerificationResult verification,
         SkillExtractionConfig? config = null)
@@ -33,16 +33,22 @@ public sealed class SkillExtractor : ISkillExtractor
 
         // Check quality threshold
         if (!verification.Verified || verification.QualityScore < config.MinQualityThreshold)
+        {
             return false;
+        }
 
         // Check if execution has enough steps
         var stepCount = verification.Execution.StepResults.Count;
         if (stepCount < config.MinStepsForExtraction)
+        {
             return false;
+        }
 
         // Check if execution was successful
         if (!verification.Execution.Success)
+        {
             return false;
+        }
 
         return await Task.FromResult(true);
     }
@@ -50,6 +56,7 @@ public sealed class SkillExtractor : ISkillExtractor
     /// <summary>
     /// Extracts a skill from a successful execution.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<Skill, string>> ExtractSkillAsync(
         ExecutionResult execution,
         VerificationResult verification,
@@ -62,34 +69,40 @@ public sealed class SkillExtractor : ISkillExtractor
         {
             // Validate inputs
             if (execution == null)
+            {
                 return Result<Skill, string>.Failure("Execution cannot be null");
+            }
 
             if (verification == null)
+            {
                 return Result<Skill, string>.Failure("Verification cannot be null");
+            }
 
             // Check if skill should be extracted
-            if (!await ShouldExtractSkillAsync(verification, config))
+            if (!await this.ShouldExtractSkillAsync(verification, config))
+            {
                 return Result<Skill, string>.Failure(
                     $"Execution does not meet extraction criteria (Quality: {verification.QualityScore:P0}, Steps: {execution.StepResults.Count})");
+            }
 
             // Generate skill name and description using LLM
-            var skillName = await GenerateSkillNameAsync(execution, ct);
-            var description = await GenerateSkillDescriptionAsync(execution, ct);
+            var skillName = await this.GenerateSkillNameAsync(execution, ct);
+            var description = await this.GenerateSkillDescriptionAsync(execution, ct);
 
             // Check if similar skill already exists
-            var existingSkill = _skillRegistry.GetSkill(skillName);
+            var existingSkill = this.skillRegistry.GetSkill(skillName);
             if (existingSkill != null)
             {
                 // Update existing skill with new execution data
-                return await UpdateExistingSkillAsync(existingSkill, execution, verification, config);
+                return await this.UpdateExistingSkillAsync(existingSkill, execution, verification, config);
             }
 
             // Extract prerequisites from successful steps
-            var prerequisites = ExtractPrerequisites(execution, config);
+            var prerequisites = this.ExtractPrerequisites(execution, config);
 
             // Extract and parameterize steps
             var steps = config.EnableAutoParameterization
-                ? ParameterizeSteps(execution.Plan.Steps)
+                ? this.ParameterizeSteps(execution.Plan.Steps)
                 : execution.Plan.Steps;
 
             // Limit steps to configured maximum
@@ -113,7 +126,7 @@ public sealed class SkillExtractor : ISkillExtractor
                 LastUsed: DateTime.UtcNow);
 
             // Register the skill
-            _skillRegistry.RegisterSkill(skill);
+            this.skillRegistry.RegisterSkill(skill);
 
             return Result<Skill, string>.Success(skill);
         }
@@ -126,6 +139,7 @@ public sealed class SkillExtractor : ISkillExtractor
     /// <summary>
     /// Generates a descriptive name for the extracted skill using LLM.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<string> GenerateSkillNameAsync(
         ExecutionResult execution,
         CancellationToken ct = default)
@@ -145,24 +159,25 @@ Requirements:
 
 Skill name:";
 
-            var skillName = await _llm.GenerateTextAsync(prompt, ct);
+            var skillName = await this.llm.GenerateTextAsync(prompt, ct);
             skillName = skillName?.Trim() ?? "extracted_skill";
 
             // Sanitize the name
-            skillName = SanitizeSkillName(skillName);
+            skillName = this.SanitizeSkillName(skillName);
 
             return skillName;
         }
         catch
         {
             // Fallback to automatic name generation
-            return GenerateFallbackSkillName(execution);
+            return this.GenerateFallbackSkillName(execution);
         }
     }
 
     /// <summary>
     /// Generates a description for the extracted skill using LLM.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<string> GenerateSkillDescriptionAsync(
         ExecutionResult execution,
         CancellationToken ct = default)
@@ -180,7 +195,7 @@ Results:
 
 Write a 1-2 sentence description of this skill's capability:";
 
-            var description = await _llm.GenerateTextAsync(prompt, ct);
+            var description = await this.llm.GenerateTextAsync(prompt, ct);
             description = description?.Trim() ?? $"Skill for: {execution.Plan.Goal}";
 
             return description;
@@ -263,18 +278,18 @@ Write a 1-2 sentence description of this skill's capability:";
             // Calculate updated success rate (weighted average)
             var totalUsages = existingSkill.UsageCount + 1;
             var updatedSuccessRate =
-                (existingSkill.SuccessRate * existingSkill.UsageCount + verification.QualityScore) / totalUsages;
+                ((existingSkill.SuccessRate * existingSkill.UsageCount) + verification.QualityScore) / totalUsages;
 
             // Create updated skill
             var updatedSkill = existingSkill with
             {
                 SuccessRate = updatedSuccessRate,
                 UsageCount = totalUsages,
-                LastUsed = DateTime.UtcNow
+                LastUsed = DateTime.UtcNow,
             };
 
             // Update in registry
-            _skillRegistry.RegisterSkill(updatedSkill);
+            this.skillRegistry.RegisterSkill(updatedSkill);
 
             return await Task.FromResult(Result<Skill, string>.Success(updatedSkill));
         }
@@ -306,7 +321,9 @@ Write a 1-2 sentence description of this skill's capability:";
 
         // Ensure it's not empty
         if (string.IsNullOrWhiteSpace(name))
+        {
             name = "extracted_skill";
+        }
 
         return name;
     }
@@ -318,7 +335,7 @@ Write a 1-2 sentence description of this skill's capability:";
     {
         // Extract first action as basis for name
         var firstAction = execution.Plan.Steps.FirstOrDefault()?.Action ?? "skill";
-        var sanitized = SanitizeSkillName(firstAction);
+        var sanitized = this.SanitizeSkillName(firstAction);
 
         // Add timestamp to ensure uniqueness
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");

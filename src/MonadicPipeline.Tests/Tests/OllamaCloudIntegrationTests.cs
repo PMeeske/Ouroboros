@@ -1,8 +1,12 @@
+// <copyright file="OllamaCloudIntegrationTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using LangChain.Databases;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Providers;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// End-to-end integration tests for Ollama Cloud endpoint support.
@@ -40,8 +44,6 @@ public static class OllamaCloudIntegrationTests
 
         Console.WriteLine("✓ All Ollama Cloud integration tests passed!");
     }
-
-    #region Local Ollama Tests (Regression Testing)
 
     private static async Task TestLocalOllamaChatModel()
     {
@@ -97,10 +99,6 @@ public static class OllamaCloudIntegrationTests
             throw new Exception($"Local Ollama embedding model test failed: {ex.Message}");
         }
     }
-
-    #endregion
-
-    #region ChatConfig Tests
 
     private static void TestChatConfigAutoDetection()
     {
@@ -223,10 +221,6 @@ public static class OllamaCloudIntegrationTests
         }
     }
 
-    #endregion
-
-    #region Chat Model Adapter Tests
-
     private static async Task TestOllamaCloudChatModelFallback()
     {
         Console.WriteLine("Testing OllamaCloudChatModel fallback behavior...");
@@ -271,10 +265,6 @@ public static class OllamaCloudIntegrationTests
         Console.WriteLine("  ✓ HttpOpenAiCompatibleChatModel fallback works correctly");
     }
 
-    #endregion
-
-    #region Embedding Model Adapter Tests
-
     private static async Task TestOllamaCloudEmbeddingModelFallback()
     {
         Console.WriteLine("Testing OllamaCloudEmbeddingModel fallback behavior...");
@@ -307,10 +297,6 @@ public static class OllamaCloudIntegrationTests
 
         Console.WriteLine($"  ✓ OllamaCloudEmbeddingModel fallback works ({embedding.Length} dimensions)");
     }
-
-    #endregion
-
-    #region Model Selection Tests
 
     private static void TestCreateRemoteChatModelSelection()
     {
@@ -359,10 +345,6 @@ public static class OllamaCloudIntegrationTests
         Console.WriteLine("  ✓ Embedding model selection works correctly");
     }
 
-    #endregion
-
-    #region End-to-End Scenario Tests
-
     private static async Task TestEndToEndLocalOllamaScenario()
     {
         Console.WriteLine("Testing end-to-end local Ollama scenario...");
@@ -395,7 +377,7 @@ public static class OllamaCloudIntegrationTests
                 Id = "test1",
                 Text = "test document",
                 Embedding = embedding
-            }
+            },
         });
 
         var retrieved = store.GetAll().ToList();
@@ -438,7 +420,7 @@ public static class OllamaCloudIntegrationTests
                 Id = "cloud1",
                 Text = "cloud document",
                 Embedding = embedding
-            }
+            },
         });
 
         var retrieved = store.GetAll().ToList();
@@ -449,6 +431,4 @@ public static class OllamaCloudIntegrationTests
 
         Console.WriteLine("  ✓ End-to-end remote Ollama Cloud scenario works correctly");
     }
-
-    #endregion
 }

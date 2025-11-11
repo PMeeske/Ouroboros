@@ -1,6 +1,6 @@
-// ==========================================================
-// Hierarchical Planner - Multi-level plan decomposition
-// ==========================================================
+// <copyright file="HierarchicalPlanner.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -30,6 +30,7 @@ public interface IHierarchicalPlanner
     /// <summary>
     /// Creates a hierarchical plan by decomposing complex tasks.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<HierarchicalPlan, string>> CreateHierarchicalPlanAsync(
         string goal,
         Dictionary<string, object>? context = null,
@@ -39,6 +40,7 @@ public interface IHierarchicalPlanner
     /// <summary>
     /// Executes a hierarchical plan recursively.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<ExecutionResult, string>> ExecuteHierarchicalAsync(
         HierarchicalPlan plan,
         CancellationToken ct = default);
@@ -49,20 +51,21 @@ public interface IHierarchicalPlanner
 /// </summary>
 public sealed class HierarchicalPlanner : IHierarchicalPlanner
 {
-    private readonly IMetaAIPlannerOrchestrator _orchestrator;
-    private readonly IChatCompletionModel _llm;
+    private readonly IMetaAIPlannerOrchestrator orchestrator;
+    private readonly IChatCompletionModel llm;
 
     public HierarchicalPlanner(
         IMetaAIPlannerOrchestrator orchestrator,
         IChatCompletionModel llm)
     {
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        this.orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        this.llm = llm ?? throw new ArgumentNullException(nameof(llm));
     }
 
     /// <summary>
     /// Creates a hierarchical plan by decomposing complex tasks.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<HierarchicalPlan, string>> CreateHierarchicalPlanAsync(
         string goal,
         Dictionary<string, object>? context = null,
@@ -74,7 +77,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
         try
         {
             // Create top-level plan
-            var topLevelResult = await _orchestrator.PlanAsync(goal, context, ct);
+            var topLevelResult = await this.orchestrator.PlanAsync(goal, context, ct);
 
             if (!topLevelResult.IsSuccess)
             {
@@ -87,7 +90,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
             // Decompose complex steps if needed
             if (topLevelPlan.Steps.Count >= config.MinStepsForDecomposition)
             {
-                await DecomposeStepsAsync(
+                await this.DecomposeStepsAsync(
                     topLevelPlan.Steps,
                     subPlans,
                     context,
@@ -114,6 +117,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
     /// <summary>
     /// Executes a hierarchical plan recursively.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<ExecutionResult, string>> ExecuteHierarchicalAsync(
         HierarchicalPlan plan,
         CancellationToken ct = default)
@@ -121,9 +125,9 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
         try
         {
             // Execute top-level plan, replacing complex steps with sub-plan execution
-            var expandedPlan = await ExpandPlanAsync(plan, ct);
+            var expandedPlan = await this.ExpandPlanAsync(plan, ct);
 
-            var executionResult = await _orchestrator.ExecuteAsync(expandedPlan, ct);
+            var executionResult = await this.orchestrator.ExecuteAsync(expandedPlan, ct);
 
             return executionResult;
         }
@@ -142,16 +146,18 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
         CancellationToken ct)
     {
         if (currentDepth >= config.MaxDepth)
+        {
             return;
+        }
 
         foreach (var step in steps)
         {
             // Check if step is complex enough to decompose
-            if (IsComplexStep(step, config))
+            if (this.IsComplexStep(step, config))
             {
                 var subGoal = $"Execute: {step.Action} with {System.Text.Json.JsonSerializer.Serialize(step.Parameters)}";
 
-                var subPlanResult = await _orchestrator.PlanAsync(subGoal, context, ct);
+                var subPlanResult = await this.orchestrator.PlanAsync(subGoal, context, ct);
 
                 if (subPlanResult.IsSuccess)
                 {
@@ -161,7 +167,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
                     // Recursively decompose sub-plan steps
                     if (subPlan.Steps.Count >= config.MinStepsForDecomposition)
                     {
-                        await DecomposeStepsAsync(
+                        await this.DecomposeStepsAsync(
                             subPlan.Steps,
                             subPlans,
                             context,

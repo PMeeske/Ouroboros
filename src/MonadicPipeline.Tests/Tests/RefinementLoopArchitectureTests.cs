@@ -1,3 +1,9 @@
+// <copyright file="RefinementLoopArchitectureTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using LangChain.DocumentLoaders;
 using LangChain.Providers;
 using LangChainPipeline.Domain.Events;
@@ -9,8 +15,6 @@ using LangChainPipeline.Providers;
 using LangChainPipeline.Tools;
 using Xunit;
 
-namespace LangChainPipeline.Tests;
-
 /// <summary>
 /// Tests for the complete architecture refinement of the reasoning pipeline.
 /// Validates that multi-iteration refinement loops properly chain iterations
@@ -21,6 +25,7 @@ public class RefinementLoopArchitectureTests
     /// <summary>
     /// Tests that CritiqueArrow uses the most recent Draft when no FinalSpec exists.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task CritiqueArrow_ShouldUseDraft_WhenNoFinalSpecExists()
     {
@@ -51,6 +56,7 @@ public class RefinementLoopArchitectureTests
     /// Tests that CritiqueArrow uses the most recent FinalSpec when it exists.
     /// This is the core improvement for multi-iteration refinement loops.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task CritiqueArrow_ShouldUseMostRecentFinalSpec_WhenItExists()
     {
@@ -86,6 +92,7 @@ public class RefinementLoopArchitectureTests
     /// <summary>
     /// Tests that ImproveArrow uses the most recent Draft when no FinalSpec exists.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task ImproveArrow_ShouldUseDraft_WhenNoFinalSpecExists()
     {
@@ -117,6 +124,7 @@ public class RefinementLoopArchitectureTests
     /// Tests that ImproveArrow uses the most recent FinalSpec when it exists.
     /// This ensures iterative improvements build upon previous improvements.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task ImproveArrow_ShouldUseMostRecentFinalSpec_WhenItExists()
     {
@@ -152,6 +160,7 @@ public class RefinementLoopArchitectureTests
     /// Tests the complete multi-iteration refinement loop architecture.
     /// Validates that each iteration builds upon the previous one.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task MultiIterationRefinementLoop_ShouldChainProperly()
     {
@@ -220,6 +229,7 @@ public class RefinementLoopArchitectureTests
     /// <summary>
     /// Tests that SafeCritiqueArrow properly handles the case when no reasoning state exists.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task SafeCritiqueArrow_ShouldReturnFailure_WhenNoReasoningStateExists()
     {
@@ -236,12 +246,13 @@ public class RefinementLoopArchitectureTests
 
         // Assert
         Assert.False(result.IsSuccess);
-        Assert.Contains("No draft or previous improvement found", result.Error ?? "");
+        Assert.Contains("No draft or previous improvement found", result.Error ?? string.Empty);
     }
 
     /// <summary>
     /// Tests that SafeImproveArrow properly handles the case when no reasoning state exists.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task SafeImproveArrow_ShouldReturnFailure_WhenNoReasoningStateExists()
     {
@@ -258,10 +269,8 @@ public class RefinementLoopArchitectureTests
 
         // Assert
         Assert.False(result.IsSuccess);
-        Assert.Contains("No draft or previous improvement found", result.Error ?? "");
+        Assert.Contains("No draft or previous improvement found", result.Error ?? string.Empty);
     }
-
-    #region Helper Methods
 
     private static ToolAwareChatModel CreateMockLLM(string responseText)
     {
@@ -277,17 +286,17 @@ public class RefinementLoopArchitectureTests
 
     private class MockChatCompletionModel : IChatCompletionModel
     {
-        private readonly string _response;
+        private readonly string response;
 
         public MockChatCompletionModel(string response)
         {
-            _response = response;
+            this.response = response;
         }
 
         public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
         {
             await Task.Delay(1, ct);
-            return _response;
+            return this.response;
         }
     }
 
@@ -296,10 +305,9 @@ public class RefinementLoopArchitectureTests
         public async Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
         {
             await Task.Delay(1, ct);
+
             // Return a simple fixed-size embedding
             return Enumerable.Range(0, 384).Select(i => (float)i / 384).ToArray();
         }
     }
-
-    #endregion
 }

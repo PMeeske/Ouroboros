@@ -1,33 +1,37 @@
+// <copyright file="ZipIngestion.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Pipeline.Ingestion.Zip;
+
 using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
 
-namespace LangChainPipeline.Pipeline.Ingestion.Zip;
-
 /// <summary>
 /// Specifies the type of content found in a zip archive entry.
 /// </summary>
-public enum ZipContentKind 
-{ 
+public enum ZipContentKind
+{
     /// <summary>
     /// CSV (Comma-Separated Values) file content.
     /// </summary>
-    Csv, 
-    
+    Csv,
+
     /// <summary>
     /// XML (Extensible Markup Language) document content.
     /// </summary>
-    Xml, 
-    
+    Xml,
+
     /// <summary>
     /// Plain text content.
     /// </summary>
-    Text, 
-    
+    Text,
+
     /// <summary>
     /// Binary or unknown content type.
     /// </summary>
-    Binary 
+    Binary,
 }
 
 /// <summary>
@@ -55,8 +59,7 @@ public sealed record ZipFileRecord(
     Func<Stream> OpenStream,
     IDictionary<string, object>? Parsed,
     string ZipPath, // path to underlying zip for lifecycle management
-    double MaxCompressionRatioLimit // the limit that was applied during scan
-);
+    double MaxCompressionRatioLimit); // the limit that was applied during scan
 
 /// <summary>
 /// Represents a parsed CSV table with header and data rows.
@@ -100,10 +103,16 @@ public static class ZipIngestion
         foreach (var entry in archive.Entries)
         {
             ct.ThrowIfCancellationRequested();
-            if (string.IsNullOrEmpty(entry.Name)) continue; // directory
+            if (string.IsNullOrEmpty(entry.Name))
+            {
+                continue; // directory
+            }
+
             total += entry.Length;
             if (total > maxTotalBytes)
+            {
                 throw new InvalidOperationException("Zip content exceeds allowed size budget");
+            }
 
             string full = entry.FullName.Replace('\\', '/');
             string? dir = full.Contains('/') ? Path.GetDirectoryName(full)?.Replace('\\', '/') : null;
@@ -112,6 +121,7 @@ public static class ZipIngestion
             var kind = Classify(ext);
             long compressed = entry.CompressedLength;
             double ratio = compressed == 0 ? double.PositiveInfinity : (double)entry.Length / compressed;
+
             // Don't mutate original classification on ratio exceed; we will decide to skip during parse
             if (kind == ZipContentKind.Binary && entry.Length > 0 && string.IsNullOrEmpty(ext))
             {
@@ -123,14 +133,20 @@ public static class ZipIngestion
                     byte[] buf = new byte[toRead];
                     int read = probeStream.Read(buf, 0, toRead);
                     if (IsLikelyText(buf.AsSpan(0, read)))
+                    {
                         kind = ZipContentKind.Text;
+                    }
                 }
-                catch { /* ignore heuristic failure */ }
+                catch
+                { /* ignore heuristic failure */
+                }
             }
+
             var captured = entry; // capture entry while archive kept alive by registry
             Func<Stream> opener = () => captured.Open();
             results.Add(new ZipFileRecord(full, dir, file, kind, entry.Length, compressed, ratio, opener, null, zipPath, maxCompressionRatio));
         }
+
         return Task.FromResult<IReadOnlyList<ZipFileRecord>>(results);
     }
 
@@ -139,7 +155,7 @@ public static class ZipIngestion
         ".csv" => ZipContentKind.Csv,
         ".xml" => ZipContentKind.Xml,
         ".txt" => ZipContentKind.Text,
-        _ => ZipContentKind.Binary
+        _ => ZipContentKind.Binary,
     };
 
     /// <summary>
@@ -172,7 +188,7 @@ public static class ZipIngestion
                     {
                         ["type"] = "skipped",
                         ["reason"] = "compression-ratio-exceeded",
-                        ["ratio"] = item.CompressionRatio
+                        ["ratio"] = item.CompressionRatio,
                     };
                 }
                 else
@@ -183,7 +199,7 @@ public static class ZipIngestion
                         ZipContentKind.Xml => await SafeXmlAsync(item, includeXmlText, ct),
                         ZipContentKind.Text => await ReadTextAsync(item, binaryMaxBytes, ct),
                         ZipContentKind.Binary => await ReadBinarySummaryAsync(item, binaryMaxBytes, ct),
-                        _ => null
+                        _ => null,
                     };
                 }
             }
@@ -196,16 +212,19 @@ public static class ZipIngestion
                     ZipContentKind.Xml => new Dictionary<string, object> { { "type", "xml" }, { "root", string.Empty }, { "textPreview", string.Empty }, { "error", ex.Message } },
                     ZipContentKind.Text => new Dictionary<string, object> { { "type", "text" }, { "preview", string.Empty }, { "truncated", true }, { "error", ex.Message } },
                     ZipContentKind.Binary => new Dictionary<string, object> { { "type", "binary" }, { "size", 0L }, { "sha256", string.Empty }, { "error", ex.Message } },
-                    _ => new Dictionary<string, object> { { "type", "error" }, { "message", ex.Message } }
+                    _ => new Dictionary<string, object> { { "type", "error" }, { "message", ex.Message } },
                 };
             }
+
             list.Add(item with { Parsed = parsed });
         }
+
         // release archives referenced
         foreach (var group in list.Select(r => r.ZipPath).Distinct())
         {
             ZipArchiveRegistry.Release(group);
         }
+
         return list;
     }
 
@@ -221,7 +240,7 @@ public static class ZipIngestion
             {
                 ["type"] = "csv",
                 ["table"] = new CsvTable(Array.Empty<string>(), []),
-                ["error"] = ex.Message
+                ["error"] = ex.Message,
             };
         }
     }
@@ -239,7 +258,7 @@ public static class ZipIngestion
                 ["type"] = "xml",
                 ["root"] = string.Empty,
                 ["textPreview"] = string.Empty,
-                ["error"] = ex.Message
+                ["error"] = ex.Message,
             };
         }
     }
@@ -250,7 +269,10 @@ public static class ZipIngestion
         using var reader = new StreamReader(s, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: false);
         string? headerLine = await reader.ReadLineAsync();
         if (headerLine == null)
+        {
             return new Dictionary<string, object> { ["type"] = "csv", ["empty"] = true };
+        }
+
         var header = SplitCsv(headerLine);
         var rows = new List<string[]>();
         string? line;
@@ -259,18 +281,23 @@ public static class ZipIngestion
             ct.ThrowIfCancellationRequested();
             rows.Add(SplitCsv(line));
         }
+
         return new Dictionary<string, object>
         {
             ["type"] = "csv",
             ["table"] = new CsvTable(header, rows),
-            ["truncated"] = !reader.EndOfStream
+            ["truncated"] = !reader.EndOfStream,
         };
     }
 
     private static string[] SplitCsv(string line)
     {
         // Robust-ish CSV splitter handling quotes and escaped quotes.
-        if (string.IsNullOrEmpty(line)) return Array.Empty<string>();
+        if (string.IsNullOrEmpty(line))
+        {
+            return Array.Empty<string>();
+        }
+
         List<string> fields = [];
         var sb = new StringBuilder();
         bool inQuotes = false;
@@ -299,6 +326,7 @@ public static class ZipIngestion
                 sb.Append(c);
             }
         }
+
         fields.Add(sb.ToString());
         return fields.Select(f => f.Trim()).ToArray();
     }
@@ -311,13 +339,25 @@ public static class ZipIngestion
         int elementCount = allElements.Count;
         int maxDepth = 0;
         var stack = new Stack<(XElement el, int depth)>();
-        if (doc.Root != null) stack.Push((doc.Root, 1));
+        if (doc.Root != null)
+        {
+            stack.Push((doc.Root, 1));
+        }
+
         while (stack.Count > 0)
         {
             var (el, depth) = stack.Pop();
-            if (depth > maxDepth) maxDepth = depth;
-            foreach (var child in el.Elements()) stack.Push((child, depth + 1));
+            if (depth > maxDepth)
+            {
+                maxDepth = depth;
+            }
+
+            foreach (var child in el.Elements())
+            {
+                stack.Push((child, depth + 1));
+            }
         }
+
         var attributeCount = allElements.Sum(e => e.Attributes().Count());
         var topChildren = doc.Root?.Elements().GroupBy(e => e.Name.LocalName)
             .Select(g => new { Name = g.Key, Count = g.Count() })
@@ -333,7 +373,7 @@ public static class ZipIngestion
             ["maxDepth"] = maxDepth,
             ["topChildren"] = topChildren?.Select(tc => new Dictionary<string, object> { { "name", tc.Name }, { "count", tc.Count } }).ToList() ?? [],
             ["doc"] = new XmlDoc(doc),
-            ["textPreview"] = includeText ? (doc.Root?.Value ?? string.Empty) : string.Empty
+            ["textPreview"] = includeText ? (doc.Root?.Value ?? string.Empty) : string.Empty,
         };
     }
 
@@ -348,7 +388,7 @@ public static class ZipIngestion
         {
             ["type"] = "text",
             ["preview"] = text,
-            ["truncated"] = !reader.EndOfStream
+            ["truncated"] = !reader.EndOfStream,
         };
     }
 
@@ -363,7 +403,7 @@ public static class ZipIngestion
             ["type"] = "binary",
             ["size"] = rec.Length,
             ["sha256"] = hash,
-            ["sampleHex"] = BitConverter.ToString(buf, 0, Math.Min(read, 64)).Replace("-", "")
+            ["sampleHex"] = BitConverter.ToString(buf, 0, Math.Min(read, 64)).Replace("-", string.Empty),
         };
     }
 
@@ -371,22 +411,39 @@ public static class ZipIngestion
     {
         using var sha = System.Security.Cryptography.SHA256.Create();
         var hash = sha.ComputeHash(data.ToArray());
-        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+        return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
     }
 
     private static bool IsLikelyText(ReadOnlySpan<byte> data)
     {
-        if (data.Length == 0) return true;
+        if (data.Length == 0)
+        {
+            return true;
+        }
+
         int control = 0;
         for (int i = 0; i < data.Length; i++)
         {
             byte b = data[i];
+
             // Allow common whitespace and ASCII range
-            if (b == 9 || b == 10 || b == 13) continue; // tab/lf/cr
-            if (b >= 32 && b < 127) continue;
+            if (b == 9 || b == 10 || b == 13)
+            {
+                continue; // tab/lf/cr
+            }
+
+            if (b >= 32 && b < 127)
+            {
+                continue;
+            }
+
             control++;
-            if (control > data.Length / 10) return false; // >10% control -> binary
+            if (control > data.Length / 10)
+            {
+                return false; // >10% control -> binary
+            }
         }
+
         return true;
     }
 }
@@ -405,7 +462,8 @@ public static class ZipIngestionStreaming
     /// <param name="maxCompressionRatio">Maximum allowed compression ratio to detect zip bombs (default: 200).</param>
     /// <param name="ct">Cancellation token for the operation.</param>
     /// <returns>An async enumerable of zip file records.</returns>
-    public static async IAsyncEnumerable<ZipFileRecord> EnumerateAsync(string zipPath,
+    public static async IAsyncEnumerable<ZipFileRecord> EnumerateAsync(
+        string zipPath,
         long maxTotalBytes = 500 * 1024 * 1024,
         double maxCompressionRatio = 200d,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
@@ -418,10 +476,17 @@ public static class ZipIngestionStreaming
         foreach (var entry in archive.Entries)
         {
             ct.ThrowIfCancellationRequested();
-            if (string.IsNullOrEmpty(entry.Name)) continue;
+            if (string.IsNullOrEmpty(entry.Name))
+            {
+                continue;
+            }
+
             total += entry.Length;
             if (total > maxTotalBytes)
+            {
                 yield break; // stop early
+            }
+
             string full = entry.FullName.Replace('\\', '/');
             string? dir = full.Contains('/') ? Path.GetDirectoryName(full)?.Replace('\\', '/') : null;
             string file = entry.Name;
@@ -431,11 +496,14 @@ public static class ZipIngestionStreaming
                 ".csv" => ZipContentKind.Csv,
                 ".xml" => ZipContentKind.Xml,
                 ".txt" => ZipContentKind.Text,
-                _ => ZipContentKind.Binary
+                _ => ZipContentKind.Binary,
             };
             long compressed = entry.CompressedLength;
             double ratio = compressed == 0 ? double.PositiveInfinity : (double)entry.Length / compressed;
-            if (ratio > maxCompressionRatio) kind = ZipContentKind.Binary;
+            if (ratio > maxCompressionRatio)
+            {
+                kind = ZipContentKind.Binary;
+            }
             else if (kind == ZipContentKind.Binary && entry.Length > 0 && string.IsNullOrEmpty(ext))
             {
                 try
@@ -444,10 +512,16 @@ public static class ZipIngestionStreaming
                     int toRead = (int)Math.Min(2048, entry.Length);
                     byte[] buf = new byte[toRead];
                     int read = ps.Read(buf, 0, toRead);
-                    if (ZipIngestionStreamingHelpers.IsLikelyText(buf.AsSpan(0, read))) kind = ZipContentKind.Text;
+                    if (ZipIngestionStreamingHelpers.IsLikelyText(buf.AsSpan(0, read)))
+                    {
+                        kind = ZipContentKind.Text;
+                    }
                 }
-                catch { }
+                catch
+                {
+                }
             }
+
             var captured = entry;
             Func<Stream> opener = () => captured.Open();
             yield return new ZipFileRecord(full, dir, file, kind, entry.Length, compressed, ratio, opener, null, zipPath, maxCompressionRatio);
@@ -459,16 +533,32 @@ internal static class ZipIngestionStreamingHelpers
 {
     public static bool IsLikelyText(ReadOnlySpan<byte> data)
     {
-        if (data.Length == 0) return true;
+        if (data.Length == 0)
+        {
+            return true;
+        }
+
         int control = 0;
         for (int i = 0; i < data.Length; i++)
         {
             byte b = data[i];
-            if (b == 9 || b == 10 || b == 13) continue;
-            if (b >= 32 && b < 127) continue;
+            if (b == 9 || b == 10 || b == 13)
+            {
+                continue;
+            }
+
+            if (b >= 32 && b < 127)
+            {
+                continue;
+            }
+
             control++;
-            if (control > data.Length / 10) return false;
+            if (control > data.Length / 10)
+            {
+                return false;
+            }
         }
+
         return true;
     }
 }
@@ -479,14 +569,14 @@ internal static class ZipIngestionStreamingHelpers
 public static class DeferredZipTextCache
 {
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> Map = new();
-    
+
     /// <summary>
     /// Stores text content associated with an identifier.
     /// </summary>
     /// <param name="id">The unique identifier for the cached text.</param>
     /// <param name="text">The text content to store.</param>
     public static void Store(string id, string text) => Map[id] = text;
-    
+
     /// <summary>
     /// Attempts to retrieve and remove text content associated with an identifier.
     /// </summary>
@@ -495,10 +585,15 @@ public static class DeferredZipTextCache
     /// <returns>True if the text was found and removed; otherwise, false.</returns>
     public static bool TryTake(string id, out string text)
     {
-        if (Map.TryRemove(id, out text!)) return true;
-        text = string.Empty; return false;
+        if (Map.TryRemove(id, out text!))
+        {
+            return true;
+        }
+
+        text = string.Empty;
+        return false;
     }
-    
+
     /// <summary>
     /// Attempts to retrieve text content associated with an identifier without removing it.
     /// </summary>
@@ -511,32 +606,57 @@ public static class DeferredZipTextCache
 internal sealed class ZipArchiveHolder : IDisposable
 {
     public FileStream Stream { get; }
+
     public ZipArchive Archive { get; }
-    private int _refCount;
+
+    private int refCount;
+
     public ZipArchiveHolder(string path)
     {
-        Stream = File.OpenRead(path);
-        Archive = new ZipArchive(Stream, ZipArchiveMode.Read, leaveOpen: false);
-        _refCount = 1;
+        this.Stream = File.OpenRead(path);
+        this.Archive = new ZipArchive(this.Stream, ZipArchiveMode.Read, leaveOpen: false);
+        this.refCount = 1;
     }
-    public void AddRef() => Interlocked.Increment(ref _refCount);
-    public int ReleaseRef() => Interlocked.Decrement(ref _refCount);
+
+    public void AddRef() => Interlocked.Increment(ref this.refCount);
+
+    public int ReleaseRef() => Interlocked.Decrement(ref this.refCount);
+
     public void Dispose()
     {
-        try { Archive.Dispose(); } catch { }
-        try { Stream.Dispose(); } catch { }
+        try
+        {
+            this.Archive.Dispose();
+        }
+        catch
+        {
+        }
+        try
+        {
+            this.Stream.Dispose();
+        }
+        catch
+        {
+        }
     }
 }
 
 internal static class ZipArchiveRegistry
 {
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ZipArchiveHolder> Map = new(StringComparer.OrdinalIgnoreCase);
+
     public static ZipArchiveHolder Acquire(string path)
     {
-        return Map.AddOrUpdate(path,
+        return Map.AddOrUpdate(
+            path,
             p => new ZipArchiveHolder(p),
-            (p, existing) => { existing.AddRef(); return existing; });
+            (p, existing) =>
+            {
+                existing.AddRef();
+                return existing;
+            });
     }
+
     public static void Release(string path)
     {
         if (Map.TryGetValue(path, out var holder))

@@ -1,7 +1,11 @@
-using System.Reflection;
-using LangChainPipeline.CLI;
+// <copyright file="PipelineToolExtensions.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Tools;
+
+using System.Reflection;
+using LangChainPipeline.CLI;
 
 /// <summary>
 /// Extension methods for registering pipeline steps as tools, enabling meta-AI capabilities.
@@ -29,7 +33,9 @@ public static class PipelineToolExtensions
             // Use the first name as the primary identifier
             var primaryName = names.FirstOrDefault();
             if (string.IsNullOrWhiteSpace(primaryName))
+            {
                 continue;
+            }
 
             // Create a description from method info
             var description = BuildStepDescription(method, names);
@@ -88,7 +94,7 @@ public static class PipelineToolExtensions
     private static string BuildStepDescription(System.Reflection.MethodInfo method, IReadOnlyList<string> names)
     {
         var methodName = method.Name;
-        var aliases = names.Count > 1 ? $" (aliases: {string.Join(", ", names.Skip(1))})" : "";
+        var aliases = names.Count > 1 ? $" (aliases: {string.Join(", ", names.Skip(1))})" : string.Empty;
 
         // Try to extract summary from XML documentation if available
         var summary = method.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description;
@@ -122,7 +128,7 @@ public static class PipelineToolExtensions
             "LlmStep" or "LLM" => "Execute LLM generation with the current prompt",
             "EnhanceMarkdown" => "Improve markdown files using LLM with iterative refinement",
             "SwitchModel" => "Switch the LLM or embedding model being used",
-            _ => $"Pipeline step: {methodName}{aliases}"
+            _ => $"Pipeline step: {methodName}{aliases}",
         };
     }
 }

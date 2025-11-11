@@ -1,7 +1,11 @@
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Core.Processing;
+// <copyright file="RecursiveChunkingExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Examples.RecursiveChunking;
+
+using LangChainPipeline.Core.Monads;
+using LangChainPipeline.Core.Processing;
 
 /// <summary>
 /// Example demonstrating RecursiveChunkProcessor for processing large documents.
@@ -9,13 +13,14 @@ namespace LangChainPipeline.Examples.RecursiveChunking;
 /// 1. Process documents that exceed model context windows
 /// 2. Use adaptive chunking to optimize processing
 /// 3. Implement map-reduce pattern for parallel processing
-/// 4. Combine chunk results hierarchically
+/// 4. Combine chunk results hierarchically.
 /// </summary>
 public static class RecursiveChunkingExample
 {
     /// <summary>
     /// Runs the recursive chunking example with a large document.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAsync()
     {
         Console.WriteLine("=== RecursiveChunkProcessor Example ===");
@@ -156,7 +161,7 @@ public static class RecursiveChunkingExample
         {
             "Document 1: MonadicPipeline is a functional programming-based AI pipeline system...",
             "Document 2: IONOS Cloud provides enterprise-grade Kubernetes infrastructure...",
-            "Document 3: RecursiveChunkProcessor enables processing of large contexts..."
+            "Document 3: RecursiveChunkProcessor enables processing of large contexts...",
         };
 
         var allDocs = string.Join("\n\n", documents);
@@ -168,11 +173,13 @@ public static class RecursiveChunkingExample
         Func<string, Task<Result<string>>> findAnswersInChunk = async chunk =>
         {
             await Task.Delay(30);
+
             // Simulate finding relevant information
             if (chunk.Contains("MonadicPipeline") || chunk.Contains("RecursiveChunkProcessor"))
             {
                 return Result<string>.Success($"Found: {chunk.Substring(0, Math.Min(100, chunk.Length))}");
             }
+
             return Result<string>.Success("No relevant information");
         };
 

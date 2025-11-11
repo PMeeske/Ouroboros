@@ -1,12 +1,11 @@
-// ==========================================================
-// Persistent Memory Store Tests
-// Tests for enhanced memory with consolidation and forgetting
-// ==========================================================
+// <copyright file="PersistentMemoryStoreTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
 
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for persistent memory store functionality.
@@ -16,6 +15,7 @@ public static class PersistentMemoryStoreTests
     /// <summary>
     /// Tests basic memory storage and retrieval.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestBasicMemoryStorage()
     {
         Console.WriteLine("=== Test: Basic Memory Storage ===");
@@ -52,6 +52,7 @@ public static class PersistentMemoryStoreTests
     /// <summary>
     /// Tests memory type classification (episodic vs semantic).
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestMemoryTypeClassification()
     {
         Console.WriteLine("=== Test: Memory Type Classification ===");
@@ -79,6 +80,7 @@ public static class PersistentMemoryStoreTests
     /// <summary>
     /// Tests memory consolidation from short-term to long-term.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestMemoryConsolidation()
     {
         Console.WriteLine("=== Test: Memory Consolidation ===");
@@ -124,6 +126,7 @@ public static class PersistentMemoryStoreTests
     /// <summary>
     /// Tests memory importance scoring.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestImportanceScoring()
     {
         Console.WriteLine("=== Test: Importance Scoring ===");
@@ -158,6 +161,7 @@ public static class PersistentMemoryStoreTests
     /// <summary>
     /// Tests intelligent forgetting of low-importance memories.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestIntelligentForgetting()
     {
         Console.WriteLine("=== Test: Intelligent Forgetting ===");
@@ -196,6 +200,7 @@ public static class PersistentMemoryStoreTests
     /// <summary>
     /// Tests memory retrieval with similarity search.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestSimilarityRetrieval()
     {
         Console.WriteLine("=== Test: Similarity Retrieval ===");
@@ -229,6 +234,7 @@ public static class PersistentMemoryStoreTests
     /// <summary>
     /// Tests memory clearing functionality.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestMemoryClear()
     {
         Console.WriteLine("=== Test: Memory Clear ===");
@@ -265,7 +271,7 @@ public static class PersistentMemoryStoreTests
             goal,
             new List<PlanStep>
             {
-                new PlanStep("action", new Dictionary<string, object>(), "outcome", 0.9)
+                new PlanStep("action", new Dictionary<string, object>(), "outcome", 0.9),
             },
             new Dictionary<string, double>(),
             DateTime.UtcNow);
@@ -280,7 +286,7 @@ public static class PersistentMemoryStoreTests
                     "success",
                     null,
                     TimeSpan.FromMilliseconds(10),
-                    new Dictionary<string, object>())
+                    new Dictionary<string, object>()),
             },
             Success: true,
             FinalOutput: "success",

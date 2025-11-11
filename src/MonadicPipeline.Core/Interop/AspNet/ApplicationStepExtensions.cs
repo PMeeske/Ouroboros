@@ -1,5 +1,8 @@
-#if NET8_0_OR_GREATER
+// <copyright file="ApplicationStepExtensions.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
+#if NET8_0_OR_GREATER
 
 // Guard ASP.NET Core references so this file only compiles when ASP.NET is available
 #if HAS_ASPNET

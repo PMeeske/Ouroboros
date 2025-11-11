@@ -1,3 +1,7 @@
+// <copyright file="MonadicExamples.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Examples;
 
 /// <summary>
@@ -6,12 +10,10 @@ namespace LangChainPipeline.Examples;
 /// </summary>
 public static class MonadicExamples
 {
-
-
-
     /// <summary>
     /// Demonstrates all enhanced monadic operations including KleisliCompose.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateAll()
     {
         Console.WriteLine("=== Enhanced Monadic Operations Demonstration ===\n");
@@ -58,8 +60,7 @@ public static class MonadicExamples
         // Pattern matching
         var result = someValue.Match(
             value => $"Got value: {value}",
-            "No value"
-        );
+            "No value");
         Console.WriteLine($"Pattern match result: {result}");
 
         Console.WriteLine();
@@ -102,8 +103,7 @@ public static class MonadicExamples
         // Pattern matching
         var result = success.Match(
             value => $"Success with value: {value}",
-            error => $"Failed with error: {error}"
-        );
+            error => $"Failed with error: {error}");
         Console.WriteLine($"Pattern match result: {result}");
 
         Console.WriteLine();
@@ -112,6 +112,7 @@ public static class MonadicExamples
     /// <summary>
     /// Demonstrates Kleisli arrows with Task monad.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateKleisliArrows()
     {
         Console.WriteLine("=== Kleisli Arrow Demonstration ===");
@@ -154,6 +155,7 @@ public static class MonadicExamples
     /// <summary>
     /// Demonstrates KleisliResult for error-aware computations.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateKleisliResult()
     {
         Console.WriteLine("=== KleisliResult Demonstration ===");
@@ -198,6 +200,7 @@ public static class MonadicExamples
     /// <summary>
     /// Demonstrates KleisliOption for nullable computations.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateKleisliOption()
     {
         Console.WriteLine("=== KleisliOption Demonstration ===");
@@ -242,6 +245,7 @@ public static class MonadicExamples
     /// <summary>
     /// Demonstrates exception handling with Catch.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateExceptionHandling()
     {
         Console.WriteLine("=== Exception Handling Demonstration ===");
@@ -251,7 +255,10 @@ public static class MonadicExamples
         {
             await Task.Delay(10);
             if (input == "throw")
+            {
                 throw new InvalidOperationException("Intentional exception");
+            }
+
             return input.Length;
         };
 
@@ -272,6 +279,7 @@ public static class MonadicExamples
     /// <summary>
     /// Demonstrates monadic laws compliance.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static Task DemonstrateMonadicLaws()
     {
         Console.WriteLine("=== Monadic Laws Demonstration ===");
@@ -298,7 +306,6 @@ public static class MonadicExamples
         Console.WriteLine($"Equal: {boundWithReturn.Equals(option)}");
 
         // Associativity Law will be complex to demonstrate here, but the structure supports it
-
         Console.WriteLine();
 
         return Task.CompletedTask;
@@ -307,6 +314,7 @@ public static class MonadicExamples
     /// <summary>
     /// Runs all demonstrations.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllDemonstrations()
     {
         Console.WriteLine("=== Enhanced Monadic Operations Demonstration ===\n");
@@ -322,5 +330,3 @@ public static class MonadicExamples
         Console.WriteLine("=== All Demonstrations Complete ===");
     }
 }
-
-

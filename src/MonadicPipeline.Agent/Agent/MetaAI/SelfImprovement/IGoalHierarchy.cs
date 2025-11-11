@@ -1,7 +1,6 @@
-// ==========================================================
-// Goal Hierarchy Interface
-// Hierarchical goal decomposition and value alignment
-// ==========================================================
+// <copyright file="IGoalHierarchy.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -10,17 +9,17 @@ namespace LangChainPipeline.Agent.MetaAI;
 /// </summary>
 public enum GoalType
 {
-    /// <summary>Primary goal - the main objective</summary>
+    /// <summary>Primary goal - the main objective.</summary>
     Primary,
 
-    /// <summary>Secondary goal - supporting objective</summary>
+    /// <summary>Secondary goal - supporting objective.</summary>
     Secondary,
 
-    /// <summary>Instrumental goal - means to achieve other goals</summary>
+    /// <summary>Instrumental goal - means to achieve other goals.</summary>
     Instrumental,
 
-    /// <summary>Safety goal - constraint or boundary condition</summary>
-    Safety
+    /// <summary>Safety goal - constraint or boundary condition.</summary>
+    Safety,
 }
 
 /// <summary>
@@ -39,6 +38,7 @@ public sealed record Goal(
     string? CompletionReason)
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="Goal"/> class.
     /// Creates a new goal with default values.
     /// </summary>
     public Goal(string description, GoalType type, double priority)
@@ -75,29 +75,29 @@ public interface IGoalHierarchy
     /// <summary>
     /// Adds a goal to the hierarchy.
     /// </summary>
-    /// <param name="goal">The goal to add</param>
+    /// <param name="goal">The goal to add.</param>
     void AddGoal(Goal goal);
 
     /// <summary>
     /// Gets a goal by ID.
     /// </summary>
-    /// <param name="id">The goal ID</param>
-    /// <returns>The goal if found, null otherwise</returns>
+    /// <param name="id">The goal ID.</param>
+    /// <returns>The goal if found, null otherwise.</returns>
     Goal? GetGoal(Guid id);
 
     /// <summary>
     /// Gets all active goals (not completed).
     /// </summary>
-    /// <returns>List of active goals</returns>
+    /// <returns>List of active goals.</returns>
     List<Goal> GetActiveGoals();
 
     /// <summary>
     /// Decomposes a complex goal into subgoals.
     /// </summary>
-    /// <param name="goal">The goal to decompose</param>
-    /// <param name="maxDepth">Maximum decomposition depth</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>The goal with populated subgoals</returns>
+    /// <param name="goal">The goal to decompose.</param>
+    /// <param name="maxDepth">Maximum decomposition depth.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The goal with populated subgoals.</returns>
     Task<Result<Goal, string>> DecomposeGoalAsync(
         Goal goal,
         int maxDepth = 3,
@@ -106,16 +106,16 @@ public interface IGoalHierarchy
     /// <summary>
     /// Detects conflicts between goals.
     /// </summary>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>List of detected conflicts</returns>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>List of detected conflicts.</returns>
     Task<List<GoalConflict>> DetectConflictsAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Checks if a goal aligns with safety constraints and values.
     /// </summary>
-    /// <param name="goal">The goal to check</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>True if aligned, false otherwise with reason</returns>
+    /// <param name="goal">The goal to check.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>True if aligned, false otherwise with reason.</returns>
     Task<Result<bool, string>> CheckValueAlignmentAsync(
         Goal goal,
         CancellationToken ct = default);
@@ -123,20 +123,20 @@ public interface IGoalHierarchy
     /// <summary>
     /// Marks a goal as complete.
     /// </summary>
-    /// <param name="id">The goal ID</param>
-    /// <param name="reason">Completion reason</param>
+    /// <param name="id">The goal ID.</param>
+    /// <param name="reason">Completion reason.</param>
     void CompleteGoal(Guid id, string reason);
 
     /// <summary>
     /// Gets the goal hierarchy as a tree structure.
     /// </summary>
-    /// <returns>Root goals with their subgoal trees</returns>
+    /// <returns>Root goals with their subgoal trees.</returns>
     List<Goal> GetGoalTree();
 
     /// <summary>
     /// Prioritizes goals based on dependencies and importance.
     /// </summary>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Ordered list of goals to pursue</returns>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Ordered list of goals to pursue.</returns>
     Task<List<Goal>> PrioritizeGoalsAsync(CancellationToken ct = default);
 }

@@ -1,3 +1,9 @@
+// <copyright file="MetaAIOrchestratorMagicTest.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
@@ -5,23 +11,22 @@ using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Tools;
 using Xunit;
 
-namespace LangChainPipeline.Tests;
-
 /// <summary>
 /// 🎩 The Magic Test - Showcases the full Meta-AI orchestration workflow
-/// 
+///
 /// This test demonstrates the complete Plan → Execute → Verify → Learn cycle
 /// using real Ollama models. It showcases:
 /// - Intelligent planning based on a complex goal
 /// - Multi-step execution with real tool coordination
 /// - Verification with quality assessment
-/// - Skill extraction and learning from experience
+/// - Skill extraction and learning from experience.
 /// </summary>
 public class MetaAIOrchestratorMagicTest
 {
     /// <summary>
     /// Tests the complete Meta-AI orchestration workflow with planning, execution, verification, and learning.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     [Trait("Category", "Integration")]
     [Trait("Speed", "Workflow")]
@@ -56,7 +61,7 @@ public class MetaAIOrchestratorMagicTest
             new Dictionary<string, object>
             {
                 ["difficulty"] = "medium",
-                ["requires_tools"] = true
+                ["requires_tools"] = true,
             });
 
         planResult.IsSuccess.Should().BeTrue("The planner should create a valid plan");
@@ -87,7 +92,8 @@ public class MetaAIOrchestratorMagicTest
             Console.WriteLine($"   {status} {result.Step.Action}: {result.Output.Substring(0, Math.Min(50, result.Output.Length))}...");
         }
 
-        execution.StepResults.Should().Contain(r => r.Success,
+        execution.StepResults.Should().Contain(
+            r => r.Success,
             "At least one step should execute successfully");
 
         // PHASE 3: 🔍 VERIFICATION - AI assesses quality & correctness
@@ -102,7 +108,8 @@ public class MetaAIOrchestratorMagicTest
         Console.WriteLine($"   Issues Found: {verification.Issues.Count}");
         Console.WriteLine($"   Improvements Suggested: {verification.Improvements.Count}");
 
-        verification.QualityScore.Should().BeGreaterThanOrEqualTo(0.0,
+        verification.QualityScore.Should().BeGreaterThanOrEqualTo(
+            0.0,
             "Quality score should be calculated");
 
         // PHASE 4: 📚 LEARNING - Experience is stored for future use

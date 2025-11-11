@@ -1,17 +1,16 @@
-// ==========================================================
-// Hybrid Sync/Async Step Demonstrations
-// Shows integration between SyncStep and async Step systems
-// ==========================================================
+// <copyright file="HybridStepExamples.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Examples;
 
 /// <summary>
-/// Demonstrates the hybrid sync/async step system
+/// Demonstrates the hybrid sync/async step system.
 /// </summary>
 public static class HybridStepExamples
 {
     /// <summary>
-    /// Example sync steps for demonstration
+    /// Example sync steps for demonstration.
     /// </summary>
     public static class SyncSteps
     {
@@ -25,7 +24,7 @@ public static class HybridStepExamples
     }
 
     /// <summary>
-    /// Example async steps for demonstration
+    /// Example async steps for demonstration.
     /// </summary>
     public static class AsyncSteps
     {
@@ -49,7 +48,7 @@ public static class HybridStepExamples
     }
 
     /// <summary>
-    /// Demonstrate pure sync step composition
+    /// Demonstrate pure sync step composition.
     /// </summary>
     public static void DemonstrateSyncComposition()
     {
@@ -78,8 +77,9 @@ public static class HybridStepExamples
     }
 
     /// <summary>
-    /// Demonstrate hybrid sync/async composition
+    /// Demonstrate hybrid sync/async composition.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateHybridComposition()
     {
         Console.WriteLine("\n=== Hybrid Sync/Async Composition ===");
@@ -105,8 +105,9 @@ public static class HybridStepExamples
     }
 
     /// <summary>
-    /// Demonstrate conversion between sync and async
+    /// Demonstrate conversion between sync and async.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateConversions()
     {
         Console.WriteLine("\n=== Sync/Async Conversions ===");
@@ -117,7 +118,7 @@ public static class HybridStepExamples
         Console.WriteLine($"Sync->Async conversion: {asyncResult}");
 
         // Implicit conversion in composition
-        Step<string, int> implicitPipeline = SyncSteps.ToUpper  // Implicitly converted
+        Step<string, int> implicitPipeline = SyncSteps.ToUpper // Implicitly converted
             .Then(AsyncSteps.NetworkCall)
             .Then(SyncSteps.GetLength);  // Composed with sync step
 
@@ -126,7 +127,7 @@ public static class HybridStepExamples
     }
 
     /// <summary>
-    /// Demonstrate monadic operations with sync steps
+    /// Demonstrate monadic operations with sync steps.
     /// </summary>
     public static void DemonstrateMonadicSync()
     {
@@ -156,8 +157,9 @@ public static class HybridStepExamples
     }
 
     /// <summary>
-    /// Demonstrate integration with contextual steps
+    /// Demonstrate integration with contextual steps.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateContextualIntegration()
     {
         Console.WriteLine("\n=== Contextual Step Integration ===");
@@ -181,8 +183,9 @@ public static class HybridStepExamples
     }
 
     /// <summary>
-    /// Run all hybrid demonstrations
+    /// Run all hybrid demonstrations.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllHybridDemonstrations()
     {
         DemonstrateSyncComposition();

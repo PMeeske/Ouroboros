@@ -1,13 +1,10 @@
-// ==========================================================
-// Kleisli <-> LangChain pipe interop
-// Enhanced integration with our unified monadic operations
-// ==========================================================
+// <copyright file="LangChainKleisliInterop.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Core.Interop;
 
 using LangChainPipeline.Core.Steps;
-
-#region Core Integration - Minimal Interop Extensions
 
 /// <summary>
 /// Minimal interop-specific extensions for integration with external systems.
@@ -16,56 +13,55 @@ using LangChainPipeline.Core.Steps;
 public static class StepInteropExtensions
 {
     /// <summary>
-    /// Lifts a pure function into a Step (Kleisli arrow)
+    /// Lifts a pure function into a Step (Kleisli arrow).
     /// </summary>
+    /// <returns></returns>
     public static Step<TA, TB> ToStep<TA, TB>(this Func<TA, TB> func)
         => input => Task.FromResult(func(input));
 
     /// <summary>
-    /// Lifts an async function into a Step
+    /// Lifts an async function into a Step.
     /// </summary>
+    /// <returns></returns>
     public static Step<TA, TB> ToStep<TA, TB>(this Func<TA, Task<TB>> func)
         => new(func);
 }
 
-#endregion
-
-#region Compatible Pipeline System
-
 /// <summary>
-/// Compatible node interface for interop with various pipeline systems
+/// Compatible node interface for interop with various pipeline systems.
 /// </summary>
 public interface ICompatNode<TIn, TOut>
 {
     Task<TOut> InvokeAsync(TIn input, CancellationToken ct = default);
+
     string Name { get; }
 }
 
 /// <summary>
-/// Lambda-based compatible node implementation
+/// Lambda-based compatible node implementation.
 /// </summary>
 public sealed class LambdaNode<TIn, TOut> : ICompatNode<TIn, TOut>
 {
-    private readonly Func<TIn, CancellationToken, Task<TOut>> _fn;
+    private readonly Func<TIn, CancellationToken, Task<TOut>> fn;
 
     /// <inheritdoc/>
     public string Name { get; }
 
     public LambdaNode(string name, Func<TIn, CancellationToken, Task<TOut>> fn)
     {
-        Name = name;
-        _fn = fn;
+        this.Name = name;
+        this.fn = fn;
     }
 
     /// <inheritdoc/>
-    public Task<TOut> InvokeAsync(TIn input, CancellationToken ct = default) => _fn(input, ct);
+    public Task<TOut> InvokeAsync(TIn input, CancellationToken ct = default) => this.fn(input, ct);
 
     /// <inheritdoc/>
-    public override string ToString() => Name;
+    public override string ToString() => this.Name;
 }
 
 /// <summary>
-/// Enhanced pipe node wrapper with monadic integration
+/// Enhanced pipe node wrapper with monadic integration.
 /// </summary>
 public readonly struct PipeNode<TIn, TOut>
 {
@@ -73,22 +69,23 @@ public readonly struct PipeNode<TIn, TOut>
 
     public PipeNode(ICompatNode<TIn, TOut> node)
     {
-        Node = node;
+        this.Node = node;
     }
 
     /// <summary>
     /// Pipe execution operator: value -> pipeline result
-    /// Note: Can't be async, so returns Task directly
+    /// Note: Can't be async, so returns Task directly.
     /// </summary>
     public static Task<TOut> operator |(TIn value, PipeNode<TIn, TOut> node)
         => node.Node.InvokeAsync(value);
 
     /// <summary>
-    /// Pipe composition with method syntax for better type safety
+    /// Pipe composition with method syntax for better type safety.
     /// </summary>
+    /// <returns></returns>
     public PipeNode<TIn, TNext> Pipe<TNext>(PipeNode<TOut, TNext> next)
     {
-        var currentNode = Node; // Capture to avoid struct 'this' issues
+        var currentNode = this.Node; // Capture to avoid struct 'this' issues
         return new PipeNode<TIn, TNext>(new LambdaNode<TIn, TNext>(
             $"{currentNode.Name} | {next.Node.Name}",
             async (input, ct) =>
@@ -99,26 +96,29 @@ public readonly struct PipeNode<TIn, TOut>
     }
 
     /// <summary>
-    /// Pipe composition with Step using method syntax
+    /// Pipe composition with Step using method syntax.
     /// </summary>
+    /// <returns></returns>
     public PipeNode<TIn, TNext> Pipe<TNext>(Step<TOut, TNext> step, string? stepName = null)
-        => Pipe(step.ToCompatNode(stepName));
+        => this.Pipe(step.ToCompatNode(stepName));
 
     /// <summary>
-    /// Convert to Kleisli Step for monadic operations
+    /// Convert to Kleisli Step for monadic operations.
     /// </summary>
+    /// <returns></returns>
     public Step<TIn, TOut> ToStep()
     {
-        var currentNode = Node; // Capture to avoid struct 'this' issues
+        var currentNode = this.Node; // Capture to avoid struct 'this' issues
         return async input => await currentNode.InvokeAsync(input).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Convert to KleisliResult with exception handling
+    /// Convert to KleisliResult with exception handling.
     /// </summary>
+    /// <returns></returns>
     public KleisliResult<TIn, TOut, Exception> ToKleisliResult()
     {
-        var currentNode = Node; // Capture to avoid struct 'this' issues
+        var currentNode = this.Node; // Capture to avoid struct 'this' issues
         return async input =>
         {
             try
@@ -134,29 +134,27 @@ public readonly struct PipeNode<TIn, TOut>
     }
 
     /// <inheritdoc/>
-    public override string ToString() => Node?.Name ?? "EmptyPipeNode";
+    public override string ToString() => this.Node?.Name ?? "EmptyPipeNode";
 }
 
-#endregion
-
-#region Conversion Extensions
-
 /// <summary>
-/// Enhanced compatibility interop with monadic integration
+/// Enhanced compatibility interop with monadic integration.
 /// </summary>
 public static class CompatInterop
 {
     /// <summary>
-    /// Convert Step to compatible node
+    /// Convert Step to compatible node.
     /// </summary>
+    /// <returns></returns>
     public static PipeNode<TIn, TOut> ToCompatNode<TIn, TOut>(this Step<TIn, TOut> step, string? name = null)
         => new(new LambdaNode<TIn, TOut>(
             name ?? $"Step[{typeof(TIn).Name}->{typeof(TOut).Name}]",
             async (input, ct) => await step(input).ConfigureAwait(false)));
 
     /// <summary>
-    /// Convert KleisliResult to compatible node
+    /// Convert KleisliResult to compatible node.
     /// </summary>
+    /// <returns></returns>
     public static PipeNode<TIn, Result<TOut, TError>> ToCompatNode<TIn, TOut, TError>(
         this KleisliResult<TIn, TOut, TError> kleisliResult,
         string? name = null)
@@ -165,8 +163,9 @@ public static class CompatInterop
             async (input, ct) => await kleisliResult(input).ConfigureAwait(false)));
 
     /// <summary>
-    /// Convert KleisliOption to compatible node
+    /// Convert KleisliOption to compatible node.
     /// </summary>
+    /// <returns></returns>
     public static PipeNode<TIn, Option<TOut>> ToCompatNode<TIn, TOut>(
         this KleisliOption<TIn, TOut> kleisliOption,
         string? name = null)
@@ -175,114 +174,116 @@ public static class CompatInterop
             async (input, ct) => await kleisliOption(input).ConfigureAwait(false)));
 
     /// <summary>
-    /// Convert pure function to compatible node
+    /// Convert pure function to compatible node.
     /// </summary>
+    /// <returns></returns>
     public static PipeNode<TIn, TOut> ToCompatNode<TIn, TOut>(this Func<TIn, TOut> f, string? name = null)
         => new(new LambdaNode<TIn, TOut>(
             name ?? $"Func[{typeof(TIn).Name}->{typeof(TOut).Name}]",
             (input, ct) => Task.FromResult(f(input))));
 
     /// <summary>
-    /// Convert async function to compatible node
+    /// Convert async function to compatible node.
     /// </summary>
+    /// <returns></returns>
     public static PipeNode<TIn, TOut> ToCompatNode<TIn, TOut>(this Func<TIn, Task<TOut>> f, string? name = null)
         => new(new LambdaNode<TIn, TOut>(
             name ?? $"Async[{typeof(TIn).Name}->{typeof(TOut).Name}]",
             (input, ct) => f(input)));
 
     /// <summary>
-    /// Create a pipeline builder for fluent composition
+    /// Create a pipeline builder for fluent composition.
     /// </summary>
+    /// <returns></returns>
     public static PipelineBuilder<TIn> StartPipeline<TIn>(string name = "Pipeline")
         => new(name);
 }
 
-#endregion
-
-#region Fluent Pipeline Builder
-
 /// <summary>
-/// Fluent pipeline builder for enhanced composition
+/// Fluent pipeline builder for enhanced composition.
 /// </summary>
 public class PipelineBuilder<TIn>
 {
-    private readonly string _name;
+    private readonly string name;
 
     public PipelineBuilder(string name)
     {
-        _name = name;
+        this.name = name;
     }
 
     /// <summary>
-    /// Add a Step to the pipeline
+    /// Add a Step to the pipeline.
     /// </summary>
+    /// <returns></returns>
     public PipelineBuilder<TIn, TOut> AddStep<TOut>(Step<TIn, TOut> step, string? stepName = null)
-        => new(_name, step.ToCompatNode(stepName));
+        => new(this.name, step.ToCompatNode(stepName));
 
     /// <summary>
-    /// Add a KleisliResult to the pipeline
+    /// Add a KleisliResult to the pipeline.
     /// </summary>
+    /// <returns></returns>
     public PipelineBuilder<TIn, Result<TOut, TError>> AddResultStep<TOut, TError>(
         KleisliResult<TIn, TOut, TError> kleisliResult,
         string? stepName = null)
-        => new(_name, kleisliResult.ToCompatNode(stepName));
+        => new(this.name, kleisliResult.ToCompatNode(stepName));
 
     /// <summary>
-    /// Add a function to the pipeline
+    /// Add a function to the pipeline.
     /// </summary>
+    /// <returns></returns>
     public PipelineBuilder<TIn, TOut> AddFunc<TOut>(Func<TIn, TOut> func, string? stepName = null)
-        => new(_name, func.ToCompatNode(stepName));
+        => new(this.name, func.ToCompatNode(stepName));
 }
 
 /// <summary>
-/// Typed pipeline builder for fluent composition
+/// Typed pipeline builder for fluent composition.
 /// </summary>
 public class PipelineBuilder<TIn, TCurrent>
 {
-    private readonly string _name;
-    private readonly PipeNode<TIn, TCurrent> _currentPipeline;
+    private readonly string name;
+    private readonly PipeNode<TIn, TCurrent> currentPipeline;
 
     public PipelineBuilder(string name, PipeNode<TIn, TCurrent> pipeline)
     {
-        _name = name;
-        _currentPipeline = pipeline;
+        this.name = name;
+        this.currentPipeline = pipeline;
     }
 
     /// <summary>
-    /// Add another step to the pipeline
+    /// Add another step to the pipeline.
     /// </summary>
+    /// <returns></returns>
     public PipelineBuilder<TIn, TOut> Then<TOut>(Step<TCurrent, TOut> step, string? stepName = null)
-        => new(_name, _currentPipeline.Pipe(step.ToCompatNode(stepName)));
+        => new(this.name, this.currentPipeline.Pipe(step.ToCompatNode(stepName)));
 
     /// <summary>
-    /// Add a function step to the pipeline
+    /// Add a function step to the pipeline.
     /// </summary>
+    /// <returns></returns>
     public PipelineBuilder<TIn, TOut> Then<TOut>(Func<TCurrent, TOut> func, string? stepName = null)
-        => new(_name, _currentPipeline.Pipe(func.ToCompatNode(stepName)));
+        => new(this.name, this.currentPipeline.Pipe(func.ToCompatNode(stepName)));
 
     /// <summary>
-    /// Build the final pipeline
+    /// Build the final pipeline.
     /// </summary>
-    public PipeNode<TIn, TCurrent> Build() => _currentPipeline;
+    /// <returns></returns>
+    public PipeNode<TIn, TCurrent> Build() => this.currentPipeline;
 
     /// <summary>
-    /// Build and execute the pipeline
+    /// Build and execute the pipeline.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<TCurrent> ExecuteAsync(TIn input)
-        => await (input | _currentPipeline);
+        => await (input | this.currentPipeline);
 }
 
-#endregion
-
-#region Enhanced Examples with Monadic Operations
-
 /// <summary>
-/// Enhanced step examples integrating with our monadic operations
+/// Enhanced step examples integrating with our monadic operations.
 /// </summary>
 public static class EnhancedSteps
 {
     /// <summary>
-    /// Example: Step that uppercases text
+    /// Example: Step that uppercases text.
     /// </summary>
     public static readonly Step<string, string> Upper = async s =>
     {
@@ -291,7 +292,7 @@ public static class EnhancedSteps
     };
 
     /// <summary>
-    /// Example: Step that gets string length
+    /// Example: Step that gets string length.
     /// </summary>
     public static readonly Step<string, int> Length = async s =>
     {
@@ -300,7 +301,7 @@ public static class EnhancedSteps
     };
 
     /// <summary>
-    /// Example: Step that formats number
+    /// Example: Step that formats number.
     /// </summary>
     public static readonly Step<int, string> Show = async n =>
     {
@@ -309,7 +310,7 @@ public static class EnhancedSteps
     };
 
     /// <summary>
-    /// Example: KleisliResult that safely parses integers
+    /// Example: KleisliResult that safely parses integers.
     /// </summary>
     public static readonly KleisliResult<string, int, string> SafeParse = async s =>
     {
@@ -320,7 +321,7 @@ public static class EnhancedSteps
     };
 
     /// <summary>
-    /// Example: KleisliOption that returns value if positive
+    /// Example: KleisliOption that returns value if positive.
     /// </summary>
     public static readonly KleisliOption<int, int> OnlyPositive = async n =>
     {
@@ -330,13 +331,14 @@ public static class EnhancedSteps
 }
 
 /// <summary>
-/// Enhanced demonstration examples
+/// Enhanced demonstration examples.
 /// </summary>
 public static class EnhancedDemo
 {
     /// <summary>
-    /// Demonstrate Kleisli composition with our enhanced operations
+    /// Demonstrate Kleisli composition with our enhanced operations.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunEnhancedKleisli()
     {
         Console.WriteLine("=== Enhanced Kleisli Composition ===");
@@ -363,8 +365,9 @@ public static class EnhancedDemo
     }
 
     /// <summary>
-    /// Demonstrate enhanced compatibility pipe with monadic operations
+    /// Demonstrate enhanced compatibility pipe with monadic operations.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunEnhancedCompatPipe()
     {
         Console.WriteLine("=== Enhanced Compatibility Pipe ===");
@@ -394,13 +397,13 @@ public static class EnhancedDemo
 
         monadicResult.Match(
             success => Console.WriteLine($"Monadic compat success: {success}"),
-            error => Console.WriteLine($"Monadic compat error: {error}")
-        );
+            error => Console.WriteLine($"Monadic compat error: {error}"));
     }
 
     /// <summary>
-    /// Run all enhanced demonstrations
+    /// Run all enhanced demonstrations.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllEnhanced()
     {
         await RunEnhancedKleisli();
@@ -409,5 +412,3 @@ public static class EnhancedDemo
         Console.WriteLine("=== All Enhanced Interop Demonstrations Complete ===");
     }
 }
-
-#endregion

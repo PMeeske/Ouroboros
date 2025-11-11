@@ -1,31 +1,31 @@
-// ==========================================================
-// MeTTa Orchestrator v3.0 Builder
-// Fluent builder for creating v3.0 orchestrator instances
-// ==========================================================
-
-using LangChainPipeline.Tools.MeTTa;
+// <copyright file="MeTTaOrchestratorBuilder.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
+
+using LangChainPipeline.Tools.MeTTa;
 
 /// <summary>
 /// Fluent builder for creating MeTTa-first Orchestrator v3.0 instances.
 /// </summary>
 public sealed class MeTTaOrchestratorBuilder
 {
-    private IChatCompletionModel? _llm;
-    private ToolRegistry? _tools;
-    private IMemoryStore? _memory;
-    private ISkillRegistry? _skills;
-    private IUncertaintyRouter? _router;
-    private ISafetyGuard? _safety;
-    private IMeTTaEngine? _mettaEngine;
+    private IChatCompletionModel? llm;
+    private ToolRegistry? tools;
+    private IMemoryStore? memory;
+    private ISkillRegistry? skills;
+    private IUncertaintyRouter? router;
+    private ISafetyGuard? safety;
+    private IMeTTaEngine? mettaEngine;
 
     /// <summary>
     /// Sets the language model for the orchestrator.
     /// </summary>
+    /// <returns></returns>
     public MeTTaOrchestratorBuilder WithLLM(IChatCompletionModel llm)
     {
-        _llm = llm;
+        this.llm = llm;
         return this;
     }
 
@@ -33,54 +33,60 @@ public sealed class MeTTaOrchestratorBuilder
     /// Sets the tool registry for the orchestrator.
     /// Automatically adds MeTTa tools if not already present.
     /// </summary>
+    /// <returns></returns>
     public MeTTaOrchestratorBuilder WithTools(ToolRegistry tools)
     {
-        _tools = tools;
+        this.tools = tools;
         return this;
     }
 
     /// <summary>
     /// Sets the memory store for the orchestrator.
     /// </summary>
+    /// <returns></returns>
     public MeTTaOrchestratorBuilder WithMemory(IMemoryStore memory)
     {
-        _memory = memory;
+        this.memory = memory;
         return this;
     }
 
     /// <summary>
     /// Sets the skill registry for the orchestrator.
     /// </summary>
+    /// <returns></returns>
     public MeTTaOrchestratorBuilder WithSkills(ISkillRegistry skills)
     {
-        _skills = skills;
+        this.skills = skills;
         return this;
     }
 
     /// <summary>
     /// Sets the uncertainty router for the orchestrator.
     /// </summary>
+    /// <returns></returns>
     public MeTTaOrchestratorBuilder WithRouter(IUncertaintyRouter router)
     {
-        _router = router;
+        this.router = router;
         return this;
     }
 
     /// <summary>
     /// Sets the safety guard for the orchestrator.
     /// </summary>
+    /// <returns></returns>
     public MeTTaOrchestratorBuilder WithSafety(ISafetyGuard safety)
     {
-        _safety = safety;
+        this.safety = safety;
         return this;
     }
 
     /// <summary>
     /// Sets the MeTTa engine for symbolic reasoning.
     /// </summary>
+    /// <returns></returns>
     public MeTTaOrchestratorBuilder WithMeTTaEngine(IMeTTaEngine engine)
     {
-        _mettaEngine = engine;
+        this.mettaEngine = engine;
         return this;
     }
 
@@ -91,26 +97,36 @@ public sealed class MeTTaOrchestratorBuilder
     /// <exception cref="InvalidOperationException">Thrown when required components are missing.</exception>
     public MeTTaOrchestrator Build()
     {
-        if (_llm == null)
+        if (this.llm == null)
+        {
             throw new InvalidOperationException("LLM is required. Use WithLLM() to set it.");
+        }
 
-        if (_memory == null)
+        if (this.memory == null)
+        {
             throw new InvalidOperationException("Memory is required. Use WithMemory() to set it.");
+        }
 
-        if (_skills == null)
+        if (this.skills == null)
+        {
             throw new InvalidOperationException("Skills are required. Use WithSkills() to set it.");
+        }
 
-        if (_router == null)
+        if (this.router == null)
+        {
             throw new InvalidOperationException("Router is required. Use WithRouter() to set it.");
+        }
 
-        if (_safety == null)
+        if (this.safety == null)
+        {
             throw new InvalidOperationException("Safety is required. Use WithSafety() to set it.");
+        }
 
         // Initialize MeTTa engine if not provided
-        var mettaEngine = _mettaEngine ?? new SubprocessMeTTaEngine();
+        var mettaEngine = this.mettaEngine ?? new SubprocessMeTTaEngine();
 
         // Ensure tools include MeTTa tools
-        var tools = _tools ?? ToolRegistry.CreateDefault();
+        var tools = this.tools ?? ToolRegistry.CreateDefault();
         var hasMeTTaTools = tools.All.Any(t => t.Name.StartsWith("metta_") || t.Name == "next_node");
         if (!hasMeTTaTools)
         {
@@ -118,14 +134,13 @@ public sealed class MeTTaOrchestratorBuilder
         }
 
         return new MeTTaOrchestrator(
-            _llm,
+            this.llm,
             tools,
-            _memory,
-            _skills,
-            _router,
-            _safety,
-            mettaEngine
-        );
+            this.memory,
+            this.skills,
+            this.router,
+            this.safety,
+            mettaEngine);
     }
 
     /// <summary>
@@ -163,6 +178,7 @@ public sealed class MeTTaOrchestratorBuilder
     public static MeTTaOrchestratorBuilder CreateWithMockMeTTa(IEmbeddingModel embedModel)
     {
         var builder = CreateDefault(embedModel);
+
         // The mock engine would be created separately and passed via WithMeTTaEngine
         return builder;
     }

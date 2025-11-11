@@ -1,8 +1,12 @@
+// <copyright file="GuidedSetup.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace MonadicPipeline.CLI.Setup;
+
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using LangChainPipeline.Options;
-
-namespace MonadicPipeline.CLI.Setup;
 
 /// <summary>
 /// Provides guided setup for the local development environment.
@@ -13,6 +17,7 @@ public static class GuidedSetup
     /// Runs the guided setup based on the provided options.
     /// </summary>
     /// <param name="options">The setup options.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAsync(SetupOptions options)
     {
         Console.WriteLine("╔═══════════════════════════════════════════════════════════════════╗");
@@ -86,11 +91,11 @@ public static class GuidedSetup
         Console.WriteLine("║                   Ollama Installation Guide                       ║");
         Console.WriteLine("╚═══════════════════════════════════════════════════════════════════╝");
         Console.WriteLine();
-        
+
         if (IsCommandAvailable("ollama"))
         {
             Console.WriteLine("✅ Ollama is already installed on your system!");
-            
+
             // Check if Ollama is running
             try
             {
@@ -104,17 +109,17 @@ public static class GuidedSetup
                         RedirectStandardError = true,
                         UseShellExecute = false,
                         CreateNoWindow = true,
-                    }
+                    },
                 };
                 process.Start();
                 process.WaitForExit();
-                
+
                 if (process.ExitCode == 0)
                 {
                     var output = await process.StandardOutput.ReadToEndAsync();
                     Console.WriteLine("\n📦 Currently installed models:");
                     Console.WriteLine(output);
-                    
+
                     if (!output.Contains("phi3") && !output.Contains("qwen") && !output.Contains("llama"))
                     {
                         Console.WriteLine("\n💡 Recommended small models for efficient orchestration:");
@@ -123,7 +128,7 @@ public static class GuidedSetup
                         Console.WriteLine("   • deepseek-coder:1.3b (800MB) - Specialized for coding");
                         Console.WriteLine("   • tinyllama (637MB) - Ultra-light for simple tasks");
                         Console.WriteLine();
-                        
+
                         if (PromptYesNo("Would you like guidance on pulling recommended models?"))
                         {
                             Console.WriteLine("\nTo install recommended models, run:");
@@ -143,7 +148,7 @@ public static class GuidedSetup
             {
                 Console.WriteLine("\n⚠️  Could not verify Ollama status.");
             }
-            
+
             return;
         }
 
@@ -152,7 +157,7 @@ public static class GuidedSetup
         Console.WriteLine("Ollama is a lightweight runtime for running LLMs locally.");
         Console.WriteLine("It enables efficient orchestration with small, specialized models.");
         Console.WriteLine();
-        
+
         if (!PromptYesNo("Do you want to install Ollama now?"))
         {
             Console.WriteLine("Skipping Ollama installation.");
@@ -199,7 +204,7 @@ public static class GuidedSetup
         Console.WriteLine("   ollama pull qwen2.5:3b         # General reasoning");
         Console.WriteLine("   ollama pull deepseek-coder:1.3b # Code tasks");
         Console.WriteLine("   ollama pull phi3:mini          # Quick responses");
-        
+
         await Task.Delay(2000); // Give user time to read
     }
 
@@ -233,7 +238,10 @@ public static class GuidedSetup
         }
 
         Console.WriteLine("The MeTTa (Meta-language for Type-Theoretic Agents) engine is not found in your PATH.");
-        if (!PromptYesNo("Do you want to proceed with installation guidance for MeTTa?")) return;
+        if (!PromptYesNo("Do you want to proceed with installation guidance for MeTTa?"))
+        {
+            return;
+        }
 
         Console.WriteLine("MeTTa is required for advanced symbolic reasoning features.");
         Console.WriteLine("Installation instructions can be found at the TrueAGI Hyperon-Experimental repository:");
@@ -254,7 +262,10 @@ public static class GuidedSetup
             return;
         }
 
-        if (!PromptYesNo("Do you want to see the command to run a local Qdrant container?")) return;
+        if (!PromptYesNo("Do you want to see the command to run a local Qdrant container?"))
+        {
+            return;
+        }
 
         Console.WriteLine("\nRun the following Docker command to start a Qdrant instance:");
         Console.WriteLine("docker run -p 6333:6333 -p 6334:6334 \\");
@@ -288,7 +299,7 @@ public static class GuidedSetup
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
-            }
+            },
         };
         process.Start();
         process.WaitForExit();

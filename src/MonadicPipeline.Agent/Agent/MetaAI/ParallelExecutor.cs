@@ -1,44 +1,47 @@
-// ==========================================================
-// Parallel Executor - Execute independent steps concurrently
-// ==========================================================
-
-using System.Collections.Concurrent;
+// <copyright file="ParallelExecutor.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
+
+using System.Collections.Concurrent;
 
 /// <summary>
 /// Represents a step dependency graph for parallel execution.
 /// </summary>
 public sealed class StepDependencyGraph
 {
-    private readonly Dictionary<int, List<int>> _dependencies = new();
-    private readonly List<PlanStep> _steps = new();
+    private readonly Dictionary<int, List<int>> dependencies = new();
+    private readonly List<PlanStep> steps = new();
 
     public StepDependencyGraph(List<PlanStep> steps)
     {
-        _steps = steps;
-        AnalyzeDependencies();
+        this.steps = steps;
+        this.AnalyzeDependencies();
     }
 
     /// <summary>
     /// Groups steps that can be executed in parallel.
     /// </summary>
+    /// <returns></returns>
     public List<List<int>> GetParallelGroups()
     {
         var groups = new List<List<int>>();
         var executed = new HashSet<int>();
 
-        while (executed.Count < _steps.Count)
+        while (executed.Count < this.steps.Count)
         {
             var group = new List<int>();
 
-            for (int i = 0; i < _steps.Count; i++)
+            for (int i = 0; i < this.steps.Count; i++)
             {
                 if (executed.Contains(i))
+                {
                     continue;
+                }
 
                 // Can execute if all dependencies are satisfied
-                if (!_dependencies.TryGetValue(i, out var deps) ||
+                if (!this.dependencies.TryGetValue(i, out var deps) ||
                     deps.All(d => executed.Contains(d)))
                 {
                     group.Add(i);
@@ -46,7 +49,9 @@ public sealed class StepDependencyGraph
             }
 
             if (group.Count == 0)
+            {
                 break; // Circular dependency or error
+            }
 
             groups.Add(group);
             executed.UnionWith(group);
@@ -58,18 +63,18 @@ public sealed class StepDependencyGraph
     private void AnalyzeDependencies()
     {
         // Analyze parameter dependencies between steps
-        for (int i = 0; i < _steps.Count; i++)
+        for (int i = 0; i < this.steps.Count; i++)
         {
             var deps = new List<int>();
-            var step = _steps[i];
+            var step = this.steps[i];
 
             // Check if this step uses outputs from previous steps
             for (int j = 0; j < i; j++)
             {
-                var prevStep = _steps[j];
+                var prevStep = this.steps[j];
 
                 // Check if current step's parameters reference previous step's output
-                if (HasDependency(step, prevStep))
+                if (this.HasDependency(step, prevStep))
                 {
                     deps.Add(j);
                 }
@@ -77,7 +82,7 @@ public sealed class StepDependencyGraph
 
             if (deps.Any())
             {
-                _dependencies[i] = deps;
+                this.dependencies[i] = deps;
             }
         }
     }
@@ -90,7 +95,7 @@ public sealed class StepDependencyGraph
 
         foreach (var param in current.Parameters.Values)
         {
-            var paramStr = param?.ToString() ?? "";
+            var paramStr = param?.ToString() ?? string.Empty;
             if (paramStr.Contains(prevActionRef) || paramStr.Contains(prevOutputRef))
             {
                 return true;
@@ -106,20 +111,21 @@ public sealed class StepDependencyGraph
 /// </summary>
 public sealed class ParallelExecutor
 {
-    private readonly ISafetyGuard _safety;
-    private readonly Func<PlanStep, CancellationToken, Task<StepResult>> _executeStep;
+    private readonly ISafetyGuard safety;
+    private readonly Func<PlanStep, CancellationToken, Task<StepResult>> executeStep;
 
     public ParallelExecutor(
         ISafetyGuard safety,
         Func<PlanStep, CancellationToken, Task<StepResult>> executeStep)
     {
-        _safety = safety ?? throw new ArgumentNullException(nameof(safety));
-        _executeStep = executeStep ?? throw new ArgumentNullException(nameof(executeStep));
+        this.safety = safety ?? throw new ArgumentNullException(nameof(safety));
+        this.executeStep = executeStep ?? throw new ArgumentNullException(nameof(executeStep));
     }
 
     /// <summary>
     /// Executes a plan with parallel execution of independent steps.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<(List<StepResult> results, bool success, string output)> ExecuteParallelAsync(
         Plan plan,
         CancellationToken ct = default)
@@ -134,14 +140,16 @@ public sealed class ParallelExecutor
         foreach (var group in parallelGroups)
         {
             if (ct.IsCancellationRequested)
+            {
                 break;
+            }
 
             // Execute all steps in this group in parallel
             var groupTasks = group.Select(async stepIndex =>
             {
                 var step = plan.Steps[stepIndex];
-                var sandboxedStep = _safety.SandboxStep(step);
-                var result = await _executeStep(sandboxedStep, ct);
+                var sandboxedStep = this.safety.SandboxStep(step);
+                var result = await this.executeStep(sandboxedStep, ct);
 
                 allResults[stepIndex] = result;
 
@@ -173,6 +181,7 @@ public sealed class ParallelExecutor
     /// <summary>
     /// Estimates the speedup from parallel execution.
     /// </summary>
+    /// <returns></returns>
     public double EstimateSpeedup(Plan plan)
     {
         var dependencyGraph = new StepDependencyGraph(plan.Steps);

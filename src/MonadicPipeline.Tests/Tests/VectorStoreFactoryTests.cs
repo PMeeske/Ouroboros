@@ -1,9 +1,13 @@
+// <copyright file="VectorStoreFactoryTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChainPipeline.Core.Configuration;
 using LangChainPipeline.Domain.Vectors;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for vector store factory functionality.
@@ -16,7 +20,7 @@ public class VectorStoreFactoryTests
         // Arrange
         var config = new VectorStoreConfiguration
         {
-            Type = "InMemory"
+            Type = "InMemory",
         };
         var factory = new VectorStoreFactory(config);
 
@@ -34,7 +38,7 @@ public class VectorStoreFactoryTests
         // Arrange
         var config = new VectorStoreConfiguration
         {
-            Type = "inmemory"
+            Type = "inmemory",
         };
         var factory = new VectorStoreFactory(config);
 
@@ -53,7 +57,7 @@ public class VectorStoreFactoryTests
         var config = new VectorStoreConfiguration
         {
             Type = "Qdrant",
-            ConnectionString = null
+            ConnectionString = null,
         };
         var factory = new VectorStoreFactory(config);
 
@@ -72,7 +76,7 @@ public class VectorStoreFactoryTests
         var config = new VectorStoreConfiguration
         {
             Type = "Pinecone",
-            ConnectionString = null
+            ConnectionString = null,
         };
         var factory = new VectorStoreFactory(config);
 
@@ -91,7 +95,7 @@ public class VectorStoreFactoryTests
         var config = new VectorStoreConfiguration
         {
             Type = "Qdrant",
-            ConnectionString = "http://localhost:6333"
+            ConnectionString = "http://localhost:6333",
         };
         var factory = new VectorStoreFactory(config);
 
@@ -110,7 +114,7 @@ public class VectorStoreFactoryTests
         var config = new VectorStoreConfiguration
         {
             Type = "Pinecone",
-            ConnectionString = "https://pinecone-api.io"
+            ConnectionString = "https://pinecone-api.io",
         };
         var factory = new VectorStoreFactory(config);
 
@@ -128,7 +132,7 @@ public class VectorStoreFactoryTests
         // Arrange
         var config = new VectorStoreConfiguration
         {
-            Type = "UnsupportedType"
+            Type = "UnsupportedType",
         };
         var factory = new VectorStoreFactory(config);
 
@@ -150,7 +154,7 @@ public class VectorStoreFactoryTests
             {
                 Type = "InMemory",
                 BatchSize = 200
-            }
+            },
         };
 
         // Act

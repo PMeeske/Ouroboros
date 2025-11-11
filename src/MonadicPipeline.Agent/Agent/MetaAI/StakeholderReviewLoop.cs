@@ -1,6 +1,6 @@
-// ==========================================================
-// Stakeholder Review Loop - PR-based approval workflow
-// ==========================================================
+// <copyright file="StakeholderReviewLoop.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -33,7 +33,7 @@ public enum ReviewCommentStatus
 {
     Open,
     Resolved,
-    Dismissed
+    Dismissed,
 }
 
 /// <summary>
@@ -65,7 +65,7 @@ public enum ReviewStatus
     AwaitingReview,
     ChangesRequested,
     Approved,
-    Merged
+    Merged,
 }
 
 /// <summary>
@@ -89,6 +89,7 @@ public interface IReviewSystemProvider
     /// <summary>
     /// Opens a new PR with the given spec.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<PullRequest, string>> OpenPullRequestAsync(
         string title,
         string description,
@@ -99,6 +100,7 @@ public interface IReviewSystemProvider
     /// <summary>
     /// Requests reviews from specified reviewers.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<bool, string>> RequestReviewersAsync(
         string prId,
         List<string> reviewers,
@@ -107,6 +109,7 @@ public interface IReviewSystemProvider
     /// <summary>
     /// Retrieves review decisions for a PR.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<List<ReviewDecision>, string>> GetReviewDecisionsAsync(
         string prId,
         CancellationToken ct = default);
@@ -114,6 +117,7 @@ public interface IReviewSystemProvider
     /// <summary>
     /// Retrieves all comments on a PR.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<List<ReviewComment>, string>> GetCommentsAsync(
         string prId,
         CancellationToken ct = default);
@@ -121,6 +125,7 @@ public interface IReviewSystemProvider
     /// <summary>
     /// Resolves a specific comment.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<bool, string>> ResolveCommentAsync(
         string prId,
         string commentId,
@@ -130,6 +135,7 @@ public interface IReviewSystemProvider
     /// <summary>
     /// Merges the PR after all approvals are collected.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<bool, string>> MergePullRequestAsync(
         string prId,
         string mergeCommitMessage,
@@ -155,6 +161,7 @@ public interface IStakeholderReviewLoop
     /// Executes the complete stakeholder review workflow.
     /// Opens PR, requests reviews, resolves comments, and merges when approved.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<StakeholderReviewResult, string>> ExecuteReviewLoopAsync(
         string title,
         string description,
@@ -166,6 +173,7 @@ public interface IStakeholderReviewLoop
     /// <summary>
     /// Monitors an existing PR until all approvals are collected.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<ReviewState, string>> MonitorReviewProgressAsync(
         string prId,
         StakeholderReviewConfig? config = null,
@@ -174,6 +182,7 @@ public interface IStakeholderReviewLoop
     /// <summary>
     /// Attempts to automatically resolve comments based on feedback.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<int, string>> ResolveCommentsAsync(
         string prId,
         List<ReviewComment> comments,
@@ -185,11 +194,13 @@ public interface IStakeholderReviewLoop
 /// </summary>
 public sealed class MockReviewSystemProvider : IReviewSystemProvider
 {
-    private readonly Dictionary<string, PullRequest> _prs = new();
-    private readonly Dictionary<string, List<ReviewDecision>> _reviews = new();
-    private readonly Dictionary<string, List<ReviewComment>> _comments = new();
+    private readonly Dictionary<string, PullRequest> prs = new();
+    private readonly Dictionary<string, List<ReviewDecision>> reviews = new();
+    private readonly Dictionary<string, List<ReviewComment>> comments = new();
+
     public string? LastCreatedPrId { get; private set; }
 
+    /// <inheritdoc/>
     public Task<Result<PullRequest, string>> OpenPullRequestAsync(
         string title,
         string description,
@@ -205,67 +216,81 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
             requiredReviewers,
             DateTime.UtcNow);
 
-        _prs[pr.Id] = pr;
-        _reviews[pr.Id] = new List<ReviewDecision>();
-        _comments[pr.Id] = new List<ReviewComment>();
-        LastCreatedPrId = pr.Id;
+        this.prs[pr.Id] = pr;
+        this.reviews[pr.Id] = new List<ReviewDecision>();
+        this.comments[pr.Id] = new List<ReviewComment>();
+        this.LastCreatedPrId = pr.Id;
 
         return Task.FromResult(Result<PullRequest, string>.Success(pr));
     }
 
+    /// <inheritdoc/>
     public Task<Result<bool, string>> RequestReviewersAsync(
         string prId,
         List<string> reviewers,
         CancellationToken ct = default)
     {
-        if (!_prs.ContainsKey(prId))
+        if (!this.prs.ContainsKey(prId))
+        {
             return Task.FromResult(Result<bool, string>.Failure("PR not found"));
+        }
 
         // Simulate reviewer requests
         return Task.FromResult(Result<bool, string>.Success(true));
     }
 
+    /// <inheritdoc/>
     public Task<Result<List<ReviewDecision>, string>> GetReviewDecisionsAsync(
         string prId,
         CancellationToken ct = default)
     {
-        if (!_reviews.ContainsKey(prId))
+        if (!this.reviews.ContainsKey(prId))
+        {
             return Task.FromResult(Result<List<ReviewDecision>, string>.Failure("PR not found"));
+        }
 
-        return Task.FromResult(Result<List<ReviewDecision>, string>.Success(_reviews[prId]));
+        return Task.FromResult(Result<List<ReviewDecision>, string>.Success(this.reviews[prId]));
     }
 
+    /// <inheritdoc/>
     public Task<Result<List<ReviewComment>, string>> GetCommentsAsync(
         string prId,
         CancellationToken ct = default)
     {
-        if (!_comments.ContainsKey(prId))
+        if (!this.comments.ContainsKey(prId))
+        {
             return Task.FromResult(Result<List<ReviewComment>, string>.Failure("PR not found"));
+        }
 
-        return Task.FromResult(Result<List<ReviewComment>, string>.Success(_comments[prId]));
+        return Task.FromResult(Result<List<ReviewComment>, string>.Success(this.comments[prId]));
     }
 
+    /// <inheritdoc/>
     public Task<Result<bool, string>> ResolveCommentAsync(
         string prId,
         string commentId,
         string resolution,
         CancellationToken ct = default)
     {
-        if (!_comments.ContainsKey(prId))
+        if (!this.comments.ContainsKey(prId))
+        {
             return Task.FromResult(Result<bool, string>.Failure("PR not found"));
+        }
 
-        var comment = _comments[prId].FirstOrDefault(c => c.CommentId == commentId);
+        var comment = this.comments[prId].FirstOrDefault(c => c.CommentId == commentId);
         if (comment == null)
+        {
             return Task.FromResult(Result<bool, string>.Failure("Comment not found"));
+        }
 
         // Remove old comment and add resolved version
         var updatedComment = comment with
         {
             Status = ReviewCommentStatus.Resolved,
-            ResolvedAt = DateTime.UtcNow
+            ResolvedAt = DateTime.UtcNow,
         };
 
-        var comments = _comments[prId];
+        var comments = this.comments[prId];
         var index = comments.IndexOf(comment);
         if (index >= 0)
         {
@@ -275,13 +300,16 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
         return Task.FromResult(Result<bool, string>.Success(true));
     }
 
+    /// <inheritdoc/>
     public Task<Result<bool, string>> MergePullRequestAsync(
         string prId,
         string mergeCommitMessage,
         CancellationToken ct = default)
     {
-        if (!_prs.ContainsKey(prId))
+        if (!this.prs.ContainsKey(prId))
+        {
             return Task.FromResult(Result<bool, string>.Failure("PR not found"));
+        }
 
         // Simulate merge
         return Task.FromResult(Result<bool, string>.Success(true));
@@ -290,13 +318,16 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
     // Test helper methods
     public void SimulateReview(string prId, string reviewerId, bool approved, string? feedback = null)
     {
-        if (!_reviews.ContainsKey(prId)) return;
+        if (!this.reviews.ContainsKey(prId))
+        {
+            return;
+        }
 
         // Remove any existing review from this reviewer (they can update their review)
-        var existingReview = _reviews[prId].FirstOrDefault(r => r.ReviewerId == reviewerId);
+        var existingReview = this.reviews[prId].FirstOrDefault(r => r.ReviewerId == reviewerId);
         if (existingReview != null)
         {
-            _reviews[prId].Remove(existingReview);
+            this.reviews[prId].Remove(existingReview);
         }
 
         var review = new ReviewDecision(
@@ -306,12 +337,15 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
             null,
             DateTime.UtcNow);
 
-        _reviews[prId].Add(review);
+        this.reviews[prId].Add(review);
     }
 
     public void SimulateComment(string prId, string reviewerId, string content)
     {
-        if (!_comments.ContainsKey(prId)) return;
+        if (!this.comments.ContainsKey(prId))
+        {
+            return;
+        }
 
         var comment = new ReviewComment(
             Guid.NewGuid().ToString(),
@@ -320,7 +354,7 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
             ReviewCommentStatus.Open,
             DateTime.UtcNow);
 
-        _comments[prId].Add(comment);
+        this.comments[prId].Add(comment);
     }
 }
 
@@ -329,17 +363,18 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
 /// </summary>
 public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
 {
-    private readonly IReviewSystemProvider _reviewSystem;
+    private readonly IReviewSystemProvider reviewSystem;
 
     public StakeholderReviewLoop(IReviewSystemProvider reviewSystem)
     {
-        _reviewSystem = reviewSystem ?? throw new ArgumentNullException(nameof(reviewSystem));
+        this.reviewSystem = reviewSystem ?? throw new ArgumentNullException(nameof(reviewSystem));
     }
 
     /// <summary>
     /// Executes the complete stakeholder review workflow.
     /// Opens PR, requests reviews, resolves comments, and merges when approved.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<StakeholderReviewResult, string>> ExecuteReviewLoopAsync(
         string title,
         string description,
@@ -357,38 +392,46 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
         try
         {
             // Step 1: Open PR
-            var prResult = await _reviewSystem.OpenPullRequestAsync(
+            var prResult = await this.reviewSystem.OpenPullRequestAsync(
                 title, description, draftSpec, requiredReviewers, ct);
 
             if (!prResult.IsSuccess)
+            {
                 return Result<StakeholderReviewResult, string>.Failure(
                     $"Failed to open PR: {prResult.Error}");
+            }
 
             var pr = prResult.Value;
 
             // Step 2: Request reviewers
-            var requestResult = await _reviewSystem.RequestReviewersAsync(
+            var requestResult = await this.reviewSystem.RequestReviewersAsync(
                 pr.Id, requiredReviewers, ct);
 
             if (!requestResult.IsSuccess)
+            {
                 return Result<StakeholderReviewResult, string>.Failure(
                     $"Failed to request reviewers: {requestResult.Error}");
+            }
 
             // Step 3: Monitor review progress
-            var monitorResult = await MonitorReviewProgressAsync(pr.Id, config, ct);
+            var monitorResult = await this.MonitorReviewProgressAsync(pr.Id, config, ct);
 
             if (!monitorResult.IsSuccess)
+            {
                 return Result<StakeholderReviewResult, string>.Failure(
                     $"Review monitoring failed: {monitorResult.Error}");
+            }
 
             var finalState = monitorResult.Value;
 
             // Step 4: Check if all required approvals are obtained
-            var allApproved = CheckAllApproved(finalState, config);
+            var allApproved = this.CheckAllApproved(finalState, config);
 
             if (!allApproved)
+            {
                 return Result<StakeholderReviewResult, string>.Failure(
                     "Not all required approvals obtained");
+            }
 
             // Step 5: Resolve remaining comments
             var openComments = finalState.AllComments
@@ -397,21 +440,25 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
 
             if (openComments.Any())
             {
-                var resolveResult = await ResolveCommentsAsync(pr.Id, openComments, ct);
+                var resolveResult = await this.ResolveCommentsAsync(pr.Id, openComments, ct);
                 if (!resolveResult.IsSuccess && !config.AutoResolveNonBlockingComments)
+                {
                     return Result<StakeholderReviewResult, string>.Failure(
                         $"Comment resolution failed: {resolveResult.Error}");
+                }
             }
 
             // Step 6: Merge PR
-            var mergeResult = await _reviewSystem.MergePullRequestAsync(
+            var mergeResult = await this.reviewSystem.MergePullRequestAsync(
                 pr.Id,
                 $"Merge approved by all reviewers: {string.Join(", ", requiredReviewers)}",
                 ct);
 
             if (!mergeResult.IsSuccess)
+            {
                 return Result<StakeholderReviewResult, string>.Failure(
                     $"Failed to merge PR: {mergeResult.Error}");
+            }
 
             sw.Stop();
 
@@ -437,6 +484,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
     /// <summary>
     /// Monitors an existing PR until all approvals are collected.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<ReviewState, string>> MonitorReviewProgressAsync(
         string prId,
         StakeholderReviewConfig? config = null,
@@ -459,28 +507,34 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
             {
                 // Check timeout
                 if (DateTime.UtcNow - startTime > timeout)
+                {
                     return Result<ReviewState, string>.Failure("Review timeout exceeded");
+                }
 
                 // Get current review decisions
-                var reviewsResult = await _reviewSystem.GetReviewDecisionsAsync(prId, ct);
+                var reviewsResult = await this.reviewSystem.GetReviewDecisionsAsync(prId, ct);
                 if (!reviewsResult.IsSuccess)
+                {
                     return Result<ReviewState, string>.Failure(
                         $"Failed to get reviews: {reviewsResult.Error}");
+                }
 
                 var reviews = reviewsResult.Value;
 
                 // Get all comments
-                var commentsResult = await _reviewSystem.GetCommentsAsync(prId, ct);
+                var commentsResult = await this.reviewSystem.GetCommentsAsync(prId, ct);
                 if (!commentsResult.IsSuccess)
+                {
                     return Result<ReviewState, string>.Failure(
                         $"Failed to get comments: {commentsResult.Error}");
+                }
 
                 var comments = commentsResult.Value;
 
                 // Build current state
-                var status = DetermineReviewStatus(reviews, comments, config);
+                var status = this.DetermineReviewStatus(reviews, comments, config);
                 var reviewState = new ReviewState(
-                    new PullRequest(prId, "", "", "", new List<string>(), DateTime.UtcNow),
+                    new PullRequest(prId, string.Empty, string.Empty, string.Empty, new List<string>(), DateTime.UtcNow),
                     reviews,
                     comments,
                     status,
@@ -488,7 +542,9 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
 
                 // Check if review is complete
                 if (status == ReviewStatus.Approved)
+                {
                     return Result<ReviewState, string>.Success(reviewState);
+                }
 
                 // Wait before next poll
                 await Task.Delay(pollingInterval, ct);
@@ -506,6 +562,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
     /// <summary>
     /// Attempts to automatically resolve comments based on feedback.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<int, string>> ResolveCommentsAsync(
         string prId,
         List<ReviewComment> comments,
@@ -521,13 +578,15 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
             foreach (var comment in openComments)
             {
                 // Generate resolution based on comment content
-                var resolution = GenerateResolution(comment.Content);
+                var resolution = this.GenerateResolution(comment.Content);
 
-                var resolveResult = await _reviewSystem.ResolveCommentAsync(
+                var resolveResult = await this.reviewSystem.ResolveCommentAsync(
                     prId, comment.CommentId, resolution, ct);
 
                 if (resolveResult.IsSuccess)
+                {
                     resolvedCount++;
+                }
             }
 
             return Result<int, string>.Success(resolvedCount);
@@ -561,24 +620,32 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
         StakeholderReviewConfig config)
     {
         if (!reviews.Any())
+        {
             return ReviewStatus.AwaitingReview;
+        }
 
         var hasOpenComments = comments.Any(c => c.Status == ReviewCommentStatus.Open);
         var allApproved = reviews.All(r => r.Approved);
         var hasRejections = reviews.Any(r => !r.Approved);
 
         if (hasRejections || hasOpenComments)
+        {
             return ReviewStatus.ChangesRequested;
+        }
 
         if (config.RequireAllReviewersApprove)
         {
             if (allApproved && reviews.Count > 0)
+            {
                 return ReviewStatus.Approved;
+            }
         }
         else
         {
             if (reviews.Count(r => r.Approved) >= config.MinimumRequiredApprovals)
+            {
                 return ReviewStatus.Approved;
+            }
         }
 
         return ReviewStatus.AwaitingReview;

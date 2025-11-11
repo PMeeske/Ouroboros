@@ -1,3 +1,7 @@
+// <copyright file="StepDefinition.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Core.Steps;
 
 /// <summary>
@@ -8,17 +12,19 @@ namespace LangChainPipeline.Core.Steps;
 /// <typeparam name="TOut">Output type.</typeparam>
 public readonly struct StepDefinition<TIn, TOut>
 {
-    private readonly Step<TIn, TOut> _compiled;
+    private readonly Step<TIn, TOut> compiled;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="StepDefinition{TIn, TOut}"/> struct.
     /// Create definition from an asynchronous step.
     /// </summary>
     public StepDefinition(Step<TIn, TOut> step)
     {
-        _compiled = step ?? throw new ArgumentNullException(nameof(step));
+        this.compiled = step ?? throw new ArgumentNullException(nameof(step));
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="StepDefinition{TIn, TOut}"/> struct.
     /// Create definition from a synchronous function.
     /// </summary>
     public StepDefinition(Func<TIn, TOut> func)
@@ -29,11 +35,15 @@ public readonly struct StepDefinition<TIn, TOut>
     /// <summary>
     /// Compose with another step, returning a new definition representing the appended pipeline.
     /// </summary>
+    /// <returns></returns>
     public StepDefinition<TIn, TNext> Pipe<TNext>(Step<TOut, TNext> next)
     {
-        if (next is null) throw new ArgumentNullException(nameof(next));
+        if (next is null)
+        {
+            throw new ArgumentNullException(nameof(next));
+        }
 
-        var current = _compiled;
+        var current = this.compiled;
         return new StepDefinition<TIn, TNext>(async input =>
         {
             var mid = await current(input).ConfigureAwait(false);
@@ -44,17 +54,23 @@ public readonly struct StepDefinition<TIn, TOut>
     /// <summary>
     /// Compose with a synchronous function.
     /// </summary>
+    /// <returns></returns>
     public StepDefinition<TIn, TNext> Pipe<TNext>(Func<TOut, TNext> func)
     {
-        if (func is null) throw new ArgumentNullException(nameof(func));
+        if (func is null)
+        {
+            throw new ArgumentNullException(nameof(func));
+        }
+
         Step<TOut, TNext> next = async value => await Task.FromResult(func(value)).ConfigureAwait(false);
-        return Pipe(next);
+        return this.Pipe(next);
     }
 
     /// <summary>
     /// Build the composed step.
     /// </summary>
-    public Step<TIn, TOut> Build() => _compiled;
+    /// <returns></returns>
+    public Step<TIn, TOut> Build() => this.compiled;
 
     /// <summary>
     /// Operator syntax sugar to mirror the old DSL pipeline semantics.

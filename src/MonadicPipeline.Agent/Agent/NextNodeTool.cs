@@ -1,13 +1,12 @@
-// ==========================================================
-// NextNode Tool - Symbolic Next-Step Enumeration
-// Uses MeTTa to determine valid next nodes in execution
-// ==========================================================
+// <copyright file="NextNodeTool.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tools;
 
 using System.Text.Json;
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Tools.MeTTa;
-
-namespace LangChainPipeline.Tools;
 
 /// <summary>
 /// Tool for enumerating valid next execution nodes using symbolic MeTTa reasoning.
@@ -15,9 +14,9 @@ namespace LangChainPipeline.Tools;
 /// </summary>
 public sealed class NextNodeTool : ITool
 {
-    private readonly IMeTTaEngine _engine;
-    private readonly MeTTaRepresentation _representation;
-    private readonly ToolRegistry _registry;
+    private readonly IMeTTaEngine engine;
+    private readonly MeTTaRepresentation representation;
+    private readonly ToolRegistry registry;
 
     /// <inheritdoc />
     public string Name => "next_node";
@@ -57,9 +56,9 @@ public sealed class NextNodeTool : ITool
 
     public NextNodeTool(IMeTTaEngine engine, ToolRegistry registry)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
-        _representation = new MeTTaRepresentation(engine);
+        this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        this.registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        this.representation = new MeTTaRepresentation(engine);
     }
 
     /// <inheritdoc />
@@ -68,9 +67,11 @@ public sealed class NextNodeTool : ITool
         try
         {
             // Parse input
-            var request = ParseInput(input);
+            var request = this.ParseInput(input);
             if (request.IsFailure)
+            {
                 return Result<string, string>.Failure(request.Error);
+            }
 
             var req = request.Value;
 
@@ -79,22 +80,23 @@ public sealed class NextNodeTool : ITool
             {
                 foreach (var constraint in req.Constraints)
                 {
-                    await _representation.AddConstraintAsync(constraint, ct);
+                    await this.representation.AddConstraintAsync(constraint, ct);
                 }
             }
 
             // Query for next nodes
-            var nextNodes = await _representation.QueryNextNodesAsync(
+            var nextNodes = await this.representation.QueryNextNodesAsync(
                 req.CurrentStepId,
                 req.Context ?? new Dictionary<string, object>(),
-                ct
-            );
+                ct);
 
             if (nextNodes.IsFailure)
+            {
                 return Result<string, string>.Failure(nextNodes.Error);
+            }
 
             // Query for recommended tools
-            var toolsResult = await _representation.QueryToolsForGoalAsync(req.PlanGoal, ct);
+            var toolsResult = await this.representation.QueryToolsForGoalAsync(req.PlanGoal, ct);
             var recommendedTools = toolsResult.GetValueOrDefault(new List<string>());
 
             // Build response
@@ -102,13 +104,13 @@ public sealed class NextNodeTool : ITool
             {
                 NextSteps = nextNodes.Value,
                 RecommendedTools = recommendedTools,
-                Timestamp = DateTime.UtcNow
+                Timestamp = DateTime.UtcNow,
             };
 
             return Result<string, string>.Success(JsonSerializer.Serialize(response, new JsonSerializerOptions
             {
                 WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             }));
         }
         catch (Exception ex)
@@ -125,10 +127,14 @@ public sealed class NextNodeTool : ITool
             var root = doc.RootElement;
 
             if (!root.TryGetProperty("current_step_id", out var stepIdElement))
+            {
                 return Result<NextNodeRequest, string>.Failure("Missing required field: current_step_id");
+            }
 
             if (!root.TryGetProperty("plan_goal", out var goalElement))
+            {
                 return Result<NextNodeRequest, string>.Failure("Missing required field: plan_goal");
+            }
 
             var stepId = stepIdElement.GetString() ?? string.Empty;
             var goal = goalElement.GetString() ?? string.Empty;
@@ -153,19 +159,19 @@ public sealed class NextNodeTool : ITool
                 {
                     var value = item.GetString();
                     if (value != null)
+                    {
                         constraints.Add(value);
+                    }
                 }
             }
 
             return Result<NextNodeRequest, string>.Success(
-                new NextNodeRequest(stepId, goal, context, constraints)
-            );
+                new NextNodeRequest(stepId, goal, context, constraints));
         }
         catch (Exception ex)
         {
             return Result<NextNodeRequest, string>.Failure(
-                $"Failed to parse input: {ex.Message}"
-            );
+                $"Failed to parse input: {ex.Message}");
         }
     }
 
@@ -173,13 +179,14 @@ public sealed class NextNodeTool : ITool
         string CurrentStepId,
         string PlanGoal,
         Dictionary<string, object>? Context,
-        List<string>? Constraints
-    );
+        List<string>? Constraints);
 
     private sealed class NextNodeResponse
     {
         public List<NextNodeCandidate> NextSteps { get; set; } = new();
+
         public List<string> RecommendedTools { get; set; } = new();
+
         public DateTime Timestamp { get; set; }
     }
 }

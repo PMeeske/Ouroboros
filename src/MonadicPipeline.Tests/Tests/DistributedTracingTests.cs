@@ -1,8 +1,12 @@
+// <copyright file="DistributedTracingTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using System.Diagnostics;
 using LangChainPipeline.Diagnostics;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 public class DistributedTracingTests
 {
@@ -34,7 +38,7 @@ public class DistributedTracingTests
         var tags = new Dictionary<string, object?>
         {
             ["key1"] = "value1",
-            ["key2"] = 42
+            ["key2"] = 42,
         };
 
         // Act
@@ -42,6 +46,7 @@ public class DistributedTracingTests
 
         // Assert
         Assert.NotNull(activity);
+
         // At least one tag should be present
         Assert.True(activity.Tags.Any());
     }
@@ -93,6 +98,7 @@ public class DistributedTracingTests
         // Assert
         Assert.NotNull(activity);
         Assert.Equal(ActivityStatusCode.Ok, activity.Status);
+
         // StatusDescription might not be exposed the same way in all Activity implementations
     }
 
@@ -213,6 +219,7 @@ public class DistributedTracingTests
 
         // Assert
         Assert.NotNull(activity);
+
         // Tags set via SetTag show up after activity completion
         Assert.Equal(ActivityStatusCode.Ok, activity.Status);
     }
@@ -229,6 +236,7 @@ public class DistributedTracingTests
 
         // Assert
         Assert.NotNull(activity);
+
         // Tags set via SetTag show up after activity completion
         Assert.Equal(ActivityStatusCode.Ok, activity.Status);
     }
@@ -245,6 +253,7 @@ public class DistributedTracingTests
 
         // Assert
         Assert.NotNull(activity);
+
         // Tags set via SetTag show up after activity completion
         Assert.Equal(ActivityStatusCode.Error, activity.Status);
     }

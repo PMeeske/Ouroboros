@@ -1,11 +1,15 @@
-using LangChain.Providers.Ollama;
+// <copyright file="OllamaPresets.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Providers;
+
+using LangChain.Providers.Ollama;
 
 public static class OllamaPresets
 {
     /// <summary>
-    /// Preset for DeepSeek Coder 33B with conservative defaults optimized for code generation.
+    /// Gets preset for DeepSeek Coder 33B with conservative defaults optimized for code generation.
     /// Automatically adapts threads, context window, and GPU usage based on <see cref="MachineCapabilities"/>.
     /// </summary>
     public static OllamaChatSettings DeepSeekCoder33B
@@ -30,7 +34,7 @@ public static class OllamaPresets
                 RepeatPenalty = 1.1f,
                 KeepAlive = 10 * 60, // keep model in memory 10 min
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
 
             return settings;
@@ -38,7 +42,7 @@ public static class OllamaPresets
     }
 
     /// <summary>
-    /// Preset for Llama 3 (general conversation). Balanced temperature and retrieval-friendly settings.
+    /// Gets preset for Llama 3 (general conversation). Balanced temperature and retrieval-friendly settings.
     /// Adapts to available CPU cores, memory size and GPU count.
     /// </summary>
     public static OllamaChatSettings Llama3General
@@ -62,14 +66,14 @@ public static class OllamaPresets
                 RepeatPenalty = 1.1f,
                 KeepAlive = 10 * 60,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
             return settings;
         }
     }
 
     /// <summary>
-    /// Preset for Llama 3 summarization. Lower temperature and slightly stronger repeat penalty
+    /// Gets preset for Llama 3 summarization. Lower temperature and slightly stronger repeat penalty
     /// to encourage concise, deterministic output.
     /// </summary>
     public static OllamaChatSettings Llama3Summarize
@@ -93,14 +97,14 @@ public static class OllamaPresets
                 RepeatPenalty = 1.15f,
                 KeepAlive = 10 * 60,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
             return settings;
         }
     }
 
     /// <summary>
-    /// Preset for DeepSeek R1 14B (reasoning). Larger context window and exploratory temperature
+    /// Gets preset for DeepSeek R1 14B (reasoning). Larger context window and exploratory temperature
     /// for deeper chains-of-thought, within conservative system limits.
     /// </summary>
     public static OllamaChatSettings DeepSeekR1_14B_Reason
@@ -124,14 +128,14 @@ public static class OllamaPresets
                 RepeatPenalty = 1.05f,
                 KeepAlive = 10 * 60,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
             return settings;
         }
     }
 
     /// <summary>
-    /// Preset for DeepSeek R1 32B (reasoning). Tries to leverage up to 2 GPUs if present
+    /// Gets preset for DeepSeek R1 32B (reasoning). Tries to leverage up to 2 GPUs if present
     /// and expands context window with sufficient host memory.
     /// </summary>
     public static OllamaChatSettings DeepSeekR1_32B_Reason
@@ -155,14 +159,14 @@ public static class OllamaPresets
                 RepeatPenalty = 1.05f,
                 KeepAlive = 10 * 60,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
             return settings;
         }
     }
 
     /// <summary>
-    /// Preset for Mistral 7B (general). Light-weight, suitable for CPU-only or single-GPU setups,
+    /// Gets preset for Mistral 7B (general). Light-weight, suitable for CPU-only or single-GPU setups,
     /// with a modest context window for RAG tasks.
     /// </summary>
     public static OllamaChatSettings Mistral7BGeneral
@@ -186,14 +190,14 @@ public static class OllamaPresets
                 RepeatPenalty = 1.1f,
                 KeepAlive = 10 * 60,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
             return settings;
         }
     }
 
     /// <summary>
-    /// Preset for Qwen2.5 7B (general). Balanced configuration for mixed tasks and RAG.
+    /// Gets preset for Qwen2.5 7B (general). Balanced configuration for mixed tasks and RAG.
     /// </summary>
     public static OllamaChatSettings Qwen25_7B_General
     {
@@ -216,14 +220,14 @@ public static class OllamaPresets
                 RepeatPenalty = 1.1f,
                 KeepAlive = 10 * 60,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
             return settings;
         }
     }
 
     /// <summary>
-    /// Preset for Phi-3 Mini (general). Small footprint model preset for quick local runs.
+    /// Gets preset for Phi-3 Mini (general). Small footprint model preset for quick local runs.
     /// </summary>
     public static OllamaChatSettings Phi3MiniGeneral
     {
@@ -246,7 +250,7 @@ public static class OllamaPresets
                 RepeatPenalty = 1.1f,
                 KeepAlive = 10 * 60,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
             return settings;
         }

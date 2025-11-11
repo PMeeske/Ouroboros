@@ -1,6 +1,10 @@
-using LangChainPipeline.CLI;
+// <copyright file="PipelineStepTool.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Tools;
+
+using LangChainPipeline.CLI;
 
 /// <summary>
 /// A tool that wraps a CLI pipeline step, allowing the LLM to invoke pipeline operations.
@@ -9,9 +13,9 @@ namespace LangChainPipeline.Tools;
 /// </summary>
 public sealed class PipelineStepTool : ITool
 {
-    private readonly string _stepName;
-    private readonly Func<string?, Step<CliPipelineState, CliPipelineState>> _stepFactory;
-    private CliPipelineState? _pipelineState;
+    private readonly string stepName;
+    private readonly Func<string?, Step<CliPipelineState, CliPipelineState>> stepFactory;
+    private CliPipelineState? pipelineState;
 
     /// <inheritdoc />
     public string Name { get; }
@@ -30,14 +34,14 @@ public sealed class PipelineStepTool : ITool
     /// <param name="stepFactory">Factory function that creates a step given optional args.</param>
     public PipelineStepTool(string stepName, string description, Func<string?, Step<CliPipelineState, CliPipelineState>> stepFactory)
     {
-        _stepName = stepName ?? throw new ArgumentNullException(nameof(stepName));
-        _stepFactory = stepFactory ?? throw new ArgumentNullException(nameof(stepFactory));
+        this.stepName = stepName ?? throw new ArgumentNullException(nameof(stepName));
+        this.stepFactory = stepFactory ?? throw new ArgumentNullException(nameof(stepFactory));
 
-        Name = $"run_{stepName.ToLowerInvariant()}";
-        Description = description;
+        this.Name = $"run_{stepName.ToLowerInvariant()}";
+        this.Description = description;
 
         // Simple schema for pipeline steps - they can accept optional string arguments
-        JsonSchema = """
+        this.JsonSchema = """
         {
             "type": "object",
             "properties": {
@@ -57,13 +61,13 @@ public sealed class PipelineStepTool : ITool
     /// <param name="state">The current pipeline state.</param>
     public void SetPipelineState(CliPipelineState state)
     {
-        _pipelineState = state;
+        this.pipelineState = state;
     }
 
     /// <inheritdoc />
     public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
     {
-        if (_pipelineState == null)
+        if (this.pipelineState == null)
         {
             return Result<string, string>.Failure("Pipeline state not initialized for this tool");
         }
@@ -90,27 +94,27 @@ public sealed class PipelineStepTool : ITool
             }
 
             // Execute the pipeline step
-            var step = _stepFactory(args);
-            var newState = await step(_pipelineState);
+            var step = this.stepFactory(args);
+            var newState = await step(this.pipelineState);
 
             // Update the pipeline state reference
-            _pipelineState.Branch = newState.Branch;
-            _pipelineState.Output = newState.Output;
-            _pipelineState.Context = newState.Context;
-            _pipelineState.Prompt = newState.Prompt;
-            _pipelineState.Query = newState.Query;
-            _pipelineState.Topic = newState.Topic;
+            this.pipelineState.Branch = newState.Branch;
+            this.pipelineState.Output = newState.Output;
+            this.pipelineState.Context = newState.Context;
+            this.pipelineState.Prompt = newState.Prompt;
+            this.pipelineState.Query = newState.Query;
+            this.pipelineState.Topic = newState.Topic;
 
             // Return result description
             var resultMessage = string.IsNullOrWhiteSpace(newState.Output)
-                ? $"Executed pipeline step '{_stepName}' successfully"
-                : $"Executed '{_stepName}': {(newState.Output.Length > 200 ? newState.Output.Substring(0, 200) + "..." : newState.Output)}";
+                ? $"Executed pipeline step '{this.stepName}' successfully"
+                : $"Executed '{this.stepName}': {(newState.Output.Length > 200 ? newState.Output.Substring(0, 200) + "..." : newState.Output)}";
 
             return Result<string, string>.Success(resultMessage);
         }
         catch (Exception ex)
         {
-            return Result<string, string>.Failure($"Pipeline step '{_stepName}' failed: {ex.Message}");
+            return Result<string, string>.Failure($"Pipeline step '{this.stepName}' failed: {ex.Message}");
         }
     }
 
@@ -132,9 +136,9 @@ public sealed class PipelineStepTool : ITool
                 {
                     return step;
                 }
+
                 // Return no-op step if not found
                 return s => Task.FromResult(s);
-            }
-        );
+            });
     }
 }

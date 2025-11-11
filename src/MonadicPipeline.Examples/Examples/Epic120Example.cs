@@ -1,12 +1,11 @@
-// ==========================================================
-// Example: Epic #120 - Production-ready Release v1.0
-// Demonstrates using EpicBranchOrchestrator to manage sub-issues
-// ==========================================================
+// <copyright file="Epic120Example.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Examples.EpicWorkflow;
 
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Core.Monads;
-
-namespace LangChainPipeline.Examples.EpicWorkflow;
 
 /// <summary>
 /// Example demonstrating epic workflow with automatic agent assignment and branch creation
@@ -17,6 +16,7 @@ public static class Epic120Example
     /// <summary>
     /// Demonstrates the complete workflow for Epic #120 with all its sub-issues.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunEpic120WorkflowAsync()
     {
         Console.WriteLine("=== Epic #120: Production-ready Release v1.0 ===\n");
@@ -65,7 +65,7 @@ public static class Epic120Example
             147, // Non-Functional Requirements (NFRs) (duplicate)
             148, // KPIs & Acceptance Criteria (duplicate)
             149, // Stakeholder Review Loop (duplicate)
-            150  // Lock & Tag Scope (duplicate)
+            150,  // Lock & Tag Scope (duplicate)
         };
 
         // Register the epic
@@ -168,6 +168,7 @@ public static class Epic120Example
     /// <summary>
     /// Demonstrates working with a subset of sub-issues in parallel.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunParallelSubIssuesAsync()
     {
         Console.WriteLine("=== Parallel Sub-issue Execution ===\n");
@@ -212,6 +213,7 @@ public static class Epic120Example
     /// <summary>
     /// Main entry point for the example.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task Main(string[] args)
     {
         try

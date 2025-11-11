@@ -1,11 +1,10 @@
-// ============================================================================
-// LangChain Memory Integration with Kleisli Pipeline System
-// Integrates memory management into the monadic pipeline architecture
-// ============================================================================
-
-using System.Collections.Concurrent;
+// <copyright file="ConversationMemory.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Core.Memory;
+
+using System.Collections.Concurrent;
 
 /// <summary>
 /// Represents a memory context that maintains conversation history
@@ -13,53 +12,58 @@ namespace LangChainPipeline.Core.Memory;
 /// </summary>
 public class ConversationMemory
 {
-    private readonly ConcurrentQueue<ConversationTurn> _turns = new();
-    private readonly int _maxTurns;
+    private readonly ConcurrentQueue<ConversationTurn> turns = new();
+    private readonly int maxTurns;
 
     public ConversationMemory(int maxTurns = 10)
     {
-        _maxTurns = maxTurns;
+        this.maxTurns = maxTurns;
     }
 
     /// <summary>
-    /// Add a turn to the conversation memory
+    /// Add a turn to the conversation memory.
     /// </summary>
     public void AddTurn(string humanInput, string aiResponse)
     {
-        _turns.Enqueue(new ConversationTurn(humanInput, aiResponse, DateTime.UtcNow));
+        this.turns.Enqueue(new ConversationTurn(humanInput, aiResponse, DateTime.UtcNow));
 
         // Maintain max turns limit
-        while (_turns.Count > _maxTurns)
+        while (this.turns.Count > this.maxTurns)
         {
-            _turns.TryDequeue(out _);
+            this.turns.TryDequeue(out _);
         }
     }
 
     /// <summary>
-    /// Get the conversation history formatted for prompts
+    /// Get the conversation history formatted for prompts.
     /// </summary>
+    /// <returns></returns>
     public string GetFormattedHistory(string humanPrefix = "Human", string aiPrefix = "AI")
     {
-        var turns = _turns.ToArray();
-        if (turns.Length == 0) return string.Empty;
+        var turns = this.turns.ToArray();
+        if (turns.Length == 0)
+        {
+            return string.Empty;
+        }
 
         return string.Join("\n", turns.Select(turn =>
             $"{humanPrefix}: {turn.HumanInput}\n{aiPrefix}: {turn.AiResponse}"));
     }
 
     /// <summary>
-    /// Get all conversation turns
+    /// Get all conversation turns.
     /// </summary>
-    public IReadOnlyList<ConversationTurn> GetTurns() => _turns.ToArray();
+    /// <returns></returns>
+    public IReadOnlyList<ConversationTurn> GetTurns() => this.turns.ToArray();
 
     /// <summary>
-    /// Clear all memory
+    /// Clear all memory.
     /// </summary>
-    public void Clear() => _turns.Clear();
+    public void Clear() => this.turns.Clear();
 }
 
 /// <summary>
-/// Represents a single turn in a conversation
+/// Represents a single turn in a conversation.
 /// </summary>
 public record ConversationTurn(
     string HumanInput,
@@ -67,9 +71,9 @@ public record ConversationTurn(
     DateTime Timestamp);
 
 /// <summary>
-/// Memory-aware pipeline context that carries both data and memory state
+/// Memory-aware pipeline context that carries both data and memory state.
 /// </summary>
-/// <typeparam name="T">The data type being processed</typeparam>
+/// <typeparam name="T">The data type being processed.</typeparam>
 public record MemoryContext<T>(
     T Data,
     ConversationMemory Memory,
@@ -78,40 +82,44 @@ public record MemoryContext<T>(
     public Dictionary<string, object> Properties { get; } = Properties ?? new();
 
     /// <summary>
-    /// Create a new context with updated data
+    /// Create a new context with updated data.
     /// </summary>
+    /// <returns></returns>
     public MemoryContext<TNew> WithData<TNew>(TNew newData)
-        => new(newData, Memory, Properties);
+        => new(newData, this.Memory, this.Properties);
 
     /// <summary>
-    /// Set a property value
+    /// Set a property value.
     /// </summary>
+    /// <returns></returns>
     public MemoryContext<T> SetProperty(string key, object value)
     {
-        var newProperties = new Dictionary<string, object>(Properties)
+        var newProperties = new Dictionary<string, object>(this.Properties)
         {
-            [key] = value
+            [key] = value,
         };
-        return new MemoryContext<T>(Data, Memory, newProperties);
+        return new MemoryContext<T>(this.Data, this.Memory, newProperties);
     }
 
     /// <summary>
-    /// Get a property value
+    /// Get a property value.
     /// </summary>
+    /// <returns></returns>
     public TValue? GetProperty<TValue>(string key)
-        => Properties.TryGetValue(key, out var value) && value is TValue typed
+        => this.Properties.TryGetValue(key, out var value) && value is TValue typed
             ? typed
             : default;
 }
 
 /// <summary>
-/// Kleisli arrows for memory-aware operations
+/// Kleisli arrows for memory-aware operations.
 /// </summary>
 public static class MemoryArrows
 {
     /// <summary>
-    /// Create a memory-aware arrow that loads conversation history into the context
+    /// Create a memory-aware arrow that loads conversation history into the context.
     /// </summary>
+    /// <returns></returns>
     public static Step<MemoryContext<T>, MemoryContext<T>> LoadMemory<T>(
         string outputKey = "history",
         string humanPrefix = "Human",
@@ -125,8 +133,9 @@ public static class MemoryArrows
     }
 
     /// <summary>
-    /// Create a memory-aware arrow that updates memory with new conversation turn
+    /// Create a memory-aware arrow that updates memory with new conversation turn.
     /// </summary>
+    /// <returns></returns>
     public static Step<MemoryContext<T>, MemoryContext<T>> UpdateMemory<T>(
         string inputKey = "input",
         string responseKey = "text")
@@ -146,8 +155,9 @@ public static class MemoryArrows
     }
 
     /// <summary>
-    /// Create a template processing arrow for conversation prompts
+    /// Create a template processing arrow for conversation prompts.
     /// </summary>
+    /// <returns></returns>
     public static Step<MemoryContext<string>, MemoryContext<string>> Template(string template)
     {
         return context =>
@@ -169,8 +179,9 @@ public static class MemoryArrows
     }
 
     /// <summary>
-    /// Create a template processing arrow for conversation prompts (generic version)
+    /// Create a template processing arrow for conversation prompts (generic version).
     /// </summary>
+    /// <returns></returns>
     public static Step<MemoryContext<object>, MemoryContext<object>> Template<T>(string template)
     {
         return context =>
@@ -192,16 +203,18 @@ public static class MemoryArrows
     }
 
     /// <summary>
-    /// Set a value in the memory context
+    /// Set a value in the memory context.
     /// </summary>
+    /// <returns></returns>
     public static Step<MemoryContext<T>, MemoryContext<T>> Set<T>(object value, string key)
     {
         return context => Task.FromResult(context.SetProperty(key, value));
     }
 
     /// <summary>
-    /// Create a mock LLM step for demonstration purposes
+    /// Create a mock LLM step for demonstration purposes.
     /// </summary>
+    /// <returns></returns>
     public static Step<MemoryContext<string>, MemoryContext<string>> MockLlm(string mockPrefix = "AI Response:")
     {
         return context =>
@@ -218,8 +231,9 @@ public static class MemoryArrows
     }
 
     /// <summary>
-    /// Create a mock LLM step for demonstration purposes (generic version)
+    /// Create a mock LLM step for demonstration purposes (generic version).
     /// </summary>
+    /// <returns></returns>
     public static Step<MemoryContext<object>, MemoryContext<object>> MockLlm<T>(string mockPrefix = "AI Response:")
     {
         return context =>
@@ -236,8 +250,9 @@ public static class MemoryArrows
     }
 
     /// <summary>
-    /// Extract a property value as the main data
+    /// Extract a property value as the main data.
     /// </summary>
+    /// <returns></returns>
     public static Step<MemoryContext<T>, MemoryContext<TOut>> ExtractProperty<T, TOut>(string key)
     {
         return context =>

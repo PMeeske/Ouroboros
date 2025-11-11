@@ -1,6 +1,6 @@
-// ==========================================================
-// Experience Replay - Train on stored experiences
-// ==========================================================
+// <copyright file="ExperienceReplay.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -38,6 +38,7 @@ public interface IExperienceReplay
     /// <summary>
     /// Trains the orchestrator on stored experiences.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<TrainingResult, string>> TrainOnExperiencesAsync(
         ExperienceReplayConfig? config = null,
         CancellationToken ct = default);
@@ -45,6 +46,7 @@ public interface IExperienceReplay
     /// <summary>
     /// Analyzes experiences to extract patterns.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<List<string>> AnalyzeExperiencePatternsAsync(
         List<Experience> experiences,
         CancellationToken ct = default);
@@ -52,6 +54,7 @@ public interface IExperienceReplay
     /// <summary>
     /// Selects experiences for training based on priority.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<List<Experience>> SelectTrainingExperiencesAsync(
         ExperienceReplayConfig config,
         CancellationToken ct = default);
@@ -62,23 +65,24 @@ public interface IExperienceReplay
 /// </summary>
 public sealed class ExperienceReplay : IExperienceReplay
 {
-    private readonly IMemoryStore _memory;
-    private readonly ISkillRegistry _skills;
-    private readonly IChatCompletionModel _llm;
+    private readonly IMemoryStore memory;
+    private readonly ISkillRegistry skills;
+    private readonly IChatCompletionModel llm;
 
     public ExperienceReplay(
         IMemoryStore memory,
         ISkillRegistry skills,
         IChatCompletionModel llm)
     {
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
-        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        this.memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        this.skills = skills ?? throw new ArgumentNullException(nameof(skills));
+        this.llm = llm ?? throw new ArgumentNullException(nameof(llm));
     }
 
     /// <summary>
     /// Trains the orchestrator on stored experiences.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<TrainingResult, string>> TrainOnExperiencesAsync(
         ExperienceReplayConfig? config = null,
         CancellationToken ct = default)
@@ -88,7 +92,7 @@ public sealed class ExperienceReplay : IExperienceReplay
         try
         {
             // Select experiences for training
-            var experiences = await SelectTrainingExperiencesAsync(config, ct);
+            var experiences = await this.SelectTrainingExperiencesAsync(config, ct);
 
             if (experiences.Count == 0)
             {
@@ -97,14 +101,14 @@ public sealed class ExperienceReplay : IExperienceReplay
             }
 
             // Analyze patterns
-            var patterns = await AnalyzeExperiencePatternsAsync(experiences, ct);
+            var patterns = await this.AnalyzeExperiencePatternsAsync(experiences, ct);
 
             // Extract skills from high-quality experiences
             var skillsExtracted = 0;
             foreach (var exp in experiences.Where(e => e.Verification.QualityScore > 0.8))
             {
                 var skillName = $"learned_skill_{Guid.NewGuid().ToString("N").Substring(0, 8)}";
-                var skillResult = await _skills.ExtractSkillAsync(
+                var skillResult = await this.skills.ExtractSkillAsync(
                     exp.Execution,
                     skillName,
                     $"Learned from goal: {exp.Goal}");
@@ -120,7 +124,7 @@ public sealed class ExperienceReplay : IExperienceReplay
             {
                 ["patterns_discovered"] = patterns.Count,
                 ["skills_extracted"] = skillsExtracted,
-                ["avg_quality"] = experiences.Average(e => e.Verification.QualityScore)
+                ["avg_quality"] = experiences.Average(e => e.Verification.QualityScore),
             };
 
             var result = new TrainingResult(
@@ -140,6 +144,7 @@ public sealed class ExperienceReplay : IExperienceReplay
     /// <summary>
     /// Analyzes experiences to extract patterns.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<List<string>> AnalyzeExperiencePatternsAsync(
         List<Experience> experiences,
         CancellationToken ct = default)
@@ -150,7 +155,7 @@ public sealed class ExperienceReplay : IExperienceReplay
         {
             // Group experiences by goal similarity
             var goalGroups = experiences
-                .GroupBy(e => ExtractGoalType(e.Goal))
+                .GroupBy(e => this.ExtractGoalType(e.Goal))
                 .Where(g => g.Count() > 1);
 
             foreach (var group in goalGroups)
@@ -160,7 +165,7 @@ public sealed class ExperienceReplay : IExperienceReplay
 
                 if (successfulExperiences.Count > 0)
                 {
-                    var commonActions = FindCommonActions(successfulExperiences);
+                    var commonActions = this.FindCommonActions(successfulExperiences);
                     if (commonActions.Any())
                     {
                         patterns.Add($"Pattern for {group.Key}: {string.Join(" -> ", commonActions)}");
@@ -171,11 +176,11 @@ public sealed class ExperienceReplay : IExperienceReplay
             // Use LLM to identify deeper patterns if available
             if (patterns.Any())
             {
-                var patternPrompt = BuildPatternAnalysisPrompt(experiences);
-                var analysis = await _llm.GenerateTextAsync(patternPrompt, ct);
+                var patternPrompt = this.BuildPatternAnalysisPrompt(experiences);
+                var analysis = await this.llm.GenerateTextAsync(patternPrompt, ct);
 
                 // Extract insights from LLM analysis
-                var insights = ExtractInsights(analysis);
+                var insights = this.ExtractInsights(analysis);
                 patterns.AddRange(insights);
             }
         }
@@ -190,20 +195,21 @@ public sealed class ExperienceReplay : IExperienceReplay
     /// <summary>
     /// Selects experiences for training based on priority.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<List<Experience>> SelectTrainingExperiencesAsync(
         ExperienceReplayConfig config,
         CancellationToken ct = default)
     {
-        var stats = await _memory.GetStatisticsAsync();
+        var stats = await this.memory.GetStatisticsAsync();
 
         // Get all experiences and filter
         var query = new MemoryQuery(
-            Goal: "",
+            Goal: string.Empty,
             Context: null,
             MaxResults: config.MaxExperiences,
             MinSimilarity: 0.0);
 
-        var allExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+        var allExperiences = await this.memory.RetrieveRelevantExperiencesAsync(query, ct);
 
         // Filter by quality
         var qualityFiltered = allExperiences
@@ -237,13 +243,24 @@ public sealed class ExperienceReplay : IExperienceReplay
         var goalLower = goal.ToLowerInvariant();
 
         if (goalLower.Contains("calculate") || goalLower.Contains("compute"))
+        {
             return "calculation";
+        }
+
         if (goalLower.Contains("analyze") || goalLower.Contains("examine"))
+        {
             return "analysis";
+        }
+
         if (goalLower.Contains("create") || goalLower.Contains("generate"))
+        {
             return "creation";
+        }
+
         if (goalLower.Contains("explain") || goalLower.Contains("describe"))
+        {
             return "explanation";
+        }
 
         return "general";
     }
@@ -256,7 +273,9 @@ public sealed class ExperienceReplay : IExperienceReplay
             .ToList();
 
         if (!actionLists.Any())
+        {
             return new List<string>();
+        }
 
         var commonActions = actionLists
             .SelectMany(actions => actions)

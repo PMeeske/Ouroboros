@@ -1,14 +1,18 @@
-using System.Collections.Concurrent;
-using LangChainPipeline.Domain.Events;
+// <copyright file="InMemoryEventStore.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Domain.Persistence;
+
+using System.Collections.Concurrent;
+using LangChainPipeline.Domain.Events;
 
 /// <summary>
 /// In-memory implementation of event store for development and testing.
 /// </summary>
 public class InMemoryEventStore : IEventStore
 {
-    private readonly ConcurrentDictionary<string, EventStream> _streams = new();
+    private readonly ConcurrentDictionary<string, EventStream> streams = new();
 
     /// <inheritdoc/>
     public Task<long> AppendEventsAsync(
@@ -20,10 +24,10 @@ public class InMemoryEventStore : IEventStore
         var eventsList = events.ToList();
         if (!eventsList.Any())
         {
-            return Task.FromResult(GetCurrentVersion(branchId));
+            return Task.FromResult(this.GetCurrentVersion(branchId));
         }
 
-        var stream = _streams.GetOrAdd(branchId, _ => new EventStream(branchId));
+        var stream = this.streams.GetOrAdd(branchId, _ => new EventStream(branchId));
 
         lock (stream.Lock)
         {
@@ -49,7 +53,7 @@ public class InMemoryEventStore : IEventStore
         long fromVersion = 0,
         CancellationToken cancellationToken = default)
     {
-        if (!_streams.TryGetValue(branchId, out var stream))
+        if (!this.streams.TryGetValue(branchId, out var stream))
         {
             return Task.FromResult<IReadOnlyList<PipelineEvent>>(Array.Empty<PipelineEvent>());
         }
@@ -70,7 +74,7 @@ public class InMemoryEventStore : IEventStore
         string branchId,
         CancellationToken cancellationToken = default)
     {
-        var version = GetCurrentVersion(branchId);
+        var version = this.GetCurrentVersion(branchId);
         return Task.FromResult(version);
     }
 
@@ -79,7 +83,7 @@ public class InMemoryEventStore : IEventStore
         string branchId,
         CancellationToken cancellationToken = default)
     {
-        var exists = _streams.ContainsKey(branchId);
+        var exists = this.streams.ContainsKey(branchId);
         return Task.FromResult(exists);
     }
 
@@ -88,37 +92,41 @@ public class InMemoryEventStore : IEventStore
         string branchId,
         CancellationToken cancellationToken = default)
     {
-        _streams.TryRemove(branchId, out _);
+        this.streams.TryRemove(branchId, out _);
         return Task.CompletedTask;
     }
 
     private long GetCurrentVersion(string branchId)
     {
-        return _streams.TryGetValue(branchId, out var stream) ? stream.Version : -1;
+        return this.streams.TryGetValue(branchId, out var stream) ? stream.Version : -1;
     }
 
     private class EventStream
     {
         public string BranchId { get; }
+
         public List<VersionedEvent> Events { get; } = new();
+
         public long Version { get; set; } = -1;
+
         public object Lock { get; } = new();
 
         public EventStream(string branchId)
         {
-            BranchId = branchId;
+            this.BranchId = branchId;
         }
     }
 
     private class VersionedEvent
     {
         public PipelineEvent Event { get; }
+
         public long Version { get; }
 
         public VersionedEvent(PipelineEvent evt, long version)
         {
-            Event = evt;
-            Version = version;
+            this.Event = evt;
+            this.Version = version;
         }
     }
 }

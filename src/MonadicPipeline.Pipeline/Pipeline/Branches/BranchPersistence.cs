@@ -1,14 +1,18 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
+// <copyright file="BranchPersistence.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Pipeline.Branches;
+
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 public static class BranchPersistence
 {
     private static readonly JsonSerializerOptions Options = new()
     {
         WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() } // PipelineEvent has JsonPolymorphic attrs
+        Converters = { new JsonStringEnumConverter() }, // PipelineEvent has JsonPolymorphic attrs
     };
 
     public static async Task SaveAsync(BranchSnapshot snapshot, string path)

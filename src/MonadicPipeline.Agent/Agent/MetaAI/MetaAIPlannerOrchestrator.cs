@@ -1,12 +1,11 @@
-// ==========================================================
-// Meta-AI Planner Orchestrator Implementation
-// Implements plan-execute-verify loop with continual learning
-// ==========================================================
+// <copyright file="MetaAIPlannerOrchestrator.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Agent.MetaAI;
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
-
-namespace LangChainPipeline.Agent.MetaAI;
 
 /// <summary>
 /// Implementation of the Meta-AI v2 planner/executor/verifier orchestrator.
@@ -14,14 +13,14 @@ namespace LangChainPipeline.Agent.MetaAI;
 /// </summary>
 public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
 {
-    private readonly IChatCompletionModel _llm;
-    private readonly ToolRegistry _tools;
-    private readonly IMemoryStore _memory;
-    private readonly ISkillRegistry _skills;
-    private readonly IUncertaintyRouter _router;
-    private readonly ISafetyGuard _safety;
-    private readonly ISkillExtractor? _skillExtractor;
-    private readonly ConcurrentDictionary<string, PerformanceMetrics> _metrics = new();
+    private readonly IChatCompletionModel llm;
+    private readonly ToolRegistry tools;
+    private readonly IMemoryStore memory;
+    private readonly ISkillRegistry skills;
+    private readonly IUncertaintyRouter router;
+    private readonly ISafetyGuard safety;
+    private readonly ISkillExtractor? skillExtractor;
+    private readonly ConcurrentDictionary<string, PerformanceMetrics> metrics = new();
 
     public MetaAIPlannerOrchestrator(
         IChatCompletionModel llm,
@@ -32,46 +31,49 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
         ISafetyGuard safety,
         ISkillExtractor? skillExtractor = null)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _tools = tools ?? throw new ArgumentNullException(nameof(tools));
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
-        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
-        _router = router ?? throw new ArgumentNullException(nameof(router));
-        _safety = safety ?? throw new ArgumentNullException(nameof(safety));
-        _skillExtractor = skillExtractor ?? new SkillExtractor(llm, skills);
+        this.llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        this.tools = tools ?? throw new ArgumentNullException(nameof(tools));
+        this.memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        this.skills = skills ?? throw new ArgumentNullException(nameof(skills));
+        this.router = router ?? throw new ArgumentNullException(nameof(router));
+        this.safety = safety ?? throw new ArgumentNullException(nameof(safety));
+        this.skillExtractor = skillExtractor ?? new SkillExtractor(llm, skills);
     }
 
     /// <summary>
     /// Plans how to accomplish a goal using available skills and past experience.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<Plan, string>> PlanAsync(
         string goal,
         Dictionary<string, object>? context = null,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(goal))
+        {
             return Result<Plan, string>.Failure("Goal cannot be empty");
+        }
 
         try
         {
             // Check if we have relevant past experiences
             var query = new MemoryQuery(goal, context, MaxResults: 5, MinSimilarity: 0.7);
-            var pastExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            var pastExperiences = await this.memory.RetrieveRelevantExperiencesAsync(query, ct);
 
             // Find matching skills
-            var matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context);
+            var matchingSkills = await this.skills.FindMatchingSkillsAsync(goal, context);
 
             // Generate plan using LLM with past experience and skills
-            var planPrompt = BuildPlanPrompt(goal, context, pastExperiences, matchingSkills);
-            var planText = await _llm.GenerateTextAsync(planPrompt, ct);
+            var planPrompt = this.BuildPlanPrompt(goal, context, pastExperiences, matchingSkills);
+            var planText = await this.llm.GenerateTextAsync(planPrompt, ct);
 
             // Parse plan from LLM response
-            var plan = ParsePlan(planText, goal);
+            var plan = this.ParsePlan(planText, goal);
 
             // Validate plan safety
             foreach (var step in plan.Steps)
             {
-                var safetyCheck = _safety.CheckSafety(
+                var safetyCheck = this.safety.CheckSafety(
                     step.Action,
                     step.Parameters,
                     PermissionLevel.UserDataWithConfirmation);
@@ -83,12 +85,12 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
                 }
             }
 
-            RecordMetric("planner", 1.0, true);
+            this.RecordMetric("planner", 1.0, true);
             return Result<Plan, string>.Success(plan);
         }
         catch (Exception ex)
         {
-            RecordMetric("planner", 1.0, false);
+            this.RecordMetric("planner", 1.0, false);
             return Result<Plan, string>.Failure($"Planning failed: {ex.Message}");
         }
     }
@@ -97,17 +99,20 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
     /// Executes a plan step by step with monitoring and safety checks.
     /// Supports optional parallel execution of independent steps.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<ExecutionResult, string>> ExecuteAsync(
         Plan plan,
         CancellationToken ct = default)
     {
         if (plan == null)
+        {
             return Result<ExecutionResult, string>.Failure("Plan cannot be null");
+        }
 
         var stopwatch = Stopwatch.StartNew();
 
         // Check if parallel execution is beneficial
-        var parallelExecutor = new ParallelExecutor(_safety, ExecuteStepAsync);
+        var parallelExecutor = new ParallelExecutor(this.safety, this.ExecuteStepAsync);
         var estimatedSpeedup = parallelExecutor.EstimateSpeedup(plan);
 
         List<StepResult> stepResults;
@@ -126,23 +131,26 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
                 // Sequential execution
                 stepResults = new List<StepResult>();
                 overallSuccess = true;
-                finalOutput = "";
+                finalOutput = string.Empty;
 
                 foreach (var step in plan.Steps)
                 {
                     if (ct.IsCancellationRequested)
+                    {
                         break;
+                    }
 
                     // Apply safety sandbox
-                    var sandboxedStep = _safety.SandboxStep(step);
+                    var sandboxedStep = this.safety.SandboxStep(step);
 
                     // Execute step
-                    var stepResult = await ExecuteStepAsync(sandboxedStep, ct);
+                    var stepResult = await this.ExecuteStepAsync(sandboxedStep, ct);
                     stepResults.Add(stepResult);
 
                     if (!stepResult.Success)
                     {
                         overallSuccess = false;
+
                         // Continue with remaining steps even if one fails
                     }
 
@@ -164,17 +172,17 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
                     ["steps_completed"] = stepResults.Count,
                     ["steps_total"] = plan.Steps.Count,
                     ["parallel_execution"] = estimatedSpeedup > 1.5,
-                    ["estimated_speedup"] = estimatedSpeedup
+                    ["estimated_speedup"] = estimatedSpeedup,
                 },
                 stopwatch.Elapsed);
 
-            RecordMetric("executor", stopwatch.Elapsed.TotalMilliseconds, overallSuccess);
+            this.RecordMetric("executor", stopwatch.Elapsed.TotalMilliseconds, overallSuccess);
             return Result<ExecutionResult, string>.Success(execution);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            RecordMetric("executor", stopwatch.Elapsed.TotalMilliseconds, false);
+            this.RecordMetric("executor", stopwatch.Elapsed.TotalMilliseconds, false);
             return Result<ExecutionResult, string>.Failure($"Execution failed: {ex.Message}");
         }
     }
@@ -182,28 +190,31 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
     /// <summary>
     /// Verifies execution results and provides feedback for improvement.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<VerificationResult, string>> VerifyAsync(
         ExecutionResult execution,
         CancellationToken ct = default)
     {
         if (execution == null)
+        {
             return Result<VerificationResult, string>.Failure("Execution cannot be null");
+        }
 
         try
         {
             // Build verification prompt
-            var verifyPrompt = BuildVerificationPrompt(execution);
-            var verificationText = await _llm.GenerateTextAsync(verifyPrompt, ct);
+            var verifyPrompt = this.BuildVerificationPrompt(execution);
+            var verificationText = await this.llm.GenerateTextAsync(verifyPrompt, ct);
 
             // Parse verification result
-            var verification = ParseVerification(execution, verificationText);
+            var verification = this.ParseVerification(execution, verificationText);
 
-            RecordMetric("verifier", 1.0, verification.Verified);
+            this.RecordMetric("verifier", 1.0, verification.Verified);
             return Result<VerificationResult, string>.Success(verification);
         }
         catch (Exception ex)
         {
-            RecordMetric("verifier", 1.0, false);
+            this.RecordMetric("verifier", 1.0, false);
             return Result<VerificationResult, string>.Failure($"Verification failed: {ex.Message}");
         }
     }
@@ -214,7 +225,9 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
     public void LearnFromExecution(VerificationResult verification)
     {
         if (verification == null)
+        {
             return;
+        }
 
         // Store experience in memory
         var experience = new Experience(
@@ -227,57 +240,57 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             new Dictionary<string, object>
             {
                 ["quality_score"] = verification.QualityScore,
-                ["verified"] = verification.Verified
+                ["verified"] = verification.Verified,
             });
 
-        _ = _memory.StoreExperienceAsync(experience);
+        _ = this.memory.StoreExperienceAsync(experience);
 
         // If execution was successful and high quality, extract a skill
-        if (verification.Verified && verification.QualityScore > 0.8 && _skillExtractor != null)
+        if (verification.Verified && verification.QualityScore > 0.8 && this.skillExtractor != null)
         {
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    var shouldExtract = await _skillExtractor.ShouldExtractSkillAsync(verification);
+                    var shouldExtract = await this.skillExtractor.ShouldExtractSkillAsync(verification);
                     if (shouldExtract)
                     {
-                        var skillResult = await _skillExtractor.ExtractSkillAsync(
+                        var skillResult = await this.skillExtractor.ExtractSkillAsync(
                             verification.Execution,
                             verification);
 
                         skillResult.Match(
                             skill =>
                             {
-                                RecordMetric("skill_extraction_success", 1.0, true);
+                                this.RecordMetric("skill_extraction_success", 1.0, true);
                                 Console.WriteLine($"✓ Extracted skill: {skill.Name} (Quality: {skill.SuccessRate:P0})");
                             },
                             error =>
                             {
-                                RecordMetric("skill_extraction_failure", 1.0, false);
+                                this.RecordMetric("skill_extraction_failure", 1.0, false);
                                 Console.WriteLine($"✗ Skill extraction failed: {error}");
                             });
                     }
                 }
                 catch (Exception ex)
                 {
-                    RecordMetric("skill_extraction_error", 1.0, false);
+                    this.RecordMetric("skill_extraction_error", 1.0, false);
                     Console.WriteLine($"✗ Skill extraction error: {ex.Message}");
                 }
             });
         }
 
-        RecordMetric("learning", 1.0, true);
+        this.RecordMetric("learning", 1.0, true);
     }
 
     /// <summary>
     /// Gets performance metrics for the orchestrator.
     /// </summary>
+    /// <returns></returns>
     public IReadOnlyDictionary<string, PerformanceMetrics> GetMetrics()
-        => new Dictionary<string, PerformanceMetrics>(_metrics);
+        => new Dictionary<string, PerformanceMetrics>(this.metrics);
 
     // Private helper methods
-
     private async Task<StepResult> ExecuteStepAsync(PlanStep step, CancellationToken ct)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -285,7 +298,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
         try
         {
             // Check if this is a tool invocation
-            var tool = _tools.Get(step.Action);
+            var tool = this.tools.Get(step.Action);
             if (tool != null)
             {
                 var args = System.Text.Json.JsonSerializer.Serialize(step.Parameters);
@@ -303,24 +316,24 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
                         new Dictionary<string, object>
                         {
                             ["tool"] = step.Action,
-                            ["success"] = true
+                            ["success"] = true,
                         }),
                     error => new StepResult(
                         step,
                         false,
-                        "",
+                        string.Empty,
                         error,
                         stopwatch.Elapsed,
                         new Dictionary<string, object>
                         {
                             ["tool"] = step.Action,
-                            ["success"] = false
+                            ["success"] = false,
                         }));
             }
 
             // If not a tool, try to execute as LLM task
             var prompt = $"Execute the following task: {step.Action}\nParameters: {System.Text.Json.JsonSerializer.Serialize(step.Parameters)}";
-            var output = await _llm.GenerateTextAsync(prompt, ct);
+            var output = await this.llm.GenerateTextAsync(prompt, ct);
 
             stopwatch.Stop();
 
@@ -332,7 +345,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
                 stopwatch.Elapsed,
                 new Dictionary<string, object>
                 {
-                    ["type"] = "llm_task"
+                    ["type"] = "llm_task",
                 });
         }
         catch (Exception ex)
@@ -341,12 +354,12 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             return new StepResult(
                 step,
                 false,
-                "",
+                string.Empty,
                 ex.Message,
                 stopwatch.Elapsed,
                 new Dictionary<string, object>
                 {
-                    ["error"] = ex.Message
+                    ["error"] = ex.Message,
                 });
         }
     }
@@ -375,6 +388,7 @@ GOAL: {goal}
             {
                 prompt += $"- {skill.Name}: {skill.Description} (Success rate: {skill.SuccessRate:P0})\n";
             }
+
             prompt += "\n";
         }
 
@@ -385,11 +399,12 @@ GOAL: {goal}
             {
                 prompt += $"- Goal: {exp.Goal}, Quality: {exp.Verification.QualityScore:P0}, Verified: {exp.Verification.Verified}\n";
             }
+
             prompt += "\n";
         }
 
         prompt += $@"AVAILABLE TOOLS:
-{string.Join("\n", _tools.All.Select(t => $"- {t.Name}: {t.Description}"))}
+{string.Join("\n", this.tools.All.Select(t => $"- {t.Name}: {t.Description}"))}
 
 Create a plan with specific steps. For each step, specify:
 1. Action (tool name or task description)
@@ -429,12 +444,12 @@ STEP 2: ...
             {
                 if (currentAction != null)
                 {
-                    steps.Add(new PlanStep(currentAction, currentParams ?? new(), currentExpected ?? "", currentConfidence));
+                    steps.Add(new PlanStep(currentAction, currentParams ?? new(), currentExpected ?? string.Empty, currentConfidence));
                 }
 
-                currentAction = trimmed.Split(':').Skip(1).FirstOrDefault()?.Trim() ?? "";
+                currentAction = trimmed.Split(':').Skip(1).FirstOrDefault()?.Trim() ?? string.Empty;
                 currentParams = new();
-                currentExpected = "";
+                currentExpected = string.Empty;
                 currentConfidence = 0.8;
             }
             else if (trimmed.StartsWith("PARAMETERS:"))
@@ -465,7 +480,7 @@ STEP 2: ...
 
         if (currentAction != null)
         {
-            steps.Add(new PlanStep(currentAction, currentParams ?? new(), currentExpected ?? "", currentConfidence));
+            steps.Add(new PlanStep(currentAction, currentParams ?? new(), currentExpected ?? string.Empty, currentConfidence));
         }
 
         // If no steps were parsed, create a simple default plan
@@ -543,7 +558,7 @@ Provide:
 
     private void RecordMetric(string component, double latencyMs, bool success)
     {
-        _metrics.AddOrUpdate(
+        this.metrics.AddOrUpdate(
             component,
             _ => new PerformanceMetrics(
                 component,

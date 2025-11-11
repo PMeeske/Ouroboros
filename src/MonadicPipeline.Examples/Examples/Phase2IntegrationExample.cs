@@ -1,16 +1,15 @@
-// ==========================================================
-// Complete Phase 2 Integration Example
-// End-to-end demonstration of metacognitive agent
-// ==========================================================
+// <copyright file="Phase2IntegrationExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Examples;
 
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
 
-namespace LangChainPipeline.Examples;
-
 /// <summary>
 /// Complete integration example showing Phase 2 metacognitive agent in action.
-/// Demonstrates the full lifecycle: task assessment, goal decomposition, 
+/// Demonstrates the full lifecycle: task assessment, goal decomposition,
 /// execution, learning, and self-improvement.
 /// </summary>
 public static class Phase2IntegrationExample
@@ -18,6 +17,7 @@ public static class Phase2IntegrationExample
     /// <summary>
     /// Runs a complete task lifecycle with metacognitive monitoring.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunCompleteTaskLifecycle()
     {
         Console.WriteLine("=== Complete Phase 2 Integration Example ===\n");
@@ -56,6 +56,7 @@ public static class Phase2IntegrationExample
             {
                 Console.WriteLine($"  ⚠ {gap}");
             }
+
             Console.WriteLine();
 
             var alternatives = await capabilities.SuggestAlternativesAsync(task);
@@ -64,6 +65,7 @@ public static class Phase2IntegrationExample
             {
                 Console.WriteLine($"  • {alt}");
             }
+
             Console.WriteLine();
         }
 
@@ -79,6 +81,7 @@ public static class Phase2IntegrationExample
             Console.WriteLine($"✗ Goal rejected due to value misalignment: {alignmentCheck.Error}");
             return;
         }
+
         Console.WriteLine("✓ Goal passes value alignment check\n");
 
         // Decompose goal into subgoals
@@ -104,6 +107,7 @@ public static class Phase2IntegrationExample
                         Console.WriteLine($"       • {sub.Description}");
                     }
                 }
+
                 Console.WriteLine();
             }
 
@@ -120,6 +124,7 @@ public static class Phase2IntegrationExample
                 Console.WriteLine($"  - {conflict.Description}");
                 Console.WriteLine($"    Suggested: {conflict.SuggestedResolutions.FirstOrDefault()}");
             }
+
             Console.WriteLine();
         }
 
@@ -134,6 +139,7 @@ public static class Phase2IntegrationExample
                 : goal.Description;
             Console.WriteLine($"  {index}. [{goal.Type}] {desc}");
         }
+
         Console.WriteLine();
 
         // === Step 3: Execution & Learning ===
@@ -208,6 +214,7 @@ public static class Phase2IntegrationExample
                 {
                     Console.WriteLine($"  ✓ {strength}");
                 }
+
                 Console.WriteLine();
             }
 
@@ -218,6 +225,7 @@ public static class Phase2IntegrationExample
                 {
                     Console.WriteLine($"  ⚠ {weakness}");
                 }
+
                 Console.WriteLine();
             }
 
@@ -240,6 +248,7 @@ public static class Phase2IntegrationExample
                 {
                     Console.WriteLine($"  Evidence: {string.Join(", ", insight.SupportingEvidence.Take(2))}");
                 }
+
                 Console.WriteLine();
             }
         }
@@ -263,6 +272,7 @@ public static class Phase2IntegrationExample
             {
                 Console.WriteLine($"  {i + 1}. {plan.Actions[i]}");
             }
+
             Console.WriteLine();
 
             if (plan.ExpectedImprovements.Any())
@@ -272,6 +282,7 @@ public static class Phase2IntegrationExample
                 {
                     Console.WriteLine($"  • {improvement.Key}: +{improvement.Value:P0}");
                 }
+
                 Console.WriteLine();
             }
         }
@@ -341,7 +352,7 @@ public static class Phase2IntegrationExample
                 UsageCount: 80,
                 DateTime.UtcNow.AddDays(-30),
                 DateTime.UtcNow,
-                new Dictionary<string, object>())
+                new Dictionary<string, object>()),
         };
 
         foreach (var cap in capabilities)

@@ -1,8 +1,12 @@
+// <copyright file="ResultMonadTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChainPipeline.Core.Monads;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for the Result monad implementation.
@@ -179,8 +183,7 @@ public class ResultMonadTests
         // Act
         var output = result.Match(
             onSuccess: x => $"Success: {x}",
-            onFailure: err => $"Error: {err}"
-        );
+            onFailure: err => $"Error: {err}");
 
         // Assert
         output.Should().Be("Success: 42");
@@ -195,8 +198,7 @@ public class ResultMonadTests
         // Act
         var output = result.Match(
             onSuccess: x => $"Success: {x}",
-            onFailure: err => $"Error: {err}"
-        );
+            onFailure: err => $"Error: {err}");
 
         // Assert
         output.Should().Be("Error: error");

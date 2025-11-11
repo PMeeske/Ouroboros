@@ -1,9 +1,13 @@
+// <copyright file="MetaAiTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.CLI;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for meta-AI capabilities where the pipeline can reason about and modify its own execution.
@@ -32,7 +36,7 @@ public static class MetaAiTests
             Tools = tools,
             Embed = embedModel,
             RetrievalK = 8,
-            Trace = false
+            Trace = false,
         };
 
         // Register pipeline steps as tools
@@ -60,8 +64,10 @@ public static class MetaAiTests
                 {
                     Console.WriteLine($"  - {t.Name}");
                 }
+
                 continue; // Don't fail the test, just warn
             }
+
             Console.WriteLine($"✓ Verified tool '{expectedTool}' is registered");
         }
 
@@ -89,7 +95,7 @@ public static class MetaAiTests
             Tools = tools,
             Embed = embedModel,
             RetrievalK = 8,
-            Trace = false
+            Trace = false,
         };
 
         // Register only specific pipeline steps
@@ -107,6 +113,7 @@ public static class MetaAiTests
             {
                 throw new Exception($"Expected tool '{toolName}' not found!");
             }
+
             Console.WriteLine($"✓ Verified selected tool '{toolName}' is registered");
         }
 
@@ -134,7 +141,7 @@ public static class MetaAiTests
             Tools = tools,
             Embed = embedModel,
             RetrievalK = 8,
-            Trace = false
+            Trace = false,
         };
 
         // Register a few pipeline steps
@@ -163,6 +170,7 @@ public static class MetaAiTests
     /// <summary>
     /// Integration test showing how pipeline steps as tools enable meta-AI reasoning.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestMetaAiIntegration()
     {
         Console.WriteLine("\n=== Testing Meta-AI Integration ===");
@@ -182,7 +190,7 @@ public static class MetaAiTests
             Tools = tools,
             Embed = embedModel,
             RetrievalK = 8,
-            Trace = true
+            Trace = true,
         };
 
         // Register pipeline steps as tools
@@ -226,6 +234,7 @@ Think step by step about which pipeline tools you could invoke to enhance your r
                     Console.WriteLine($"  - {call.ToolName} with args: {call.Arguments}");
                     Console.WriteLine($"    Result: {call.Output}");
                 }
+
                 Console.WriteLine("✓ Meta-AI successfully demonstrated - LLM used pipeline tools!");
             }
             else
@@ -251,6 +260,7 @@ Think step by step about which pipeline tools you could invoke to enhance your r
     /// <summary>
     /// Runs all meta-AI tests.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllTests()
     {
         Console.WriteLine("\n" + new string('=', 60));

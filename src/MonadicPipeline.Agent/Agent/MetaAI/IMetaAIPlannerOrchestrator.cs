@@ -1,7 +1,6 @@
-// ==========================================================
-// Meta-AI Layer v2 - Planner/Executor/Verifier Orchestrator
-// Implements continual learning with plan-execute-verify loop
-// ==========================================================
+// <copyright file="IMetaAIPlannerOrchestrator.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -65,10 +64,10 @@ public interface IMetaAIPlannerOrchestrator
     /// <summary>
     /// Plans how to accomplish a goal based on available tools and past experience.
     /// </summary>
-    /// <param name="goal">The goal to accomplish</param>
-    /// <param name="context">Additional context information</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>A plan with steps and confidence scores</returns>
+    /// <param name="goal">The goal to accomplish.</param>
+    /// <param name="context">Additional context information.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A plan with steps and confidence scores.</returns>
     Task<Result<Plan, string>> PlanAsync(
         string goal,
         Dictionary<string, object>? context = null,
@@ -77,9 +76,9 @@ public interface IMetaAIPlannerOrchestrator
     /// <summary>
     /// Executes a plan step by step with monitoring.
     /// </summary>
-    /// <param name="plan">The plan to execute</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Execution result with outcomes for each step</returns>
+    /// <param name="plan">The plan to execute.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Execution result with outcomes for each step.</returns>
     Task<Result<ExecutionResult, string>> ExecuteAsync(
         Plan plan,
         CancellationToken ct = default);
@@ -87,9 +86,9 @@ public interface IMetaAIPlannerOrchestrator
     /// <summary>
     /// Verifies execution results and provides feedback for improvement.
     /// </summary>
-    /// <param name="execution">The execution result to verify</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Verification result with quality score and suggestions</returns>
+    /// <param name="execution">The execution result to verify.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Verification result with quality score and suggestions.</returns>
     Task<Result<VerificationResult, string>> VerifyAsync(
         ExecutionResult execution,
         CancellationToken ct = default);
@@ -97,11 +96,12 @@ public interface IMetaAIPlannerOrchestrator
     /// <summary>
     /// Learns from execution experience to improve future planning.
     /// </summary>
-    /// <param name="verification">The verification result to learn from</param>
+    /// <param name="verification">The verification result to learn from.</param>
     void LearnFromExecution(VerificationResult verification);
 
     /// <summary>
     /// Gets performance metrics for the orchestrator.
     /// </summary>
+    /// <returns></returns>
     IReadOnlyDictionary<string, PerformanceMetrics> GetMetrics();
 }

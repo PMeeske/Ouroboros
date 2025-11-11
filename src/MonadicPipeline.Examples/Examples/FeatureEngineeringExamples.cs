@@ -1,3 +1,7 @@
+// <copyright file="FeatureEngineeringExamples.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Examples;
 
 using System;
@@ -72,14 +76,13 @@ public static class FeatureEngineeringExamples
         {
             ["Service"] = "public class UserService { public User GetUser(int id) => null; }",
             ["Repository"] = "public class UserRepository { public User Find(int id) => null; }",
-            ["Controller"] = "public class UserController { public IActionResult Get(int id) => Ok(); }"
+            ["Controller"] = "public class UserController { public IActionResult Get(int id) => Ok(); }",
         };
 
         // Vectorize all snippets
         var vectors = codeSnippets.ToDictionary(
             kvp => kvp.Key,
-            kvp => vectorizer.TransformCode(kvp.Value)
-        );
+            kvp => vectorizer.TransformCode(kvp.Value));
 
         // Compute similarity matrix
         Console.WriteLine("Similarity Matrix:");
@@ -88,12 +91,15 @@ public static class FeatureEngineeringExamples
             foreach (var key2 in vectors.Keys)
             {
                 if (string.CompareOrdinal(key1, key2) <= 0)
+                {
                     continue;
+                }
 
                 var similarity = CSharpHashVectorizer.CosineSimilarity(vectors[key1], vectors[key2]);
                 Console.WriteLine($"  {key1} <-> {key2}: {similarity:F4}");
             }
         }
+
         Console.WriteLine();
     }
 
@@ -107,8 +113,7 @@ public static class FeatureEngineeringExamples
         var vectorizer = new CSharpHashVectorizer(dimension: 4096);
         var deduplicator = new StreamDeduplicator(
             similarityThreshold: 0.95f,
-            maxCacheSize: 100
-        );
+            maxCacheSize: 100);
 
         // Simulate a stream of code changes with duplicates
         var codeStream = new[]
@@ -118,7 +123,7 @@ public static class FeatureEngineeringExamples
             "public class User { public int Id { get; set; } public string Name { get; set; } }",
             "public class User { public int Id { get; set; } }", // Duplicate
             "public class Product { public int Id { get; set; } }",
-            "public class Product { public int Id { get; set; } }" // Duplicate
+            "public class Product { public int Id { get; set; } }", // Duplicate
         };
 
         Console.WriteLine($"Original stream: {codeStream.Length} items");
@@ -135,6 +140,7 @@ public static class FeatureEngineeringExamples
     /// <summary>
     /// Example 4: Async stream deduplication with IAsyncEnumerable.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task AsyncStreamDeduplicationExample()
     {
         Console.WriteLine("=== Example 4: Async Stream Deduplication ===\n");
@@ -142,8 +148,7 @@ public static class FeatureEngineeringExamples
         var vectorizer = new CSharpHashVectorizer(dimension: 4096);
         var deduplicator = new StreamDeduplicator(
             similarityThreshold: 0.95f,
-            maxCacheSize: 1000
-        );
+            maxCacheSize: 1000);
 
         // Simulate an async stream of log entries
         async IAsyncEnumerable<string> GetLogStreamAsync()
@@ -156,7 +161,7 @@ public static class FeatureEngineeringExamples
                 "Error: Connection timeout", // Duplicate
                 "Warning: High memory usage",
                 "Info: User logged in", // Duplicate
-                "Error: Database connection failed"
+                "Error: Database connection failed",
             };
 
             foreach (var log in logs)
@@ -203,7 +208,7 @@ public static class FeatureEngineeringExamples
             "public class A { }", // Duplicate
             "public class B { }",
             "public class C { }",
-            "public class C { }" // Duplicate
+            "public class C { }", // Duplicate
         };
 
         // Use extension method for concise deduplication
@@ -232,13 +237,12 @@ public static class FeatureEngineeringExamples
             ["SubtractMethod"] = "public int Subtract(int a, int b) => a - b;",
             ["MultiplyMethod"] = "public int Multiply(int a, int b) => a * b;",
             ["SumMethod"] = "public int Sum(int x, int y) => x + y;", // Similar to Add
-            ["LogMethod"] = "public void Log(string msg) => Console.WriteLine(msg);"
+            ["LogMethod"] = "public void Log(string msg) => Console.WriteLine(msg);",
         };
 
         var databaseVectors = codeDatabase.ToDictionary(
             kvp => kvp.Key,
-            kvp => vectorizer.TransformCode(kvp.Value)
-        );
+            kvp => vectorizer.TransformCode(kvp.Value));
 
         // Query: Find similar code to a new snippet
         var query = "public int Plus(int num1, int num2) => num1 + num2;";
@@ -251,7 +255,7 @@ public static class FeatureEngineeringExamples
             .Select(kvp => new
             {
                 Name = kvp.Key,
-                Similarity = CSharpHashVectorizer.CosineSimilarity(queryVector, kvp.Value)
+                Similarity = CSharpHashVectorizer.CosineSimilarity(queryVector, kvp.Value),
             })
             .OrderByDescending(x => x.Similarity)
             .Take(3);
@@ -260,6 +264,7 @@ public static class FeatureEngineeringExamples
         {
             Console.WriteLine($"  {match.Name}: {match.Similarity:F4}");
         }
+
         Console.WriteLine();
     }
 
@@ -283,8 +288,7 @@ public static class FeatureEngineeringExamples
         // Detect duplicates with high threshold
         var vectors = codeFiles.ToDictionary(
             kvp => kvp.Key,
-            kvp => vectorizer.TransformCode(kvp.Value)
-        );
+            kvp => vectorizer.TransformCode(kvp.Value));
 
         Console.WriteLine("Potential duplicates (similarity > 0.95):");
         foreach (var file1 in vectors.Keys)
@@ -292,7 +296,9 @@ public static class FeatureEngineeringExamples
             foreach (var file2 in vectors.Keys)
             {
                 if (string.CompareOrdinal(file1, file2) <= 0)
+                {
                     continue;
+                }
 
                 var similarity = CSharpHashVectorizer.CosineSimilarity(vectors[file1], vectors[file2]);
                 if (similarity > 0.95f)
@@ -301,12 +307,14 @@ public static class FeatureEngineeringExamples
                 }
             }
         }
+
         Console.WriteLine();
     }
 
     /// <summary>
     /// Run all examples.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllExamples()
     {
         Console.WriteLine("========================================");

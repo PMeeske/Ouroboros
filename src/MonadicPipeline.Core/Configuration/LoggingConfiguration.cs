@@ -1,8 +1,12 @@
+// <copyright file="LoggingConfiguration.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Core.Configuration;
+
 using Microsoft.Extensions.Configuration;
 using Serilog;
 using Serilog.Events;
-
-namespace LangChainPipeline.Core.Configuration;
 
 /// <summary>
 /// Helper class for configuring structured logging with Serilog.
@@ -12,6 +16,7 @@ public static class LoggingConfiguration
     /// <summary>
     /// Configures Serilog with the provided configuration and pipeline settings.
     /// </summary>
+    /// <returns></returns>
     public static ILogger CreateLogger(IConfiguration configuration, PipelineConfiguration? pipelineConfig = null)
     {
         var loggerConfig = new LoggerConfiguration()
@@ -45,6 +50,7 @@ public static class LoggingConfiguration
     /// <summary>
     /// Configures Serilog with default settings for the given environment.
     /// </summary>
+    /// <returns></returns>
     public static ILogger CreateDefaultLogger(string environmentName = "Production")
     {
         var logLevel = environmentName == "Development" ? LogEventLevel.Debug : LogEventLevel.Information;
@@ -75,7 +81,7 @@ public static class LoggingConfiguration
             "WARNING" or "WARN" => LogEventLevel.Warning,
             "ERROR" => LogEventLevel.Error,
             "FATAL" or "CRITICAL" => LogEventLevel.Fatal,
-            _ => LogEventLevel.Information
+            _ => LogEventLevel.Information,
         };
     }
 }

@@ -1,6 +1,6 @@
-// ==========================================================
-// Adaptive Planner - Real-time plan adaptation during execution
-// ==========================================================
+// <copyright file="AdaptivePlanner.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -21,7 +21,7 @@ public enum AdaptationStrategy
     ReplaceStep,
     AddStep,
     Replan,
-    Abort
+    Abort,
 }
 
 /// <summary>
@@ -59,6 +59,7 @@ public interface IAdaptivePlanner
     /// <summary>
     /// Executes a plan with real-time adaptation.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<ExecutionResult, string>> ExecuteWithAdaptationAsync(
         Plan plan,
         AdaptivePlanningConfig? config = null,
@@ -72,6 +73,7 @@ public interface IAdaptivePlanner
     /// <summary>
     /// Evaluates if adaptation is needed.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<AdaptationAction?> EvaluateAdaptationAsync(
         ExecutionContext context,
         CancellationToken ct = default);
@@ -82,24 +84,25 @@ public interface IAdaptivePlanner
 /// </summary>
 public sealed class AdaptivePlanner : IAdaptivePlanner
 {
-    private readonly IMetaAIPlannerOrchestrator _orchestrator;
-    private readonly IChatCompletionModel _llm;
-    private readonly List<AdaptationTrigger> _triggers = new();
+    private readonly IMetaAIPlannerOrchestrator orchestrator;
+    private readonly IChatCompletionModel llm;
+    private readonly List<AdaptationTrigger> triggers = new();
 
     public AdaptivePlanner(
         IMetaAIPlannerOrchestrator orchestrator,
         IChatCompletionModel llm)
     {
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        this.orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        this.llm = llm ?? throw new ArgumentNullException(nameof(llm));
 
         // Register default triggers
-        RegisterDefaultTriggers();
+        this.RegisterDefaultTriggers();
     }
 
     /// <summary>
     /// Executes a plan with real-time adaptation.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<ExecutionResult, string>> ExecuteWithAdaptationAsync(
         Plan plan,
         AdaptivePlanningConfig? config = null,
@@ -117,7 +120,9 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
             for (int i = 0; i < currentPlan.Steps.Count; i++)
             {
                 if (ct.IsCancellationRequested)
+                {
                     break;
+                }
 
                 var step = currentPlan.Steps[i];
 
@@ -129,11 +134,11 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                     i,
                     new Dictionary<string, object>
                     {
-                        ["total_adaptations"] = adaptationHistory.Count
+                        ["total_adaptations"] = adaptationHistory.Count,
                     });
 
                 // Check if adaptation is needed before execution
-                var adaptationAction = await EvaluateAdaptationAsync(context, ct);
+                var adaptationAction = await this.EvaluateAdaptationAsync(context, ct);
 
                 if (adaptationAction != null)
                 {
@@ -148,6 +153,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                                 i = -1; // Restart from beginning
                                 continue;
                             }
+
                             break;
 
                         case AdaptationStrategy.ReplaceStep:
@@ -156,6 +162,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                                 step = adaptationAction.ReplacementStep;
                                 currentPlan.Steps[i] = step;
                             }
+
                             break;
 
                         case AdaptationStrategy.Abort:
@@ -168,23 +175,24 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                             {
                                 currentPlan.Steps.Insert(i + 1, adaptationAction.ReplacementStep);
                             }
+
                             break;
                     }
                 }
 
                 // Execute step with retry logic
-                var stepResult = await ExecuteStepWithRetryAsync(step, config.MaxRetries, ct);
+                var stepResult = await this.ExecuteStepWithRetryAsync(step, config.MaxRetries, ct);
                 allStepResults.Add(stepResult);
 
                 // Check if we need to adapt after execution
                 var postContext = context with { CompletedSteps = allStepResults };
-                var postAdaptation = await EvaluateAdaptationAsync(postContext, ct);
+                var postAdaptation = await this.EvaluateAdaptationAsync(postContext, ct);
 
                 if (postAdaptation?.Strategy == AdaptationStrategy.Replan && config.EnableAutoReplan)
                 {
                     // Generate new plan for remaining steps
                     var remainingGoal = $"Continue from step {i + 1}: {plan.Goal}";
-                    var replanResult = await _orchestrator.PlanAsync(remainingGoal, null, ct);
+                    var replanResult = await this.orchestrator.PlanAsync(remainingGoal, null, ct);
 
                     if (replanResult.IsSuccess)
                     {
@@ -209,7 +217,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                 new Dictionary<string, object>
                 {
                     ["adaptations"] = adaptationHistory,
-                    ["adaptive_execution"] = true
+                    ["adaptive_execution"] = true,
                 },
                 sw.Elapsed);
 
@@ -227,23 +235,24 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
     public void RegisterTrigger(AdaptationTrigger trigger)
     {
         ArgumentNullException.ThrowIfNull(trigger);
-        _triggers.Add(trigger);
+        this.triggers.Add(trigger);
     }
 
     /// <summary>
     /// Evaluates if adaptation is needed.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<AdaptationAction?> EvaluateAdaptationAsync(
         ExecutionContext context,
         CancellationToken ct = default)
     {
         // Check all registered triggers
-        foreach (var trigger in _triggers)
+        foreach (var trigger in this.triggers)
         {
             if (trigger.Condition(context))
             {
                 // Trigger matched - determine adaptation action
-                var action = await CreateAdaptationActionAsync(trigger, context, ct);
+                var action = await this.CreateAdaptationActionAsync(trigger, context, ct);
                 if (action != null)
                 {
                     return action;
@@ -285,7 +294,9 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                     new Dictionary<string, object> { ["attempts"] = attempts });
 
                 if (lastResult.Success)
+                {
                     break;
+                }
             }
             catch (Exception ex)
             {
@@ -293,7 +304,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                 lastResult = new StepResult(
                     step,
                     false,
-                    "",
+                    string.Empty,
                     ex.Message,
                     sw.Elapsed,
                     new Dictionary<string, object> { ["attempts"] = attempts });
@@ -303,7 +314,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
         return lastResult ?? new StepResult(
             step,
             false,
-            "",
+            string.Empty,
             "Max retries exceeded",
             TimeSpan.Zero,
             new Dictionary<string, object> { ["attempts"] = attempts });
@@ -321,12 +332,12 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
         {
             case AdaptationStrategy.Replan:
                 // Generate revised plan
-                var replanResult = await _orchestrator.PlanAsync(
+                var replanResult = await this.orchestrator.PlanAsync(
                     context.OriginalPlan.Goal,
                     new Dictionary<string, object>
                     {
                         ["completed_steps"] = context.CompletedSteps.Count,
-                        ["context"] = "replanning_due_to_issues"
+                        ["context"] = "replanning_due_to_issues",
                     },
                     ct);
 
@@ -334,6 +345,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                 {
                     return new AdaptationAction(strategy, reason, replanResult.Value);
                 }
+
                 break;
 
             case AdaptationStrategy.ReplaceStep:
@@ -344,7 +356,7 @@ Expected: {context.CurrentStep.ExpectedOutcome}
 
 Suggest an alternative approach to achieve the same outcome.";
 
-                var suggestion = await _llm.GenerateTextAsync(prompt, ct);
+                var suggestion = await this.llm.GenerateTextAsync(prompt, ct);
 
                 // Parse suggestion into a new step (simplified)
                 var replacementStep = new PlanStep(
@@ -362,23 +374,27 @@ Suggest an alternative approach to achieve the same outcome.";
     private void RegisterDefaultTriggers()
     {
         // Trigger: Multiple consecutive failures
-        _triggers.Add(new AdaptationTrigger(
+        this.triggers.Add(new AdaptationTrigger(
             "consecutive_failures",
             ctx => ctx.CompletedSteps.TakeLast(3).Count(s => !s.Success) >= 2,
             AdaptationStrategy.Replan));
 
         // Trigger: Low confidence step about to execute
-        _triggers.Add(new AdaptationTrigger(
+        this.triggers.Add(new AdaptationTrigger(
             "low_confidence",
             ctx => ctx.CurrentStep.ConfidenceScore < 0.3,
             AdaptationStrategy.ReplaceStep));
 
         // Trigger: High failure rate
-        _triggers.Add(new AdaptationTrigger(
+        this.triggers.Add(new AdaptationTrigger(
             "high_failure_rate",
             ctx =>
             {
-                if (ctx.CompletedSteps.Count < 3) return false;
+                if (ctx.CompletedSteps.Count < 3)
+                {
+                    return false;
+                }
+
                 var failureRate = ctx.CompletedSteps.Count(s => !s.Success) / (double)ctx.CompletedSteps.Count;
                 return failureRate > 0.5;
             },

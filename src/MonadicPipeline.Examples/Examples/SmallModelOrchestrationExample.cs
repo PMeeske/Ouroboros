@@ -1,15 +1,12 @@
-// ==========================================================
-// Small Model Orchestration Example
-// Demonstrates how to orchestrate complex tasks efficiently
-// using multiple small, specialized models instead of one
-// large model - achieving GPT-5-level results cost-effectively
-// ==========================================================
+// <copyright file="SmallModelOrchestrationExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Examples;
 
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
 using LangChainPipeline.CLI;
-
-namespace LangChainPipeline.Examples;
 
 /// <summary>
 /// Demonstrates efficient orchestration of complex tasks using small, specialized models.
@@ -23,6 +20,7 @@ public static class SmallModelOrchestrationExample
     /// This example shows how to break down a complex task (code review)
     /// into specialized sub-tasks handled by different small models.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunCodeReviewOrchestrationExample()
     {
         Console.WriteLine("╔═══════════════════════════════════════════════════════════════════╗");
@@ -45,13 +43,13 @@ public static class SmallModelOrchestrationExample
         {
             // Setup small, specialized models
             var provider = new OllamaProvider();
-            
+
             // General purpose model for coordination (phi3:mini - 2.3GB)
             var generalModel = new OllamaChatAdapter(new OllamaChatModel(provider, "phi3"));
-            
+
             // Code-specialized model for syntax/bug detection (deepseek-coder:1.3b - 800MB)
             var coderModel = new OllamaChatAdapter(new OllamaChatModel(provider, "deepseek-coder:1.3b"));
-            
+
             // Reasoning model for architecture decisions (qwen2.5:3b - 2GB)
             var reasoningModel = new OllamaChatAdapter(new OllamaChatModel(provider, "qwen2.5:3b"));
 
@@ -109,21 +107,21 @@ def process_user_data(user_id):
             Console.WriteLine("Step 1: Syntax & Bug Detection (deepseek-coder:1.3b)");
             Console.WriteLine("───────────────────────────────────────────────────────");
             var syntaxPrompt = $"Analyze this Python code for syntax errors and security vulnerabilities:\n\n{codeToReview}";
-            
+
             var syntaxAnalysis = await orchestrator.GenerateTextAsync(syntaxPrompt);
             Console.WriteLine($"Analysis: {TruncateOutput(syntaxAnalysis, 300)}\n");
 
             Console.WriteLine("Step 2: Architecture Review (qwen2.5:3b)");
             Console.WriteLine("───────────────────────────────────────────────────────");
             var architecturePrompt = $"Review this code's architecture and suggest improvements following best practices:\n\n{codeToReview}";
-            
+
             var architectureReview = await orchestrator.GenerateTextAsync(architecturePrompt);
             Console.WriteLine($"Review: {TruncateOutput(architectureReview, 300)}\n");
 
             Console.WriteLine("Step 3: Summary & Recommendations (phi3:mini)");
             Console.WriteLine("───────────────────────────────────────────────────────");
             var summaryPrompt = $"Summarize the key issues and provide actionable recommendations based on:\n\nSyntax Analysis:\n{syntaxAnalysis}\n\nArchitecture Review:\n{architectureReview}";
-            
+
             var summary = await orchestrator.GenerateTextAsync(summaryPrompt);
             Console.WriteLine($"Summary: {TruncateOutput(summary, 400)}\n");
 
@@ -131,7 +129,7 @@ def process_user_data(user_id):
             Console.WriteLine("═══════════════════════════════════════════════════════════════════");
             Console.WriteLine("Performance Metrics");
             Console.WriteLine("═══════════════════════════════════════════════════════════════════");
-            
+
             var metrics = underlyingOrchestrator.GetMetrics();
 
             foreach (var (modelName, metric) in metrics)
@@ -176,6 +174,7 @@ def process_user_data(user_id):
     /// Shows how to coordinate information gathering, analysis, and synthesis
     /// across multiple specialized models.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunResearchOrchestrationExample()
     {
         Console.WriteLine("╔═══════════════════════════════════════════════════════════════════╗");
@@ -196,14 +195,14 @@ def process_user_data(user_id):
             var reasoningModel = new OllamaChatAdapter(new OllamaChatModel(provider, "qwen2.5:3b"));
 
             var tools = ToolRegistry.CreateDefault();
-            
+
             var orchestratorBuilder = new OrchestratorBuilder(tools, "general")
-                .WithModel("general", generalModel, ModelType.General, 
+                .WithModel("general", generalModel, ModelType.General,
                     new[] { "data-gathering", "synthesis", "summary" }, 2048, 800)
                 .WithModel("reasoner", reasoningModel, ModelType.Reasoning,
                     new[] { "analysis", "reasoning", "evaluation", "critical-thinking" }, 3072, 1000)
                 .WithMetricTracking(true);
-            
+
             var orchestrator = orchestratorBuilder.Build();
 
             Console.WriteLine("✓ Research orchestrator initialized\n");
@@ -257,16 +256,17 @@ def process_user_data(user_id):
     /// <summary>
     /// Runs all small model orchestration examples.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllExamples()
     {
         Console.WriteLine("\n🚀 Starting Small Model Orchestration Examples\n");
-        
+
         await RunCodeReviewOrchestrationExample();
-        
+
         Console.WriteLine("\n" + new string('═', 70) + "\n");
-        
+
         await RunResearchOrchestrationExample();
-        
+
         Console.WriteLine("\n✅ All examples completed!\n");
     }
 }

@@ -1,6 +1,6 @@
-// ==========================================================
-// Human-in-the-Loop - Interactive refinement and approval
-// ==========================================================
+// <copyright file="HumanInTheLoopOrchestrator.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -61,6 +61,7 @@ public interface IHumanFeedbackProvider
     /// <summary>
     /// Requests feedback from human.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<HumanFeedbackResponse> RequestFeedbackAsync(
         HumanFeedbackRequest request,
         CancellationToken ct = default);
@@ -68,6 +69,7 @@ public interface IHumanFeedbackProvider
     /// <summary>
     /// Requests approval for an action.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<ApprovalResponse> RequestApprovalAsync(
         ApprovalRequest request,
         CancellationToken ct = default);
@@ -81,6 +83,7 @@ public interface IHumanInTheLoopOrchestrator
     /// <summary>
     /// Executes a plan with human oversight.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<ExecutionResult, string>> ExecuteWithHumanOversightAsync(
         Plan plan,
         HumanInTheLoopConfig? config = null,
@@ -89,6 +92,7 @@ public interface IHumanInTheLoopOrchestrator
     /// <summary>
     /// Refines a plan interactively with human feedback.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<Result<Plan, string>> RefinePlanInteractivelyAsync(
         Plan plan,
         CancellationToken ct = default);
@@ -123,7 +127,7 @@ public sealed class ConsoleFeedbackProvider : IHumanFeedbackProvider
         }
 
         Console.Write("Your response: ");
-        var response = await Task.Run(() => Console.ReadLine() ?? "", ct);
+        var response = await Task.Run(() => Console.ReadLine() ?? string.Empty, ct);
 
         return new HumanFeedbackResponse(
             request.RequestId,
@@ -144,7 +148,7 @@ public sealed class ConsoleFeedbackProvider : IHumanFeedbackProvider
         Console.Write("Approve? (y/n): ");
 
         var response = await Task.Run(() => Console.ReadLine() ?? "n", ct);
-        var approved = response.ToLowerInvariant() == "y";
+        var approved = string.Equals(response, "y", StringComparison.InvariantCultureIgnoreCase);
 
         return new ApprovalResponse(
             request.RequestId,
@@ -160,15 +164,15 @@ public sealed class ConsoleFeedbackProvider : IHumanFeedbackProvider
 /// </summary>
 public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
 {
-    private readonly IMetaAIPlannerOrchestrator _orchestrator;
-    private IHumanFeedbackProvider _feedbackProvider;
+    private readonly IMetaAIPlannerOrchestrator orchestrator;
+    private IHumanFeedbackProvider feedbackProvider;
 
     public HumanInTheLoopOrchestrator(
         IMetaAIPlannerOrchestrator orchestrator,
         IHumanFeedbackProvider? feedbackProvider = null)
     {
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
-        _feedbackProvider = feedbackProvider ?? new ConsoleFeedbackProvider();
+        this.orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        this.feedbackProvider = feedbackProvider ?? new ConsoleFeedbackProvider();
     }
 
     /// <summary>
@@ -176,12 +180,13 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
     /// </summary>
     public void SetFeedbackProvider(IHumanFeedbackProvider provider)
     {
-        _feedbackProvider = provider ?? throw new ArgumentNullException(nameof(provider));
+        this.feedbackProvider = provider ?? throw new ArgumentNullException(nameof(provider));
     }
 
     /// <summary>
     /// Executes a plan with human oversight.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<ExecutionResult, string>> ExecuteWithHumanOversightAsync(
         Plan plan,
         HumanInTheLoopConfig? config = null,
@@ -200,14 +205,16 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
             for (int i = 0; i < plan.Steps.Count; i++)
             {
                 if (ct.IsCancellationRequested)
+                {
                     break;
+                }
 
                 var step = plan.Steps[i];
 
                 // Check if step requires approval
-                if (config.RequireApprovalForCriticalSteps && IsCriticalStep(step, config))
+                if (config.RequireApprovalForCriticalSteps && this.IsCriticalStep(step, config))
                 {
-                    var approval = await RequestStepApprovalAsync(step, i, ct);
+                    var approval = await this.RequestStepApprovalAsync(step, i, ct);
 
                     if (!approval.Approved)
                     {
@@ -216,7 +223,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                         stepResults.Add(new StepResult(
                             step,
                             false,
-                            "",
+                            string.Empty,
                             $"Human rejected: {approval.Reason}",
                             TimeSpan.Zero,
                             new Dictionary<string, object> { ["human_rejected"] = true }));
@@ -227,13 +234,13 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                     // Apply any modifications from approval
                     if (approval.Modifications != null && approval.Modifications.Any())
                     {
-                        step = ApplyModifications(step, approval.Modifications);
+                        step = this.ApplyModifications(step, approval.Modifications);
                         approvalHistory.Add($"Step {i} modified by user");
                     }
                 }
 
                 // Execute step
-                var executionResult = await _orchestrator.ExecuteAsync(
+                var executionResult = await this.orchestrator.ExecuteAsync(
                     new Plan(plan.Goal, new List<PlanStep> { step }, plan.ConfidenceScores, DateTime.UtcNow),
                     ct);
 
@@ -246,7 +253,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                     stepResults.Add(new StepResult(
                         step,
                         false,
-                        "",
+                        string.Empty,
                         executionResult.Error,
                         TimeSpan.Zero,
                         new Dictionary<string, object>()));
@@ -266,7 +273,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                 new Dictionary<string, object>
                 {
                     ["human_oversight"] = true,
-                    ["approvals"] = approvalHistory
+                    ["approvals"] = approvalHistory,
                 },
                 sw.Elapsed);
 
@@ -281,6 +288,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
     /// <summary>
     /// Refines a plan interactively with human feedback.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<Plan, string>> RefinePlanInteractivelyAsync(
         Plan plan,
         CancellationToken ct = default)
@@ -298,12 +306,12 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                     "add step",
                     "remove step",
                     "modify step",
-                    "replan"
+                    "replan",
                 },
                 DateTime.UtcNow,
                 TimeSpan.FromMinutes(5));
 
-            var feedback = await _feedbackProvider.RequestFeedbackAsync(feedbackRequest, ct);
+            var feedback = await this.feedbackProvider.RequestFeedbackAsync(feedbackRequest, ct);
 
             var response = feedback.Response.ToLowerInvariant();
 
@@ -314,7 +322,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
             else if (response.Contains("replan"))
             {
                 // Request replanning
-                var replanResult = await _orchestrator.PlanAsync(plan.Goal, null, ct);
+                var replanResult = await this.orchestrator.PlanAsync(plan.Goal, null, ct);
                 return replanResult;
             }
             else if (response.Contains("add"))
@@ -328,8 +336,8 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                     DateTime.UtcNow,
                     TimeSpan.FromMinutes(5));
 
-                var stepFeedback = await _feedbackProvider.RequestFeedbackAsync(stepRequest, ct);
-                var newStep = ParseStepFromFeedback(stepFeedback.Response);
+                var stepFeedback = await this.feedbackProvider.RequestFeedbackAsync(stepRequest, ct);
+                var newStep = this.ParseStepFromFeedback(stepFeedback.Response);
 
                 plan.Steps.Add(newStep);
                 return Result<Plan, string>.Success(plan);
@@ -369,7 +377,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
             $"Step {stepIndex + 1}: {step.ExpectedOutcome}",
             DateTime.UtcNow);
 
-        return await _feedbackProvider.RequestApprovalAsync(request, ct);
+        return await this.feedbackProvider.RequestApprovalAsync(request, ct);
     }
 
     private PlanStep ApplyModifications(PlanStep step, Dictionary<string, object> modifications)

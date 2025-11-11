@@ -1,8 +1,12 @@
+// <copyright file="TrackedVectorStore.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Domain.Vectors;
+
 using LangChain.Databases;
 using LangChain.Databases.InMemory;
 using LangChain.DocumentLoaders;
-
-namespace LangChainPipeline.Domain.Vectors;
 
 /// <summary>
 /// A tracked vector store that fixes the state consistency issues identified in the PR.
@@ -10,7 +14,7 @@ namespace LangChainPipeline.Domain.Vectors;
 /// </summary>
 public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
 {
-    private readonly List<Vector> _all = [];
+    private readonly List<Vector> all = [];
 
     /// <summary>
     /// Adds vectors to the store asynchronously.
@@ -22,7 +26,7 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
     public async Task AddAsync(IEnumerable<Vector> vectors, CancellationToken cancellationToken = default)
     {
         List<Vector> list = vectors.ToList();
-        _all.AddRange(list);
+        this.all.AddRange(list);
         await base.AddAsync(list, cancellationToken);
     }
 
@@ -40,7 +44,7 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
         CancellationToken cancellationToken = default)
     {
         // Get all vectors with embeddings
-        var vectorsWithEmbeddings = _all.Where(v => v.Embedding != null).ToList();
+        var vectorsWithEmbeddings = this.all.Where(v => v.Embedding != null).ToList();
         if (!vectorsWithEmbeddings.Any())
         {
             return Task.FromResult<IReadOnlyCollection<Document>>(new List<Document>().AsReadOnly());
@@ -51,7 +55,7 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
             .Select(v => new
             {
                 Vector = v,
-                Similarity = CalculateCosineSimilarity(embedding, v.Embedding!)
+                Similarity = CalculateCosineSimilarity(embedding, v.Embedding!),
             })
             .OrderByDescending(x => x.Similarity)
             .Take(amount)
@@ -72,19 +76,20 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task ClearAsync(CancellationToken cancellationToken = default)
     {
-        var ids = _all.Select(v => v.Id).ToList();
+        var ids = this.all.Select(v => v.Id).ToList();
         if (ids.Any())
         {
-            await base.DeleteAsync(ids, cancellationToken).ConfigureAwait(false);
+            await this.DeleteAsync(ids, cancellationToken).ConfigureAwait(false);
         }
-        _all.Clear(); // Clear tracking state after clearing base class
+
+        this.all.Clear(); // Clear tracking state after clearing base class
     }
 
     /// <summary>
     /// Gets all vectors currently stored.
     /// </summary>
     /// <returns>An enumerable of all vectors.</returns>
-    public IEnumerable<Vector> GetAll() => _all.AsReadOnly();
+    public IEnumerable<Vector> GetAll() => this.all.AsReadOnly();
 
     /// <summary>
     /// Calculates cosine similarity between two embeddings.
@@ -92,7 +97,9 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
     private static float CalculateCosineSimilarity(float[] a, float[] b)
     {
         if (a.Length != b.Length)
+        {
             return 0f;
+        }
 
         var dotProduct = 0f;
         var magnitudeA = 0f;
@@ -106,7 +113,9 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
         }
 
         if (magnitudeA == 0f || magnitudeB == 0f)
+        {
             return 0f;
+        }
 
         return dotProduct / (MathF.Sqrt(magnitudeA) * MathF.Sqrt(magnitudeB));
     }

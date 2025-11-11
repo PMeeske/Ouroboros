@@ -1,7 +1,6 @@
-// ==========================================================
-// Transfer Learning Interface
-// Domain adaptation and analogical reasoning
-// ==========================================================
+// <copyright file="ITransferLearner.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -34,11 +33,11 @@ public interface ITransferLearner
     /// <summary>
     /// Adapts a skill from one domain to another.
     /// </summary>
-    /// <param name="sourceSkill">The skill to adapt</param>
-    /// <param name="targetDomain">The target domain description</param>
-    /// <param name="config">Optional configuration</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Adapted skill or error message</returns>
+    /// <param name="sourceSkill">The skill to adapt.</param>
+    /// <param name="targetDomain">The target domain description.</param>
+    /// <param name="config">Optional configuration.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Adapted skill or error message.</returns>
     Task<Result<TransferResult, string>> AdaptSkillToDomainAsync(
         Skill sourceSkill,
         string targetDomain,
@@ -48,10 +47,10 @@ public interface ITransferLearner
     /// <summary>
     /// Estimates how well a skill can transfer to a new domain.
     /// </summary>
-    /// <param name="skill">The skill to evaluate</param>
-    /// <param name="targetDomain">The target domain</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Transferability score (0-1)</returns>
+    /// <param name="skill">The skill to evaluate.</param>
+    /// <param name="targetDomain">The target domain.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Transferability score (0-1).</returns>
     Task<double> EstimateTransferabilityAsync(
         Skill skill,
         string targetDomain,
@@ -60,10 +59,10 @@ public interface ITransferLearner
     /// <summary>
     /// Finds analogies between domains to guide transfer.
     /// </summary>
-    /// <param name="sourceDomain">Source domain description</param>
-    /// <param name="targetDomain">Target domain description</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>List of analogical mappings</returns>
+    /// <param name="sourceDomain">Source domain description.</param>
+    /// <param name="targetDomain">Target domain description.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>List of analogical mappings.</returns>
     Task<List<(string source, string target, double confidence)>> FindAnalogiesAsync(
         string sourceDomain,
         string targetDomain,
@@ -72,14 +71,14 @@ public interface ITransferLearner
     /// <summary>
     /// Gets the transfer history for a skill.
     /// </summary>
-    /// <param name="skillName">Name of the skill</param>
-    /// <returns>List of transfer attempts</returns>
+    /// <param name="skillName">Name of the skill.</param>
+    /// <returns>List of transfer attempts.</returns>
     List<TransferResult> GetTransferHistory(string skillName);
 
     /// <summary>
     /// Validates if a transferred skill works in the target domain.
     /// </summary>
-    /// <param name="transferResult">The transfer result to validate</param>
-    /// <param name="success">Whether the validation was successful</param>
+    /// <param name="transferResult">The transfer result to validate.</param>
+    /// <param name="success">Whether the validation was successful.</param>
     void RecordTransferValidation(TransferResult transferResult, bool success);
 }

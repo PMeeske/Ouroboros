@@ -1,15 +1,12 @@
-// ==========================================================
-// Meta-AI v2 Enhancement Tests
-// Tests for parallel execution, hierarchical planning, experience replay,
-// skill composition, distributed orchestration, adaptive planning,
-// cost-aware routing, and human-in-the-loop
-// ==========================================================
+// <copyright file="MetaAIv2EnhancementTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
 
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for Meta-AI v2 enhancements.
@@ -19,6 +16,7 @@ public static class MetaAIv2EnhancementTests
     /// <summary>
     /// Tests parallel execution of independent steps.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestParallelExecution()
     {
         Console.WriteLine("=== Test: Parallel Execution ===");
@@ -57,10 +55,14 @@ public static class MetaAIv2EnhancementTests
         var (results, success, output) = await executor.ExecuteParallelAsync(plan);
 
         if (results.Count != 3)
+        {
             throw new Exception($"Expected 3 results, got {results.Count}");
+        }
 
         if (!success)
+        {
             throw new Exception("Parallel execution should succeed");
+        }
 
         Console.WriteLine($"✓ Parallel execution completed: {results.Count} steps");
         Console.WriteLine($"✓ All steps successful: {success}");
@@ -70,6 +72,7 @@ public static class MetaAIv2EnhancementTests
     /// <summary>
     /// Tests hierarchical planning for complex tasks.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestHierarchicalPlanning()
     {
         Console.WriteLine("=== Test: Hierarchical Planning ===");
@@ -125,6 +128,7 @@ public static class MetaAIv2EnhancementTests
     /// <summary>
     /// Tests experience replay for training.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestExperienceReplay()
     {
         Console.WriteLine("=== Test: Experience Replay ===");
@@ -181,6 +185,7 @@ public static class MetaAIv2EnhancementTests
     /// <summary>
     /// Tests skill composition.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestSkillComposition()
     {
         Console.WriteLine("=== Test: Skill Composition ===");
@@ -244,6 +249,7 @@ public static class MetaAIv2EnhancementTests
     /// <summary>
     /// Tests distributed orchestration.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestDistributedOrchestration()
     {
         Console.WriteLine("=== Test: Distributed Orchestration ===");
@@ -297,6 +303,7 @@ public static class MetaAIv2EnhancementTests
     /// <summary>
     /// Tests adaptive planning with real-time adaptation.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestAdaptivePlanning()
     {
         Console.WriteLine("=== Test: Adaptive Planning ===");
@@ -363,6 +370,7 @@ public static class MetaAIv2EnhancementTests
     /// <summary>
     /// Tests cost-aware routing.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestCostAwareRouting()
     {
         Console.WriteLine("=== Test: Cost-Aware Routing ===");
@@ -430,6 +438,7 @@ public static class MetaAIv2EnhancementTests
     /// <summary>
     /// Tests human-in-the-loop integration.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestHumanInTheLoop()
     {
         Console.WriteLine("=== Test: Human-in-the-Loop ===");
@@ -498,6 +507,7 @@ public static class MetaAIv2EnhancementTests
     /// <summary>
     /// Runs all enhancement tests.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllEnhancementTests()
     {
         Console.WriteLine("\n" + new string('=', 60));
@@ -519,14 +529,13 @@ public static class MetaAIv2EnhancementTests
     }
 
     // Helper methods
-
     private static Experience CreateTestExperience(string goal, double quality)
     {
         var plan = new Plan(
             goal,
             new List<PlanStep>
             {
-                new PlanStep("test_action", new Dictionary<string, object>(), "expected", 0.8)
+                new PlanStep("test_action", new Dictionary<string, object>(), "expected", 0.8),
             },
             new Dictionary<string, double> { ["overall"] = 0.8 },
             DateTime.UtcNow);
@@ -541,7 +550,7 @@ public static class MetaAIv2EnhancementTests
                     "Success",
                     null,
                     TimeSpan.FromSeconds(1),
-                    new Dictionary<string, object>())
+                    new Dictionary<string, object>()),
             },
             true,
             "Success",

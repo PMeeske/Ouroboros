@@ -1,6 +1,10 @@
-using LangChainPipeline.Tools.MeTTa;
+// <copyright file="MeTTaTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Tests;
+
+using LangChainPipeline.Tools.MeTTa;
 
 /// <summary>
 /// Tests for MeTTa symbolic reasoning integration.
@@ -10,6 +14,7 @@ public static class MeTTaTests
     /// <summary>
     /// Tests basic MeTTa query tool functionality.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestMeTTaQueryTool()
     {
         Console.WriteLine("=== Test: MeTTa Query Tool ===");
@@ -26,8 +31,7 @@ public static class MeTTaTests
 
         result.Match(
             success => Console.WriteLine($"✓ Query result: {success}"),
-            error => Console.WriteLine($"✗ Query failed: {error}")
-        );
+            error => Console.WriteLine($"✗ Query failed: {error}"));
 
         Console.WriteLine("✓ MeTTa query tool test completed\n");
     }
@@ -35,6 +39,7 @@ public static class MeTTaTests
     /// <summary>
     /// Tests MeTTa rule application.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestMeTTaRuleTool()
     {
         Console.WriteLine("=== Test: MeTTa Rule Tool ===");
@@ -48,8 +53,7 @@ public static class MeTTaTests
 
         result.Match(
             success => Console.WriteLine($"✓ Rule applied: {success}"),
-            error => Console.WriteLine($"✗ Rule failed: {error}")
-        );
+            error => Console.WriteLine($"✗ Rule failed: {error}"));
 
         Console.WriteLine("✓ MeTTa rule tool test completed\n");
     }
@@ -57,6 +61,7 @@ public static class MeTTaTests
     /// <summary>
     /// Tests MeTTa plan verification.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestMeTTaPlanVerifier()
     {
         Console.WriteLine("=== Test: MeTTa Plan Verifier ===");
@@ -70,8 +75,7 @@ public static class MeTTaTests
 
         result.Match(
             success => Console.WriteLine($"✓ Verification result: {success}"),
-            error => Console.WriteLine($"✗ Verification failed: {error}")
-        );
+            error => Console.WriteLine($"✗ Verification failed: {error}"));
 
         Console.WriteLine("✓ MeTTa plan verifier test completed\n");
     }
@@ -79,6 +83,7 @@ public static class MeTTaTests
     /// <summary>
     /// Tests adding facts to MeTTa.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestMeTTaFactTool()
     {
         Console.WriteLine("=== Test: MeTTa Fact Tool ===");
@@ -90,8 +95,7 @@ public static class MeTTaTests
 
         result.Match(
             success => Console.WriteLine($"✓ {success}"),
-            error => Console.WriteLine($"✗ Failed: {error}")
-        );
+            error => Console.WriteLine($"✗ Failed: {error}"));
 
         Console.WriteLine("✓ MeTTa fact tool test completed\n");
     }
@@ -126,6 +130,7 @@ public static class MeTTaTests
     /// <summary>
     /// Tests HTTP MeTTa engine (without actual HTTP server).
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestHttpMeTTaEngine()
     {
         Console.WriteLine("=== Test: HTTP MeTTa Engine ===");
@@ -137,8 +142,7 @@ public static class MeTTaTests
 
         result.Match(
             success => Console.WriteLine($"Unexpected success: {success}"),
-            error => Console.WriteLine($"✓ Expected connection error: {error.Substring(0, Math.Min(50, error.Length))}...")
-        );
+            error => Console.WriteLine($"✓ Expected connection error: {error.Substring(0, Math.Min(50, error.Length))}..."));
 
         engine.Dispose();
         Console.WriteLine("✓ HTTP MeTTa engine test completed\n");
@@ -147,6 +151,7 @@ public static class MeTTaTests
     /// <summary>
     /// Tests subprocess MeTTa engine (will warn if metta not installed).
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestSubprocessMeTTaEngine()
     {
         Console.WriteLine("=== Test: Subprocess MeTTa Engine ===");
@@ -157,8 +162,7 @@ public static class MeTTaTests
 
         result.Match(
             success => Console.WriteLine($"✓ Query succeeded: {success}"),
-            error => Console.WriteLine($"✓ Expected if metta not installed: {error}")
-        );
+            error => Console.WriteLine($"✓ Expected if metta not installed: {error}"));
 
         engine.Dispose();
         Console.WriteLine("✓ Subprocess MeTTa engine test completed\n");
@@ -167,6 +171,7 @@ public static class MeTTaTests
     /// <summary>
     /// Runs all MeTTa tests.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllTests()
     {
         Console.WriteLine("╔════════════════════════════════════════════╗");
@@ -200,7 +205,7 @@ public static class MeTTaTests
 /// </summary>
 internal sealed class MockMeTTaEngine : IMeTTaEngine
 {
-    private readonly List<string> _facts = new();
+    private readonly List<string> facts = new();
 
     public Task<Result<string, string>> ExecuteQueryAsync(string query, CancellationToken ct = default)
     {
@@ -208,7 +213,7 @@ internal sealed class MockMeTTaEngine : IMeTTaEngine
         var result = query switch
         {
             "(+ 1 2)" => "3",
-            _ => $"[Result of: {query}]"
+            _ => $"[Result of: {query}]",
         };
 
         return Task.FromResult(Result<string, string>.Success(result));
@@ -216,7 +221,7 @@ internal sealed class MockMeTTaEngine : IMeTTaEngine
 
     public Task<Result<Unit, string>> AddFactAsync(string fact, CancellationToken ct = default)
     {
-        _facts.Add(fact);
+        this.facts.Add(fact);
         return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
     }
 
@@ -233,7 +238,7 @@ internal sealed class MockMeTTaEngine : IMeTTaEngine
 
     public Task<Result<Unit, string>> ResetAsync(CancellationToken ct = default)
     {
-        _facts.Clear();
+        this.facts.Clear();
         return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
     }
 

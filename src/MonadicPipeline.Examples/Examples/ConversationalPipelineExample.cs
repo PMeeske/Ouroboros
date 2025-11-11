@@ -1,3 +1,7 @@
+// <copyright file="ConversationalPipelineExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Examples;
 
 /// <summary>
@@ -8,6 +12,7 @@ public static class ConversationalPipelineExample
     /// <summary>
     /// Demonstrates the conversational pipeline pattern from the code review.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunConversationalExample()
     {
         Console.WriteLine("=== Conversational Pipeline Example ===");
@@ -46,14 +51,16 @@ public static class ConversationalPipelineExample
 
             // Simulate the conversational pipeline builder
             var conversationBuilder = new ConversationBuilder<string, string>("conversation-context")
-                .AddTransformation(context =>
+                .AddTransformation(
+                    context =>
                 {
                     // Add conversation history to context
                     var history = context.Memory.GetFormattedHistory();
                     context.SetProperty("conversation_history", history);
                     return context;
                 }, "Added conversation history")
-                .AddProcessor(async (context, _) =>
+                .AddProcessor(
+                    async (context, _) =>
                 {
                     // Simulate AI processing (replace with actual LLM call)
                     var userInput = context.GetProperty<string>("input") ?? "No input";
@@ -109,7 +116,7 @@ public static class ConversationalPipelineExample
                 "CancellationTokens are essential for cooperative cancellation in async operations. " +
                 "Pass them to async methods to allow graceful cancellation when needed.",
 
-            _ => "I understand your question. Could you provide more specific details so I can give you a more targeted response?"
+            _ => "I understand your question. Could you provide more specific details so I can give you a more targeted response?",
         };
     }
 }

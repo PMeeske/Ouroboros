@@ -1,16 +1,19 @@
+// <copyright file="SolutionIngestion.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+// TrackedVectorStore
+namespace LangChainPipeline.Pipeline.Ingestion;
+
 using System.Xml.Linq;
 using LangChain.Databases;
 using LangChain.Splitters.Text;
-
-// TrackedVectorStore
-
-namespace LangChainPipeline.Pipeline.Ingestion;
 
 /// <summary>
 /// Specialized ingestion for .NET solutions. Produces vector embeddings for:
 ///  - Solution/project structure summaries (synthetic meta documents)
 ///  - Source code files (.cs by default) chunked with RecursiveCharacterTextSplitter
-///  - Optional additional extensions (.razor,.cshtml, etc.) if requested
+///  - Optional additional extensions (.razor,.cshtml, etc.) if requested.
 /// </summary>
 public static class SolutionIngestion
 {
@@ -37,11 +40,17 @@ public static class SolutionIngestion
             foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 if (part.StartsWith("maxFiles=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(9), out var mf))
+                {
                     maxFiles = mf;
+                }
                 else if (part.StartsWith("maxFileBytes=", StringComparison.OrdinalIgnoreCase) && long.TryParse(part.AsSpan(13), out var mfb))
+                {
                     maxFileBytes = mfb;
+                }
                 else if (part.Equals("metaOnly", StringComparison.OrdinalIgnoreCase))
+                {
                     metaOnly = true;
+                }
                 else if (part.StartsWith("ext=", StringComparison.OrdinalIgnoreCase))
                 {
                     exts.Clear();
@@ -49,17 +58,23 @@ public static class SolutionIngestion
                         .Select(e => e.StartsWith('.') ? e.ToLowerInvariant() : "." + e.ToLowerInvariant()));
                 }
                 else if (part.Equals("noProjectMeta", StringComparison.OrdinalIgnoreCase))
+                {
                     includeProjectMeta = false;
+                }
                 else if (part.Equals("noSolutionMeta", StringComparison.OrdinalIgnoreCase))
+                {
                     includeSolutionMeta = false;
+                }
             }
         }
+
         return new SolutionIngestionOptions(maxFiles, maxFileBytes, metaOnly, exts.Distinct().ToArray(), includeProjectMeta, includeSolutionMeta);
     }
 
     /// <summary>
     /// Performs ingestion. Emits vectors to the provided store and returns the created vector list.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task<List<Vector>> IngestAsync(
         TrackedVectorStore store,
         string rootPath,
@@ -85,7 +100,9 @@ public static class SolutionIngestion
                 string meta = $"SOLUTION SUMMARY\nPath: {Path.GetFileName(solutionFile)}\nProject Count: {projectLines.Count}\nProjects:\n" + string.Join('\n', projectLines);
                 await EmbedSyntheticAsync(embed, vectors, meta, solutionFile + "#meta:solution", ct);
             }
-            catch { /* ignore meta failures */ }
+            catch
+            { /* ignore meta failures */
+            }
         }
 
         if (options.IncludeProjectMeta)
@@ -95,7 +112,7 @@ public static class SolutionIngestion
                 try
                 {
                     var doc = XDocument.Load(csproj);
-                    var sdk = doc.Root?.Attribute("Sdk")?.Value ?? "";
+                    var sdk = doc.Root?.Attribute("Sdk")?.Value ?? string.Empty;
                     var pkgRefs = doc.Descendants().Where(e => e.Name.LocalName == "PackageReference")
                         .Select(e => $"{e.Attribute("Include")?.Value}:{e.Attribute("Version")?.Value}")
                         .Take(100)
@@ -106,14 +123,19 @@ public static class SolutionIngestion
                     string meta = $"PROJECT SUMMARY\nName: {Path.GetFileName(csproj)}\nSDK: {sdk}\nTargetFramework(s): {string.Join(",", tfms)}\nPackages:\n" + string.Join('\n', pkgRefs);
                     await EmbedSyntheticAsync(embed, vectors, meta, csproj + "#meta:project", ct);
                 }
-                catch { }
+                catch
+                {
+                }
             }
         }
 
         if (options.MetaOnly)
         {
             if (vectors.Count > 0)
+            {
                 await store.AddAsync(vectors);
+            }
+
             return vectors;
         }
 
@@ -131,9 +153,17 @@ public static class SolutionIngestion
             {
                 ct.ThrowIfCancellationRequested();
                 var fi = new FileInfo(file);
-                if (fi.Length > options.MaxFileBytes) continue;
+                if (fi.Length > options.MaxFileBytes)
+                {
+                    continue;
+                }
+
                 string text = File.ReadAllText(file);
-                if (string.IsNullOrWhiteSpace(text)) continue;
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    continue;
+                }
+
                 var chunks = splitter.SplitText(text);
                 int ci = 0;
                 foreach (var chunk in chunks)
@@ -145,14 +175,14 @@ public static class SolutionIngestion
                         {
                             ["path"] = file,
                             ["chunkIndex"] = ci,
-                            ["type"] = "code"
+                            ["type"] = "code",
                         };
                         vectors.Add(new Vector
                         {
                             Id = file + "#chunk" + ci,
                             Text = chunk,
                             Metadata = (IDictionary<string, object>)(object)meta,
-                            Embedding = embResp
+                            Embedding = embResp,
                         });
                         ci++;
                     }
@@ -162,11 +192,16 @@ public static class SolutionIngestion
                     }
                 }
             }
-            catch { /* skip file */ }
+            catch
+            { /* skip file */
+            }
         }
 
         if (vectors.Count > 0)
+        {
             await store.AddAsync(vectors);
+        }
+
         return vectors;
     }
 
@@ -181,7 +216,7 @@ public static class SolutionIngestion
                 Id = id,
                 Text = content,
                 Metadata = (IDictionary<string, object>)(object)meta,
-                Embedding = emb
+                Embedding = emb,
             });
         }
         catch
@@ -190,13 +225,17 @@ public static class SolutionIngestion
             var meta = new Dictionary<string, object?> { ["type"] = "meta", ["fallback"] = true };
             var seed = content.Length;
             var arr = new float[16];
-            for (int i = 0; i < arr.Length; i++) arr[i] = (float)((seed * (i + 31)) % 100) / 100f;
+            for (int i = 0; i < arr.Length; i++)
+            {
+                arr[i] = (float)((seed * (i + 31)) % 100) / 100f;
+            }
+
             vectors.Add(new Vector
             {
                 Id = id,
                 Text = content,
                 Metadata = (IDictionary<string, object>)(object)meta,
-                Embedding = arr
+                Embedding = arr,
             });
         }
     }
@@ -212,8 +251,11 @@ public static class SolutionIngestion
                 s.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
                 s.Equals(".vs", StringComparison.OrdinalIgnoreCase) ||
                 s.Equals("node_modules", StringComparison.OrdinalIgnoreCase))
+            {
                 return true;
+            }
         }
+
         return false;
     }
 }

@@ -1,12 +1,10 @@
-// ==========================================================
-// Orchestrated Chat Model
-// Performance-aware wrapper that uses orchestrator for
-// intelligent model and tool selection
-// ==========================================================
-
-using System.Diagnostics;
+// <copyright file="OrchestratedChatModel.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent;
+
+using System.Diagnostics;
 
 /// <summary>
 /// Performance-aware chat model that uses an orchestrator to select
@@ -15,18 +13,19 @@ namespace LangChainPipeline.Agent;
 /// </summary>
 public sealed class OrchestratedChatModel : IChatCompletionModel
 {
-    private readonly IModelOrchestrator _orchestrator;
-    private readonly bool _trackMetrics;
+    private readonly IModelOrchestrator orchestrator;
+    private readonly bool trackMetrics;
 
     public OrchestratedChatModel(IModelOrchestrator orchestrator, bool trackMetrics = true)
     {
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
-        _trackMetrics = trackMetrics;
+        this.orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        this.trackMetrics = trackMetrics;
     }
 
     /// <summary>
     /// Generates text using orchestrator-selected model.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
         var sw = Stopwatch.StartNew();
@@ -34,7 +33,7 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
         try
         {
             // Get orchestrator decision
-            var decision = await _orchestrator.SelectModelAsync(prompt, ct: ct);
+            var decision = await this.orchestrator.SelectModelAsync(prompt, ct: ct);
 
             return await decision.Match(
                 async selected =>
@@ -43,10 +42,10 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
                     var result = await selected.SelectedModel.GenerateTextAsync(prompt, ct);
 
                     // Track metrics
-                    if (_trackMetrics)
+                    if (this.trackMetrics)
                     {
                         sw.Stop();
-                        _orchestrator.RecordMetric(
+                        this.orchestrator.RecordMetric(
                             selected.ModelName,
                             sw.Elapsed.TotalMilliseconds,
                             success: !string.IsNullOrEmpty(result));
@@ -58,11 +57,12 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
         }
         catch (Exception ex)
         {
-            if (_trackMetrics)
+            if (this.trackMetrics)
             {
                 sw.Stop();
-                _orchestrator.RecordMetric("orchestrator", sw.Elapsed.TotalMilliseconds, success: false);
+                this.orchestrator.RecordMetric("orchestrator", sw.Elapsed.TotalMilliseconds, success: false);
             }
+
             return $"[orchestrator-exception] {ex.Message}";
         }
     }
@@ -70,6 +70,7 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
     /// <summary>
     /// Generates text with tools using orchestrator recommendations.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<(string Text, List<ToolExecution> Tools, OrchestratorDecision? Decision)>
         GenerateWithOrchestratedToolsAsync(string prompt, CancellationToken ct = default)
     {
@@ -78,7 +79,7 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
         try
         {
             // Get orchestrator decision
-            var decisionResult = await _orchestrator.SelectModelAsync(prompt, ct: ct);
+            var decisionResult = await this.orchestrator.SelectModelAsync(prompt, ct: ct);
 
             return await decisionResult.Match(
                 async decision =>
@@ -92,10 +93,10 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
                     var (text, tools) = await toolAwareModel.GenerateWithToolsAsync(prompt, ct);
 
                     // Track metrics
-                    if (_trackMetrics)
+                    if (this.trackMetrics)
                     {
                         sw.Stop();
-                        _orchestrator.RecordMetric(
+                        this.orchestrator.RecordMetric(
                             decision.ModelName,
                             sw.Elapsed.TotalMilliseconds,
                             success: !string.IsNullOrEmpty(text));
@@ -103,7 +104,7 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
                         // Track tool usage
                         foreach (var tool in tools)
                         {
-                            _orchestrator.RecordMetric(
+                            this.orchestrator.RecordMetric(
                                 $"tool_{tool.ToolName}",
                                 0, // Tool execution time tracked separately
                                 success: true);
@@ -117,11 +118,12 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
         }
         catch (Exception ex)
         {
-            if (_trackMetrics)
+            if (this.trackMetrics)
             {
                 sw.Stop();
-                _orchestrator.RecordMetric("orchestrator", sw.Elapsed.TotalMilliseconds, success: false);
+                this.orchestrator.RecordMetric("orchestrator", sw.Elapsed.TotalMilliseconds, success: false);
             }
+
             return ($"[orchestrator-exception] {ex.Message}", new List<ToolExecution>(), null);
         }
     }
@@ -132,18 +134,19 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
 /// </summary>
 public sealed class OrchestratorBuilder
 {
-    private readonly SmartModelOrchestrator _orchestrator;
-    private readonly List<(ModelCapability, IChatCompletionModel)> _models = new();
-    private bool _trackMetrics = true;
+    private readonly SmartModelOrchestrator orchestrator;
+    private readonly List<(ModelCapability, IChatCompletionModel)> models = new();
+    private bool trackMetrics = true;
 
     public OrchestratorBuilder(ToolRegistry baseTools, string fallbackModel = "default")
     {
-        _orchestrator = new SmartModelOrchestrator(baseTools, fallbackModel);
+        this.orchestrator = new SmartModelOrchestrator(baseTools, fallbackModel);
     }
 
     /// <summary>
     /// Registers a model with its capabilities.
     /// </summary>
+    /// <returns></returns>
     public OrchestratorBuilder WithModel(
         string name,
         IChatCompletionModel model,
@@ -161,35 +164,38 @@ public sealed class OrchestratorBuilder
             avgLatencyMs,
             type);
 
-        _models.Add((capability, model));
+        this.models.Add((capability, model));
         return this;
     }
 
     /// <summary>
     /// Enables or disables performance metric tracking.
     /// </summary>
+    /// <returns></returns>
     public OrchestratorBuilder WithMetricTracking(bool enabled)
     {
-        _trackMetrics = enabled;
+        this.trackMetrics = enabled;
         return this;
     }
 
     /// <summary>
     /// Builds the orchestrated chat model.
     /// </summary>
+    /// <returns></returns>
     public OrchestratedChatModel Build()
     {
         // Register all models
-        foreach (var (capability, model) in _models)
+        foreach (var (capability, model) in this.models)
         {
-            _orchestrator.RegisterModel(capability, model);
+            this.orchestrator.RegisterModel(capability, model);
         }
 
-        return new OrchestratedChatModel(_orchestrator, _trackMetrics);
+        return new OrchestratedChatModel(this.orchestrator, this.trackMetrics);
     }
 
     /// <summary>
     /// Gets the underlying orchestrator for advanced scenarios.
     /// </summary>
-    public IModelOrchestrator GetOrchestrator() => _orchestrator;
+    /// <returns></returns>
+    public IModelOrchestrator GetOrchestrator() => this.orchestrator;
 }

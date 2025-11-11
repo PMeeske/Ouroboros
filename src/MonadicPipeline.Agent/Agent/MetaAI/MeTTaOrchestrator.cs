@@ -1,13 +1,12 @@
-// ==========================================================
-// Meta-AI Layer v3.0 - MeTTa-First Orchestrator
-// Integrates symbolic reasoning with neural planning
-// ==========================================================
+// <copyright file="MeTTaOrchestrator.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Agent.MetaAI;
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using LangChainPipeline.Tools.MeTTa;
-
-namespace LangChainPipeline.Agent.MetaAI;
 
 /// <summary>
 /// Meta-AI v3.0 orchestrator with MeTTa-first representation layer.
@@ -15,15 +14,15 @@ namespace LangChainPipeline.Agent.MetaAI;
 /// </summary>
 public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 {
-    private readonly IChatCompletionModel _llm;
-    private readonly ToolRegistry _tools;
-    private readonly IMemoryStore _memory;
-    private readonly ISkillRegistry _skills;
-    private readonly IUncertaintyRouter _router;
-    private readonly ISafetyGuard _safety;
-    private readonly IMeTTaEngine _mettaEngine;
-    private readonly MeTTaRepresentation _representation;
-    private readonly ConcurrentDictionary<string, PerformanceMetrics> _metrics = new();
+    private readonly IChatCompletionModel llm;
+    private readonly ToolRegistry tools;
+    private readonly IMemoryStore memory;
+    private readonly ISkillRegistry skills;
+    private readonly IUncertaintyRouter router;
+    private readonly ISafetyGuard safety;
+    private readonly IMeTTaEngine mettaEngine;
+    private readonly MeTTaRepresentation representation;
+    private readonly ConcurrentDictionary<string, PerformanceMetrics> metrics = new();
 
     public MeTTaOrchestrator(
         IChatCompletionModel llm,
@@ -34,26 +33,29 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         ISafetyGuard safety,
         IMeTTaEngine mettaEngine)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _tools = tools ?? throw new ArgumentNullException(nameof(tools));
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
-        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
-        _router = router ?? throw new ArgumentNullException(nameof(router));
-        _safety = safety ?? throw new ArgumentNullException(nameof(safety));
-        _mettaEngine = mettaEngine ?? throw new ArgumentNullException(nameof(mettaEngine));
-        _representation = new MeTTaRepresentation(mettaEngine);
+        this.llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        this.tools = tools ?? throw new ArgumentNullException(nameof(tools));
+        this.memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        this.skills = skills ?? throw new ArgumentNullException(nameof(skills));
+        this.router = router ?? throw new ArgumentNullException(nameof(router));
+        this.safety = safety ?? throw new ArgumentNullException(nameof(safety));
+        this.mettaEngine = mettaEngine ?? throw new ArgumentNullException(nameof(mettaEngine));
+        this.representation = new MeTTaRepresentation(mettaEngine);
     }
 
     /// <summary>
     /// Plans with MeTTa symbolic representation.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<Plan, string>> PlanAsync(
         string goal,
         Dictionary<string, object>? context = null,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(goal))
+        {
             return Result<Plan, string>.Failure("Goal cannot be empty");
+        }
 
         try
         {
@@ -61,23 +63,23 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 
             // Get past experiences and skills
             var query = new MemoryQuery(goal, context, MaxResults: 5, MinSimilarity: 0.7);
-            var pastExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
-            var matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context);
+            var pastExperiences = await this.memory.RetrieveRelevantExperiencesAsync(query, ct);
+            var matchingSkills = await this.skills.FindMatchingSkillsAsync(goal, context);
 
             // Generate initial plan using LLM
-            var planPrompt = BuildPlanPrompt(goal, context, pastExperiences, matchingSkills);
-            var planText = await _llm.GenerateTextAsync(planPrompt, ct);
-            var plan = ParsePlan(planText, goal);
+            var planPrompt = this.BuildPlanPrompt(goal, context, pastExperiences, matchingSkills);
+            var planText = await this.llm.GenerateTextAsync(planPrompt, ct);
+            var plan = this.ParsePlan(planText, goal);
 
             // Translate plan to MeTTa representation
-            var translationResult = await _representation.TranslatePlanAsync(plan, ct);
+            var translationResult = await this.representation.TranslatePlanAsync(plan, ct);
             if (translationResult.IsFailure)
             {
                 Console.WriteLine($"Warning: Failed to translate plan to MeTTa: {translationResult.Error}");
             }
 
             // Translate tools to MeTTa
-            var toolTranslation = await _representation.TranslateToolsAsync(_tools, ct);
+            var toolTranslation = await this.representation.TranslateToolsAsync(this.tools, ct);
             if (toolTranslation.IsFailure)
             {
                 Console.WriteLine($"Warning: Failed to translate tools to MeTTa: {toolTranslation.Error}");
@@ -86,7 +88,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             // Validate plan safety
             foreach (var step in plan.Steps)
             {
-                var safetyCheck = _safety.CheckSafety(
+                var safetyCheck = this.safety.CheckSafety(
                     step.Action,
                     step.Parameters,
                     PermissionLevel.UserDataWithConfirmation);
@@ -98,12 +100,12 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                 }
             }
 
-            RecordMetric("planner", sw.ElapsedMilliseconds, true);
+            this.RecordMetric("planner", sw.ElapsedMilliseconds, true);
             return Result<Plan, string>.Success(plan);
         }
         catch (Exception ex)
         {
-            RecordMetric("planner", 1.0, false);
+            this.RecordMetric("planner", 1.0, false);
             return Result<Plan, string>.Failure($"Planning failed: {ex.Message}");
         }
     }
@@ -111,6 +113,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     /// <summary>
     /// Executes plan with symbolic next-node selection.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<ExecutionResult, string>> ExecuteAsync(
         Plan plan,
         CancellationToken ct = default)
@@ -131,17 +134,16 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                 var context = new Dictionary<string, object>
                 {
                     ["step_index"] = i,
-                    ["total_steps"] = plan.Steps.Count
+                    ["total_steps"] = plan.Steps.Count,
                 };
 
                 if (i > 0)
                 {
                     // Use MeTTa to validate this is a valid next step
-                    var nextNodes = await _representation.QueryNextNodesAsync(
+                    var nextNodes = await this.representation.QueryNextNodesAsync(
                         $"step_{i - 1}",
                         context,
-                        ct
-                    );
+                        ct);
 
                     if (nextNodes.IsSuccess)
                     {
@@ -151,7 +153,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                 }
 
                 // Execute the step
-                var stepResult = await ExecuteStepAsync(step, ct);
+                var stepResult = await this.ExecuteStepAsync(step, ct);
                 stepResults.Add(stepResult);
 
                 // Update MeTTa with execution results
@@ -161,21 +163,20 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                     stepResult.Success,
                     stepResult.Output,
                     metadata,
-                    sw.Elapsed
-                );
+                    sw.Elapsed);
 
-                await _representation.TranslateExecutionStateAsync(execResult, ct);
+                await this.representation.TranslateExecutionStateAsync(execResult, ct);
 
                 if (!stepResult.Success && !string.IsNullOrEmpty(stepResult.Error))
                 {
-                    RecordMetric("executor", sw.ElapsedMilliseconds, false);
+                    this.RecordMetric("executor", sw.ElapsedMilliseconds, false);
                     return Result<ExecutionResult, string>.Success(
                         new ExecutionResult(plan, stepResults, false, stepResult.Error, metadata, sw.Elapsed));
                 }
             }
 
             sw.Stop();
-            RecordMetric("executor", sw.ElapsedMilliseconds, true);
+            this.RecordMetric("executor", sw.ElapsedMilliseconds, true);
 
             var finalOutput = stepResults.LastOrDefault()?.Output ?? string.Empty;
             return Result<ExecutionResult, string>.Success(
@@ -183,7 +184,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         }
         catch (Exception ex)
         {
-            RecordMetric("executor", sw.ElapsedMilliseconds, false);
+            this.RecordMetric("executor", sw.ElapsedMilliseconds, false);
             return Result<ExecutionResult, string>.Failure($"Execution failed: {ex.Message}");
         }
     }
@@ -191,6 +192,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     /// <summary>
     /// Verifies execution with MeTTa symbolic reasoning.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<VerificationResult, string>> VerifyAsync(
         ExecutionResult execution,
         CancellationToken ct = default)
@@ -200,15 +202,15 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             var sw = Stopwatch.StartNew();
 
             // Build verification prompt
-            var verifyPrompt = BuildVerificationPrompt(execution);
-            var verificationText = await _llm.GenerateTextAsync(verifyPrompt, ct);
+            var verifyPrompt = this.BuildVerificationPrompt(execution);
+            var verificationText = await this.llm.GenerateTextAsync(verifyPrompt, ct);
 
             // Parse verification result
-            var verification = ParseVerification(execution, verificationText);
+            var verification = this.ParseVerification(execution, verificationText);
 
             // Use MeTTa for symbolic plan verification if available
-            var planMetta = FormatPlanForMeTTa(execution.Plan);
-            var mettaVerification = await _mettaEngine.VerifyPlanAsync(planMetta, ct);
+            var planMetta = this.FormatPlanForMeTTa(execution.Plan);
+            var mettaVerification = await this.mettaEngine.VerifyPlanAsync(planMetta, ct);
 
             if (mettaVerification.IsSuccess)
             {
@@ -216,18 +218,18 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                 {
                     Improvements = verification.Improvements
                         .Append($"MeTTa verification: {(mettaVerification.Value ? "PASSED" : "FAILED")}")
-                        .ToList()
+                        .ToList(),
                 };
             }
 
             sw.Stop();
-            RecordMetric("verifier", sw.ElapsedMilliseconds, true);
+            this.RecordMetric("verifier", sw.ElapsedMilliseconds, true);
 
             return Result<VerificationResult, string>.Success(verification);
         }
         catch (Exception ex)
         {
-            RecordMetric("verifier", 1.0, false);
+            this.RecordMetric("verifier", 1.0, false);
             return Result<VerificationResult, string>.Failure($"Verification failed: {ex.Message}");
         }
     }
@@ -245,20 +247,19 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             Execution: verification.Execution,
             Verification: verification,
             Timestamp: DateTime.UtcNow,
-            Metadata: verification.Execution.Metadata
-        );
+            Metadata: verification.Execution.Metadata);
 
         // Store in memory asynchronously
-        _ = _memory.StoreExperienceAsync(experience);
+        _ = this.memory.StoreExperienceAsync(experience);
 
         // Update metrics
-        RecordMetric("learner", 1.0, verification.Verified);
+        this.RecordMetric("learner", 1.0, verification.Verified);
     }
 
     /// <inheritdoc/>
     public IReadOnlyDictionary<string, PerformanceMetrics> GetMetrics()
     {
-        return _metrics;
+        return this.metrics;
     }
 
     // Helper methods
@@ -270,7 +271,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         try
         {
             // Find and execute the tool
-            var toolOption = _tools.GetTool(step.Action);
+            var toolOption = this.tools.GetTool(step.Action);
             if (!toolOption.HasValue)
             {
                 return new StepResult(
@@ -285,8 +286,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 
             return result.Match(
                 output => new StepResult(step, true, output, null, sw.Elapsed, observedState),
-                error => new StepResult(step, false, string.Empty, error, sw.Elapsed, observedState)
-            );
+                error => new StepResult(step, false, string.Empty, error, sw.Elapsed, observedState));
         }
         catch (Exception ex)
         {
@@ -306,20 +306,29 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         {
             prompt += "Context:\n";
             foreach (var item in context)
+            {
                 prompt += $"- {item.Key}: {item.Value}\n";
+            }
+
             prompt += "\n";
         }
 
         prompt += "Available tools:\n";
-        foreach (var tool in _tools.All)
+        foreach (var tool in this.tools.All)
+        {
             prompt += $"- {tool.Name}: {tool.Description}\n";
+        }
+
         prompt += "\n";
 
         if (pastExperiences.Count > 0)
         {
             prompt += "Relevant past experiences:\n";
             foreach (var exp in pastExperiences.Take(3))
+            {
                 prompt += $"- {exp.Goal} (success: {exp.Verification.Verified}, quality: {exp.Verification.QualityScore:F2})\n";
+            }
+
             prompt += "\n";
         }
 
@@ -350,8 +359,8 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             {
                 foreach (var element in array.EnumerateArray())
                 {
-                    var action = element.GetProperty("action").GetString() ?? "";
-                    var expected = element.GetProperty("expected_outcome").GetString() ?? "";
+                    var action = element.GetProperty("action").GetString() ?? string.Empty;
+                    var expected = element.GetProperty("expected_outcome").GetString() ?? string.Empty;
                     var confidence = element.TryGetProperty("confidence", out var conf)
                         ? conf.GetDouble()
                         : 0.5;
@@ -421,7 +430,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             {
                 foreach (var issue in issuesArray.EnumerateArray())
                 {
-                    issues.Add(issue.GetString() ?? "");
+                    issues.Add(issue.GetString() ?? string.Empty);
                 }
             }
 
@@ -430,7 +439,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             {
                 foreach (var improvement in improvArray.EnumerateArray())
                 {
-                    improvements.Add(improvement.GetString() ?? "");
+                    improvements.Add(improvement.GetString() ?? string.Empty);
                 }
             }
 
@@ -456,7 +465,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 
     private void RecordMetric(string component, double latencyMs, bool success)
     {
-        _metrics.AddOrUpdate(
+        this.metrics.AddOrUpdate(
             component,
             _ => new PerformanceMetrics(
                 ResourceName: component,
@@ -464,13 +473,12 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                 AverageLatencyMs: latencyMs,
                 SuccessRate: success ? 1.0 : 0.0,
                 LastUsed: DateTime.UtcNow,
-                CustomMetrics: new Dictionary<string, double>()
-            ),
+                CustomMetrics: new Dictionary<string, double>()),
             (_, old) =>
             {
                 var totalCalls = old.ExecutionCount + 1;
                 var successCalls = (int)(old.SuccessRate * old.ExecutionCount) + (success ? 1 : 0);
-                var avgLatency = (old.AverageLatencyMs * old.ExecutionCount + latencyMs) / totalCalls;
+                var avgLatency = ((old.AverageLatencyMs * old.ExecutionCount) + latencyMs) / totalCalls;
                 var successRate = (double)successCalls / totalCalls;
 
                 return new PerformanceMetrics(
@@ -479,8 +487,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                     AverageLatencyMs: avgLatency,
                     SuccessRate: successRate,
                     LastUsed: DateTime.UtcNow,
-                    CustomMetrics: old.CustomMetrics
-                );
+                    CustomMetrics: old.CustomMetrics);
             });
     }
 }

@@ -1,23 +1,22 @@
-// ==========================================================
-// Skill Registry Implementation
-// Manages learned skills and pattern reuse
-// ==========================================================
-
-using System.Collections.Concurrent;
+// <copyright file="SkillRegistry.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent.MetaAI;
+
+using System.Collections.Concurrent;
 
 /// <summary>
 /// Implementation of skill registry for learning and reusing successful patterns.
 /// </summary>
 public sealed class SkillRegistry : ISkillRegistry
 {
-    private readonly ConcurrentDictionary<string, Skill> _skills = new();
-    private readonly IEmbeddingModel? _embedding;
+    private readonly ConcurrentDictionary<string, Skill> skills = new();
+    private readonly IEmbeddingModel? embedding;
 
     public SkillRegistry(IEmbeddingModel? embedding = null)
     {
-        _embedding = embedding;
+        this.embedding = embedding;
     }
 
     /// <summary>
@@ -26,30 +25,33 @@ public sealed class SkillRegistry : ISkillRegistry
     public void RegisterSkill(Skill skill)
     {
         ArgumentNullException.ThrowIfNull(skill);
-        _skills[skill.Name] = skill;
+        this.skills[skill.Name] = skill;
     }
 
     /// <summary>
     /// Finds skills matching a goal.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<List<Skill>> FindMatchingSkillsAsync(
         string goal,
         Dictionary<string, object>? context = null)
     {
         if (string.IsNullOrWhiteSpace(goal))
+        {
             return new List<Skill>();
+        }
 
-        var allSkills = _skills.Values.ToList();
+        var allSkills = this.skills.Values.ToList();
 
-        if (_embedding != null)
+        if (this.embedding != null)
         {
             // Use semantic similarity if embedding model available
-            var goalEmbedding = await _embedding.CreateEmbeddingsAsync(goal);
+            var goalEmbedding = await this.embedding.CreateEmbeddingsAsync(goal);
 
             var skillScores = new List<(Skill skill, double score)>();
             foreach (var skill in allSkills)
             {
-                var skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description);
+                var skillEmbedding = await this.embedding.CreateEmbeddingsAsync(skill.Description);
                 var similarity = CosineSimilarity(goalEmbedding, skillEmbedding);
                 skillScores.Add((skill, similarity));
             }
@@ -75,12 +77,15 @@ public sealed class SkillRegistry : ISkillRegistry
     /// <summary>
     /// Gets a skill by name.
     /// </summary>
+    /// <returns></returns>
     public Skill? GetSkill(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
+        {
             return null;
+        }
 
-        _skills.TryGetValue(name, out var skill);
+        this.skills.TryGetValue(name, out var skill);
         return skill;
     }
 
@@ -90,9 +95,11 @@ public sealed class SkillRegistry : ISkillRegistry
     public void RecordSkillExecution(string name, bool success)
     {
         if (string.IsNullOrWhiteSpace(name))
+        {
             return;
+        }
 
-        _skills.AddOrUpdate(
+        this.skills.AddOrUpdate(
             name,
             _ => throw new InvalidOperationException($"Skill '{name}' not found"),
             (_, existing) =>
@@ -104,7 +111,7 @@ public sealed class SkillRegistry : ISkillRegistry
                 {
                     UsageCount = newCount,
                     SuccessRate = newSuccessRate,
-                    LastUsed = DateTime.UtcNow
+                    LastUsed = DateTime.UtcNow,
                 };
             });
     }
@@ -112,25 +119,33 @@ public sealed class SkillRegistry : ISkillRegistry
     /// <summary>
     /// Gets all registered skills.
     /// </summary>
+    /// <returns></returns>
     public IReadOnlyList<Skill> GetAllSkills()
-        => _skills.Values.OrderByDescending(s => s.SuccessRate).ToList();
+        => this.skills.Values.OrderByDescending(s => s.SuccessRate).ToList();
 
     /// <summary>
     /// Extracts a skill from successful execution.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<Skill, string>> ExtractSkillAsync(
         ExecutionResult execution,
         string skillName,
         string description)
     {
         if (execution == null)
+        {
             return Result<Skill, string>.Failure("Execution cannot be null");
+        }
 
         if (!execution.Success)
+        {
             return Result<Skill, string>.Failure("Cannot extract skill from failed execution");
+        }
 
         if (string.IsNullOrWhiteSpace(skillName))
+        {
             return Result<Skill, string>.Failure("Skill name cannot be empty");
+        }
 
         try
         {
@@ -152,7 +167,7 @@ public sealed class SkillRegistry : ISkillRegistry
                 CreatedAt: DateTime.UtcNow,
                 LastUsed: DateTime.UtcNow);
 
-            RegisterSkill(skill);
+            this.RegisterSkill(skill);
 
             return await Task.FromResult(Result<Skill, string>.Success(skill));
         }
@@ -165,7 +180,9 @@ public sealed class SkillRegistry : ISkillRegistry
     private static double CosineSimilarity(float[] a, float[] b)
     {
         if (a.Length != b.Length)
+        {
             return 0;
+        }
 
         double dotProduct = 0;
         double magnitudeA = 0;
@@ -179,7 +196,9 @@ public sealed class SkillRegistry : ISkillRegistry
         }
 
         if (magnitudeA == 0 || magnitudeB == 0)
+        {
             return 0;
+        }
 
         return dotProduct / (Math.Sqrt(magnitudeA) * Math.Sqrt(magnitudeB));
     }

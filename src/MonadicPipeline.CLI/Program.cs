@@ -1,6 +1,6 @@
-// ==============================
-// Minimal CLI entry (top-level)
-// ==============================
+// <copyright file="Program.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 using System.Diagnostics;
 using CommandLine;
@@ -37,7 +37,6 @@ return;
 // ---------------
 // Local functions
 // ---------------
-
 static async Task ParseAndRunAsync(string[] args)
 {
     // CommandLineParser verbs
@@ -51,8 +50,7 @@ static async Task ParseAndRunAsync(string[] args)
             (OrchestratorOptions o) => RunOrchestratorAsync(o),
             (MeTTaOptions o) => RunMeTTaAsync(o),
             (SetupOptions o) => GuidedSetup.RunAsync(o),
-            _ => Task.CompletedTask
-        );
+            _ => Task.CompletedTask);
 }
 
 static async Task RunPipelineDslAsync(string dsl, string modelName, string embedName, string sourcePath, int k, bool trace, ChatRuntimeSettings? settings = null, PipelineOptions? pipelineOpts = null)
@@ -74,6 +72,7 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
         IChatCompletionModel MakeLocal(string name, string role)
         {
             var m = new OllamaChatModel(provider, name);
+
             // Apply presets based on model name and role
             try
             {
@@ -109,14 +108,29 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
                     m.Settings = OllamaPresets.Phi3MiniGeneral;
                 }
             }
-            catch { /* non-fatal: fall back to provider defaults */ }
+            catch
+            { /* non-fatal: fall back to provider defaults */
+            }
             return new OllamaChatAdapter(m);
         }
+
         string general = pipelineOpts.GeneralModel ?? modelName;
         modelMap["general"] = MakeLocal(general, "general");
-        if (!string.IsNullOrWhiteSpace(pipelineOpts.CoderModel)) modelMap["coder"] = MakeLocal(pipelineOpts.CoderModel!, "coder");
-        if (!string.IsNullOrWhiteSpace(pipelineOpts.SummarizeModel)) modelMap["summarize"] = MakeLocal(pipelineOpts.SummarizeModel!, "summarize");
-        if (!string.IsNullOrWhiteSpace(pipelineOpts.ReasonModel)) modelMap["reason"] = MakeLocal(pipelineOpts.ReasonModel!, "reason");
+        if (!string.IsNullOrWhiteSpace(pipelineOpts.CoderModel))
+        {
+            modelMap["coder"] = MakeLocal(pipelineOpts.CoderModel!, "coder");
+        }
+
+        if (!string.IsNullOrWhiteSpace(pipelineOpts.SummarizeModel))
+        {
+            modelMap["summarize"] = MakeLocal(pipelineOpts.SummarizeModel!, "summarize");
+        }
+
+        if (!string.IsNullOrWhiteSpace(pipelineOpts.ReasonModel))
+        {
+            modelMap["reason"] = MakeLocal(pipelineOpts.ReasonModel!, "reason");
+        }
+
         chatModel = new MultiModelRouter(modelMap, fallbackKey: "general");
     }
     else if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
@@ -144,17 +158,41 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
         try
         {
             var n = (modelName ?? string.Empty).ToLowerInvariant();
-            if (n.StartsWith("deepseek-coder:33b")) chat.Settings = OllamaPresets.DeepSeekCoder33B;
-            else if (n.StartsWith("llama3")) chat.Settings = OllamaPresets.Llama3General;
-            else if (n.StartsWith("deepseek-r1:32") || n.Contains("32b")) chat.Settings = OllamaPresets.DeepSeekR1_32B_Reason;
-            else if (n.StartsWith("deepseek-r1:14") || n.Contains("14b")) chat.Settings = OllamaPresets.DeepSeekR1_14B_Reason;
-            else if (n.Contains("mistral") && (n.Contains("7b") || !n.Contains("large"))) chat.Settings = OllamaPresets.Mistral7BGeneral;
-            else if (n.StartsWith("qwen2.5") || n.Contains("qwen")) chat.Settings = OllamaPresets.Qwen25_7B_General;
-            else if (n.StartsWith("phi3") || n.Contains("phi-3")) chat.Settings = OllamaPresets.Phi3MiniGeneral;
+            if (n.StartsWith("deepseek-coder:33b"))
+            {
+                chat.Settings = OllamaPresets.DeepSeekCoder33B;
+            }
+            else if (n.StartsWith("llama3"))
+            {
+                chat.Settings = OllamaPresets.Llama3General;
+            }
+            else if (n.StartsWith("deepseek-r1:32") || n.Contains("32b"))
+            {
+                chat.Settings = OllamaPresets.DeepSeekR1_32B_Reason;
+            }
+            else if (n.StartsWith("deepseek-r1:14") || n.Contains("14b"))
+            {
+                chat.Settings = OllamaPresets.DeepSeekR1_14B_Reason;
+            }
+            else if (n.Contains("mistral") && (n.Contains("7b") || !n.Contains("large")))
+            {
+                chat.Settings = OllamaPresets.Mistral7BGeneral;
+            }
+            else if (n.StartsWith("qwen2.5") || n.Contains("qwen"))
+            {
+                chat.Settings = OllamaPresets.Qwen25_7B_General;
+            }
+            else if (n.StartsWith("phi3") || n.Contains("phi-3"))
+            {
+                chat.Settings = OllamaPresets.Phi3MiniGeneral;
+            }
         }
-        catch { /* ignore and use defaults */ }
+        catch
+        { /* ignore and use defaults */
+        }
         chatModel = new OllamaChatAdapter(chat); // adapter added below
     }
+
     IEmbeddingModel embed = CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);
 
     var tools = new ToolRegistry();
@@ -164,6 +202,7 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
         Console.WriteLine($"Source path '{resolvedSource}' does not exist - creating.");
         Directory.CreateDirectory(resolvedSource);
     }
+
     var branch = new PipelineBranch("cli", new TrackedVectorStore(), DataSource.FromPath(resolvedSource));
 
     var state = new CliPipelineState
@@ -173,7 +212,7 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
         Tools = tools,
         Embed = embed,
         RetrievalK = k,
-        Trace = trace
+        Trace = trace,
     };
 
     // Register pipeline steps as tools for meta-AI capabilities
@@ -200,6 +239,7 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
         {
             Console.WriteLine("\n(no reasoning output; pipeline may only have ingested or set values)");
         }
+
         Telemetry.PrintSummary();
     }
     catch (Exception ex)
@@ -235,26 +275,61 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
                 try
                 {
                     var n = (name ?? string.Empty).ToLowerInvariant();
-                    if (n.StartsWith("deepseek-coder:33b")) m.Settings = OllamaPresets.DeepSeekCoder33B;
-                    else if (n.StartsWith("llama3")) m.Settings = role.Equals("summarize", StringComparison.OrdinalIgnoreCase) ? OllamaPresets.Llama3Summarize : OllamaPresets.Llama3General;
-                    else if (n.StartsWith("deepseek-r1:32") || n.Contains("32b")) m.Settings = OllamaPresets.DeepSeekR1_32B_Reason;
-                    else if (n.StartsWith("deepseek-r1:14") || n.Contains("14b")) m.Settings = OllamaPresets.DeepSeekR1_14B_Reason;
-                    else if (n.Contains("mistral") && (n.Contains("7b") || !n.Contains("large"))) m.Settings = OllamaPresets.Mistral7BGeneral;
-                    else if (n.StartsWith("qwen2.5") || n.Contains("qwen")) m.Settings = OllamaPresets.Qwen25_7B_General;
-                    else if (n.StartsWith("phi3") || n.Contains("phi-3")) m.Settings = OllamaPresets.Phi3MiniGeneral;
+                    if (n.StartsWith("deepseek-coder:33b"))
+                    {
+                        m.Settings = OllamaPresets.DeepSeekCoder33B;
+                    }
+                    else if (n.StartsWith("llama3"))
+                    {
+                        m.Settings = role.Equals("summarize", StringComparison.OrdinalIgnoreCase) ? OllamaPresets.Llama3Summarize : OllamaPresets.Llama3General;
+                    }
+                    else if (n.StartsWith("deepseek-r1:32") || n.Contains("32b"))
+                    {
+                        m.Settings = OllamaPresets.DeepSeekR1_32B_Reason;
+                    }
+                    else if (n.StartsWith("deepseek-r1:14") || n.Contains("14b"))
+                    {
+                        m.Settings = OllamaPresets.DeepSeekR1_14B_Reason;
+                    }
+                    else if (n.Contains("mistral") && (n.Contains("7b") || !n.Contains("large")))
+                    {
+                        m.Settings = OllamaPresets.Mistral7BGeneral;
+                    }
+                    else if (n.StartsWith("qwen2.5") || n.Contains("qwen"))
+                    {
+                        m.Settings = OllamaPresets.Qwen25_7B_General;
+                    }
+                    else if (n.StartsWith("phi3") || n.Contains("phi-3"))
+                    {
+                        m.Settings = OllamaPresets.Phi3MiniGeneral;
+                    }
                 }
                 catch
                 {
                     // Best-effort preset mapping only. If parsing the model name fails,
                     // we intentionally keep provider defaults to avoid hard failures.
                 }
+
                 return new OllamaChatAdapter(m);
             }
+
             string general = askOpts.GeneralModel ?? modelName;
             modelMap["general"] = MakeLocal(general, "general");
-            if (!string.IsNullOrWhiteSpace(askOpts.CoderModel)) modelMap["coder"] = MakeLocal(askOpts.CoderModel!, "coder");
-            if (!string.IsNullOrWhiteSpace(askOpts.SummarizeModel)) modelMap["summarize"] = MakeLocal(askOpts.SummarizeModel!, "summarize");
-            if (!string.IsNullOrWhiteSpace(askOpts.ReasonModel)) modelMap["reason"] = MakeLocal(askOpts.ReasonModel!, "reason");
+            if (!string.IsNullOrWhiteSpace(askOpts.CoderModel))
+            {
+                modelMap["coder"] = MakeLocal(askOpts.CoderModel!, "coder");
+            }
+
+            if (!string.IsNullOrWhiteSpace(askOpts.SummarizeModel))
+            {
+                modelMap["summarize"] = MakeLocal(askOpts.SummarizeModel!, "summarize");
+            }
+
+            if (!string.IsNullOrWhiteSpace(askOpts.ReasonModel))
+            {
+                modelMap["reason"] = MakeLocal(askOpts.ReasonModel!, "reason");
+            }
+
             chatModel = new MultiModelRouter(modelMap, fallbackKey: "general");
         }
         else if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
@@ -282,20 +357,43 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
             try
             {
                 var n = (modelName ?? string.Empty).ToLowerInvariant();
-                if (n.StartsWith("deepseek-coder:33b")) chat.Settings = OllamaPresets.DeepSeekCoder33B;
-                else if (n.StartsWith("llama3")) chat.Settings = OllamaPresets.Llama3General;
-                else if (n.StartsWith("deepseek-r1:32") || n.Contains("32b")) chat.Settings = OllamaPresets.DeepSeekR1_32B_Reason;
-                else if (n.StartsWith("deepseek-r1:14") || n.Contains("14b")) chat.Settings = OllamaPresets.DeepSeekR1_14B_Reason;
-                else if (n.Contains("mistral") && (n.Contains("7b") || !n.Contains("large"))) chat.Settings = OllamaPresets.Mistral7BGeneral;
-                else if (n.StartsWith("qwen2.5") || n.Contains("qwen")) chat.Settings = OllamaPresets.Qwen25_7B_General;
-                else if (n.StartsWith("phi3") || n.Contains("phi-3")) chat.Settings = OllamaPresets.Phi3MiniGeneral;
+                if (n.StartsWith("deepseek-coder:33b"))
+                {
+                    chat.Settings = OllamaPresets.DeepSeekCoder33B;
+                }
+                else if (n.StartsWith("llama3"))
+                {
+                    chat.Settings = OllamaPresets.Llama3General;
+                }
+                else if (n.StartsWith("deepseek-r1:32") || n.Contains("32b"))
+                {
+                    chat.Settings = OllamaPresets.DeepSeekR1_32B_Reason;
+                }
+                else if (n.StartsWith("deepseek-r1:14") || n.Contains("14b"))
+                {
+                    chat.Settings = OllamaPresets.DeepSeekR1_14B_Reason;
+                }
+                else if (n.Contains("mistral") && (n.Contains("7b") || !n.Contains("large")))
+                {
+                    chat.Settings = OllamaPresets.Mistral7BGeneral;
+                }
+                else if (n.StartsWith("qwen2.5") || n.Contains("qwen"))
+                {
+                    chat.Settings = OllamaPresets.Qwen25_7B_General;
+                }
+                else if (n.StartsWith("phi3") || n.Contains("phi-3"))
+                {
+                    chat.Settings = OllamaPresets.Phi3MiniGeneral;
+                }
             }
             catch
             {
                 // Non-fatal: preset mapping is best-effort. Defaults are fine if detection fails.
             }
+
             chatModel = new OllamaChatAdapter(chat);
         }
+
         IEmbeddingModel embed = CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);
 
         // Tool-aware LLM and in-memory vector store
@@ -310,7 +408,7 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
             {
                 "API versioning best practices with backward compatibility",
                 "Circuit breaker using Polly in .NET",
-                "Event sourcing and CQRS patterns overview"
+                "Event sourcing and CQRS patterns overview",
             };
             foreach (var (text, idx) in docs.Select((d, i) => (d, i)))
             {
@@ -325,12 +423,14 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
                             Id = (idx + 1).ToString(),
                             Text = text,
                             Embedding = resp
-                        }
+                        },
                     });
                     Telemetry.RecordEmbeddingSuccess(resp.Length);
                     Telemetry.RecordVectors(1);
                     if (Environment.GetEnvironmentVariable("MONADIC_DEBUG") == "1")
-                        Console.WriteLine($"[embed] seed ok id={(idx + 1)} dim={resp.Length}");
+                    {
+                        Console.WriteLine($"[embed] seed ok id={ idx + 1} dim={resp.Length}");
+                    }
                 }
                 catch
                 {
@@ -341,12 +441,14 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
                             Id = (idx + 1).ToString(),
                             Text = text,
                             Embedding = new float[8]
-                        }
+                        },
                     });
                     Telemetry.RecordEmbeddingFailure();
                     Telemetry.RecordVectors(1);
                     if (Environment.GetEnvironmentVariable("MONADIC_DEBUG") == "1")
-                        Console.WriteLine($"[embed] seed fail id={(idx + 1)} fallback-dim=8");
+                    {
+                        Console.WriteLine($"[embed] seed fail id={ idx + 1} fallback-dim=8");
+                    }
                 }
             }
         }
@@ -372,7 +474,6 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
 }
 
 // (usage handled by CommandLineParser built-in help)
-
 static Task RunListTokensAsync()
 {
     Console.WriteLine("Available token groups:");
@@ -380,6 +481,7 @@ static Task RunListTokensAsync()
     {
         Console.WriteLine($"- {method.DeclaringType?.Name}.{method.Name}(): {string.Join(", ", names)}");
     }
+
     return Task.CompletedTask;
 }
 
@@ -391,7 +493,7 @@ static IChatCompletionModel CreateRemoteChatModel(string endpoint, string apiKey
         ChatEndpointType.OllamaCloud => new OllamaCloudChatModel(endpoint, apiKey, modelName, settings),
         ChatEndpointType.OpenAiCompatible => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings),
         ChatEndpointType.Auto => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings), // Default to OpenAI-compatible for auto
-        _ => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings)
+        _ => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings),
     };
 }
 
@@ -403,9 +505,10 @@ static IEmbeddingModel CreateEmbeddingModel(string? endpoint, string? apiKey, Ch
         return endpointType switch
         {
             ChatEndpointType.OllamaCloud => new OllamaCloudEmbeddingModel(endpoint, apiKey, embedName),
-            _ => new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embedName)) // Fall back to local for OpenAI-compatible (no standard embedding endpoint)
+            _ => new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embedName)), // Fall back to local for OpenAI-compatible (no standard embedding endpoint)
         };
     }
+
     return new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embedName));
 }
 
@@ -417,16 +520,32 @@ static Task RunExplainAsync(ExplainOptions o)
 
 static async Task RunPipelineAsync(PipelineOptions o)
 {
-    if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase)) Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
-    if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
+    if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase))
+    {
+        Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
+    }
+
+    if (o.Debug)
+    {
+        Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
+    }
+
     var settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
     await RunPipelineDslAsync(o.Dsl, o.Model, o.Embed, o.Source, o.K, o.Trace, settings, o);
 }
 
 static async Task RunAskAsync(AskOptions o)
 {
-    if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase)) Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
-    if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
+    if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase))
+    {
+        Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
+    }
+
+    if (o.Debug)
+    {
+        Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
+    }
+
     var settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
     ValidateSecrets(o);
     LogBackendSelection(o.Model, settings, o);
@@ -455,6 +574,7 @@ static async Task RunAskAsync(AskOptions o)
         }
 
         var tools = new ToolRegistry();
+
         // Register a couple of default utility tools if absent
         if (!tools.All.Any())
         {
@@ -462,6 +582,7 @@ static async Task RunAskAsync(AskOptions o)
                 .WithFunction("echo", "Echo back the input", s => s)
                 .WithFunction("uppercase", "Convert text to uppercase", s => s.ToUpperInvariant());
         }
+
         TrackedVectorStore? ragStore = null;
         IEmbeddingModel? embedModel = null;
         if (o.Rag)
@@ -487,6 +608,7 @@ static async Task RunAskAsync(AskOptions o)
                     await ragStore.AddAsync(new[] { new Vector { Id = (idx + 1).ToString(), Text = text, Embedding = new float[8] } });
                 }
             }
+
             if (tools.Get("search") is null && embedModel is not null)
             {
                 tools = tools.WithTool(new LangChainPipeline.Tools.RetrievalTool(ragStore, embedModel));
@@ -508,8 +630,11 @@ static async Task RunAskAsync(AskOptions o)
                         questionForAgent = $"Context:\n- {ctx}\n\nQuestion: {o.Question}";
                     }
                 }
-                catch { /* fallback silently */ }
+                catch
+                { /* fallback silently */
+                }
             }
+
             var answer = await agentInstance.RunAsync(questionForAgent);
             sw.Stop();
             Console.WriteLine(answer);
@@ -524,6 +649,7 @@ static async Task RunAskAsync(AskOptions o)
             {
                 await GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true });
             }
+
             return;
         }
     }
@@ -547,14 +673,12 @@ static async Task RunAskAsync(AskOptions o)
             {
                 GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true }).Wait();
             }
-        }
-    );
+        });
 }
 
 // ------------------
 // CommandLineParser
 // ------------------
-
 static void ValidateSecrets(AskOptions? askOpts = null)
 {
     var (endpoint, apiKey, _) = ChatConfig.ResolveWithOverrides(askOpts?.Endpoint, askOpts?.ApiKey, askOpts?.EndpointType);
@@ -571,7 +695,7 @@ static void LogBackendSelection(string model, ChatRuntimeSettings settings, AskO
         ? $"remote-{endpointType.ToString().ToLowerInvariant()}"
         : "ollama-local";
     string maskedKey = string.IsNullOrWhiteSpace(apiKey) ? "(none)" : apiKey.Length <= 8 ? "********" : apiKey[..4] + "..." + apiKey[^4..];
-    Console.WriteLine($"[INIT] Backend={backend} Model={model} Temp={settings.Temperature} MaxTok={settings.MaxTokens} Key={maskedKey} Endpoint={(endpoint ?? "(none)")}");
+    Console.WriteLine($"[INIT] Backend={backend} Model={model} Temp={settings.Temperature} MaxTok={settings.MaxTokens} Key={maskedKey} Endpoint={ endpoint ?? "(none)"}");
 }
 
 static Task RunTestsAsync(TestOptions o)
@@ -637,6 +761,7 @@ static Task RunTestsAsync(TestOptions o)
         Console.Error.WriteLine(ex.StackTrace);
         Environment.Exit(1);
     }
+
     return Task.CompletedTask;
 }
 
@@ -646,7 +771,10 @@ static async Task RunOrchestratorAsync(OrchestratorOptions o)
     Console.WriteLine("║   Smart Model Orchestrator - Intelligent Model Selection  ║");
     Console.WriteLine("╚════════════════════════════════════════════════════════════╝\n");
 
-    if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
+    if (o.Debug)
+    {
+        Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
+    }
 
     try
     {
@@ -730,6 +858,7 @@ static async Task RunOrchestratorAsync(OrchestratorOptions o)
         {
             await GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true });
         }
+
         Environment.Exit(1);
     }
     catch (Exception ex)
@@ -740,6 +869,7 @@ static async Task RunOrchestratorAsync(OrchestratorOptions o)
         {
             Console.Error.WriteLine(ex.StackTrace);
         }
+
         Environment.Exit(1);
     }
 }
@@ -750,7 +880,10 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
     Console.WriteLine("║   MeTTa Orchestrator v3.0 - Symbolic Reasoning            ║");
     Console.WriteLine("╚════════════════════════════════════════════════════════════╝\n");
 
-    if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
+    if (o.Debug)
+    {
+        Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
+    }
 
     try
     {
@@ -787,8 +920,7 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
                 Console.Error.WriteLine($"Planning failed: {error}");
                 Environment.Exit(1);
                 return null!;
-            }
-        );
+            });
 
         sw.Stop();
         Console.WriteLine($"✓ Plan generated in {sw.ElapsedMilliseconds}ms");
@@ -802,6 +934,7 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
             Console.WriteLine($"     Expected: {step.ExpectedOutcome}");
             Console.WriteLine($"     Confidence: {step.ConfidenceScore:P2}");
         }
+
         Console.WriteLine();
 
         if (o.PlanOnly)
@@ -827,6 +960,7 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
                 {
                     Console.WriteLine($"  Output: {success.FinalOutput}");
                 }
+
                 Console.WriteLine($"\nStep Results:");
                 for (int i = 0; i < success.StepResults.Count; i++)
                 {
@@ -844,8 +978,7 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
             {
                 Console.Error.WriteLine($"Execution failed: {error}");
                 Environment.Exit(1);
-            }
-        );
+            });
 
         if (o.ShowMetrics)
         {
@@ -871,6 +1004,7 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
         {
             await GuidedSetup.RunAsync(new SetupOptions { InstallOllama = true });
         }
+
         Environment.Exit(1);
     }
     catch (Exception ex) when (ex.Message.Contains("metta") && (ex.Message.Contains("not found") || ex.Message.Contains("No such file")))
@@ -880,6 +1014,7 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
         {
             await GuidedSetup.RunAsync(new SetupOptions { InstallMeTTa = true });
         }
+
         Environment.Exit(1);
     }
     catch (Exception ex)
@@ -890,8 +1025,7 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
         {
             Console.Error.WriteLine(ex.StackTrace);
         }
+
         Environment.Exit(1);
     }
 }
-
-

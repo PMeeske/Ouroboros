@@ -1,3 +1,7 @@
+// <copyright file="Prompts.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Pipeline.Reasoning;
 
 public static class Prompts

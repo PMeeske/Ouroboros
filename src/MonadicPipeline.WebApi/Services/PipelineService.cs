@@ -1,6 +1,10 @@
-using System.Diagnostics;
+// <copyright file="PipelineService.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.WebApi.Services;
+
+using System.Diagnostics;
 
 /// <summary>
 /// Service for executing AI pipeline operations.
@@ -9,11 +13,12 @@ namespace LangChainPipeline.WebApi.Services;
 public interface IPipelineService
 {
     Task<string> AskAsync(AskRequest request, CancellationToken cancellationToken = default);
+
     Task<string> ExecutePipelineAsync(PipelineRequest request, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// Default implementation of pipeline service
+/// Default implementation of pipeline service.
 /// </summary>
 public sealed class PipelineService : IPipelineService
 {
@@ -53,7 +58,10 @@ public sealed class PipelineService : IPipelineService
         {
             var chat = new OllamaChatModel(provider, modelName);
             if (modelName == "deepseek-coder:33b")
+            {
                 chat.Settings = OllamaPresets.DeepSeekCoder33B;
+            }
+
             chatModel = new OllamaChatAdapter(chat);
         }
 
@@ -69,33 +77,35 @@ public sealed class PipelineService : IPipelineService
             {
                 "API versioning best practices with backward compatibility",
                 "Circuit breaker using Polly in .NET",
-                "Event sourcing and CQRS patterns overview"
+                "Event sourcing and CQRS patterns overview",
             };
             foreach (var (text, idx) in docs.Select((d, i) => (d, i)))
             {
                 try
                 {
                     var resp = await embed.CreateEmbeddingsAsync(text, cancellationToken);
-                    await store.AddAsync(new[]
+                    await store.AddAsync(
+                        new[]
                     {
                         new Vector
                         {
                             Id = (idx + 1).ToString(),
                             Text = text,
                             Embedding = resp
-                        }
+                        },
                     }, cancellationToken);
                 }
                 catch
                 {
-                    await store.AddAsync(new[]
+                    await store.AddAsync(
+                        new[]
                     {
                         new Vector
                         {
                             Id = (idx + 1).ToString(),
                             Text = text,
                             Embedding = new float[8]
-                        }
+                        },
                     }, cancellationToken);
                 }
             }
@@ -153,7 +163,10 @@ public sealed class PipelineService : IPipelineService
         {
             var chat = new OllamaChatModel(provider, modelName);
             if (modelName == "deepseek-coder:33b")
+            {
                 chat.Settings = OllamaPresets.DeepSeekCoder33B;
+            }
+
             chatModel = new OllamaChatAdapter(chat);
         }
 
@@ -165,6 +178,7 @@ public sealed class PipelineService : IPipelineService
         {
             Directory.CreateDirectory(resolvedSource);
         }
+
         var branch = new PipelineBranch("webapi", new TrackedVectorStore(), DataSource.FromPath(resolvedSource));
 
         var state = new CliPipelineState
@@ -174,7 +188,7 @@ public sealed class PipelineService : IPipelineService
             Tools = tools,
             Embed = embed,
             RetrievalK = k,
-            Trace = trace
+            Trace = trace,
         };
 
         tools = tools.WithPipelineSteps(state);
@@ -201,7 +215,7 @@ public sealed class PipelineService : IPipelineService
             ChatEndpointType.OllamaCloud => new OllamaCloudChatModel(endpoint, apiKey, modelName, settings),
             ChatEndpointType.OpenAiCompatible => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings),
             ChatEndpointType.Auto => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings),
-            _ => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings)
+            _ => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings),
         };
     }
 
@@ -212,9 +226,10 @@ public sealed class PipelineService : IPipelineService
             return endpointType switch
             {
                 ChatEndpointType.OllamaCloud => new OllamaCloudEmbeddingModel(endpoint, apiKey, embedName),
-                _ => new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embedName))
+                _ => new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embedName)),
             };
         }
+
         return new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embedName));
     }
 }

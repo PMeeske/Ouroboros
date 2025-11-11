@@ -1,6 +1,10 @@
-using System.Text.Json.Serialization;
+// <copyright file="PipelineEvent.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Domain.Events;
+
+using System.Text.Json.Serialization;
 
 /// <summary>
 /// Base class for all pipeline events that can occur during execution.

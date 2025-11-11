@@ -1,7 +1,11 @@
-using System.Text;
-using System.Text.RegularExpressions;
+// <copyright file="PipelineDsl.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.CLI;
+
+using System.Text;
+using System.Text.RegularExpressions;
 
 public static class PipelineDsl
 {
@@ -53,6 +57,7 @@ public static class PipelineDsl
                     {
                         tokens.Add(token);
                     }
+
                     current.Clear();
                     continue;
                 }
@@ -88,6 +93,7 @@ public static class PipelineDsl
                     return Task.FromResult(s);
                 };
             }
+
             steps.Add(found);
         }
 
@@ -119,13 +125,12 @@ public static class PipelineDsl
     }
 
     // arg parsing is handled by individual steps; keep builder minimal
-
     public static string Explain(string dsl)
     {
         var parts = Tokenize(dsl);
         var lines = new List<string>(parts.Length + 2)
         {
-            "Pipeline tokens:"
+            "Pipeline tokens:",
         };
 
         foreach (var token in parts)
@@ -141,7 +146,7 @@ public static class PipelineDsl
             }
         }
 
-        lines.Add("");
+        lines.Add(string.Empty);
         lines.Add("Available token groups:");
         foreach (var (method, names) in StepRegistry.GetTokenGroups())
         {

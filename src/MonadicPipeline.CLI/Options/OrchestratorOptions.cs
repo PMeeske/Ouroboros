@@ -1,9 +1,13 @@
-using CommandLine;
+// <copyright file="OrchestratorOptions.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Options;
 
+using CommandLine;
+
 [Verb("orchestrator", HelpText = "Run smart model orchestrator with intelligent model and tool selection.")]
-sealed class OrchestratorOptions
+internal sealed class OrchestratorOptions
 {
     [Option('g', "goal", Required = true, HelpText = "Goal or task for the orchestrator to accomplish.")]
     public string Goal { get; set; } = string.Empty;

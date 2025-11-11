@@ -1,3 +1,7 @@
+// <copyright file="ChunkingModels.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Core.Processing;
 
 /// <summary>
@@ -14,7 +18,7 @@ public enum ChunkingStrategy
     /// Adaptive chunking - starts with maxChunkSize and adjusts based on processing success.
     /// Uses conditioned stimulus learning to optimize chunk size over time.
     /// </summary>
-    Adaptive
+    Adaptive,
 }
 
 /// <summary>
@@ -24,8 +28,7 @@ public sealed record ChunkMetadata(
     int Index,
     int TotalChunks,
     int TokenCount,
-    ChunkingStrategy Strategy
-);
+    ChunkingStrategy Strategy);
 
 /// <summary>
 /// Represents an intermediate chunk result with its metadata.
@@ -35,5 +38,4 @@ public sealed record ChunkResult<TOutput>(
     TOutput Output,
     ChunkMetadata Metadata,
     TimeSpan ProcessingTime,
-    bool Success
-);
+    bool Success);

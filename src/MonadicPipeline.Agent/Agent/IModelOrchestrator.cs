@@ -1,8 +1,6 @@
-// ==========================================================
-// Model Orchestrator Interface
-// Defines contract for intelligent model and tool selection
-// based on prompt analysis and performance metrics
-// ==========================================================
+// <copyright file="IModelOrchestrator.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Agent;
 
@@ -27,7 +25,7 @@ public enum ModelType
     Reasoning,
     Creative,
     Summary,
-    Analysis
+    Analysis,
 }
 
 /// <summary>
@@ -51,7 +49,7 @@ public enum UseCaseType
     Summarization,
     Analysis,
     Conversation,
-    ToolUse
+    ToolUse,
 }
 
 /// <summary>
@@ -84,10 +82,10 @@ public interface IModelOrchestrator
     /// <summary>
     /// Analyzes a prompt and selects the optimal model and tool configuration.
     /// </summary>
-    /// <param name="prompt">The input prompt to analyze</param>
-    /// <param name="context">Optional contextual information</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Orchestrator decision with selected model and tools</returns>
+    /// <param name="prompt">The input prompt to analyze.</param>
+    /// <param name="context">Optional contextual information.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Orchestrator decision with selected model and tools.</returns>
     Task<Result<OrchestratorDecision, string>> SelectModelAsync(
         string prompt,
         Dictionary<string, object>? context = null,
@@ -96,27 +94,27 @@ public interface IModelOrchestrator
     /// <summary>
     /// Classifies a prompt into a use case for model selection.
     /// </summary>
-    /// <param name="prompt">The prompt to classify</param>
-    /// <returns>Classified use case</returns>
+    /// <param name="prompt">The prompt to classify.</param>
+    /// <returns>Classified use case.</returns>
     UseCase ClassifyUseCase(string prompt);
 
     /// <summary>
     /// Registers a model with its capabilities for orchestration.
     /// </summary>
-    /// <param name="capability">Model capability metadata</param>
+    /// <param name="capability">Model capability metadata.</param>
     void RegisterModel(ModelCapability capability);
 
     /// <summary>
     /// Records performance metrics for a model or tool execution.
     /// </summary>
-    /// <param name="resourceName">Name of the model or tool</param>
-    /// <param name="latencyMs">Execution time in milliseconds</param>
-    /// <param name="success">Whether execution succeeded</param>
+    /// <param name="resourceName">Name of the model or tool.</param>
+    /// <param name="latencyMs">Execution time in milliseconds.</param>
+    /// <param name="success">Whether execution succeeded.</param>
     void RecordMetric(string resourceName, double latencyMs, bool success);
 
     /// <summary>
     /// Gets current performance metrics for all resources.
     /// </summary>
-    /// <returns>Dictionary of resource names to their metrics</returns>
+    /// <returns>Dictionary of resource names to their metrics.</returns>
     IReadOnlyDictionary<string, PerformanceMetrics> GetMetrics();
 }

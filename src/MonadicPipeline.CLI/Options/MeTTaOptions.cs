@@ -1,9 +1,13 @@
-using CommandLine;
+// <copyright file="MeTTaOptions.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Options;
 
+using CommandLine;
+
 [Verb("metta", HelpText = "Run MeTTa orchestrator v3.0 with symbolic reasoning capabilities.")]
-sealed class MeTTaOptions
+internal sealed class MeTTaOptions
 {
     [Option('g', "goal", Required = true, HelpText = "Goal or task for the MeTTa orchestrator to plan and execute.")]
     public string Goal { get; set; } = string.Empty;

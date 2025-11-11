@@ -1,7 +1,11 @@
-using LangChain.Databases;
-using LangChain.DocumentLoaders;
+// <copyright file="ReplayEngine.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Pipeline.Replay;
+
+using LangChain.Databases;
+using LangChain.DocumentLoaders;
 
 /// <summary>
 /// Engine for replaying pipeline execution with fresh context and tool re-execution.
@@ -28,7 +32,7 @@ public sealed class ReplayEngine(ToolAwareChatModel llm, IEmbeddingModel embed)
             Id = v.Id,
             Text = v.Text,
             Metadata = v.Metadata,
-            Embedding = v.Embedding
+            Embedding = v.Embedding,
         }));
 
         // Replay each reasoning step with fresh context
@@ -51,7 +55,7 @@ public sealed class ReplayEngine(ToolAwareChatModel llm, IEmbeddingModel embed)
                 "Draft" => new Draft(newText),
                 "Critique" => new Critique(newText),
                 "Final" => new FinalSpec(newText),
-                _ => new Draft(newText)
+                _ => new Draft(newText),
             };
 
             replayed = replayed.WithReasoning(newState, prompt, newTools);

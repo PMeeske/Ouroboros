@@ -1,8 +1,12 @@
+// <copyright file="Adapters.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Providers;
+
 using System.Net.Http.Json;
 using System.Text;
 using LangChain.Providers.Ollama;
-
-namespace LangChainPipeline.Providers;
 
 /// <summary>
 /// Minimal contract used by <see cref="ToolAwareChatModel"/> to obtain text responses.
@@ -18,11 +22,11 @@ public interface IChatCompletionModel
 /// </summary>
 public sealed class OllamaChatAdapter : IChatCompletionModel
 {
-    private readonly OllamaChatModel _model;
+    private readonly OllamaChatModel model;
 
     public OllamaChatAdapter(OllamaChatModel model)
     {
-        _model = model ?? throw new ArgumentNullException(nameof(model));
+        this.model = model ?? throw new ArgumentNullException(nameof(model));
     }
 
     /// <inheritdoc/>
@@ -30,7 +34,7 @@ public sealed class OllamaChatAdapter : IChatCompletionModel
     {
         try
         {
-            var stream = _model.GenerateAsync(prompt, cancellationToken: ct);
+            var stream = this.model.GenerateAsync(prompt, cancellationToken: ct);
             var builder = new StringBuilder();
 
             await foreach (var chunk in stream.WithCancellation(ct).ConfigureAwait(false))
@@ -52,13 +56,16 @@ public sealed class OllamaChatAdapter : IChatCompletionModel
         catch
         {
             // Deterministic fallback keeps the pipeline running in offline scenarios.
-            return $"[ollama-fallback:{_model.GetType().Name}] {prompt}";
+            return $"[ollama-fallback:{this.model.GetType().Name}] {prompt}";
         }
     }
 
     private static string ExtractResponseText(object? response)
     {
-        if (response is null) return string.Empty;
+        if (response is null)
+        {
+            return string.Empty;
+        }
 
         switch (response)
         {
@@ -112,22 +119,29 @@ public sealed class OllamaChatAdapter : IChatCompletionModel
 /// </summary>
 public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
 {
-    private readonly HttpClient _client;
-    private readonly string _model;
-    private readonly ChatRuntimeSettings _settings;
+    private readonly HttpClient client;
+    private readonly string model;
+    private readonly ChatRuntimeSettings settings;
 
     public HttpOpenAiCompatibleChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null)
     {
-        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
-        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
-
-        _client = new HttpClient
+        if (string.IsNullOrWhiteSpace(endpoint))
         {
-            BaseAddress = new Uri(endpoint, UriKind.Absolute)
+            throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        }
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new ArgumentException("API key is required", nameof(apiKey));
+        }
+
+        this.client = new HttpClient
+        {
+            BaseAddress = new Uri(endpoint, UriKind.Absolute),
         };
-        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
-        _model = model;
-        _settings = settings ?? new ChatRuntimeSettings();
+        this.client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        this.model = model;
+        this.settings = settings ?? new ChatRuntimeSettings();
     }
 
     /// <inheritdoc/>
@@ -137,12 +151,12 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
         {
             using var payload = JsonContent.Create(new
             {
-                model = _model,
-                temperature = _settings.Temperature,
-                max_output_tokens = _settings.MaxTokens,
-                input = prompt
+                model = this.model,
+                temperature = this.settings.Temperature,
+                max_output_tokens = this.settings.MaxTokens,
+                input = prompt,
             });
-            using var response = await _client.PostAsync("/v1/responses", payload, ct).ConfigureAwait(false);
+            using var response = await this.client.PostAsync("/v1/responses", payload, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
             if (json is not null && json.TryGetValue("output_text", out var text) && text is string s)
@@ -154,7 +168,8 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
         {
             // Remote backend not reachable → fall back to indicating failure.
         }
-        return $"[remote-fallback:{_model}] {prompt}";
+
+        return $"[remote-fallback:{this.model}] {prompt}";
     }
 }
 
@@ -164,22 +179,29 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
 /// </summary>
 public sealed class OllamaCloudChatModel : IChatCompletionModel
 {
-    private readonly HttpClient _client;
-    private readonly string _model;
-    private readonly ChatRuntimeSettings _settings;
+    private readonly HttpClient client;
+    private readonly string model;
+    private readonly ChatRuntimeSettings settings;
 
     public OllamaCloudChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null)
     {
-        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
-        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
-
-        _client = new HttpClient
+        if (string.IsNullOrWhiteSpace(endpoint))
         {
-            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute)
+            throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        }
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new ArgumentException("API key is required", nameof(apiKey));
+        }
+
+        this.client = new HttpClient
+        {
+            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute),
         };
-        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
-        _model = model;
-        _settings = settings ?? new ChatRuntimeSettings();
+        this.client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        this.model = model;
+        this.settings = settings ?? new ChatRuntimeSettings();
     }
 
     /// <inheritdoc/>
@@ -190,17 +212,17 @@ public sealed class OllamaCloudChatModel : IChatCompletionModel
             // Use Ollama's native /api/generate endpoint and JSON format
             using var payload = JsonContent.Create(new
             {
-                model = _model,
+                model = this.model,
                 prompt = prompt,
                 stream = false,
                 options = new
                 {
-                    temperature = _settings.Temperature,
-                    num_predict = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null
-                }
+                    temperature = this.settings.Temperature,
+                    num_predict = this.settings.MaxTokens > 0 ? this.settings.MaxTokens : (int?)null
+                },
             });
 
-            using var response = await _client.PostAsync("/api/generate", payload, ct).ConfigureAwait(false);
+            using var response = await this.client.PostAsync("/api/generate", payload, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
@@ -213,12 +235,13 @@ public sealed class OllamaCloudChatModel : IChatCompletionModel
         {
             // Remote Ollama Cloud not reachable → fall back to indicating failure.
         }
-        return $"[ollama-cloud-fallback:{_model}] {prompt}";
+
+        return $"[ollama-cloud-fallback:{this.model}] {prompt}";
     }
 
     public void Dispose()
     {
-        _client?.Dispose();
+        this.client?.Dispose();
     }
 }
 
@@ -229,33 +252,50 @@ public sealed class OllamaCloudChatModel : IChatCompletionModel
 /// </summary>
 public sealed class MultiModelRouter : IChatCompletionModel
 {
-    private readonly IReadOnlyDictionary<string, IChatCompletionModel> _models;
-    private readonly string _fallbackKey;
+    private readonly IReadOnlyDictionary<string, IChatCompletionModel> models;
+    private readonly string fallbackKey;
 
     public MultiModelRouter(IReadOnlyDictionary<string, IChatCompletionModel> models, string fallbackKey)
     {
-        if (models.Count == 0) throw new ArgumentException("At least one model is required", nameof(models));
-        _models = models;
-        _fallbackKey = fallbackKey;
+        if (models.Count == 0)
+        {
+            throw new ArgumentException("At least one model is required", nameof(models));
+        }
+
+        this.models = models;
+        this.fallbackKey = fallbackKey;
     }
 
     /// <inheritdoc/>
     public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
-        IChatCompletionModel target = SelectModel(prompt);
+        IChatCompletionModel target = this.SelectModel(prompt);
         return target.GenerateTextAsync(prompt, ct);
     }
 
     private IChatCompletionModel SelectModel(string prompt)
     {
-        if (string.IsNullOrWhiteSpace(prompt)) return _models[_fallbackKey];
-        if (prompt.Contains("code", StringComparison.OrdinalIgnoreCase) && _models.TryGetValue("coder", out var coder))
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            return this.models[this.fallbackKey];
+        }
+
+        if (prompt.Contains("code", StringComparison.OrdinalIgnoreCase) && this.models.TryGetValue("coder", out var coder))
+        {
             return coder;
-        if (prompt.Length > 600 && _models.TryGetValue("summarize", out var summarize))
+        }
+
+        if (prompt.Length > 600 && this.models.TryGetValue("summarize", out var summarize))
+        {
             return summarize;
-        if (prompt.Contains("reason", StringComparison.OrdinalIgnoreCase) && _models.TryGetValue("reason", out var reason))
+        }
+
+        if (prompt.Contains("reason", StringComparison.OrdinalIgnoreCase) && this.models.TryGetValue("reason", out var reason))
+        {
             return reason;
-        return _models.TryGetValue(_fallbackKey, out var fallback) ? fallback : _models.Values.First();
+        }
+
+        return this.models.TryGetValue(this.fallbackKey, out var fallback) ? fallback : this.models.Values.First();
     }
 }
 
@@ -269,7 +309,11 @@ public sealed class DeterministicEmbeddingModel : IEmbeddingModel
     /// <inheritdoc/>
     public Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
     {
-        if (input is null) input = string.Empty;
+        if (input is null)
+        {
+            input = string.Empty;
+        }
+
         Span<byte> buffer = stackalloc byte[Math.Max(32, input.Length)];
         int len = System.Text.Encoding.UTF8.GetBytes(input, buffer);
         var hash = System.Security.Cryptography.SHA256.HashData(buffer[..len]);
@@ -278,6 +322,7 @@ public sealed class DeterministicEmbeddingModel : IEmbeddingModel
         {
             vector[i] = hash[i] / 255f;
         }
+
         return Task.FromResult(vector);
     }
 }
@@ -288,12 +333,12 @@ public sealed class DeterministicEmbeddingModel : IEmbeddingModel
 /// </summary>
 public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
 {
-    private readonly OllamaEmbeddingModel _model;
-    private readonly DeterministicEmbeddingModel _fallback = new();
+    private readonly OllamaEmbeddingModel model;
+    private readonly DeterministicEmbeddingModel fallback = new();
 
     public OllamaEmbeddingAdapter(OllamaEmbeddingModel model)
     {
-        _model = model ?? throw new ArgumentNullException(nameof(model));
+        this.model = model ?? throw new ArgumentNullException(nameof(model));
     }
 
     /// <inheritdoc/>
@@ -301,16 +346,17 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
     {
         try
         {
-            var response = await _model.CreateEmbeddingsAsync(input, cancellationToken: ct).ConfigureAwait(false);
+            var response = await this.model.CreateEmbeddingsAsync(input, cancellationToken: ct).ConfigureAwait(false);
             if (TryExtractEmbedding(response, out var vector))
             {
                 return vector;
             }
-            return await _fallback.CreateEmbeddingsAsync(input, ct).ConfigureAwait(false);
+
+            return await this.fallback.CreateEmbeddingsAsync(input, ct).ConfigureAwait(false);
         }
         catch
         {
-            return await _fallback.CreateEmbeddingsAsync(input, ct).ConfigureAwait(false);
+            return await this.fallback.CreateEmbeddingsAsync(input, ct).ConfigureAwait(false);
         }
     }
 
@@ -393,21 +439,28 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
 /// </summary>
 public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
 {
-    private readonly HttpClient _client;
-    private readonly string _model;
-    private readonly DeterministicEmbeddingModel _fallback = new();
+    private readonly HttpClient client;
+    private readonly string model;
+    private readonly DeterministicEmbeddingModel fallback = new();
 
     public OllamaCloudEmbeddingModel(string endpoint, string apiKey, string model)
     {
-        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
-        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
-
-        _client = new HttpClient
+        if (string.IsNullOrWhiteSpace(endpoint))
         {
-            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute)
+            throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        }
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new ArgumentException("API key is required", nameof(apiKey));
+        }
+
+        this.client = new HttpClient
+        {
+            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute),
         };
-        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
-        _model = model;
+        this.client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        this.model = model;
     }
 
     /// <inheritdoc/>
@@ -418,11 +471,11 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
             // Use Ollama's native /api/embeddings endpoint and JSON format
             using var payload = JsonContent.Create(new
             {
-                model = _model,
-                prompt = input
+                model = this.model,
+                prompt = input,
             });
 
-            using var response = await _client.PostAsync("/api/embeddings", payload, ct).ConfigureAwait(false);
+            using var response = await this.client.PostAsync("/api/embeddings", payload, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
@@ -438,6 +491,7 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
                             floats.Add(value);
                         }
                     }
+
                     if (floats.Count > 0)
                     {
                         return floats.ToArray();
@@ -449,11 +503,12 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
         {
             // Remote Ollama Cloud not reachable → fall back to deterministic embedding
         }
-        return await _fallback.CreateEmbeddingsAsync(input, ct).ConfigureAwait(false);
+
+        return await this.fallback.CreateEmbeddingsAsync(input, ct).ConfigureAwait(false);
     }
 
     public void Dispose()
     {
-        _client?.Dispose();
+        this.client?.Dispose();
     }
 }

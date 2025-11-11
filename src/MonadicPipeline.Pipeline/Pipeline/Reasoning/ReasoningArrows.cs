@@ -1,6 +1,10 @@
-using LangChain.DocumentLoaders;
+// <copyright file="ReasoningArrows.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Pipeline.Reasoning;
+
+using LangChain.DocumentLoaders;
 
 /// <summary>
 /// Provides arrow functions for reasoning operations in the pipeline.
@@ -31,6 +35,7 @@ public static class ReasoningArrows
     /// <summary>
     /// Creates a draft arrow that generates an initial response.
     /// </summary>
+    /// <returns></returns>
     public static Step<PipelineBranch, PipelineBranch> DraftArrow(
         ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
         => async branch =>
@@ -42,7 +47,7 @@ public static class ReasoningArrows
             {
                 ["context"] = context,
                 ["topic"] = topic,
-                ["tools_schemas"] = ToolSchemasOrEmpty(tools)
+                ["tools_schemas"] = ToolSchemasOrEmpty(tools),
             });
 
             (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
@@ -52,6 +57,7 @@ public static class ReasoningArrows
     /// <summary>
     /// Creates a Result-safe draft arrow that generates an initial response with error handling.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<PipelineBranch, PipelineBranch, string> SafeDraftArrow(
         ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
         => async branch =>
@@ -65,7 +71,7 @@ public static class ReasoningArrows
                 {
                     ["context"] = context,
                     ["topic"] = topic,
-                    ["tools_schemas"] = ToolSchemasOrEmpty(tools)
+                    ["tools_schemas"] = ToolSchemasOrEmpty(tools),
                 });
 
                 (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
@@ -82,12 +88,16 @@ public static class ReasoningArrows
     /// Creates a critique arrow that analyzes and critiques the most recent reasoning state.
     /// Supports iterative refinement by critiquing either the initial Draft or a previous FinalSpec.
     /// </summary>
+    /// <returns></returns>
     public static Step<PipelineBranch, PipelineBranch> CritiqueArrow(
         ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
         => async branch =>
         {
             ReasoningState? currentState = GetMostRecentReasoningState(branch);
-            if (currentState is null) return branch;
+            if (currentState is null)
+            {
+                return branch;
+            }
 
             IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
@@ -97,7 +107,7 @@ public static class ReasoningArrows
                 ["context"] = context,
                 ["draft"] = currentState.Text,
                 ["topic"] = topic,
-                ["tools_schemas"] = ToolSchemasOrEmpty(tools)
+                ["tools_schemas"] = ToolSchemasOrEmpty(tools),
             });
 
             (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
@@ -108,6 +118,7 @@ public static class ReasoningArrows
     /// Creates a Result-safe critique arrow with proper error handling and validation.
     /// Supports iterative refinement by critiquing the most recent reasoning state.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<PipelineBranch, PipelineBranch, string> SafeCritiqueArrow(
         ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
         => async branch =>
@@ -116,7 +127,9 @@ public static class ReasoningArrows
             {
                 ReasoningState? currentState = GetMostRecentReasoningState(branch);
                 if (currentState is null)
+                {
                     return Result<PipelineBranch, string>.Failure("No draft or previous improvement found to critique");
+                }
 
                 IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
                 string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
@@ -126,7 +139,7 @@ public static class ReasoningArrows
                     ["context"] = context,
                     ["draft"] = currentState.Text,
                     ["topic"] = topic,
-                    ["tools_schemas"] = ToolSchemasOrEmpty(tools)
+                    ["tools_schemas"] = ToolSchemasOrEmpty(tools),
                 });
 
                 (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
@@ -143,13 +156,17 @@ public static class ReasoningArrows
     /// Creates an improvement arrow that generates a final improved version.
     /// Supports iterative refinement by improving upon the most recent reasoning state.
     /// </summary>
+    /// <returns></returns>
     public static Step<PipelineBranch, PipelineBranch> ImproveArrow(
         ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
         => async branch =>
         {
             ReasoningState? currentState = GetMostRecentReasoningState(branch);
             Critique? critique = branch.Events.OfType<ReasoningStep>().Select(e => e.State).OfType<Critique>().LastOrDefault();
-            if (currentState is null || critique is null) return branch;
+            if (currentState is null || critique is null)
+            {
+                return branch;
+            }
 
             IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
@@ -160,7 +177,7 @@ public static class ReasoningArrows
                 ["draft"] = currentState.Text,
                 ["critique"] = critique.CritiqueText,
                 ["topic"] = topic,
-                ["tools_schemas"] = ToolSchemasOrEmpty(tools)
+                ["tools_schemas"] = ToolSchemasOrEmpty(tools),
             });
 
             (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
@@ -171,6 +188,7 @@ public static class ReasoningArrows
     /// Creates a Result-safe improvement arrow with comprehensive error handling.
     /// Supports iterative refinement by improving upon the most recent reasoning state.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<PipelineBranch, PipelineBranch, string> SafeImproveArrow(
         ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
         => async branch =>
@@ -181,9 +199,14 @@ public static class ReasoningArrows
                 Critique? critique = branch.Events.OfType<ReasoningStep>().Select(e => e.State).OfType<Critique>().LastOrDefault();
 
                 if (currentState is null)
+                {
                     return Result<PipelineBranch, string>.Failure("No draft or previous improvement found for improvement");
+                }
+
                 if (critique is null)
+                {
                     return Result<PipelineBranch, string>.Failure("No critique found for improvement");
+                }
 
                 IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
                 string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
@@ -194,7 +217,7 @@ public static class ReasoningArrows
                     ["draft"] = currentState.Text,
                     ["critique"] = critique.CritiqueText,
                     ["topic"] = topic,
-                    ["tools_schemas"] = ToolSchemasOrEmpty(tools)
+                    ["tools_schemas"] = ToolSchemasOrEmpty(tools),
                 });
 
                 (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
@@ -211,6 +234,7 @@ public static class ReasoningArrows
     /// Creates a complete safe reasoning pipeline that chains draft -> critique -> improve with error handling.
     /// Demonstrates monadic composition for robust pipeline execution.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<PipelineBranch, PipelineBranch, string> SafeReasoningPipeline(
         ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
         => SafeDraftArrow(llm, tools, embed, topic, query, k)
