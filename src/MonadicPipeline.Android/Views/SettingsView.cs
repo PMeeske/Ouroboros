@@ -224,8 +224,19 @@ public class SettingsView : ContentPage
 
         if (confirm)
         {
-            // This would need to be connected to the CommandHistoryService
-            await DisplayAlert("Success", "Command history cleared.", "OK");
+            try
+            {
+                // Get database path (same as used in MainPage and CliExecutor)
+                var dbPath = Path.Combine(FileSystem.AppDataDirectory, "command_history.db");
+                var historyService = new CommandHistoryService(dbPath);
+                
+                await historyService.ClearHistoryAsync();
+                await DisplayAlert("Success", "Command history cleared successfully.", "OK");
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Error", $"Failed to clear history: {ex.Message}", "OK");
+            }
         }
     }
 
