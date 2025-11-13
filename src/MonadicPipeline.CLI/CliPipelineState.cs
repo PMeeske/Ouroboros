@@ -18,4 +18,8 @@ public sealed class CliPipelineState
     public List<string> Retrieved { get; } = [];
     public string Context { get; set; } = string.Empty;
     public string Output { get; set; } = string.Empty;
+
+    // Streaming infrastructure
+    public StreamingContext? Streaming { get; set; }
+    public IObservable<object>? ActiveStream { get; set; }
 }
