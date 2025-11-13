@@ -12,6 +12,11 @@ on:
       - 'src/MonadicPipeline.Android/**'
   workflow_dispatch:
 
+# Cancel in-progress builds for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-android:
     name: Build Android APK
@@ -30,12 +35,17 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Install MAUI workload
-      run: |
-        echo "Installing MAUI Android workload..."
-        dotnet workload install maui-android --skip-sign-check --verbosity detailed
-        echo "Verifying installation..."
-        dotnet workload list
-        echo "Workload installation complete."
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 15
+        max_attempts: 3
+        retry_wait_seconds: 30
+        command: |
+          echo "Installing MAUI Android workload..."
+          dotnet workload install maui-android --skip-sign-check --verbosity detailed
+          echo "Verifying installation..."
+          dotnet workload list
+          echo "Workload installation complete."
 
     - name: Cache NuGet packages
       uses: actions/cache@v4
@@ -47,27 +57,38 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies (Core libraries)
-      run: |
-        echo "Restoring core dependencies..."
-        cd src
-        dotnet restore MonadicPipeline.Core/MonadicPipeline.Core.csproj
-        dotnet restore MonadicPipeline.Domain/MonadicPipeline.Domain.csproj
-        dotnet restore MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj
-        dotnet restore MonadicPipeline.Tools/MonadicPipeline.Tools.csproj
-        dotnet restore MonadicPipeline.Providers/MonadicPipeline.Providers.csproj
-        dotnet restore MonadicPipeline.Agent/MonadicPipeline.Agent.csproj
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_wait_seconds: 30
+        command: |
+          echo "Restoring core dependencies..."
+          cd src
+          dotnet restore MonadicPipeline.Core/MonadicPipeline.Core.csproj
+          dotnet restore MonadicPipeline.Domain/MonadicPipeline.Domain.csproj
+          dotnet restore MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj
+          dotnet restore MonadicPipeline.Tools/MonadicPipeline.Tools.csproj
+          dotnet restore MonadicPipeline.Providers/MonadicPipeline.Providers.csproj
+          dotnet restore MonadicPipeline.Agent/MonadicPipeline.Agent.csproj
 
     - name: Restore Android project dependencies
-      run: |
-        echo "Restoring Android project dependencies..."
-        cd src/MonadicPipeline.Android
-        dotnet restore --verbosity detailed
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_wait_seconds: 30
+        command: |
+          echo "Restoring Android project dependencies..."
+          cd src/MonadicPipeline.Android
+          dotnet restore --verbosity detailed
 
     - name: Build Android APK
       run: |
         echo "Building Android APK..."
         cd src/MonadicPipeline.Android
         dotnet build -c Release -f net8.0-android --verbosity normal
+      timeout-minutes: 20
 
     - name: List build output
       if: always()
@@ -93,6 +114,7 @@ jobs:
     - name: Upload APK artifact
       if: success()
       uses: actions/upload-artifact@v4
+      continue-on-error: true
       with:
         name: monadic-pipeline-android-apk
         path: ${{ steps.find-apk.outputs.apk_path }}
@@ -120,6 +142,8 @@ jobs:
     - name: Send email notification with APK download link
       if: success()
       uses: dawidd6/action-send-mail@v3
+      continue-on-error: true
+      timeout-minutes: 5
       with:
         server_address: ${{ secrets.SMTP_SERVER }}
         server_port: ${{ secrets.SMTP_PORT }}

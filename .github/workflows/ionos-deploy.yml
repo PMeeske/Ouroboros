@@ -38,6 +38,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Prevent concurrent deployments to the same environment
+concurrency:
+  group: ionos-deployment-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   IONOS_REGISTRY: ${{ vars.IONOS_REGISTRY || 'adaptive-systems.cr.de-fra.ionos.com' }}
   NAMESPACE: monadic-pipeline
@@ -48,6 +53,7 @@ jobs:
   infrastructure:
     name: Manage IONOS Infrastructure
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -125,6 +131,7 @@ jobs:
   test:
     name: Run Tests
     needs: [infrastructure]
+    timeout-minutes: 20
     permissions:
       contents: read
       checks: write
@@ -140,10 +147,16 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        uses: nick-fields/retry-action@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: dotnet restore
 
       - name: Build
         run: dotnet build --no-restore --configuration Release
+        timeout-minutes: 15
 
       - name: Run xUnit tests
         run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
@@ -158,6 +171,7 @@ jobs:
     name: Build and Push Images
     needs: [test]
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -180,6 +194,7 @@ jobs:
           registry: ${{ env.IONOS_REGISTRY }}
           username: ${{ secrets.IONOS_REGISTRY_USERNAME }}
           password: ${{ secrets.IONOS_REGISTRY_PASSWORD }}
+        timeout-minutes: 5
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -195,6 +210,7 @@ jobs:
             ${{ env.IONOS_REGISTRY }}/${{ env.CONTAINER_NAME_CLI }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+        timeout-minutes: 30
 
       - name: Build and push WebAPI image
         uses: docker/build-push-action@v5
@@ -207,11 +223,13 @@ jobs:
             ${{ env.IONOS_REGISTRY }}/${{ env.CONTAINER_NAME_WEBAPI }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+        timeout-minutes: 30
 
   deploy:
     name: Deploy to IONOS Kubernetes
     needs: [build-and-push]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -233,11 +251,16 @@ jobs:
           version: 'latest'
 
       - name: Configure kubectl for IONOS
-        run: |
-          echo "${{ secrets.IONOS_KUBECONFIG }}" > kubeconfig.yaml
-          export KUBECONFIG=$(pwd)/kubeconfig.yaml
-          kubectl cluster-info
-          echo "KUBECONFIG=$(pwd)/kubeconfig.yaml" >> $GITHUB_ENV
+        uses: nick-fields/retry-action@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          retry_wait_seconds: 10
+          command: |
+            echo "${{ secrets.IONOS_KUBECONFIG }}" > kubeconfig.yaml
+            export KUBECONFIG=$(pwd)/kubeconfig.yaml
+            kubectl cluster-info
+            echo "KUBECONFIG=$(pwd)/kubeconfig.yaml" >> $GITHUB_ENV
 
       - name: Validate IONOS prerequisites
         run: |
@@ -263,17 +286,26 @@ jobs:
           fi
 
       - name: Create namespace
-        run: |
-          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+        uses: nick-fields/retry-action@v3
+        with:
+          timeout_minutes: 3
+          max_attempts: 3
+          retry_wait_seconds: 5
+          command: kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Create registry pull secret
-        run: |
-          kubectl create secret docker-registry ionos-registry-secret \
-            --docker-server=${{ env.IONOS_REGISTRY }} \
-            --docker-username=${{ secrets.IONOS_REGISTRY_USERNAME }} \
-            --docker-password=${{ secrets.IONOS_REGISTRY_PASSWORD }} \
-            --namespace=${{ env.NAMESPACE }} \
-            --dry-run=client -o yaml | kubectl apply -f -
+        uses: nick-fields/retry-action@v3
+        with:
+          timeout_minutes: 3
+          max_attempts: 3
+          retry_wait_seconds: 5
+          command: |
+            kubectl create secret docker-registry ionos-registry-secret \
+              --docker-server=${{ env.IONOS_REGISTRY }} \
+              --docker-username=${{ secrets.IONOS_REGISTRY_USERNAME }} \
+              --docker-password=${{ secrets.IONOS_REGISTRY_PASSWORD }} \
+              --namespace=${{ env.NAMESPACE }} \
+              --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Prepare deployment manifests
         run: |
@@ -302,21 +334,36 @@ jobs:
           sed -i 's|#   - name: ionos-registry-secret|  - name: ionos-registry-secret|g' /tmp/k8s-manifests/webapi-deployment.yaml
 
       - name: Apply secrets and configmap
-        run: |
-          echo "⚠️  Applying secrets - ensure k8s/secrets.yaml is updated for production!"
-          kubectl apply -f k8s/secrets.yaml
-          kubectl apply -f k8s/configmap.yaml
+        uses: nick-fields/retry-action@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          retry_wait_seconds: 10
+          command: |
+            echo "⚠️  Applying secrets - ensure k8s/secrets.yaml is updated for production!"
+            kubectl apply -f k8s/secrets.yaml
+            kubectl apply -f k8s/configmap.yaml
 
       - name: Deploy dependencies
-        run: |
-          kubectl apply -f /tmp/k8s-manifests/ollama.yaml
-          kubectl apply -f /tmp/k8s-manifests/qdrant.yaml
-          kubectl apply -f k8s/jaeger.yaml
+        uses: nick-fields/retry-action@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 15
+          command: |
+            kubectl apply -f /tmp/k8s-manifests/ollama.yaml
+            kubectl apply -f /tmp/k8s-manifests/qdrant.yaml
+            kubectl apply -f k8s/jaeger.yaml
 
       - name: Deploy applications
-        run: |
-          kubectl apply -f /tmp/k8s-manifests/deployment.yaml
-          kubectl apply -f /tmp/k8s-manifests/webapi-deployment.yaml
+        uses: nick-fields/retry-action@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 15
+          command: |
+            kubectl apply -f /tmp/k8s-manifests/deployment.yaml
+            kubectl apply -f /tmp/k8s-manifests/webapi-deployment.yaml
 
       - name: Wait for deployments
         run: |
@@ -349,6 +396,7 @@ jobs:
           fi
 
       - name: Deployment summary
+        if: always()
         run: |
           echo "================================================"
           echo "Deployment Complete!"
@@ -365,3 +413,14 @@ jobs:
           kubectl get all -n ${{ env.NAMESPACE }}
           echo ""
           kubectl get pvc -n ${{ env.NAMESPACE }}
+
+      - name: Cleanup on failure
+        if: failure()
+        continue-on-error: true
+        run: |
+          echo "Cleaning up resources on failure..."
+          # Remove kubeconfig file
+          rm -f kubeconfig.yaml
+          # Log failure details
+          echo "Deployment failed. Check logs above for details."
+          kubectl get events -n ${{ env.NAMESPACE }} --sort-by='.lastTimestamp' | tail -20 || true
