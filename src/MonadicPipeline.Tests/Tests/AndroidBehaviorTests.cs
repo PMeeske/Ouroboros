@@ -404,16 +404,13 @@ public class AndroidPurpleScreenBehaviorTests
     public void GivenDatabaseFailure_WhenAppStarts_ThenUIShouldRenderWithError()
     {
         // Given: Database initialization will fail
-        var dbInitWillFail = true;
         var outputBuilder = new StringBuilder();
 
-        // When: App initialization is attempted
+        // When: App initialization is attempted and fails
         try
         {
-            if (dbInitWillFail)
-            {
-                throw new Exception("SQLite Error: unable to open database file");
-            }
+            // Simulate database initialization failure
+            throw new Exception("SQLite Error: unable to open database file");
         }
         catch (Exception ex)
         {
@@ -437,7 +434,6 @@ public class AndroidPurpleScreenBehaviorTests
     public void GivenAllServicesHealthy_WhenAppStarts_ThenFullFunctionalityShouldBeAvailable()
     {
         // Given: All services initialize successfully
-        var servicesHealthy = true;
         object? cliExecutor = null;
         var outputBuilder = new StringBuilder();
 
@@ -445,10 +441,8 @@ public class AndroidPurpleScreenBehaviorTests
         outputBuilder.AppendLine("MonadicPipeline CLI v1.0");
         try
         {
-            if (servicesHealthy)
-            {
-                cliExecutor = new object(); // Successful initialization
-            }
+            // Simulate successful initialization
+            cliExecutor = new object(); // Successful initialization
             outputBuilder.AppendLine("> ");
         }
         catch (Exception ex)
@@ -468,8 +462,6 @@ public class AndroidPurpleScreenBehaviorTests
     public void GivenPartialServiceFailure_WhenAppStarts_ThenDegradedModeShouldWork()
     {
         // Given: Main service fails but fallback succeeds
-        var primaryServiceFails = true;
-        var fallbackSucceeds = true;
         object? cliExecutor = null;
         var outputBuilder = new StringBuilder();
 
@@ -477,19 +469,14 @@ public class AndroidPurpleScreenBehaviorTests
         outputBuilder.AppendLine("MonadicPipeline CLI v1.0");
         try
         {
-            if (primaryServiceFails)
-            {
-                throw new Exception("Primary initialization failed");
-            }
-            cliExecutor = new object();
+            // Simulate primary initialization failure
+            throw new Exception("Primary initialization failed");
         }
         catch (Exception ex)
         {
             outputBuilder.AppendLine($"⚠ Initialization error: {ex.Message}");
-            if (fallbackSucceeds)
-            {
-                cliExecutor = new object(); // Fallback
-            }
+            // Simulate successful fallback
+            cliExecutor = new object(); // Fallback
         }
         outputBuilder.AppendLine("> ");
 
