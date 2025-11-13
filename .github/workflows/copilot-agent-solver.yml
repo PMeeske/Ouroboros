@@ -19,13 +19,16 @@ jobs:
     # Run if the issue has the 'copilot-agent' label
     if: contains(github.event.issue.labels.*.name, 'copilot-agent')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        timeout-minutes: 5
 
       - name: Authenticate, Install, and Run Copilot
         id: copilot-suggest
         shell: bash
+        timeout-minutes: 15
         env:
           # Use a non-conflicting name for the secret
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -60,6 +63,8 @@ jobs:
 
       - name: Create Pull Request
         shell: bash
+        continue-on-error: true
+        timeout-minutes: 5
         env:
           GH_TOKEN: ${{ secrets.COPILOT_BOT_TOKEN }}
           GH_ISSUE_NUMBER: ${{ github.event.issue.number }}

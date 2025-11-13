@@ -35,6 +35,11 @@ on:
       - 'terraform/**'
       - '.github/workflows/terraform-infrastructure.yml'
 
+# Prevent concurrent Terraform operations
+concurrency:
+  group: terraform-${{ github.event.inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
 env:
   TF_VERSION: '1.5.0'
   TF_WORKING_DIR: terraform
@@ -43,6 +48,7 @@ jobs:
   terraform:
     name: Terraform ${{ github.event.inputs.action || 'plan' }} - ${{ github.event.inputs.environment || 'dev' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     environment: IONOS  # Use IONOS environment for secrets
 
     steps:
@@ -75,9 +81,15 @@ jobs:
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          echo "Initializing Terraform..."
-          terraform init
+        uses: nick-fields/retry-action@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: |
+            cd ${{ env.TF_WORKING_DIR }}
+            echo "Initializing Terraform..."
+            terraform init
 
       - name: Terraform Format Check
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -86,6 +98,7 @@ jobs:
       - name: Terraform Validate
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform validate
+        timeout-minutes: 5
 
       - name: Determine environment file
         id: env_file
@@ -106,10 +119,12 @@ jobs:
             -out=tfplan \
             -no-color
         continue-on-error: true
+        timeout-minutes: 20
 
       - name: Comment PR with Plan
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
+        continue-on-error: true
         with:
           script: |
             const output = `#### Terraform Plan 📝 for \`${{ steps.env_file.outputs.environment }}\`
@@ -142,6 +157,7 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform apply -auto-approve tfplan
+        timeout-minutes: 30
 
       - name: Terraform Destroy
         if: github.event.inputs.action == 'destroy' && github.event.inputs.auto_approve == 'true'
@@ -150,6 +166,7 @@ jobs:
           terraform destroy \
             -var-file=${{ steps.env_file.outputs.var_file }} \
             -auto-approve
+        timeout-minutes: 30
 
       - name: Output Terraform Results
         if: github.event.inputs.action == 'apply' || github.event_name == 'push'
@@ -163,6 +180,7 @@ jobs:
       - name: Upload Terraform Outputs
         if: github.event.inputs.action == 'apply' || github.event_name == 'push'
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: terraform-outputs-${{ steps.env_file.outputs.environment }}
           path: ${{ env.TF_WORKING_DIR }}/outputs.json
@@ -178,6 +196,7 @@ jobs:
       - name: Upload Kubeconfig
         if: github.event.inputs.action == 'apply' || github.event_name == 'push'
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: kubeconfig-${{ steps.env_file.outputs.environment }}
           path: ${{ env.TF_WORKING_DIR }}/kubeconfig-${{ steps.env_file.outputs.environment }}.yaml
@@ -187,6 +206,7 @@ jobs:
     name: Notify on completion
     needs: terraform
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: always()
 
     steps:

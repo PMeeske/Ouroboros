@@ -45,111 +45,147 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
-      run: dotnet restore
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_wait_seconds: 30
+        command: dotnet restore
 
     - name: Build
       run: dotnet build --configuration Release --no-restore
+      timeout-minutes: 15
 
     - name: Setup Ollama
-      run: |
-        # Install Ollama
-        curl -fsSL https://ollama.com/install.sh | sh
-
-        # Start Ollama service in background
-        ollama serve > /tmp/ollama.log 2>&1 &
-
-        # Wait for Ollama to be ready
-        echo "Waiting for Ollama service to start..."
-        for i in {1..30}; do
-          if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
-            echo "✓ Ollama service is ready"
-            break
-          fi
-          if [ $i -eq 30 ]; then
-            echo "Error: Ollama service failed to start"
-            cat /tmp/ollama.log
-            exit 1
-          fi
-          echo -n "."
-          sleep 2
-        done
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_wait_seconds: 30
+        command: |
+          # Install Ollama
+          curl -fsSL https://ollama.com/install.sh | sh
+          
+          # Start Ollama service in background
+          ollama serve > /tmp/ollama.log 2>&1 &
+          
+          # Wait for Ollama to be ready
+          echo "Waiting for Ollama service to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+              echo "✓ Ollama service is ready"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "Error: Ollama service failed to start"
+              cat /tmp/ollama.log
+              exit 1
+            fi
+            echo -n "."
+            sleep 2
+          done
 
     - name: Pull Ollama models
-      run: |
-        echo "Pulling llama3:8b model (memory-efficient)..."
-        ollama pull llama3:8b
-
-        echo "Pulling nomic-embed-text embedding model..."
-        ollama pull nomic-embed-text
-
-        echo "✓ Models pulled successfully"
-        ollama list
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 20
+        max_attempts: 3
+        retry_wait_seconds: 60
+        command: |
+          echo "Pulling llama3:8b model (memory-efficient)..."
+          ollama pull llama3:8b
+          
+          echo "Pulling nomic-embed-text embedding model..."
+          ollama pull nomic-embed-text
+          
+          echo "✓ Models pulled successfully"
+          ollama list
 
     - name: Test 1 - Basic Ollama Connectivity
-      run: |
-        echo "=== Test 1: Basic Ollama Connectivity ==="
-        cd src/MonadicPipeline.CLI
-
-        # Basic ask command to verify Ollama works
-        dotnet run --no-build --configuration Release -- ask \
-          -q "What is 2+2? Answer with just the number." \
-          --model "llama3:8b" \
-          --max-tokens 50
-
-        echo "✓ Basic connectivity test passed"
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 5
+        max_attempts: 2
+        retry_wait_seconds: 10
+        command: |
+          echo "=== Test 1: Basic Ollama Connectivity ==="
+          cd src/MonadicPipeline.CLI
+          
+          # Basic ask command to verify Ollama works
+          dotnet run --no-build --configuration Release -- ask \
+            -q "What is 2+2? Answer with just the number." \
+            --model "llama3:8b" \
+            --max-tokens 50
+          
+          echo "✓ Basic connectivity test passed"
 
     - name: Test 2 - Pipeline DSL Execution
-      run: |
-        echo "=== Test 2: Pipeline DSL Execution ==="
-        cd src/MonadicPipeline.CLI
-
-        # Test pipeline DSL with draft step
-        dotnet run --no-build --configuration Release -- pipeline \
-          --dsl "SetPrompt('Explain what functional programming is in one sentence') | UseDraft" \
-          --model "llama3:8b" \
-          --max-tokens 100
-
-        echo "✓ Pipeline DSL test passed"
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 5
+        max_attempts: 2
+        retry_wait_seconds: 10
+        command: |
+          echo "=== Test 2: Pipeline DSL Execution ==="
+          cd src/MonadicPipeline.CLI
+          
+          # Test pipeline DSL with draft step
+          dotnet run --no-build --configuration Release -- pipeline \
+            --dsl "SetPrompt('Explain what functional programming is in one sentence') | UseDraft" \
+            --model "llama3:8b" \
+            --max-tokens 100
+          
+          echo "✓ Pipeline DSL test passed"
 
     - name: Test 3 - Memory-Efficient Reverse Engineering
-      run: |
-        echo "=== Test 3: Reverse Engineering Pipeline (Memory-Efficient) ==="
-        cd src/MonadicPipeline.CLI
-
-        # Create a minimal test directory structure
-        mkdir -p /tmp/test-project
-        echo "# Test Project" > /tmp/test-project/README.md
-        echo "public class TestClass { }" > /tmp/test-project/TestClass.cs
-
-        # Run reverse engineering pipeline with memory-efficient settings
-        dotnet run --no-build --configuration Release -- pipeline \
-          --dsl "UseDir('root=/tmp/test-project|norec') | UseIngest | SetTopic('Generate markdown requirement specs') | UseDraft" \
-          --model "llama3:8b" \
-          --embed "nomic-embed-text" \
-          --topk 3 \
-          --max-tokens 200
-
-        echo "✓ Reverse engineering test passed"
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 10
+        max_attempts: 2
+        retry_wait_seconds: 15
+        command: |
+          echo "=== Test 3: Reverse Engineering Pipeline (Memory-Efficient) ==="
+          cd src/MonadicPipeline.CLI
+          
+          # Create a minimal test directory structure
+          mkdir -p /tmp/test-project
+          echo "# Test Project" > /tmp/test-project/README.md
+          echo "public class TestClass { }" > /tmp/test-project/TestClass.cs
+          
+          # Run reverse engineering pipeline with memory-efficient settings
+          dotnet run --no-build --configuration Release -- pipeline \
+            --dsl "UseDir('root=/tmp/test-project|norec') | UseIngest | SetTopic('Generate markdown requirement specs') | UseDraft" \
+            --model "llama3:8b" \
+            --embed "nomic-embed-text" \
+            --topk 3 \
+            --max-tokens 200
+          
+          echo "✓ Reverse engineering test passed"
 
     - name: Test 4 - RAG with Embeddings
-      run: |
-        echo "=== Test 4: RAG with Embeddings ==="
-        cd src/MonadicPipeline.CLI
-
-        # Create test content for RAG
-        mkdir -p /tmp/rag-test
-        echo "Functional programming is a paradigm that treats computation as evaluation of mathematical functions." > /tmp/rag-test/fp-guide.txt
-
-        # Test with RAG enabled
-        dotnet run --no-build --configuration Release -- ask \
-          -q "What is functional programming?" \
-          --model "llama3:8b" \
-          --embed "nomic-embed-text" \
-          --rag \
-          --topk 2 \
-          --max-tokens 100
-
-        echo "✓ RAG test passed"
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 10
+        max_attempts: 2
+        retry_wait_seconds: 15
+        command: |
+          echo "=== Test 4: RAG with Embeddings ==="
+          cd src/MonadicPipeline.CLI
+          
+          # Create test content for RAG
+          mkdir -p /tmp/rag-test
+          echo "Functional programming is a paradigm that treats computation as evaluation of mathematical functions." > /tmp/rag-test/fp-guide.txt
+          
+          # Test with RAG enabled
+          dotnet run --no-build --configuration Release -- ask \
+            -q "What is functional programming?" \
+            --model "llama3:8b" \
+            --embed "nomic-embed-text" \
+            --rag \
+            --topk 2 \
+            --max-tokens 100
+          
+          echo "✓ RAG test passed"
 
     - name: Verify Ollama Service Logs
       if: always()
@@ -185,6 +221,7 @@ jobs:
     - name: Upload Test Artifacts
       uses: actions/upload-artifact@v4
       if: always()
+      continue-on-error: true
       with:
         name: ollama-integration-logs
         path: |
