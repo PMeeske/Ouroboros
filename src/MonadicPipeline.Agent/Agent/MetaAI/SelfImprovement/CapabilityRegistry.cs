@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Capability Registry Implementation
 // Agent self-model with capability tracking and assessment

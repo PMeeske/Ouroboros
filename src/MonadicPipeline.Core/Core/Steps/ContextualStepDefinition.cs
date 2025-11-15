@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Contextual Step Definition - Append-only Builder Pattern
 // Implements the Reader/Writer monad pattern with fluent composition

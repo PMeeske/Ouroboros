@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Meta-AI Planner Orchestrator Implementation
 // Implements plan-execute-verify loop with continual learning

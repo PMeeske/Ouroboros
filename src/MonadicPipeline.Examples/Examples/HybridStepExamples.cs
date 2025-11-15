@@ -15,11 +15,19 @@ public static class HybridStepExamples
     /// </summary>
     public static class SyncSteps
     {
+        /// <summary>Converts a string to uppercase</summary>
         public static readonly SyncStep<string, string> ToUpper = new((string s) => s.ToUpperInvariant());
+        
+        /// <summary>Gets the length of a string</summary>
         public static readonly SyncStep<string, int> GetLength = new((string s) => s.Length);
+        
+        /// <summary>Converts an integer to a string</summary>
         public static readonly SyncStep<int, string> ToStringStep = new((int i) => i.ToString());
+        
+        /// <summary>Parses a string to an integer</summary>
         public static readonly SyncStep<string, int> ParseInt = new((string s) => int.Parse(s));
 
+        /// <summary>Formats a number with a size descriptor</summary>
         public static readonly SyncStep<int, string> FormatNumber =
             new((int n) => n > 100 ? $"Large: {n}" : $"Small: {n}");
     }
@@ -29,18 +37,21 @@ public static class HybridStepExamples
     /// </summary>
     public static class AsyncSteps
     {
+        /// <summary>Asynchronously converts a string to uppercase</summary>
         public static readonly Step<string, string> AsyncToUpper = async s =>
         {
             await Task.Delay(10); // Simulate async work
             return s.ToUpperInvariant();
         };
 
+        /// <summary>Asynchronously formats a number</summary>
         public static readonly Step<int, string> AsyncFormat = async n =>
         {
             await Task.Delay(10); // Simulate async work
             return $"Async formatted: {n}";
         };
 
+        /// <summary>Simulates an async network call</summary>
         public static readonly Step<string, string> NetworkCall = async s =>
         {
             await Task.Delay(50); // Simulate network delay

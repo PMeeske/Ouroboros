@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ============================================================================
 // LangChain Memory Integration with Kleisli Pipeline System
 // Integrates memory management into the monadic pipeline architecture

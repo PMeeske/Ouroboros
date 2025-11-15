@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // MeTTa Orchestrator v3.0 Builder
 // Fluent builder for creating v3.0 orchestrator instances

@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Meta-AI Layer v2 - Planner/Executor/Verifier Orchestrator
 // Implements continual learning with plan-execute-verify loop

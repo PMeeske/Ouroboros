@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Skill Extractor Implementation
 // Automatic extraction of reusable skills from successful executions

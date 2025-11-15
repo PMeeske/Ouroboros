@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Skill Composition - Combine skills into higher-level skills
 // ==========================================================
