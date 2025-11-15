@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.Xml.Linq;
 using LangChain.Databases;
 using LangChain.Splitters.Text;

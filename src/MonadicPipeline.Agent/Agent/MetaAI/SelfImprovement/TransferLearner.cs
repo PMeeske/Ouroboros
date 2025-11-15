@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Transfer Learning Implementation
 // Domain adaptation and analogical reasoning for skill transfer

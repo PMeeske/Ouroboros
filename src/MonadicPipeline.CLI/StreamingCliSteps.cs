@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Channels;

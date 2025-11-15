@@ -251,4 +251,30 @@ public class OptionMonadTests
         if (left.HasValue)
             left.Value.Should().Be(right.Value);
     }
+
+    [Fact]
+    public void Map_OnNone_RemainsNone()
+    {
+        // Arrange
+        var option = Option<int>.None();
+
+        // Act
+        var mapped = option.Map(x => x * 2);
+
+        // Assert
+        mapped.HasValue.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Bind_OnNone_RemainsNone()
+    {
+        // Arrange
+        var option = Option<int>.None();
+
+        // Act
+        var bound = option.Bind(x => Option<int>.Some(x * 2));
+
+        // Assert
+        bound.HasValue.Should().BeFalse();
+    }
 }

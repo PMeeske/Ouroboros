@@ -246,4 +246,30 @@ public class ResultMonadTests
         left.IsSuccess.Should().Be(right.IsSuccess);
         left.Value.Should().Be(right.Value);
     }
+
+    [Fact]
+    public void GetValueOrDefault_OnSuccess_ReturnsValue()
+    {
+        // Arrange
+        var result = Result<int, string>.Success(42);
+
+        // Act
+        var value = result.GetValueOrDefault(0);
+
+        // Assert
+        value.Should().Be(42);
+    }
+
+    [Fact]
+    public void GetValueOrDefault_OnFailure_ReturnsDefault()
+    {
+        // Arrange
+        var result = Result<int, string>.Failure("error");
+
+        // Act
+        var value = result.GetValueOrDefault(99);
+
+        // Assert
+        value.Should().Be(99);
+    }
 }

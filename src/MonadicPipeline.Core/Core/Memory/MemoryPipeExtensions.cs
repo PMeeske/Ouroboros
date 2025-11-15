@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ============================================================================
 // Memory-Aware Kleisli Pipeline Integration
 // Extension methods to integrate memory functionality with existing pipes

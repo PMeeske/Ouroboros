@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // NextNode Tool - Symbolic Next-Step Enumeration
 // Uses MeTTa to determine valid next nodes in execution

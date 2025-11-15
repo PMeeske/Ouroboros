@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Curiosity Engine Interface
 // Intrinsic motivation and curiosity-driven exploration

@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using LangChain.Abstractions.Schema;            // IChainValues
 // BaseStackableChain (namespace assumption)
 using LangChain.Chains.HelperChains;            // StackChain (optional)
@@ -30,7 +31,7 @@ public static class ChainAdapters
     };
 
     /// <summary>
-    /// Wrap a <see cref="BaseStackableChain"/> as a pipeline <see cref="Step"/> with explicit key isolation.
+    /// Wrap a <see cref="BaseStackableChain"/> as a pipeline Step with explicit key isolation.
     /// </summary>
     /// <param name="chain">Underlying LangChain stackable chain.</param>
     /// <param name="inputKeys">State property names to export into the chain value dictionary.</param>

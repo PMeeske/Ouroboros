@@ -1,3 +1,4 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Model Orchestrator Interface
 // Defines contract for intelligent model and tool selection
