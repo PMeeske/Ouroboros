@@ -1,7 +1,6 @@
 {
   "stryker-config": {
     "solution": "MonadicPipeline.sln",
-    "project": "src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj",
     "test-projects": [
       "src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj"
     ],
