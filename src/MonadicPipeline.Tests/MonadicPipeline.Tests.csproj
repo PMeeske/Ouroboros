@@ -42,6 +42,10 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" Version="8.7.1" />
+    <!-- SpecFlow BDD integration -->
+    <PackageReference Include="SpecFlow" Version="3.9.40" />
+    <PackageReference Include="SpecFlow.xUnit" Version="3.9.40" />
+    <PackageReference Include="SpecFlow.Tools.MsBuild.Generation" Version="3.9.40" />
   </ItemGroup>
 
   <ItemGroup>
