@@ -100,15 +100,14 @@ public class AndroidServicesIntegrationTests
     }
 
     [Fact]
-    public void CliExecutor_CommandExecution_WithoutInitialization_ShouldFail()
+    public async Task CliExecutor_CommandExecution_WithoutInitialization_ShouldFail()
     {
         // Arrange
         var executor = new TestCliExecutor();
 
         // Act & Assert
-        var action = () => executor.ExecuteCommandAsync("help").Wait();
-        action.Should().Throw<AggregateException>()
-            .WithInnerException<InvalidOperationException>()
+        var action = async () => await executor.ExecuteCommandAsync("help");
+        await action.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("Executor not initialized");
     }
 }
