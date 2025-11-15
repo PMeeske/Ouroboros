@@ -1,0 +1,40 @@
+{
+  "stryker-config": {
+    "solution": "MonadicPipeline.sln",
+    "project": "src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj",
+    "test-projects": [
+      "src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj"
+    ],
+    "target-framework": "net8.0",
+    "coverage-analysis": "perTest",
+    "mutation-level": "Standard",
+    "reporters": [
+      "html",
+      "progress",
+      "cleartext"
+    ],
+    "thresholds": {
+      "high": 80,
+      "low": 60,
+      "break": 50
+    },
+    "mutate": [
+      "src/**/*.cs",
+      "!**/bin/**",
+      "!**/obj/**",
+      "!**/*.g.cs",
+      "!**/*.Designer.cs",
+      "!src/MonadicPipeline.Tests/**"
+    ],
+    "ignore-methods": [
+      "ToString",
+      "GetHashCode",
+      "Equals"
+    ],
+    "ignore-mutations": [
+      "string"
+    ],
+    "verbosity": "info",
+    "additional-timeout": 5000
+  }
+}

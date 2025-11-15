@@ -3,10 +3,6 @@
 // </copyright>
 
 namespace LangChainPipeline.Core.LangChain;
-
-using LangChain.Prompts.Base;
-using LangChain.Providers;
-
 /// <summary>
 /// LangChain-integrated conversation pipeline that properly uses official LangChain chains
 /// integrated with the existing monadic pipeline patterns.
@@ -72,7 +68,7 @@ public class LangChainConversationPipeline
     {
         var currentContext = initialContext;
 
-        foreach (var step in this.steps)
+        foreach (Func<LangChainConversationContext, Task<LangChainConversationContext>> step in this.steps)
         {
             currentContext = await step(currentContext);
         }
@@ -108,7 +104,7 @@ public static class LangChainConversationBuilder
     public static LangChainConversationPipeline AddAiResponseGeneration(
         this LangChainConversationPipeline pipeline,
         IChatModel llm,
-        BasePromptTemplate prompt,
+        PromptTemplate prompt,
         string outputKey = "text")
     {
         return pipeline.AddLangChainLlm(llm, prompt, outputKey);

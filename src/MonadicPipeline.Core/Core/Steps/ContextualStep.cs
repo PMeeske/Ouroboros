@@ -25,8 +25,8 @@ public static class ContextualStep
         => async (input, context) =>
         {
             await Task.Yield();
-            var result = func(input);
-            var logs = log != null ? [log] : new List<string>();
+            TOut? result = func(input);
+            List<string> logs = log != null ? [log] : new List<string>();
             return (result, logs);
         };
 
@@ -40,7 +40,7 @@ public static class ContextualStep
         => async (input, context) =>
         {
             var result = await step(input);
-            var logs = log != null ? [log] : new List<string>();
+            List<string> logs = log != null ? [log] : new List<string>();
             return (result, logs);
         };
 
@@ -79,10 +79,10 @@ public static class ContextualStepExtensions
         ContextualStep<TMid, TOut, TContext> second)
         => async (input, context) =>
         {
-            var (midResult, firstLogs) = await first(input, context);
-            var (finalResult, secondLogs) = await second(midResult, context);
+            (TMid? midResult, List<string>? firstLogs) = await first(input, context);
+            (TOut? finalResult, List<string>? secondLogs) = await second(midResult, context);
 
-            var combinedLogs = new List<string>();
+            List<string> combinedLogs = new List<string>();
             combinedLogs.AddRange(firstLogs);
             combinedLogs.AddRange(secondLogs);
 
@@ -99,8 +99,8 @@ public static class ContextualStepExtensions
         string? log = null)
         => async (input, context) =>
         {
-            var (midResult, logs) = await step(input, context);
-            var finalResult = mapper(midResult);
+            (TMid? midResult, List<string>? logs) = await step(input, context);
+            TOut? finalResult = mapper(midResult);
 
             if (log != null)
             {
@@ -119,7 +119,7 @@ public static class ContextualStepExtensions
         string logMessage)
         => async (input, context) =>
         {
-            var (result, logs) = await step(input, context);
+            (TOut? result, List<string>? logs) = await step(input, context);
             logs.Add(logMessage);
             return (result, logs);
         };
@@ -133,8 +133,8 @@ public static class ContextualStepExtensions
         Func<TOut, string?> logFunction)
         => async (input, context) =>
         {
-            var (result, logs) = await step(input, context);
-            var conditionalLog = logFunction(result);
+            (TOut? result, List<string>? logs) = await step(input, context);
+            string? conditionalLog = logFunction(result);
             if (conditionalLog != null)
             {
                 logs.Add(conditionalLog);
@@ -175,7 +175,7 @@ public static class ContextualStepExtensions
         {
             try
             {
-                var (result, logs) = await step(input, context);
+                (TOut result, List<string> logs) = await step(input, context);
                 return (Result<TOut, Exception>.Success(result), logs);
             }
             catch (Exception ex)
@@ -195,13 +195,13 @@ public static class ContextualStepExtensions
         {
             try
             {
-                var (result, logs) = await step(input, context);
+                (TOut result, List<string> logs) = await step(input, context);
                 var option = predicate(result) ? Option<TOut>.Some(result) : Option<TOut>.None();
                 return (option, logs);
             }
             catch (Exception ex)
             {
-                var logs = new List<string> { $"Exception converted to None: {ex.Message}" };
+                List<string> logs = new List<string> { $"Exception converted to None: {ex.Message}" };
                 return (Option<TOut>.None(), logs);
             }
         };

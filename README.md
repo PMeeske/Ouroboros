@@ -11,7 +11,7 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
 ## 🚀 Key Features
 
 - **🧮 Monadic Composition**: Type-safe pipeline operations using `Result<T>` and `Option<T>` monads
-- **🔗 Kleisli Arrows**: Mathematical composition of computations in monadic contexts  
+- **🔗 Kleisli Arrows**: Mathematical composition of computations in monadic contexts
 - **🤖 LangChain Integration**: Native integration with LangChain providers and tools
 - **⚡ LangChain Pipe Operators**: Familiar `Set | Retrieve | Template | LLM` syntax with monadic safety
 - **🧠 Meta-AI Layer**: Pipeline steps exposed as tools - the LLM can invoke pipeline operations
@@ -116,13 +116,13 @@ Iteration N:  Critique(FinalSpec_{N-1}) → Improve → FinalSpec_N
    cd src/MonadicPipeline.CLI
    dotnet run -- setup --all
    ```
-   
+
    The guided setup wizard will help you:
    - Install and configure Ollama for local LLM execution
    - Setup authentication for external providers (OpenAI, Ollama Cloud)
    - Install MeTTa symbolic reasoning engine (optional)
    - Configure local vector database (Qdrant)
-   
+
    You can also run individual setup steps:
    ```bash
    dotnet run -- setup --ollama           # Install Ollama only
@@ -494,7 +494,7 @@ Mathematical composition of monadic computations:
 
 ```csharp
 public static Step<TInput, TOutput> CreateStep<TInput, TOutput>(
-    Func<TInput, Task<Result<TOutput>>> operation) => 
+    Func<TInput, Task<Result<TOutput>>> operation) =>
     async input => await operation(input);
 ```
 
@@ -717,7 +717,7 @@ public class CustomTool : ITool
 {
     public string Name => "custom_tool";
     public string Description => "Performs custom analysis";
-    
+
     public async Task<ToolExecution> ExecuteAsync(ToolArgs args)
     {
         // Implementation
@@ -812,6 +812,22 @@ reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:"TestCoverageRep
 - 📊 [Full Coverage Report](TEST_COVERAGE_REPORT.md) - Detailed analysis and recommendations
 - 📋 [Quick Reference](TEST_COVERAGE_QUICKREF.md) - Commands and current metrics
 - 🔄 CI/CD: Automated coverage reporting via GitHub Actions
+
+#### Mutation Testing
+
+Mutation testing is powered by [Stryker.NET](https://stryker-mutator.io). A local dotnet tool manifest (`.config/dotnet-tools.json`) pins the `dotnet-stryker` version and a repository-wide configuration (`stryker-config.json`) defines reporters, thresholds, and mutation filters.
+
+```powershell
+# PowerShell
+./scripts/run-mutation-tests.ps1 -OpenReport
+
+# Bash / WSL / macOS
+./scripts/run-mutation-tests.sh
+```
+
+Both helpers restore local tools and execute `dotnet stryker --config-file stryker-config.json`. The PowerShell variant can optionally open the latest HTML report (`StrykerOutput/<timestamp>/reports/mutation-report.html`).
+
+Additional details and CI guidance are available in [TEST_MUTATION_GUIDE.md](TEST_MUTATION_GUIDE.md).
 
 ## 🔄 GitHub Copilot Development Loop
 
@@ -1096,9 +1112,9 @@ For a high-level overview of all infrastructure work:
 
 If you encounter errors like:
 ```
-Failed to pull image "monadic-pipeline-webapi:latest": failed to pull and unpack image 
-"docker.io/library/monadic-pipeline-webapi:latest": failed to resolve reference 
-"docker.io/library/monadic-pipeline-webapi:latest": pull access denied, repository does 
+Failed to pull image "monadic-pipeline-webapi:latest": failed to pull and unpack image
+"docker.io/library/monadic-pipeline-webapi:latest": failed to resolve reference
+"docker.io/library/monadic-pipeline-webapi:latest": pull access denied, repository does
 not exist or may require authorization
 ```
 
@@ -1131,7 +1147,7 @@ This script checks your cluster type and provides specific guidance.
 3. **For IONOS Cloud**:
    ```bash
    ./scripts/deploy-ionos.sh monadic-pipeline
-   
+
    # Check deployment status
    ./scripts/check-ionos-deployment.sh monadic-pipeline
    ```
@@ -1141,10 +1157,10 @@ This script checks your cluster type and provides specific guidance.
    ```bash
    # AWS EKS
    ./scripts/deploy-cloud.sh 123456789.dkr.ecr.us-east-1.amazonaws.com
-   
+
    # GCP GKE
    ./scripts/deploy-cloud.sh gcr.io/my-project
-   
+
    # Docker Hub
    ./scripts/deploy-cloud.sh docker.io/myusername
    ```

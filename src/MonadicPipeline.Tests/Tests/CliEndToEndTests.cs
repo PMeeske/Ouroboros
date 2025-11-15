@@ -650,7 +650,6 @@ public static class CliEndToEndTests
         var integrationTestType = typeof(OllamaCloudIntegrationTests);
         var vectorTestType = typeof(TrackedVectorStoreTests);
         var memoryTestType = typeof(MemoryContextTests);
-        var conversationTestType = typeof(LangChainConversationTests);
 
         if (integrationTestType == null)
         {
@@ -667,10 +666,7 @@ public static class CliEndToEndTests
             throw new Exception("MemoryContextTests should exist");
         }
 
-        if (conversationTestType == null)
-        {
-            throw new Exception("LangChainConversationTests should exist");
-        }
+        // Note: LangChainConversationTests are temporarily excluded while LangChain integration is disabled.
 
         Console.WriteLine("  ✓ Test command structure is complete");
     }

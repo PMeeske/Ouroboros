@@ -13,8 +13,17 @@ dotnet test --collect:"XPlat Code Coverage" && \
 ```bash
 # Open HTML report in browser
 open TestCoverageReport/index.html      # macOS
-xdg-open TestCoverageReport/index.html  # Linux  
+xdg-open TestCoverageReport/index.html  # Linux
 start TestCoverageReport/index.html     # Windows
+```
+
+### Run Mutation Tests
+```bash
+# PowerShell
+./scripts/run-mutation-tests.ps1
+
+# Bash / WSL / macOS
+./scripts/run-mutation-tests.sh
 ```
 
 ### Run Specific Tests
@@ -237,6 +246,6 @@ dotnet build --no-incremental
 
 ---
 
-**Last Updated:** October 5, 2025  
-**Coverage Tool:** Coverlet + ReportGenerator  
+**Last Updated:** October 5, 2025
+**Coverage Tool:** Coverlet + ReportGenerator
 **Test Framework:** xUnit 2.6.6

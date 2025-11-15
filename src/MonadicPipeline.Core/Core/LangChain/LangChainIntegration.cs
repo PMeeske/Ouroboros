@@ -3,13 +3,6 @@
 // </copyright>
 
 namespace LangChainPipeline.Core.LangChain;
-
-using LangChain.Chains.HelperChains;
-using LangChain.Chains.LLM;
-using LangChain.Prompts.Base;
-using LangChain.Providers;
-using LangChain.Schema;
-
 /// <summary>
 /// Integration layer that bridges LangChain chains with the monadic pipeline system.
 /// </summary>
@@ -106,7 +99,7 @@ public static class LangChainIntegration
     /// <returns></returns>
     public static KleisliResult<Dictionary<string, object>, Dictionary<string, object>, string> CreateLlmKleisli(
         IChatModel llm,
-        BasePromptTemplate prompt,
+        PromptTemplate prompt,
         string outputKey = "text")
     {
         var llmChain = new LlmChain(new LlmChainInput(llm, prompt)
@@ -134,7 +127,7 @@ public static class LangChainIntegration
     /// <returns></returns>
     public static Step<Dictionary<string, object>, Dictionary<string, object>> CreateLlmStep(
         IChatModel llm,
-        BasePromptTemplate prompt,
+        PromptTemplate prompt,
         string outputKey = "text")
     {
         var llmChain = new LlmChain(new LlmChainInput(llm, prompt)

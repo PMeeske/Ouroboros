@@ -74,12 +74,12 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
         try
         {
             // Determine optimal chunk size
-            var chunkSize = strategy == ChunkingStrategy.Adaptive
+            int chunkSize = strategy == ChunkingStrategy.Adaptive
                 ? this.GetAdaptiveChunkSize(maxChunkSize)
                 : maxChunkSize;
 
             // Split context into chunks
-            var chunks = this.SplitIntoChunks(textContext, chunkSize);
+            List<string> chunks = this.SplitIntoChunks(textContext, chunkSize);
 
             if (chunks.Count == 0)
             {
@@ -87,10 +87,10 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
             }
 
             // Process chunks in parallel (map phase)
-            var chunkResults = await this.ProcessChunksInParallelAsync(chunks, chunkSize, strategy, cancellationToken);
+            List<ChunkResult<string>> chunkResults = await this.ProcessChunksInParallelAsync(chunks, strategy, cancellationToken);
 
             // Check for failures
-            var failures = chunkResults.Where(r => !r.Success).ToList();
+            List<ChunkResult<string>> failures = chunkResults.Where(r => !r.Success).ToList();
             if (failures.Any())
             {
                 // Update performance metrics for failures
@@ -111,8 +111,7 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
 
             // Combine results (reduce phase)
             var combinedResult = await this.CombineChunkResultsAsync(
-                chunkResults.Select(r => r.Output).ToList(),
-                cancellationToken);
+                chunkResults.Select(r => r.Output).ToList());
 
             if (combinedResult.IsFailure)
             {
@@ -144,7 +143,7 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
     /// </summary>
     private List<string> SplitIntoChunks(string text, int chunkSize)
     {
-        var chunks = new List<string>();
+        List<string> chunks = new List<string>();
 
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -152,25 +151,25 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
         }
 
         // Simple token approximation: ~4 characters per token
-        var chunkCharSize = chunkSize * 4;
-        var overlap = chunkSize / 4; // 25% overlap to maintain context
-        var overlapCharSize = overlap * 4;
+        int chunkCharSize = chunkSize * 4;
+        int overlap = chunkSize / 4; // 25% overlap to maintain context
+        int overlapCharSize = overlap * 4;
 
-        var position = 0;
+        int position = 0;
         while (position < text.Length)
         {
-            var remainingLength = text.Length - position;
-            var currentChunkSize = Math.Min(chunkCharSize, remainingLength);
+            int remainingLength = text.Length - position;
+            int currentChunkSize = Math.Min(chunkCharSize, remainingLength);
 
             // Try to break at sentence boundaries
-            var chunk = text.Substring(position, currentChunkSize);
+            string chunk = text.Substring(position, currentChunkSize);
 
             // If not at the end, try to find a good break point
             if (position + currentChunkSize < text.Length)
             {
-                var lastPeriod = chunk.LastIndexOf(". ");
-                var lastNewline = chunk.LastIndexOf('\n');
-                var breakPoint = Math.Max(lastPeriod, lastNewline);
+                int lastPeriod = chunk.LastIndexOf(". ");
+                int lastNewline = chunk.LastIndexOf('\n');
+                int breakPoint = Math.Max(lastPeriod, lastNewline);
 
                 if (breakPoint > currentChunkSize / 2) // Only break if we're past halfway
                 {
@@ -202,8 +201,8 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
                 ChunkingStrategy strategy,
         CancellationToken cancellationToken)
     {
-        var results = new ConcurrentBag<ChunkResult<string>>();
-        var options = new ParallelOptions
+        ConcurrentBag<ChunkResult<string>> results = new ConcurrentBag<ChunkResult<string>>();
+        ParallelOptions options = new ParallelOptions
         {
             CancellationToken = cancellationToken,
             MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 4), // Limit parallelism
@@ -214,8 +213,8 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
             options,
             async (item, ct) =>
             {
-                var (chunk, index) = item;
-                var stopwatch = Stopwatch.StartNew();
+                (string? chunk, int index) = item;
+                Stopwatch stopwatch = Stopwatch.StartNew();
 
                 try
                 {
@@ -284,7 +283,7 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
     private int GetAdaptiveChunkSize(int requestedMaxSize)
     {
         // Start with requested size
-        var candidateSize = Math.Clamp(requestedMaxSize, MinChunkSize, MaxChunkSize);
+        int candidateSize = Math.Clamp(requestedMaxSize, MinChunkSize, MaxChunkSize);
 
         // If we have performance data, optimize based on success rates
         if (this.chunkSizePerformance.Any())
