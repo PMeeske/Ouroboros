@@ -252,4 +252,40 @@ public static class OllamaPresets
             return settings;
         }
     }
+
+    /// <summary>
+    /// Preset for TinyLlama optimized for high-performance parallel execution.
+    /// Designed for divide-and-conquer strategies where multiple instances run concurrently.
+    /// Ultra-low context window and aggressive threading for maximum throughput.
+    /// </summary>
+    public static OllamaChatSettings TinyLlamaFast
+    {
+        get
+        {
+            int cores = MachineCapabilities.CpuCores;
+            long memMb = MachineCapabilities.TotalMemoryMb;
+            int gpus = MachineCapabilities.GpuCount;
+
+            // Reserve threads for parallel execution - each instance gets fewer threads
+            // to allow multiple instances to run simultaneously
+            int threadsPerInstance = Math.Max(1, cores / 4);
+
+            OllamaChatSettings settings = new OllamaChatSettings
+            {
+                NumCtx = 2048, // Small context for speed
+                NumThread = threadsPerInstance,
+                NumGpu = gpus > 0 ? 1 : 0, // Single GPU if available
+                MainGpu = 0,
+                LowVram = true, // Always use low VRAM mode for parallel efficiency
+                Temperature = 0.4f, // Lower temperature for more deterministic parallel results
+                TopP = 0.85f,
+                TopK = 30,
+                RepeatPenalty = 1.1f,
+                KeepAlive = 5 * 60, // Shorter keep-alive for memory efficiency
+                UseMmap = true,
+                UseMlock = false
+            };
+            return settings;
+        }
+    }
 }
