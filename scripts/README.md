@@ -220,6 +220,71 @@ Checks and validates external accessibility of deployed IONOS infrastructure.
 
 ### Local Development
 
+#### `qdrant-setup.sh` / `qdrant-setup.ps1` - Qdrant Vector Store Setup (NEW)
+Comprehensive convenience script for setting up and managing Qdrant vector store locally.
+
+**Linux/macOS:**
+```bash
+./scripts/qdrant-setup.sh [command]
+```
+
+**Windows:**
+```powershell
+.\scripts\qdrant-setup.ps1 [command]
+```
+
+**Commands:**
+- `setup` - Full setup: start Qdrant and configure MonadicPipeline
+- `start` - Start Qdrant container
+- `stop` - Stop Qdrant container
+- `restart` - Restart Qdrant container
+- `status` - Check Qdrant status and show info
+- `logs` - View Qdrant logs (follow mode)
+- `configure` - Configure MonadicPipeline to use Qdrant
+- `list` - List all collections
+- `delete-collection <name>` - Delete a specific collection
+- `clean` - Delete all Qdrant data (WARNING: destructive!)
+- `help` - Show help message
+
+**Quick Start:**
+```bash
+# Complete setup (Linux/macOS)
+./scripts/qdrant-setup.sh setup
+
+# Complete setup (Windows)
+.\scripts\qdrant-setup.ps1 setup
+
+# Or step by step:
+./scripts/qdrant-setup.sh start       # Start Qdrant
+./scripts/qdrant-setup.sh configure   # Configure app
+./scripts/qdrant-setup.sh status      # Check status
+```
+
+**What it does:**
+- Checks Docker and Docker Compose installation
+- Starts Qdrant container with health checks
+- Automatically configures .env file for Qdrant
+- Lists collections and their statistics
+- Provides collection management (list, delete)
+- Shows Qdrant dashboard URL
+- Manages Qdrant data cleanup
+
+**Features:**
+- ✓ Color-coded output for easy reading
+- ✓ Automatic health checking with retries
+- ✓ Safe collection deletion with confirmation
+- ✓ Comprehensive status information
+- ✓ Cross-platform support (Linux/macOS/Windows)
+
+**Qdrant URLs (when running):**
+- HTTP API: `http://localhost:6333`
+- gRPC API: `localhost:6334`
+- Dashboard: `http://localhost:6333/dashboard`
+
+**See also:**
+- [Qdrant Quick Start Guide](../docs/VECTOR_STORES_QUICKSTART.md)
+- [Vector Stores Documentation](../docs/VECTOR_STORES.md)
+
 #### `deploy-local.sh`
 Publishes the application to a local directory for manual deployment or systemd service installation.
 
