@@ -5,6 +5,7 @@
 [![LangChain](https://img.shields.io/badge/LangChain-0.17.0-purple)](https://www.nuget.org/packages/LangChain/)
 [![Coverage](https://img.shields.io/badge/coverage-8.4%25-yellow)](TEST_COVERAGE_REPORT.md)
 [![Tests](https://img.shields.io/badge/tests-304%20passing-brightgreen)](src/MonadicPipeline.Tests)
+[![Mutation Testing](https://github.com/PMeeske/MonadicPipeline/actions/workflows/mutation-testing.yml/badge.svg)](https://github.com/PMeeske/MonadicPipeline/actions/workflows/mutation-testing.yml)
 
 A **sophisticated functional programming-based AI pipeline system** built on LangChain, implementing category theory principles, monadic composition, and functional programming patterns to create type-safe, composable AI workflows.
 
@@ -825,6 +826,14 @@ reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:"TestCoverageRep
 #### Mutation Testing
 
 Mutation testing is powered by [Stryker.NET](https://stryker-mutator.io). A local dotnet tool manifest (`.config/dotnet-tools.json`) pins the `dotnet-stryker` version and a repository-wide configuration (`stryker-config.json`) defines reporters, thresholds, and mutation filters.
+
+**Automated CI/CD:** The mutation testing workflow runs automatically:
+- 🌙 **Nightly Schedule**: Executes at 2 AM UTC daily
+- 🎯 **Manual Trigger**: Can be run on-demand from the Actions tab with configurable mutation level (Standard/Complete/Basic)
+- 📊 **Reports**: Generates HTML and JSON reports available as workflow artifacts
+- ✅ **Thresholds**: High ≥80%, Low ≥60%, Break <50%
+
+**Local Execution:**
 
 ```powershell
 # PowerShell

@@ -75,14 +75,54 @@ The `.gitignore` is configured to exclude `StrykerOutput/` and temporary folders
 
 ## CI/CD Integration
 
-To add mutation testing to CI, install the local tools and execute Stryker in your workflow:
+The repository includes an **automated mutation testing workflow** (`.github/workflows/mutation-testing.yml`) that runs mutation tests in CI/CD:
+
+### Automated Execution
+
+**Schedule:**
+- Runs automatically every night at 2 AM UTC
+- Ensures regular monitoring of test suite quality
+
+**Manual Trigger:**
+- Navigate to Actions → Mutation Testing → Run workflow
+- Configure mutation level (Standard, Complete, or Basic)
+- Configure verbosity level (info, debug, or trace)
+
+### Workflow Features
+
+The mutation testing workflow provides:
+
+1. **Artifact Generation**: HTML and JSON reports are uploaded as artifacts
+2. **Workflow Summary**: Displays mutation testing results in the Actions summary
+3. **Configurable Parameters**: Adjust mutation level and verbosity on-demand
+4. **Timeout Protection**: 120-minute timeout prevents runaway processes
+5. **Retry Mechanism**: Automatic retries for transient failures
+6. **NuGet Caching**: Speeds up dependency restoration
+7. **Non-Breaking**: Workflow warns but doesn't fail on low scores
+
+### Viewing Results
+
+After a workflow run completes:
+
+1. Go to the Actions tab in GitHub
+2. Select the "Mutation Testing" workflow
+3. Click on a specific run
+4. Download the `mutation-report-html` artifact
+5. Extract and open `mutation-report.html` in a browser
+
+### Manual CI/CD Integration
+
+To integrate mutation testing into other workflows, add these steps:
 
 ```yaml
 - name: Restore dotnet tools
   run: dotnet tool restore
 
 - name: Run mutation tests
-  run: dotnet stryker --config-file stryker-config.json --reporters "html" "progress"
+  run: |
+    dotnet stryker \
+      --config-file stryker-config.json \
+      --reporters "html" "progress" "json"
 ```
 
 Consider running mutation tests on a nightly build or gated branch to balance runtime with coverage benefits.

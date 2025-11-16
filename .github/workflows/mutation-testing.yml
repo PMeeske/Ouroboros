@@ -1,0 +1,219 @@
+name: Mutation Testing
+
+on:
+  # Run mutation tests on a schedule (nightly at 2 AM UTC)
+  schedule:
+    - cron: '0 2 * * *'
+
+  # Allow manual triggering from the Actions tab
+  workflow_dispatch:
+    inputs:
+      mutation_level:
+        description: 'Mutation level (Standard, Complete, or Basic)'
+        required: false
+        default: 'Standard'
+        type: choice
+        options:
+          - Standard
+          - Complete
+          - Basic
+      verbosity:
+        description: 'Verbosity level'
+        required: false
+        default: 'info'
+        type: choice
+        options:
+          - info
+          - debug
+          - trace
+
+# Cancel in-progress runs for the same workflow on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutation-test:
+    name: Run Mutation Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # Mutation testing can take a while
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+      timeout-minutes: 5
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_wait_seconds: 30
+        command: dotnet restore
+
+    - name: Restore dotnet tools
+      uses: nick-fields/retry-action@v3
+      with:
+        timeout_minutes: 5
+        max_attempts: 3
+        retry_wait_seconds: 10
+        command: dotnet tool restore
+
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore
+      timeout-minutes: 15
+
+    - name: Run mutation tests
+      id: mutation-test
+      continue-on-error: true
+      run: |
+        # Set mutation level from input or use default
+        ML="${{ github.event.inputs.mutation_level || 'Standard' }}"
+        VERBOSITY="${{ github.event.inputs.verbosity || 'info' }}"
+
+        echo "Running mutation tests with level: ${ML}, verbosity: ${VERBOSITY}"
+
+        # Run Stryker with configuration
+        dotnet stryker \
+          --config-file stryker-config.json \
+          --mutation-level "${ML}" \
+          --verbosity "${VERBOSITY}" \
+          --reporters "html" "progress" "json" "cleartext"
+      timeout-minutes: 90
+
+    - name: Extract mutation score
+      id: mutation-score
+      if: always()
+      run: |
+        # Find the most recent mutation report JSON
+        REPORT=$(find StrykerOutput -name "mutation-report.json" \
+          -type f | sort -r | head -n 1)
+
+        if [ -f "$REPORT" ]; then
+          echo "Found mutation report: $REPORT"
+
+          # Extract mutation score using jq
+          if command -v jq &> /dev/null; then
+            SCORE=$(jq -r '.thresholds.high' "$REPORT" 2>/dev/null \
+              || echo "N/A")
+            MUTANTS=$(jq -r '.files | length' "$REPORT" 2>/dev/null \
+              || echo "N/A")
+
+            echo "mutation_score=${SCORE}" >> $GITHUB_OUTPUT
+            echo "total_mutants=${MUTANTS}" >> $GITHUB_OUTPUT
+            echo "report_found=true" >> $GITHUB_OUTPUT
+          else
+            echo "jq not found, skipping score extraction"
+            echo "report_found=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "No mutation report found"
+          echo "report_found=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Display mutation test summary
+      if: always()
+      run: |
+        echo "## 🧬 Mutation Testing Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        FOUND="${{ steps.mutation-score.outputs.report_found }}"
+        if [ "$FOUND" = "true" ]; then
+          echo "✅ Mutation testing completed successfully" \
+            >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Configuration:**" >> $GITHUB_STEP_SUMMARY
+          ML="${{ github.event.inputs.mutation_level || 'Standard' }}"
+          echo "- Mutation Level: ${ML}" >> $GITHUB_STEP_SUMMARY
+          echo "- Target Framework: net8.0" >> $GITHUB_STEP_SUMMARY
+          echo "- Test Project: MonadicPipeline.Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Thresholds:**" >> $GITHUB_STEP_SUMMARY
+          echo "- 🟢 High: ≥80%" >> $GITHUB_STEP_SUMMARY
+          echo "- 🟡 Low: ≥60%" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔴 Break: <50%" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📊 Download the artifacts to view the HTML report." \
+            >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ Mutation testing did not complete or reports missing." \
+            >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the workflow logs for details." >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**About Mutation Testing:**" >> $GITHUB_STEP_SUMMARY
+        echo "Mutation testing validates test quality by introducing" \
+          >> $GITHUB_STEP_SUMMARY
+        echo "small changes (mutations) to the code and verifying that" \
+          >> $GITHUB_STEP_SUMMARY
+        echo "tests detect these changes. A high mutation score indicates" \
+          >> $GITHUB_STEP_SUMMARY
+        echo "a robust test suite." >> $GITHUB_STEP_SUMMARY
+
+    - name: Upload mutation report HTML
+      uses: actions/upload-artifact@v4
+      if: always()
+      continue-on-error: true
+      with:
+        name: mutation-report-html
+        path: StrykerOutput/**/reports/mutation-report.html
+        retention-days: 30
+        if-no-files-found: warn
+
+    - name: Upload mutation report JSON
+      uses: actions/upload-artifact@v4
+      if: always()
+      continue-on-error: true
+      with:
+        name: mutation-report-json
+        path: StrykerOutput/**/mutation-report.json
+        retention-days: 30
+        if-no-files-found: warn
+
+    - name: Upload Stryker logs
+      uses: actions/upload-artifact@v4
+      if: always()
+      continue-on-error: true
+      with:
+        name: stryker-logs
+        path: StrykerOutput/**/logs/
+        retention-days: 7
+        if-no-files-found: ignore
+
+    - name: Check mutation threshold
+      if: steps.mutation-test.outcome == 'failure'
+      run: |
+        echo "::warning::Mutation testing failed or threshold not met"
+        echo "Review the artifacts to identify areas needing better"
+        echo "test coverage."
+        exit 0  # Don't fail the workflow, just warn
+
+    - name: Job summary
+      if: always()
+      run: |
+        OUTCOME="${{ steps.mutation-test.outcome }}"
+        if [ "$OUTCOME" = "success" ]; then
+          echo "✅ Mutation testing completed successfully"
+        else
+          echo "⚠️ Mutation testing completed with issues"
+          echo "Check the reports for details"
+        fi
