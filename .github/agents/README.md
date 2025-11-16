@@ -99,8 +99,6 @@ This agent specializes in:
 - Writing mobile unit and UI tests
 - Integrating third-party libraries
 - Implementing mobile security best practices
-- Troubleshooting platform-specific issues
-- Choosing between native and cross-platform approaches
 
 **Example invocation:**
 ```
@@ -108,6 +106,136 @@ This agent specializes in:
 @android-expert How do I build a cross-platform app with .NET MAUI that shares business logic?
 ```
 
+### 5. Testing & Quality Assurance Expert (`testing-quality-expert.md`)
+
+**Expertise:** Comprehensive Testing, Code Coverage, Mutation Testing, Quality Metrics
+
+This agent specializes in:
+- Unit, integration, and end-to-end testing strategies
+- Mutation testing with Stryker.NET
+- Code coverage analysis and reporting
+- Property-based testing with FsCheck
+- Performance benchmarking with BenchmarkDotNet
+- Test automation and CI/CD integration
+- Quality metrics and code analysis
+
+**Use this agent when:**
+- Writing comprehensive test suites
+- Improving code coverage and test quality
+- Setting up mutation testing
+- Implementing property-based tests
+- Configuring test automation pipelines
+- Analyzing code quality metrics
+- Troubleshooting flaky tests
+
+**Example invocation:**
+```
+@testing-quality-expert How do I set up mutation testing for my monadic pipeline code?
+```
+
+### 6. C# & .NET Architecture Expert (`csharp-dotnet-expert.md`)
+
+**Expertise:** C# Language Features, .NET 8 Patterns, Performance Optimization
+
+This agent specializes in:
+- Modern C# features (C# 12, records, pattern matching)
+- Async/await best practices and ValueTask optimization
+- Memory-efficient code with Span<T> and Memory<T>
+- Dependency injection and service lifetime management
+- LINQ optimization and custom operators
+- Performance profiling and optimization
+
+**Use this agent when:**
+- Leveraging modern C# language features
+- Optimizing async/await patterns
+- Implementing memory-efficient code
+- Configuring dependency injection
+- Writing high-performance LINQ queries
+- Profiling and optimizing bottlenecks
+- Implementing advanced .NET patterns
+
+**Example invocation:**
+```
+@csharp-dotnet-expert How do I optimize this LINQ query for better performance?
+```
+
+### 7. API Design & Documentation Expert (`api-design-expert.md`)
+
+**Expertise:** RESTful API Design, OpenAPI, API Versioning, Developer Experience
+
+This agent specializes in:
+- RESTful API design principles and best practices
+- OpenAPI/Swagger specification and documentation
+- API versioning strategies (URL, header, content negotiation)
+- Request/response validation and error handling
+- Pagination, filtering, and HATEOAS
+- Rate limiting and API security
+
+**Use this agent when:**
+- Designing new API endpoints
+- Creating OpenAPI specifications
+- Implementing API versioning
+- Writing API documentation
+- Implementing pagination and filtering
+- Setting up rate limiting
+- Improving developer experience
+
+**Example invocation:**
+```
+@api-design-expert How do I design a RESTful API for pipeline management with proper versioning?
+```
+
+### 8. Database & Persistence Expert (`database-persistence-expert.md`)
+
+**Expertise:** Vector Databases (Qdrant), Event Sourcing, Data Modeling, Caching
+
+This agent specializes in:
+- Qdrant vector database integration and optimization
+- Event sourcing and CQRS patterns
+- Repository pattern and specifications
+- Multi-level caching strategies
+- Optimistic concurrency control
+- Connection resilience and retry policies
+
+**Use this agent when:**
+- Integrating vector databases
+- Implementing event sourcing
+- Designing persistence layers
+- Optimizing database queries
+- Setting up caching strategies
+- Handling concurrency conflicts
+- Managing database connections
+
+**Example invocation:**
+```
+@database-persistence-expert How do I optimize vector similarity search in Qdrant?
+```
+
+### 9. Security & Compliance Expert (`security-compliance-expert.md`)
+
+**Expertise:** Application Security, Authentication, Authorization, Secrets Management
+
+This agent specializes in:
+- OWASP Top 10 vulnerabilities and mitigations
+- Authentication (OAuth 2.0, JWT, API keys)
+- Authorization (RBAC, ABAC, policy-based)
+- Secrets management (Azure Key Vault, Kubernetes Secrets)
+- Input validation and output sanitization
+- Audit logging and compliance (GDPR, SOC 2)
+
+**Use this agent when:**
+- Implementing authentication/authorization
+- Managing secrets securely
+- Validating and sanitizing inputs
+- Setting up audit logging
+- Addressing security vulnerabilities
+- Ensuring compliance requirements
+- Security hardening
+
+**Example invocation:**
+```
+@security-compliance-expert How do I implement secure JWT authentication with proper secret management?
+```
 ## How to Use Custom Agents
 
 ### In GitHub Copilot Chat
@@ -135,7 +263,12 @@ This agent specializes in:
    - Functional programming questions → `@functional-pipeline-expert`
    - AI/ML orchestration questions → `@ai-orchestration-specialist`
    - Infrastructure/deployment questions → `@cloud-devops-expert`
-   - Android (Kotlin) or .NET MAUI (C#) development → `@android-expert`
+   - Mobile development questions → `@android-expert`
+   - Testing and quality questions → `@testing-quality-expert`
+   - C# and .NET questions → `@csharp-dotnet-expert`
+   - API design questions → `@api-design-expert`
+   - Database and persistence questions → `@database-persistence-expert`
+   - Security and compliance questions → `@security-compliance-expert`
 
 2. **Provide Context:**
    - Include relevant code snippets
@@ -154,32 +287,56 @@ This agent specializes in:
 
 ## Agent Capabilities Matrix
 
-| Capability | Functional Pipeline | AI Orchestration | Cloud DevOps | Android & MAUI Expert |
-|------------|-------------------|------------------|--------------|----------------------|
-| Monadic Composition | ✅ Expert | ⚠️ Basic | ❌ N/A | ❌ N/A |
-| Event Sourcing | ✅ Expert | ⚠️ Basic | ❌ N/A | ❌ N/A |
-| LangChain Integration | ✅ Expert | ✅ Expert | ❌ N/A | ❌ N/A |
-| Model Orchestration | ⚠️ Basic | ✅ Expert | ❌ N/A | ❌ N/A |
-| Self-Improving Agents | ⚠️ Basic | ✅ Expert | ❌ N/A | ❌ N/A |
-| Skill Extraction | ❌ N/A | ✅ Expert | ❌ N/A | ❌ N/A |
-| Kubernetes | ❌ N/A | ❌ N/A | ✅ Expert | ❌ N/A |
-| CI/CD Pipelines | ❌ N/A | ❌ N/A | ✅ Expert | ⚠️ Basic |
-| Infrastructure as Code | ❌ N/A | ❌ N/A | ✅ Expert | ❌ N/A |
-| Observability | ⚠️ Basic | ⚠️ Basic | ✅ Expert | ⚠️ Basic |
-| Security | ⚠️ Basic | ⚠️ Basic | ✅ Expert | ✅ Expert |
-| Android Development (Kotlin) | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
-| .NET MAUI (C#) | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
-| Kotlin Programming | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
-| C# Programming | ⚠️ Basic | ⚠️ Basic | ⚠️ Basic | ✅ Expert |
-| Jetpack Compose | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
-| Mobile Architecture | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
-| Mobile Testing | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
-| Cross-Platform Development | ❌ N/A | ❌ N/A | ❌ N/A | ✅ Expert |
+| Capability | Functional | AI Orch | DevOps | Android | Testing | C#/.NET | API | Database | Security |
+|------------|------------|---------|--------|---------|---------|---------|-----|----------|----------|
+| Monadic Composition | ✅ | ⚠️ | ❌ | ❌ | ✅ | ✅ | ❌ | ⚠️ | ❌ |
+| Event Sourcing | ✅ | ⚠️ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ✅ | ❌ |
+| LangChain Integration | ✅ | ✅ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
+| Model Orchestration | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Self-Improving Agents | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Kubernetes | ❌ | ❌ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ |
+| CI/CD Pipelines | ❌ | ❌ | ✅ | ⚠️ | ✅ | ⚠️ | ❌ | ❌ | ⚠️ |
+| Infrastructure as Code | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ |
+| Observability | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Unit Testing | ✅ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ |
+| Integration Testing | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ |
+| Mutation Testing | ❌ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ❌ | ❌ |
+| Code Coverage | ⚠️ | ❌ | ⚠️ | ⚠️ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| C# Language Features | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Async/Await Patterns | ✅ | ⚠️ | ❌ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ |
+| Memory Optimization | ⚠️ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ |
+| Dependency Injection | ⚠️ | ⚠️ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
+| RESTful API Design | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ | ⚠️ |
+| OpenAPI/Swagger | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ❌ | ❌ |
+| API Versioning | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Vector Databases | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ✅ | ❌ |
+| Qdrant | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| CQRS | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ |
+| Repository Pattern | ⚠️ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ❌ | ✅ | ❌ |
+| Caching Strategies | ❌ | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ⚠️ | ✅ | ❌ |
+| Authentication | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ |
+| Authorization | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ |
+| Secrets Management | ❌ | ❌ | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Input Validation | ⚠️ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ | ✅ |
+| Audit Logging | ⚠️ | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ |
+| OWASP Top 10 | ❌ | ❌ | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ✅ |
+| Mobile Development | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-Legend:
+**Legend:**
 - ✅ Expert: Deep expertise, primary responsibility
 - ⚠️ Basic: General knowledge, can assist
 - ❌ N/A: Outside scope of expertise
+
+**Column Headers:**
+- Functional = Functional Pipeline Expert
+- AI Orch = AI Orchestration Specialist
+- DevOps = Cloud-Native DevOps Expert
+- Android = Android & MAUI Expert
+- Testing = Testing & Quality Assurance Expert
+- C#/.NET = C# & .NET Architecture Expert
+- API = API Design & Documentation Expert
+- Database = Database & Persistence Expert
+- Security = Security & Compliance Expert
 
 ## Common Workflows
 
@@ -243,6 +400,52 @@ Legend:
    and deploys to Kubernetes on merge to main.
    ```
 
+### Workflow 4: API Development
+
+1. **Design:**
+   ```
+   @api-design-expert How should I design a RESTful API for pipeline execution
+   with proper versioning and error handling?
+   ```
+
+2. **Implementation:**
+   ```
+   @csharp-dotnet-expert What's the best way to structure the WebApi project
+   with dependency injection and async patterns?
+   ```
+
+3. **Security:**
+   ```
+   @security-compliance-expert How do I implement JWT authentication with
+   proper secret management for the API?
+   ```
+
+4. **Testing:**
+   ```
+   @testing-quality-expert How do I write integration tests for the API
+   endpoints with proper mocking?
+   ```
+
+### Workflow 5: Database Integration
+
+1. **Design:**
+   ```
+   @database-persistence-expert How do I integrate Qdrant for vector search
+   with optimal performance?
+   ```
+
+2. **Implementation:**
+   ```
+   @csharp-dotnet-expert What's the best pattern for implementing the
+   repository with async operations?
+   ```
+
+3. **Testing:**
+   ```
+   @testing-quality-expert How do I test database interactions with
+   integration tests?
+   ```
+
 ## Contributing
 
 When adding new agents:
@@ -273,8 +476,10 @@ If you find issues with agent responses or have suggestions for improvements:
 
 ---
 
-**Last Updated:** 2025-11-09
+**Last Updated:** 2025-11-16
 
-**Version:** 1.0.0
+**Version:** 2.0.0
+
+**Maintained by:** MonadicPipeline Team
 
 **Maintained by:** MonadicPipeline Team
