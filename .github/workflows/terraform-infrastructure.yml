@@ -80,7 +80,6 @@ jobs:
           fi
 
       - name: Terraform Init
-        working-directory: ${{ env.TF_WORKING_DIR }}
         uses: nick-fields/retry-action@v3
         with:
           timeout_minutes: 10
