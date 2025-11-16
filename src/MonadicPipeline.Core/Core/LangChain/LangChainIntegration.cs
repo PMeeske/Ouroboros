@@ -1,21 +1,17 @@
-// LangChain Integration Layer for Monadic Pipeline System
-
-using LangChain.Chains.HelperChains;
-using LangChain.Chains.LLM;
-using LangChain.Prompts.Base;
-using LangChain.Providers;
-using LangChain.Schema;
+// <copyright file="LangChainIntegration.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Core.LangChain;
-
 /// <summary>
-/// Integration layer that bridges LangChain chains with the monadic pipeline system
+/// Integration layer that bridges LangChain chains with the monadic pipeline system.
 /// </summary>
 public static class LangChainIntegration
 {
     /// <summary>
-    /// Converts a LangChain BaseStackableChain into a monadic KleisliResult
+    /// Converts a LangChain BaseStackableChain into a monadic KleisliResult.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<Dictionary<string, object>, Dictionary<string, object>, string> ToMonadicKleisli(
         this BaseStackableChain chain)
     {
@@ -35,8 +31,9 @@ public static class LangChainIntegration
     }
 
     /// <summary>
-    /// Converts a LangChain LlmChain into a monadic KleisliResult
+    /// Converts a LangChain LlmChain into a monadic KleisliResult.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<Dictionary<string, object>, Dictionary<string, object>, string> ToMonadicKleisli(
         this LlmChain chain)
     {
@@ -56,8 +53,9 @@ public static class LangChainIntegration
     }
 
     /// <summary>
-    /// Converts a LangChain BaseStackableChain into a plain Step (throws on error)
+    /// Converts a LangChain BaseStackableChain into a plain Step (throws on error).
     /// </summary>
+    /// <returns></returns>
     public static Step<Dictionary<string, object>, Dictionary<string, object>> ToStep(
         this BaseStackableChain chain)
     {
@@ -70,8 +68,9 @@ public static class LangChainIntegration
     }
 
     /// <summary>
-    /// Converts a LangChain LlmChain into a plain Step (throws on error)
+    /// Converts a LangChain LlmChain into a plain Step (throws on error).
     /// </summary>
+    /// <returns></returns>
     public static Step<Dictionary<string, object>, Dictionary<string, object>> ToStep(
         this LlmChain chain)
     {
@@ -84,8 +83,9 @@ public static class LangChainIntegration
     }
 
     /// <summary>
-    /// Creates a LangChain SetChain wrapped as a monadic KleisliResult
+    /// Creates a LangChain SetChain wrapped as a monadic KleisliResult.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<Dictionary<string, object>, Dictionary<string, object>, string> CreateSetKleisli(
         object value, string outputKey = "query")
     {
@@ -94,24 +94,26 @@ public static class LangChainIntegration
     }
 
     /// <summary>
-    /// Creates a LangChain LLMChain wrapped as a monadic KleisliResult
+    /// Creates a LangChain LLMChain wrapped as a monadic KleisliResult.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<Dictionary<string, object>, Dictionary<string, object>, string> CreateLlmKleisli(
         IChatModel llm,
-        BasePromptTemplate prompt,
+        PromptTemplate prompt,
         string outputKey = "text")
     {
         var llmChain = new LlmChain(new LlmChainInput(llm, prompt)
         {
-            OutputKey = outputKey
+            OutputKey = outputKey,
         });
 
         return llmChain.ToMonadicKleisli();
     }
 
     /// <summary>
-    /// Creates a LangChain SetChain wrapped as a Step
+    /// Creates a LangChain SetChain wrapped as a Step.
     /// </summary>
+    /// <returns></returns>
     public static Step<Dictionary<string, object>, Dictionary<string, object>> CreateSetStep(
         object value, string outputKey = "query")
     {
@@ -120,16 +122,17 @@ public static class LangChainIntegration
     }
 
     /// <summary>
-    /// Creates a LangChain LLMChain wrapped as a Step
+    /// Creates a LangChain LLMChain wrapped as a Step.
     /// </summary>
+    /// <returns></returns>
     public static Step<Dictionary<string, object>, Dictionary<string, object>> CreateLlmStep(
         IChatModel llm,
-        BasePromptTemplate prompt,
+        PromptTemplate prompt,
         string outputKey = "text")
     {
         var llmChain = new LlmChain(new LlmChainInput(llm, prompt)
         {
-            OutputKey = outputKey
+            OutputKey = outputKey,
         });
 
         return llmChain.ToStep();
@@ -137,13 +140,14 @@ public static class LangChainIntegration
 }
 
 /// <summary>
-/// Extensions for integrating LangChain chains with the conversation system
+/// Extensions for integrating LangChain chains with the conversation system.
 /// </summary>
 public static class LangChainConversationIntegration
 {
     /// <summary>
-    /// Updates the LangChain conversation pipeline to use proper LangChain chains
+    /// Updates the LangChain conversation pipeline to use proper LangChain chains.
     /// </summary>
+    /// <returns></returns>
     public static LangChainConversationPipeline AddLangChainLlm(
         this LangChainConversationPipeline pipeline,
         IChatModel llm,
@@ -157,7 +161,7 @@ public static class LangChainConversationIntegration
                 // Create LLM chain
                 var llmChain = new LlmChain(new LlmChainInput(llm, prompt)
                 {
-                    OutputKey = outputKey
+                    OutputKey = outputKey,
                 });
 
                 // Convert context properties to chain input
@@ -184,8 +188,9 @@ public static class LangChainConversationIntegration
     }
 
     /// <summary>
-    /// Adds a LangChain set operation to the pipeline
+    /// Adds a LangChain set operation to the pipeline.
     /// </summary>
+    /// <returns></returns>
     public static LangChainConversationPipeline AddLangChainSet(
         this LangChainConversationPipeline pipeline,
         object value,
@@ -221,8 +226,9 @@ public static class LangChainConversationIntegration
     }
 
     /// <summary>
-    /// Adds a generic LangChain stackable chain to the pipeline
+    /// Adds a generic LangChain stackable chain to the pipeline.
     /// </summary>
+    /// <returns></returns>
     public static LangChainConversationPipeline AddLangChainStep(
         this LangChainConversationPipeline pipeline,
         BaseStackableChain chain)

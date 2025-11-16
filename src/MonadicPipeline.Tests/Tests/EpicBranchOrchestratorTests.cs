@@ -1,8 +1,12 @@
+// <copyright file="EpicBranchOrchestratorTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests.Agent;
+
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Core.Monads;
 using Xunit;
-
-namespace LangChainPipeline.Tests.Agent;
 
 /// <summary>
 /// Tests for the Epic Branch Orchestration system.
@@ -20,7 +24,7 @@ public class EpicBranchOrchestratorTests
     public async Task RegisterEpic_WithValidData_ReturnsSuccess()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
         var subIssues = new List<int> { 1, 2, 3 };
 
         // Act
@@ -42,12 +46,12 @@ public class EpicBranchOrchestratorTests
     public async Task RegisterEpic_WithEmptyTitle_ReturnsFailure()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
 
         // Act
         var result = await orchestrator.RegisterEpicAsync(
             1,
-            "",
+            string.Empty,
             "Description",
             new List<int> { 1 });
 
@@ -60,7 +64,7 @@ public class EpicBranchOrchestratorTests
     public async Task RegisterEpic_WithNoSubIssues_ReturnsFailure()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
 
         // Act
         var result = await orchestrator.RegisterEpicAsync(
@@ -79,7 +83,7 @@ public class EpicBranchOrchestratorTests
     {
         // Arrange
         var config = new EpicBranchConfig(AutoAssignAgents: true, AutoCreateBranches: true);
-        var orchestrator = CreateTestOrchestrator(config);
+        var orchestrator = this.CreateTestOrchestrator(config);
         var subIssues = new List<int> { 1, 2, 3 };
 
         // Act
@@ -107,7 +111,7 @@ public class EpicBranchOrchestratorTests
     {
         // Arrange
         var config = new EpicBranchConfig(AutoAssignAgents: false);
-        var orchestrator = CreateTestOrchestrator(config);
+        var orchestrator = this.CreateTestOrchestrator(config);
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1 });
 
         // Act
@@ -124,7 +128,7 @@ public class EpicBranchOrchestratorTests
     public async Task AssignSubIssue_WithNonexistentEpic_ReturnsFailure()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
 
         // Act
         var result = await orchestrator.AssignSubIssueAsync(999, 1);
@@ -138,7 +142,7 @@ public class EpicBranchOrchestratorTests
     public async Task AssignSubIssue_WithNonexistentSubIssue_ReturnsFailure()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1 });
 
         // Act
@@ -154,7 +158,7 @@ public class EpicBranchOrchestratorTests
     {
         // Arrange
         var config = new EpicBranchConfig(AutoAssignAgents: false);
-        var orchestrator = CreateTestOrchestrator(config);
+        var orchestrator = this.CreateTestOrchestrator(config);
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1 });
 
         // Act
@@ -169,7 +173,7 @@ public class EpicBranchOrchestratorTests
     public async Task GetSubIssueAssignments_ReturnsAllAssignments()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1, 2, 3 });
 
         // Act
@@ -184,7 +188,7 @@ public class EpicBranchOrchestratorTests
     public void GetSubIssueAssignments_ForNonexistentEpic_ReturnsEmpty()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
 
         // Act
         var assignments = orchestrator.GetSubIssueAssignments(999);
@@ -197,7 +201,7 @@ public class EpicBranchOrchestratorTests
     public async Task GetSubIssueAssignment_ReturnsSpecificAssignment()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1, 2, 3 });
 
         // Act
@@ -212,7 +216,7 @@ public class EpicBranchOrchestratorTests
     public void GetSubIssueAssignment_ForNonexistent_ReturnsNull()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
 
         // Act
         var assignment = orchestrator.GetSubIssueAssignment(999, 1);
@@ -225,7 +229,7 @@ public class EpicBranchOrchestratorTests
     public async Task UpdateSubIssueStatus_WithValidData_ReturnsSuccess()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1 });
 
         // Act
@@ -240,7 +244,7 @@ public class EpicBranchOrchestratorTests
     public async Task UpdateSubIssueStatus_ToCompleted_SetsCompletedAt()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1 });
 
         // Act
@@ -255,7 +259,7 @@ public class EpicBranchOrchestratorTests
     public async Task UpdateSubIssueStatus_WithError_SetsErrorMessage()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1 });
 
         // Act
@@ -271,7 +275,7 @@ public class EpicBranchOrchestratorTests
     public void UpdateSubIssueStatus_ForNonexistent_ReturnsFailure()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
 
         // Act
         var result = orchestrator.UpdateSubIssueStatus(999, 1, SubIssueStatus.Completed);
@@ -285,7 +289,7 @@ public class EpicBranchOrchestratorTests
     public async Task ExecuteSubIssue_WithValidWork_ReturnsSuccess()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1 });
 
         // Act
@@ -310,7 +314,7 @@ public class EpicBranchOrchestratorTests
     public async Task ExecuteSubIssue_WithFailingWork_ReturnsFailure()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1 });
 
         // Act
@@ -336,7 +340,7 @@ public class EpicBranchOrchestratorTests
     public async Task ExecuteSubIssue_WithException_ReturnsFailure()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1 });
 
         // Act
@@ -362,7 +366,7 @@ public class EpicBranchOrchestratorTests
     public async Task ExecuteSubIssue_WhenAlreadyInProgress_ReturnsFailure()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1 });
         orchestrator.UpdateSubIssueStatus(1, 1, SubIssueStatus.InProgress);
 
@@ -385,7 +389,7 @@ public class EpicBranchOrchestratorTests
     public async Task ExecuteSubIssue_ForNonexistent_ReturnsFailure()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
 
         // Act
         var result = await orchestrator.ExecuteSubIssueAsync(
@@ -407,7 +411,7 @@ public class EpicBranchOrchestratorTests
     {
         // Arrange
         var config = new EpicBranchConfig(BranchPrefix: "test-epic");
-        var orchestrator = CreateTestOrchestrator(config);
+        var orchestrator = this.CreateTestOrchestrator(config);
         await orchestrator.RegisterEpicAsync(42, "Test Epic", "Description", new List<int> { 123 });
 
         // Act
@@ -423,7 +427,7 @@ public class EpicBranchOrchestratorTests
     {
         // Arrange
         var config = new EpicBranchConfig(AgentPoolPrefix: "test-agent");
-        var orchestrator = CreateTestOrchestrator(config);
+        var orchestrator = this.CreateTestOrchestrator(config);
         await orchestrator.RegisterEpicAsync(42, "Test Epic", "Description", new List<int> { 123 });
 
         // Act
@@ -438,7 +442,7 @@ public class EpicBranchOrchestratorTests
     public async Task ParallelExecution_HandlesMultipleSubIssues()
     {
         // Arrange
-        var orchestrator = CreateTestOrchestrator();
+        var orchestrator = this.CreateTestOrchestrator();
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1, 2, 3, 4, 5 });
 
         // Act
@@ -469,7 +473,7 @@ public class EpicBranchOrchestratorTests
     {
         // Arrange
         var config = new EpicBranchConfig(AutoCreateBranches: false);
-        var orchestrator = CreateTestOrchestrator(config);
+        var orchestrator = this.CreateTestOrchestrator(config);
 
         // Act
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1 });
@@ -486,7 +490,7 @@ public class EpicBranchOrchestratorTests
     {
         // Arrange
         var config = new EpicBranchConfig(AutoAssignAgents: false);
-        var orchestrator = CreateTestOrchestrator(config);
+        var orchestrator = this.CreateTestOrchestrator(config);
 
         // Act
         await orchestrator.RegisterEpicAsync(1, "Test Epic", "Description", new List<int> { 1 });

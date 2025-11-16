@@ -1,3 +1,7 @@
+// <copyright file="ToolAwareChatModel.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Providers;
 
 /// <summary>
@@ -23,7 +27,9 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
         {
             string line = rawLine.Trim();
             if (!line.StartsWith("[TOOL:", StringComparison.Ordinal))
+            {
                 continue;
+            }
 
             // Parse tool invocation: [TOOL:name args]
             string inside = line.Trim('[', ']')[5..].Trim(); // Remove "[TOOL:" prefix
@@ -44,8 +50,7 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
                 var toolResult = await tool.InvokeAsync(args, ct);
                 output = toolResult.Match(
                     success => success,
-                    error => $"error: {error}"
-                );
+                    error => $"error: {error}");
             }
             catch (Exception ex)
             {
@@ -69,7 +74,7 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
     {
         try
         {
-            var (text, tools) = await GenerateWithToolsAsync(prompt, ct);
+            var (text, tools) = await this.GenerateWithToolsAsync(prompt, ct);
             return Result<(string, List<ToolExecution>), string>.Success((text, tools));
         }
         catch (Exception ex)

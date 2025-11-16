@@ -1,6 +1,10 @@
-using System.Text.Json;
+// <copyright file="ToolJson.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Tools;
+
+using System.Text.Json;
 
 /// <summary>
 /// Provides JSON serialization utilities for tools.
@@ -10,7 +14,7 @@ public static class ToolJson
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNameCaseInsensitive = true,
-        WriteIndented = false
+        WriteIndented = false,
     };
 
     /// <summary>

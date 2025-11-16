@@ -1,3 +1,7 @@
+// <copyright file="KleisliExtensions.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Core.Kleisli;
 
 /// <summary>
@@ -7,7 +11,6 @@ namespace LangChainPipeline.Core.Kleisli;
 /// </summary>
 public static class KleisliExtensions
 {
-    #region Core Composition Operations
 
     /// <summary>
     /// Kleisli composition: (f >=> g)(a) = f(a) >>= g
@@ -41,16 +44,18 @@ public static class KleisliExtensions
         => async input => await g(await f(input).ConfigureAwait(false)).ConfigureAwait(false);
 
     /// <summary>
-    /// Mixed composition: Step -> Kleisli
+    /// Mixed composition: Step -> Kleisli.
     /// </summary>
+    /// <returns></returns>
     public static Kleisli<TA, TC> Then<TA, TB, TC>(
         this Step<TA, TB> f,
         Kleisli<TB, TC> g)
         => async input => await g(await f(input).ConfigureAwait(false)).ConfigureAwait(false);
 
     /// <summary>
-    /// Mixed composition: Kleisli -> Step
+    /// Mixed composition: Kleisli -> Step.
     /// </summary>
+    /// <returns></returns>
     public static Step<TA, TC> Then<TA, TB, TC>(
         this Kleisli<TA, TB> f,
         Step<TB, TC> g)
@@ -59,6 +64,7 @@ public static class KleisliExtensions
     /// <summary>
     /// Maps a function over the result of a Step arrow (functor operation).
     /// </summary>
+    /// <returns></returns>
     public static Step<TA, TC> Map<TA, TB, TC>(
         this Step<TA, TB> arrow,
         Func<TB, TC> func)
@@ -67,6 +73,7 @@ public static class KleisliExtensions
     /// <summary>
     /// Maps a function over the result of a Kleisli arrow (functor operation).
     /// </summary>
+    /// <returns></returns>
     public static Kleisli<TA, TC> Map<TA, TB, TC>(
         this Kleisli<TA, TB> arrow,
         Func<TB, TC> func)
@@ -75,6 +82,7 @@ public static class KleisliExtensions
     /// <summary>
     /// Maps an async function over the result of a Step arrow.
     /// </summary>
+    /// <returns></returns>
     public static Step<TA, TC> MapAsync<TA, TB, TC>(
         this Step<TA, TB> arrow,
         Func<TB, Task<TC>> func)
@@ -83,6 +91,7 @@ public static class KleisliExtensions
     /// <summary>
     /// Maps an async function over the result of a Kleisli arrow.
     /// </summary>
+    /// <returns></returns>
     public static Kleisli<TA, TC> MapAsync<TA, TB, TC>(
         this Kleisli<TA, TB> arrow,
         Func<TB, Task<TC>> func)
@@ -91,6 +100,7 @@ public static class KleisliExtensions
     /// <summary>
     /// Executes a side effect on the result of a Step without modifying it (tap operation).
     /// </summary>
+    /// <returns></returns>
     public static Step<TA, TB> Tap<TA, TB>(
         this Step<TA, TB> arrow,
         Action<TB> action)
@@ -104,6 +114,7 @@ public static class KleisliExtensions
     /// <summary>
     /// Executes a side effect on the result of a Kleisli arrow without modifying it (tap operation).
     /// </summary>
+    /// <returns></returns>
     public static Kleisli<TA, TB> Tap<TA, TB>(
         this Kleisli<TA, TB> arrow,
         Action<TB> action)
@@ -117,6 +128,7 @@ public static class KleisliExtensions
     /// <summary>
     /// Catches exceptions in a Step arrow and converts them to a Result.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<TA, TB, Exception> Catch<TA, TB>(
         this Step<TA, TB> arrow)
         => async input =>
@@ -135,6 +147,7 @@ public static class KleisliExtensions
     /// <summary>
     /// Catches exceptions in a Kleisli arrow and converts them to a Result.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<TA, TB, Exception> Catch<TA, TB>(
         this Kleisli<TA, TB> arrow)
         => async input =>
@@ -150,14 +163,11 @@ public static class KleisliExtensions
             }
         };
 
-    #endregion
-
-    #region KleisliResult Operations
-
     /// <summary>
     /// Composes KleisliResult arrows with proper error handling.
     /// If the first computation fails, the error is propagated without executing the second.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<TA, TC, TError> Then<TA, TB, TC, TError>(
         this KleisliResult<TA, TB, TError> first,
         KleisliResult<TB, TC, TError> second)
@@ -172,6 +182,7 @@ public static class KleisliExtensions
     /// <summary>
     /// Maps a function over the success result of a KleisliResult.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<TA, TC, TError> Map<TA, TB, TC, TError>(
         this KleisliResult<TA, TB, TError> arrow,
         Func<TB, TC> func)
@@ -186,6 +197,7 @@ public static class KleisliExtensions
     /// <summary>
     /// Executes a side effect on the success result without modifying it.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<TA, TB, TError> Tap<TA, TB, TError>(
         this KleisliResult<TA, TB, TError> arrow,
         Action<TB> action)
@@ -193,18 +205,18 @@ public static class KleisliExtensions
         {
             var result = await arrow(input);
             if (result.IsSuccess)
+            {
                 action(result.Value);
+            }
+
             return result;
         };
-
-    #endregion
-
-    #region KleisliOption Operations
 
     /// <summary>
     /// Composes KleisliOption arrows with proper None handling.
     /// If the first computation returns None, the second is not executed.
     /// </summary>
+    /// <returns></returns>
     public static KleisliOption<TA, TC> Then<TA, TB, TC>(
         this KleisliOption<TA, TB> first,
         KleisliOption<TB, TC> second)
@@ -219,6 +231,7 @@ public static class KleisliExtensions
     /// <summary>
     /// Maps a function over the Some result of a KleisliOption.
     /// </summary>
+    /// <returns></returns>
     public static KleisliOption<TA, TC> Map<TA, TB, TC>(
         this KleisliOption<TA, TB> arrow,
         Func<TB, TC> func)
@@ -230,14 +243,11 @@ public static class KleisliExtensions
                 : Option<TC>.None();
         };
 
-    #endregion
-
-    #region Conversion Operations
-
     /// <summary>
     /// Converts a KleisliOption to a KleisliResult.
     /// None becomes a Failure with the provided error.
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<TA, TB, TError> ToResult<TA, TB, TError>(
         this KleisliOption<TA, TB> arrow,
         TError error)
@@ -248,10 +258,6 @@ public static class KleisliExtensions
                 ? Result<TB, TError>.Success(result.Value)
                 : Result<TB, TError>.Failure(error);
         };
-
-    #endregion
-
-    #region Higher-Order Composition Operations
 
     /// <summary>
     /// Applies a KleisliCompose function to compose two Kleisli arrows.
@@ -297,6 +303,4 @@ public static class KleisliExtensions
         this Kleisli<TIn, TMid> f,
         Func<Kleisli<TIn, TMid>, Kleisli<TIn, TOut>> composeFunc)
         => composeFunc(f);
-
-    #endregion
 }

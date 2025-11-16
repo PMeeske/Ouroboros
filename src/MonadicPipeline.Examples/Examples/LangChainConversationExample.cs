@@ -1,3 +1,7 @@
+// <copyright file="LangChainConversationExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Examples;
 
 /// <summary>
@@ -9,6 +13,7 @@ public static class LangChainConversationExample
     /// <summary>
     /// Demonstrates the LangChain-based conversational pipeline.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunLangChainConversationalExample()
     {
         Console.WriteLine("=== LangChain-Based Conversational Pipeline Example ===");
@@ -105,7 +110,7 @@ public static class LangChainConversationExample
                 "CancellationTokens are essential for cooperative cancellation in async operations. " +
                 "Pass them to async methods to allow graceful cancellation when needed.",
 
-            _ => "I understand your question. Could you provide more specific details so I can give you a more targeted response?"
+            _ => "I understand your question. Could you provide more specific details so I can give you a more targeted response?",
         };
     }
 }

@@ -1,3 +1,7 @@
+// <copyright file="GlobalUsings.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 global using LangChain.Abstractions;
 global using LangChain.Databases;
 global using LangChain.DocumentLoaders;

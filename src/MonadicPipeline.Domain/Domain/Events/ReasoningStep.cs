@@ -1,3 +1,7 @@
+// <copyright file="ReasoningStep.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Domain.Events;
 
 /// <summary>
@@ -16,5 +20,4 @@ public sealed record ReasoningStep(
     ReasoningState State,
     DateTime Timestamp,
     string Prompt,
-    List<ToolExecution>? ToolCalls = null
-) : PipelineEvent(Id, "Reasoning", Timestamp);
+    List<ToolExecution>? ToolCalls = null) : PipelineEvent(Id, "Reasoning", Timestamp);

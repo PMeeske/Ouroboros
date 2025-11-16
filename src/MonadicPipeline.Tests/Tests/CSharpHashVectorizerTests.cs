@@ -1,8 +1,12 @@
+// <copyright file="CSharpHashVectorizerTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChainPipeline.Infrastructure.FeatureEngineering;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for CSharpHashVectorizer functionality.
@@ -348,6 +352,7 @@ public class CSharpHashVectorizerTests
     /// <summary>
     /// Tests async methods work correctly.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task TransformCodeAsync_WithValidCode_ReturnsVector()
     {
@@ -366,6 +371,7 @@ public class CSharpHashVectorizerTests
     /// <summary>
     /// Tests async file transformation.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task TransformFilesAsync_WithValidFiles_ReturnsVectors()
     {

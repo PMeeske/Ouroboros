@@ -1,6 +1,10 @@
-using LangChainPipeline.Core.Security.Authentication;
+// <copyright file="AuthorizationProvider.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Core.Security.Authorization;
+
+using LangChainPipeline.Core.Security.Authentication;
 
 /// <summary>
 /// Result of an authorization check.
@@ -8,24 +12,26 @@ namespace LangChainPipeline.Core.Security.Authorization;
 public class AuthorizationResult
 {
     /// <summary>
-    /// Whether the action is authorized.
+    /// Gets a value indicating whether whether the action is authorized.
     /// </summary>
     public bool IsAuthorized { get; init; }
 
     /// <summary>
-    /// Reason for denial (if not authorized).
+    /// Gets reason for denial (if not authorized).
     /// </summary>
     public string? DenialReason { get; init; }
 
     /// <summary>
     /// Creates an authorized result.
     /// </summary>
+    /// <returns></returns>
     public static AuthorizationResult Allow() =>
         new() { IsAuthorized = true };
 
     /// <summary>
     /// Creates a denied result with a reason.
     /// </summary>
+    /// <returns></returns>
     public static AuthorizationResult Deny(string reason) =>
         new() { IsAuthorized = false, DenialReason = reason };
 }
@@ -38,6 +44,7 @@ public interface IAuthorizationProvider
     /// <summary>
     /// Checks if a principal is authorized to execute a tool.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<AuthorizationResult> AuthorizeToolExecutionAsync(
         AuthenticationPrincipal principal,
         string toolName,
@@ -47,6 +54,7 @@ public interface IAuthorizationProvider
     /// <summary>
     /// Checks if a principal has a specific permission.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<AuthorizationResult> CheckPermissionAsync(
         AuthenticationPrincipal principal,
         string permission,
@@ -55,6 +63,7 @@ public interface IAuthorizationProvider
     /// <summary>
     /// Checks if a principal can access a resource.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<AuthorizationResult> CheckResourceAccessAsync(
         AuthenticationPrincipal principal,
         string resourceType,
@@ -68,22 +77,23 @@ public interface IAuthorizationProvider
 /// </summary>
 public class RoleBasedAuthorizationProvider : IAuthorizationProvider
 {
-    private readonly Dictionary<string, HashSet<string>> _rolePermissions = new();
-    private readonly Dictionary<string, HashSet<string>> _toolRoleRequirements = new();
-    private readonly object _lock = new();
+    private readonly Dictionary<string, HashSet<string>> rolePermissions = new();
+    private readonly Dictionary<string, HashSet<string>> toolRoleRequirements = new();
+    private readonly object @lock = new();
 
     /// <summary>
     /// Assigns a permission to a role.
     /// </summary>
     public void AssignPermissionToRole(string role, string permission)
     {
-        lock (_lock)
+        lock (this.@lock)
         {
-            if (!_rolePermissions.ContainsKey(role))
+            if (!this.rolePermissions.ContainsKey(role))
             {
-                _rolePermissions[role] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                this.rolePermissions[role] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
-            _rolePermissions[role].Add(permission);
+
+            this.rolePermissions[role].Add(permission);
         }
     }
 
@@ -92,29 +102,31 @@ public class RoleBasedAuthorizationProvider : IAuthorizationProvider
     /// </summary>
     public void RequireRoleForTool(string toolName, string role)
     {
-        lock (_lock)
+        lock (this.@lock)
         {
-            if (!_toolRoleRequirements.ContainsKey(toolName))
+            if (!this.toolRoleRequirements.ContainsKey(toolName))
             {
-                _toolRoleRequirements[toolName] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                this.toolRoleRequirements[toolName] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
-            _toolRoleRequirements[toolName].Add(role);
+
+            this.toolRoleRequirements[toolName].Add(role);
         }
     }
 
     /// <summary>
     /// Checks if a principal is authorized to execute a tool.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task<AuthorizationResult> AuthorizeToolExecutionAsync(
         AuthenticationPrincipal principal,
         string toolName,
         string? input = null,
         CancellationToken ct = default)
     {
-        lock (_lock)
+        lock (this.@lock)
         {
             // Check if tool has role requirements
-            if (!_toolRoleRequirements.TryGetValue(toolName, out var requiredRoles))
+            if (!this.toolRoleRequirements.TryGetValue(toolName, out var requiredRoles))
             {
                 // No requirements means anyone can execute
                 return Task.FromResult(AuthorizationResult.Allow());
@@ -134,17 +146,18 @@ public class RoleBasedAuthorizationProvider : IAuthorizationProvider
     /// <summary>
     /// Checks if a principal has a specific permission.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task<AuthorizationResult> CheckPermissionAsync(
         AuthenticationPrincipal principal,
         string permission,
         CancellationToken ct = default)
     {
-        lock (_lock)
+        lock (this.@lock)
         {
             // Check if any of the principal's roles have the permission
             foreach (var role in principal.Roles)
             {
-                if (_rolePermissions.TryGetValue(role, out var permissions) &&
+                if (this.rolePermissions.TryGetValue(role, out var permissions) &&
                     permissions.Contains(permission))
                 {
                     return Task.FromResult(AuthorizationResult.Allow());
@@ -159,6 +172,7 @@ public class RoleBasedAuthorizationProvider : IAuthorizationProvider
     /// <summary>
     /// Checks if a principal can access a resource.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task<AuthorizationResult> CheckResourceAccessAsync(
         AuthenticationPrincipal principal,
         string resourceType,
@@ -168,6 +182,6 @@ public class RoleBasedAuthorizationProvider : IAuthorizationProvider
     {
         // Build permission string (e.g., "document:read", "pipeline:execute")
         var permission = $"{resourceType}:{action}";
-        return CheckPermissionAsync(principal, permission, ct);
+        return this.CheckPermissionAsync(principal, permission, ct);
     }
 }

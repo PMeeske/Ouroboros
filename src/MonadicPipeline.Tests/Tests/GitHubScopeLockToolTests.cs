@@ -1,8 +1,12 @@
+// <copyright file="GitHubScopeLockToolTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChainPipeline.Tools;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for the GitHubScopeLockTool implementation.
@@ -98,7 +102,7 @@ public class GitHubScopeLockToolTests
         var args = new GitHubScopeLockArgs
         {
             IssueNumber = 138,
-            Milestone = "v1.0"
+            Milestone = "v1.0",
         };
 
         // Assert
@@ -112,7 +116,7 @@ public class GitHubScopeLockToolTests
         // Arrange & Act
         var args = new GitHubScopeLockArgs
         {
-            IssueNumber = 138
+            IssueNumber = 138,
         };
 
         // Assert

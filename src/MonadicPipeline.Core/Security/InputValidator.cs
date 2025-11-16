@@ -1,3 +1,7 @@
+// <copyright file="InputValidator.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Core.Security;
 
 /// <summary>
@@ -6,29 +10,31 @@ namespace LangChainPipeline.Core.Security;
 public class ValidationResult
 {
     /// <summary>
-    /// Indicates whether the input is valid.
+    /// Gets a value indicating whether indicates whether the input is valid.
     /// </summary>
     public bool IsValid { get; init; }
 
     /// <summary>
-    /// The sanitized input value if validation succeeded.
+    /// Gets the sanitized input value if validation succeeded.
     /// </summary>
     public string? SanitizedValue { get; init; }
 
     /// <summary>
-    /// List of validation errors if validation failed.
+    /// Gets list of validation errors if validation failed.
     /// </summary>
     public List<string> Errors { get; init; } = new();
 
     /// <summary>
     /// Creates a successful validation result.
     /// </summary>
+    /// <returns></returns>
     public static ValidationResult Success(string sanitizedValue) =>
         new() { IsValid = true, SanitizedValue = sanitizedValue };
 
     /// <summary>
     /// Creates a failed validation result.
     /// </summary>
+    /// <returns></returns>
     public static ValidationResult Failure(params string[] errors) =>
         new() { IsValid = false, Errors = errors.ToList() };
 }
@@ -38,19 +44,21 @@ public class ValidationResult
 /// </summary>
 public class InputValidator
 {
-    private readonly ValidationOptions _options;
+    private readonly ValidationOptions options;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="InputValidator"/> class.
     /// Initializes a new input validator with the specified options.
     /// </summary>
     public InputValidator(ValidationOptions? options = null)
     {
-        _options = options ?? ValidationOptions.Default;
+        this.options = options ?? ValidationOptions.Default;
     }
 
     /// <summary>
     /// Validates and sanitizes user input.
     /// </summary>
+    /// <returns></returns>
     public ValidationResult ValidateAndSanitize(string input, ValidationContext context)
     {
         if (string.IsNullOrEmpty(input))
@@ -74,16 +82,16 @@ public class InputValidator
         }
 
         // Check for injection patterns if enabled
-        if (_options.CheckInjectionPatterns)
+        if (this.options.CheckInjectionPatterns)
         {
-            var injectionErrors = CheckForInjectionPatterns(input);
+            var injectionErrors = this.CheckForInjectionPatterns(input);
             errors.AddRange(injectionErrors);
         }
 
         // Check for dangerous characters
-        if (_options.CheckDangerousCharacters)
+        if (this.options.CheckDangerousCharacters)
         {
-            var charErrors = CheckForDangerousCharacters(input, context);
+            var charErrors = this.CheckForDangerousCharacters(input, context);
             errors.AddRange(charErrors);
         }
 
@@ -93,7 +101,7 @@ public class InputValidator
         }
 
         // Sanitize the input
-        var sanitized = SanitizeInput(input, context);
+        var sanitized = this.SanitizeInput(input, context);
 
         return ValidationResult.Success(sanitized);
     }
@@ -109,7 +117,7 @@ public class InputValidator
             "'; drop", "'; delete", "'; update", "'; insert",
             "union select", "exec(", "execute(",
             "' or '", "\" or \"", "or 1=1", "or '1'='1",
-            "--", "/*", "*/"
+            "--", "/*", "*/",
         };
 
         if (sqlPatterns.Any(pattern => lowerInput.Contains(pattern)))
@@ -121,7 +129,7 @@ public class InputValidator
         string[] commandPatterns =
         {
             "&&", "||", ";", "|", "`", "$(",
-            "../", "..\\", "/etc/", "c:\\"
+            "../", "..\\", "/etc/", "c:\\",
         };
 
         if (commandPatterns.Any(pattern => lowerInput.Contains(pattern.ToLowerInvariant())))
@@ -133,7 +141,7 @@ public class InputValidator
         string[] scriptPatterns =
         {
             "<script", "javascript:", "onerror=", "onload=",
-            "<iframe", "eval(", "expression("
+            "<iframe", "eval(", "expression(",
         };
 
         if (scriptPatterns.Any(pattern => lowerInput.Contains(pattern)))
@@ -194,7 +202,7 @@ public class InputValidator
         }
 
         // Remove any remaining control characters (except newline, tab)
-        if (_options.RemoveControlCharacters)
+        if (this.options.RemoveControlCharacters)
         {
             result = new string(result.Where(c =>
                 !char.IsControl(c) || c == '\n' || c == '\r' || c == '\t').ToArray());
@@ -216,63 +224,63 @@ public class InputValidator
 public class ValidationContext
 {
     /// <summary>
-    /// Maximum allowed length of input.
+    /// Gets or sets maximum allowed length of input.
     /// </summary>
     public int MaxLength { get; set; } = 10_000;
 
     /// <summary>
-    /// Minimum required length of input.
+    /// Gets or sets minimum required length of input.
     /// </summary>
     public int MinLength { get; set; } = 0;
 
     /// <summary>
-    /// Allow empty input.
+    /// Gets or sets a value indicating whether allow empty input.
     /// </summary>
     public bool AllowEmpty { get; set; } = false;
 
     /// <summary>
-    /// Trim leading and trailing whitespace.
+    /// Gets or sets a value indicating whether trim leading and trailing whitespace.
     /// </summary>
     public bool TrimWhitespace { get; set; } = true;
 
     /// <summary>
-    /// Normalize line endings to LF.
+    /// Gets or sets a value indicating whether normalize line endings to LF.
     /// </summary>
     public bool NormalizeLineEndings { get; set; } = true;
 
     /// <summary>
-    /// Escape HTML characters.
+    /// Gets or sets a value indicating whether escape HTML characters.
     /// </summary>
     public bool EscapeHtml { get; set; } = false;
 
     /// <summary>
-    /// Characters that are explicitly blocked.
+    /// Gets or sets characters that are explicitly blocked.
     /// </summary>
     public HashSet<char>? BlockedCharacters { get; set; }
 
     /// <summary>
-    /// Default validation context for general text input.
+    /// Gets default validation context for general text input.
     /// </summary>
     public static ValidationContext Default => new();
 
     /// <summary>
-    /// Strict validation context for sensitive operations.
+    /// Gets strict validation context for sensitive operations.
     /// </summary>
     public static ValidationContext Strict => new()
     {
         MaxLength = 1000,
         EscapeHtml = true,
-        BlockedCharacters = new HashSet<char> { '<', '>', '&', '"', '\'' }
+        BlockedCharacters = new HashSet<char> { '<', '>', '&', '"', '\'' },
     };
 
     /// <summary>
-    /// Validation context for tool parameters.
+    /// Gets validation context for tool parameters.
     /// </summary>
     public static ValidationContext ToolParameter => new()
     {
         MaxLength = 5000,
         TrimWhitespace = true,
-        NormalizeLineEndings = true
+        NormalizeLineEndings = true,
     };
 }
 
@@ -282,31 +290,31 @@ public class ValidationContext
 public class ValidationOptions
 {
     /// <summary>
-    /// Check for injection patterns (SQL, command, script).
+    /// Gets or sets a value indicating whether check for injection patterns (SQL, command, script).
     /// </summary>
     public bool CheckInjectionPatterns { get; set; } = true;
 
     /// <summary>
-    /// Check for dangerous characters.
+    /// Gets or sets a value indicating whether check for dangerous characters.
     /// </summary>
     public bool CheckDangerousCharacters { get; set; } = true;
 
     /// <summary>
-    /// Remove control characters during sanitization.
+    /// Gets or sets a value indicating whether remove control characters during sanitization.
     /// </summary>
     public bool RemoveControlCharacters { get; set; } = true;
 
     /// <summary>
-    /// Default validation options.
+    /// Gets default validation options.
     /// </summary>
     public static ValidationOptions Default => new();
 
     /// <summary>
-    /// Lenient validation options (fewer checks).
+    /// Gets lenient validation options (fewer checks).
     /// </summary>
     public static ValidationOptions Lenient => new()
     {
         CheckInjectionPatterns = false,
-        CheckDangerousCharacters = true
+        CheckDangerousCharacters = true,
     };
 }

@@ -1,3 +1,7 @@
+// <copyright file="MeTTaTools.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Tools.MeTTa;
 
 /// <summary>
@@ -5,7 +9,7 @@ namespace LangChainPipeline.Tools.MeTTa;
 /// </summary>
 public sealed class MeTTaQueryTool : ITool
 {
-    private readonly IMeTTaEngine _engine;
+    private readonly IMeTTaEngine engine;
 
     /// <inheritdoc />
     public string Name => "metta_query";
@@ -26,12 +30,13 @@ public sealed class MeTTaQueryTool : ITool
     }";
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="MeTTaQueryTool"/> class.
     /// Creates a new MeTTa query tool.
     /// </summary>
     /// <param name="engine">The MeTTa engine to use for query execution.</param>
     public MeTTaQueryTool(IMeTTaEngine engine)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
     }
 
     /// <inheritdoc />
@@ -62,7 +67,7 @@ public sealed class MeTTaQueryTool : ITool
             query = input;
         }
 
-        return await _engine.ExecuteQueryAsync(query, ct);
+        return await this.engine.ExecuteQueryAsync(query, ct);
     }
 }
 
@@ -71,7 +76,7 @@ public sealed class MeTTaQueryTool : ITool
 /// </summary>
 public sealed class MeTTaRuleTool : ITool
 {
-    private readonly IMeTTaEngine _engine;
+    private readonly IMeTTaEngine engine;
 
     /// <inheritdoc />
     public string Name => "metta_rule";
@@ -92,12 +97,13 @@ public sealed class MeTTaRuleTool : ITool
     }";
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="MeTTaRuleTool"/> class.
     /// Creates a new MeTTa rule tool.
     /// </summary>
     /// <param name="engine">The MeTTa engine to use for rule application.</param>
     public MeTTaRuleTool(IMeTTaEngine engine)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
     }
 
     /// <inheritdoc />
@@ -127,7 +133,7 @@ public sealed class MeTTaRuleTool : ITool
             rule = input;
         }
 
-        return await _engine.ApplyRuleAsync(rule, ct);
+        return await this.engine.ApplyRuleAsync(rule, ct);
     }
 }
 
@@ -136,7 +142,7 @@ public sealed class MeTTaRuleTool : ITool
 /// </summary>
 public sealed class MeTTaPlanVerifierTool : ITool
 {
-    private readonly IMeTTaEngine _engine;
+    private readonly IMeTTaEngine engine;
 
     /// <inheritdoc />
     public string Name => "metta_verify_plan";
@@ -157,12 +163,13 @@ public sealed class MeTTaPlanVerifierTool : ITool
     }";
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="MeTTaPlanVerifierTool"/> class.
     /// Creates a new MeTTa plan verifier tool.
     /// </summary>
     /// <param name="engine">The MeTTa engine to use for plan verification.</param>
     public MeTTaPlanVerifierTool(IMeTTaEngine engine)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
     }
 
     /// <inheritdoc />
@@ -192,12 +199,11 @@ public sealed class MeTTaPlanVerifierTool : ITool
             plan = input;
         }
 
-        var result = await _engine.VerifyPlanAsync(plan, ct);
+        var result = await this.engine.VerifyPlanAsync(plan, ct);
 
         return result.Match(
             isValid => Result<string, string>.Success(isValid ? "Plan is valid" : "Plan is invalid"),
-            error => Result<string, string>.Failure(error)
-        );
+            error => Result<string, string>.Failure(error));
     }
 }
 
@@ -206,7 +212,7 @@ public sealed class MeTTaPlanVerifierTool : ITool
 /// </summary>
 public sealed class MeTTaFactTool : ITool
 {
-    private readonly IMeTTaEngine _engine;
+    private readonly IMeTTaEngine engine;
 
     /// <inheritdoc />
     public string Name => "metta_add_fact";
@@ -227,12 +233,13 @@ public sealed class MeTTaFactTool : ITool
     }";
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="MeTTaFactTool"/> class.
     /// Creates a new MeTTa fact tool.
     /// </summary>
     /// <param name="engine">The MeTTa engine to use.</param>
     public MeTTaFactTool(IMeTTaEngine engine)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
     }
 
     /// <inheritdoc />
@@ -262,11 +269,10 @@ public sealed class MeTTaFactTool : ITool
             fact = input;
         }
 
-        var result = await _engine.AddFactAsync(fact, ct);
+        var result = await this.engine.AddFactAsync(fact, ct);
 
         return result.Match(
             _ => Result<string, string>.Success("Fact added successfully"),
-            error => Result<string, string>.Failure(error)
-        );
+            error => Result<string, string>.Failure(error));
     }
 }

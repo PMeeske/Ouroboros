@@ -1,3 +1,7 @@
+// <copyright file="RetrievalArgs.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Tools;
 
 /// <summary>
@@ -6,12 +10,12 @@ namespace LangChainPipeline.Tools;
 public sealed class RetrievalArgs
 {
     /// <summary>
-    /// The query string for semantic search.
+    /// Gets or sets the query string for semantic search.
     /// </summary>
-    public string Q { get; set; } = "";
+    public string Q { get; set; } = string.Empty;
 
     /// <summary>
-    /// Number of documents to retrieve (default: 3).
+    /// Gets or sets number of documents to retrieve (default: 3).
     /// </summary>
     public int K { get; set; } = 3;
 }

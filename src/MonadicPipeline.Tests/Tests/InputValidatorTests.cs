@@ -1,8 +1,12 @@
+// <copyright file="InputValidatorTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChainPipeline.Core.Security;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for input validation and sanitization functionality.
@@ -31,7 +35,7 @@ public class InputValidatorTests
     {
         // Arrange
         var validator = new InputValidator();
-        var input = "";
+        var input = string.Empty;
         var context = new ValidationContext { AllowEmpty = false };
 
         // Act
@@ -47,7 +51,7 @@ public class InputValidatorTests
     {
         // Arrange
         var validator = new InputValidator();
-        var input = "";
+        var input = string.Empty;
         var context = new ValidationContext { AllowEmpty = true };
 
         // Act
@@ -55,7 +59,7 @@ public class InputValidatorTests
 
         // Assert
         result.IsValid.Should().BeTrue();
-        result.SanitizedValue.Should().Be("");
+        result.SanitizedValue.Should().Be(string.Empty);
     }
 
     [Fact]
@@ -168,7 +172,7 @@ public class InputValidatorTests
         var input = "Hello<World>";
         var context = new ValidationContext
         {
-            BlockedCharacters = new HashSet<char> { '<', '>' }
+            BlockedCharacters = new HashSet<char> { '<', '>' },
         };
 
         // Act

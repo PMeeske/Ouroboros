@@ -1,6 +1,10 @@
-using System.Diagnostics;
+// <copyright file="DistributedTracing.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Diagnostics;
+
+using System.Diagnostics;
 
 /// <summary>
 /// Distributed tracing implementation using System.Diagnostics.Activity.
@@ -16,10 +20,10 @@ public static class DistributedTracing
     /// <summary>
     /// Starts a new activity (span) for tracing.
     /// </summary>
-    /// <param name="name">Activity name</param>
-    /// <param name="kind">Activity kind (Internal, Client, Server, Producer, Consumer)</param>
-    /// <param name="tags">Optional tags to add to the activity</param>
-    /// <returns>Activity instance or null if tracing is disabled</returns>
+    /// <param name="name">Activity name.</param>
+    /// <param name="kind">Activity kind (Internal, Client, Server, Producer, Consumer).</param>
+    /// <param name="tags">Optional tags to add to the activity.</param>
+    /// <returns>Activity instance or null if tracing is disabled.</returns>
     public static Activity? StartActivity(
         string name,
         ActivityKind kind = ActivityKind.Internal,
@@ -41,12 +45,15 @@ public static class DistributedTracing
     /// <summary>
     /// Records an event in the current activity.
     /// </summary>
-    /// <param name="name">Event name</param>
-    /// <param name="tags">Optional tags for the event</param>
+    /// <param name="name">Event name.</param>
+    /// <param name="tags">Optional tags for the event.</param>
     public static void RecordEvent(string name, Dictionary<string, object?>? tags = null)
     {
         var activity = Activity.Current;
-        if (activity == null) return;
+        if (activity == null)
+        {
+            return;
+        }
 
         var tagsArray = tags?.Select(kvp => new KeyValuePair<string, object?>(kvp.Key, kvp.Value))
             ?? Array.Empty<KeyValuePair<string, object?>>();
@@ -57,11 +64,14 @@ public static class DistributedTracing
     /// <summary>
     /// Records an exception in the current activity.
     /// </summary>
-    /// <param name="exception">Exception to record</param>
+    /// <param name="exception">Exception to record.</param>
     public static void RecordException(Exception exception)
     {
         var activity = Activity.Current;
-        if (activity == null) return;
+        if (activity == null)
+        {
+            return;
+        }
 
         activity.SetStatus(ActivityStatusCode.Error, exception.Message);
         activity.SetTag("exception.type", exception.GetType().FullName);
@@ -72,12 +82,15 @@ public static class DistributedTracing
     /// <summary>
     /// Sets the status of the current activity.
     /// </summary>
-    /// <param name="code">Status code</param>
-    /// <param name="description">Optional description</param>
+    /// <param name="code">Status code.</param>
+    /// <param name="description">Optional description.</param>
     public static void SetStatus(ActivityStatusCode code, string? description = null)
     {
         var activity = Activity.Current;
-        if (activity == null) return;
+        if (activity == null)
+        {
+            return;
+        }
 
         activity.SetStatus(code, description);
     }
@@ -85,12 +98,15 @@ public static class DistributedTracing
     /// <summary>
     /// Adds a tag to the current activity.
     /// </summary>
-    /// <param name="key">Tag key</param>
-    /// <param name="value">Tag value</param>
+    /// <param name="key">Tag key.</param>
+    /// <param name="value">Tag value.</param>
     public static void AddTag(string key, object? value)
     {
         var activity = Activity.Current;
-        if (activity == null) return;
+        if (activity == null)
+        {
+            return;
+        }
 
         activity.SetTag(key, value);
     }
@@ -98,7 +114,7 @@ public static class DistributedTracing
     /// <summary>
     /// Gets the current trace ID for correlation.
     /// </summary>
-    /// <returns>Trace ID string or null if no active activity</returns>
+    /// <returns>Trace ID string or null if no active activity.</returns>
     public static string? GetTraceId()
     {
         return Activity.Current?.TraceId.ToString();
@@ -107,7 +123,7 @@ public static class DistributedTracing
     /// <summary>
     /// Gets the current span ID for correlation.
     /// </summary>
-    /// <returns>Span ID string or null if no active activity</returns>
+    /// <returns>Span ID string or null if no active activity.</returns>
     public static string? GetSpanId()
     {
         return Activity.Current?.SpanId.ToString();
@@ -122,15 +138,15 @@ public static class TracingExtensions
     /// <summary>
     /// Traces a tool execution.
     /// </summary>
-    /// <param name="toolName">Name of the tool</param>
-    /// <param name="input">Tool input</param>
-    /// <returns>Activity for the tool execution</returns>
+    /// <param name="toolName">Name of the tool.</param>
+    /// <param name="input">Tool input.</param>
+    /// <returns>Activity for the tool execution.</returns>
     public static Activity? TraceToolExecution(string toolName, string input)
     {
         var tags = new Dictionary<string, object?>
         {
             ["tool.name"] = toolName,
-            ["tool.input_length"] = input.Length
+            ["tool.input_length"] = input.Length,
         };
 
         return DistributedTracing.StartActivity($"tool.{toolName}", ActivityKind.Internal, tags);
@@ -139,13 +155,13 @@ public static class TracingExtensions
     /// <summary>
     /// Traces a pipeline execution.
     /// </summary>
-    /// <param name="pipelineName">Name of the pipeline</param>
-    /// <returns>Activity for the pipeline execution</returns>
+    /// <param name="pipelineName">Name of the pipeline.</param>
+    /// <returns>Activity for the pipeline execution.</returns>
     public static Activity? TracePipelineExecution(string pipelineName)
     {
         var tags = new Dictionary<string, object?>
         {
-            ["pipeline.name"] = pipelineName
+            ["pipeline.name"] = pipelineName,
         };
 
         return DistributedTracing.StartActivity($"pipeline.{pipelineName}", ActivityKind.Internal, tags);
@@ -154,15 +170,15 @@ public static class TracingExtensions
     /// <summary>
     /// Traces an LLM request.
     /// </summary>
-    /// <param name="model">Model name</param>
-    /// <param name="promptLength">Length of the prompt</param>
-    /// <returns>Activity for the LLM request</returns>
+    /// <param name="model">Model name.</param>
+    /// <param name="promptLength">Length of the prompt.</param>
+    /// <returns>Activity for the LLM request.</returns>
     public static Activity? TraceLlmRequest(string model, int promptLength)
     {
         var tags = new Dictionary<string, object?>
         {
             ["llm.model"] = model,
-            ["llm.prompt_length"] = promptLength
+            ["llm.prompt_length"] = promptLength,
         };
 
         return DistributedTracing.StartActivity("llm.request", ActivityKind.Client, tags);
@@ -171,15 +187,15 @@ public static class TracingExtensions
     /// <summary>
     /// Traces a vector store operation.
     /// </summary>
-    /// <param name="operation">Operation type (e.g., "search", "insert", "delete")</param>
-    /// <param name="vectorCount">Number of vectors involved</param>
-    /// <returns>Activity for the vector operation</returns>
+    /// <param name="operation">Operation type (e.g., "search", "insert", "delete").</param>
+    /// <param name="vectorCount">Number of vectors involved.</param>
+    /// <returns>Activity for the vector operation.</returns>
     public static Activity? TraceVectorOperation(string operation, int vectorCount)
     {
         var tags = new Dictionary<string, object?>
         {
             ["vector.operation"] = operation,
-            ["vector.count"] = vectorCount
+            ["vector.count"] = vectorCount,
         };
 
         return DistributedTracing.StartActivity($"vector.{operation}", ActivityKind.Internal, tags);
@@ -188,12 +204,15 @@ public static class TracingExtensions
     /// <summary>
     /// Adds completion tags to an LLM activity.
     /// </summary>
-    /// <param name="activity">Activity to update</param>
-    /// <param name="responseLength">Length of the response</param>
-    /// <param name="tokenCount">Number of tokens used</param>
+    /// <param name="activity">Activity to update.</param>
+    /// <param name="responseLength">Length of the response.</param>
+    /// <param name="tokenCount">Number of tokens used.</param>
     public static void CompleteLlmRequest(this Activity? activity, int responseLength, int tokenCount)
     {
-        if (activity == null) return;
+        if (activity == null)
+        {
+            return;
+        }
 
         activity.SetTag("llm.response_length", responseLength);
         activity.SetTag("llm.token_count", tokenCount);
@@ -203,12 +222,15 @@ public static class TracingExtensions
     /// <summary>
     /// Adds completion tags to a tool activity.
     /// </summary>
-    /// <param name="activity">Activity to update</param>
-    /// <param name="success">Whether the tool execution succeeded</param>
-    /// <param name="outputLength">Length of the output</param>
+    /// <param name="activity">Activity to update.</param>
+    /// <param name="success">Whether the tool execution succeeded.</param>
+    /// <param name="outputLength">Length of the output.</param>
     public static void CompleteToolExecution(this Activity? activity, bool success, int outputLength)
     {
-        if (activity == null) return;
+        if (activity == null)
+        {
+            return;
+        }
 
         activity.SetTag("tool.success", success);
         activity.SetTag("tool.output_length", outputLength);
@@ -221,29 +243,31 @@ public static class TracingExtensions
 /// </summary>
 public static class TracingConfiguration
 {
-    private static ActivityListener? _listener;
+    private static ActivityListener? listener;
 
     /// <summary>
     /// Enables tracing with the specified callback for handling activities.
     /// </summary>
-    /// <param name="onActivityStarted">Callback when an activity starts</param>
-    /// <param name="onActivityStopped">Callback when an activity stops</param>
+    /// <param name="onActivityStarted">Callback when an activity starts.</param>
+    /// <param name="onActivityStopped">Callback when an activity stops.</param>
     public static void EnableTracing(
         Action<Activity>? onActivityStarted = null,
         Action<Activity>? onActivityStopped = null)
     {
-        if (_listener != null)
+        if (listener != null)
+        {
             return; // Already enabled
+        }
 
-        _listener = new ActivityListener
+        listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == "MonadicPipeline",
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
             ActivityStarted = onActivityStarted,
-            ActivityStopped = onActivityStopped
+            ActivityStopped = onActivityStopped,
         };
 
-        ActivitySource.AddActivityListener(_listener);
+        ActivitySource.AddActivityListener(listener);
     }
 
     /// <summary>
@@ -251,8 +275,8 @@ public static class TracingConfiguration
     /// </summary>
     public static void DisableTracing()
     {
-        _listener?.Dispose();
-        _listener = null;
+        listener?.Dispose();
+        listener = null;
     }
 
     /// <summary>

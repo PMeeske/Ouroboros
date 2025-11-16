@@ -1,3 +1,7 @@
+// <copyright file="Kleisli.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Core.Kleisli;
 
 /// <summary>
@@ -120,8 +124,6 @@ public static class Arrow
             }
         };
 
-    #region Result Arrow Factories
-
     /// <summary>
     /// Creates an arrow that always succeeds with the given value.
     /// </summary>
@@ -144,10 +146,6 @@ public static class Arrow
     public static KleisliResult<TInput, TOutput, TError> Failure<TInput, TOutput, TError>(TError error)
         => _ => Task.FromResult(Result<TOutput, TError>.Failure(error));
 
-    #endregion
-
-    #region Option Arrow Factories
-
     /// <summary>
     /// Creates an arrow that always returns Some with the given value.
     /// </summary>
@@ -166,10 +164,6 @@ public static class Arrow
     /// <returns>A KleisliOption that always returns None.</returns>
     public static KleisliOption<TInput, TOutput> None<TInput, TOutput>()
         => _ => Task.FromResult(Option<TOutput>.None());
-
-    #endregion
-
-    #region Composition Combinators
 
     /// <summary>
     /// Creates a KleisliCompose function that implements standard Kleisli composition.
@@ -194,6 +188,4 @@ public static class Arrow
     public static Func<Kleisli<TMid, TOut>, Kleisli<TIn, TOut>> ComposeWith<TIn, TMid, TOut>(
         Kleisli<TIn, TMid> f)
         => g => async input => await g(await f(input));
-
-    #endregion
 }

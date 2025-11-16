@@ -1,15 +1,12 @@
-// ==========================================================
-// Meta-AI v2 Enhancements Example
-// Demonstrates all new capabilities: parallel execution, hierarchical planning,
-// experience replay, skill composition, distributed orchestration, 
-// adaptive planning, cost-aware routing, and human-in-the-loop
-// ==========================================================
+// <copyright file="MetaAIv2EnhancementsExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Examples;
 
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
-
-namespace LangChainPipeline.Examples;
 
 /// <summary>
 /// Comprehensive example demonstrating Meta-AI v2 enhancements.
@@ -19,6 +16,7 @@ public static class MetaAIv2EnhancementsExample
     /// <summary>
     /// Demonstrates parallel execution of independent steps.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateParallelExecution()
     {
         Console.WriteLine("=== Parallel Execution Example ===\n");
@@ -37,7 +35,7 @@ public static class MetaAIv2EnhancementsExample
             "Analyze three different datasets concurrently",
             new Dictionary<string, object>
             {
-                ["datasets"] = new[] { "sales.csv", "inventory.csv", "customers.csv" }
+                ["datasets"] = new[] { "sales.csv", "inventory.csv", "customers.csv" },
             });
 
         if (planResult.IsSuccess)
@@ -66,6 +64,7 @@ public static class MetaAIv2EnhancementsExample
     /// <summary>
     /// Demonstrates hierarchical planning for complex tasks.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateHierarchicalPlanning()
     {
         Console.WriteLine("=== Hierarchical Planning Example ===\n");
@@ -111,6 +110,7 @@ public static class MetaAIv2EnhancementsExample
     /// <summary>
     /// Demonstrates experience replay for continual learning.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateExperienceReplay()
     {
         Console.WriteLine("=== Experience Replay Example ===\n");
@@ -153,6 +153,7 @@ public static class MetaAIv2EnhancementsExample
     /// <summary>
     /// Demonstrates skill composition.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateSkillComposition()
     {
         Console.WriteLine("=== Skill Composition Example ===\n");
@@ -224,6 +225,7 @@ public static class MetaAIv2EnhancementsExample
     /// <summary>
     /// Demonstrates distributed orchestration.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateDistributedOrchestration()
     {
         Console.WriteLine("=== Distributed Orchestration Example ===\n");
@@ -275,6 +277,7 @@ public static class MetaAIv2EnhancementsExample
     /// <summary>
     /// Demonstrates adaptive planning with real-time adjustments.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateAdaptivePlanning()
     {
         Console.WriteLine("=== Adaptive Planning Example ===\n");
@@ -332,6 +335,7 @@ public static class MetaAIv2EnhancementsExample
     /// <summary>
     /// Demonstrates cost-aware routing.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateCostAwareRouting()
     {
         Console.WriteLine("=== Cost-Aware Routing Example ===\n");
@@ -362,7 +366,7 @@ public static class MetaAIv2EnhancementsExample
             CostOptimizationStrategy.MinimizeCost,
             CostOptimizationStrategy.MaximizeQuality,
             CostOptimizationStrategy.Balanced,
-            CostOptimizationStrategy.MaximizeValue
+            CostOptimizationStrategy.MaximizeValue,
         };
 
         foreach (var strategy in strategies)
@@ -394,6 +398,7 @@ public static class MetaAIv2EnhancementsExample
     /// <summary>
     /// Demonstrates human-in-the-loop workflows.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateHumanInTheLoop()
     {
         Console.WriteLine("=== Human-in-the-Loop Example ===\n");
@@ -453,6 +458,7 @@ public static class MetaAIv2EnhancementsExample
     /// <summary>
     /// Runs all enhancement demonstrations.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllDemonstrations()
     {
         Console.WriteLine("\n" + new string('=', 70));
@@ -522,7 +528,6 @@ public static class MetaAIv2EnhancementsExample
     }
 
     // Helper methods
-
     private static Experience CreateSampleExperience(string goal, double quality)
     {
         var plan = new Plan(
@@ -541,7 +546,7 @@ public static class MetaAIv2EnhancementsExample
                     "Success",
                     null,
                     TimeSpan.FromSeconds(1),
-                    new Dictionary<string, object>())
+                    new Dictionary<string, object>()),
             },
             true,
             "Success",

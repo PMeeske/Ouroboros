@@ -1,3 +1,7 @@
+// <copyright file="IMeTTaEngine.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Tools.MeTTa;
 
 /// <summary>
@@ -59,5 +63,6 @@ public readonly struct Unit
     /// <summary>
     /// Returns string representation.
     /// </summary>
+    /// <returns></returns>
     public override string ToString() => "()";
 }

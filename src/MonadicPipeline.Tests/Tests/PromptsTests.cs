@@ -1,8 +1,12 @@
+// <copyright file="PromptsTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChainPipeline.Pipeline.Reasoning;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for the Prompts static class.
@@ -30,7 +34,7 @@ public class PromptsTests
         {
             { "tools_schemas", "test-schema" },
             { "context", "test-context" },
-            { "topic", "test-topic" }
+            { "topic", "test-topic" },
         });
 
         // Assert
@@ -63,7 +67,7 @@ public class PromptsTests
             { "tools_schemas", "schema" },
             { "context", "context" },
             { "draft", "draft-text" },
-            { "topic", "topic" }
+            { "topic", "topic" },
         });
 
         // Assert
@@ -98,7 +102,7 @@ public class PromptsTests
             { "context", "context" },
             { "draft", "draft" },
             { "critique", "critique-text" },
-            { "topic", "topic" }
+            { "topic", "topic" },
         });
 
         // Assert

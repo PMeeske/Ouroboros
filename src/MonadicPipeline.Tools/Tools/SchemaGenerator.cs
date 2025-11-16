@@ -1,7 +1,11 @@
-using System.Reflection;
-using System.Text.Json.Serialization;
+// <copyright file="SchemaGenerator.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Tools;
+
+using System.Reflection;
+using System.Text.Json.Serialization;
 
 /// <summary>
 /// Generates JSON schemas for types to support tool parameter validation.
@@ -27,13 +31,12 @@ public static class SchemaGenerator
                 p => new
                 {
                     type = MapType(p.PropertyType),
-                    description = p.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? string.Empty
-                }
-            ),
+                    description = p.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? string.Empty,
+                }),
             required = properties
                 .Where(p => !IsNullable(p.PropertyType))
                 .Select(p => p.Name)
-                .ToArray()
+                .ToArray(),
         };
 
         return ToolJson.Serialize(schema);
@@ -42,19 +45,29 @@ public static class SchemaGenerator
     private static string MapType(Type type)
     {
         if (type == typeof(string))
+        {
             return "string";
+        }
 
         if (type == typeof(int) || type == typeof(long))
+        {
             return "integer";
+        }
 
         if (type == typeof(float) || type == typeof(double) || type == typeof(decimal))
+        {
             return "number";
+        }
 
         if (type == typeof(bool))
+        {
             return "boolean";
+        }
 
         if (type.IsArray || (typeof(System.Collections.IEnumerable).IsAssignableFrom(type) && type != typeof(string)))
+        {
             return "array";
+        }
 
         return "object";
     }
@@ -62,7 +75,9 @@ public static class SchemaGenerator
     private static bool IsNullable(Type type)
     {
         if (!type.IsValueType)
+        {
             return true;
+        }
 
         return Nullable.GetUnderlyingType(type) != null;
     }

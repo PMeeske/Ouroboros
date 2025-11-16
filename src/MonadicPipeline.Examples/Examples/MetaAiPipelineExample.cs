@@ -1,14 +1,12 @@
-// ==========================================================
-// Meta-AI Pipeline Example
-// Demonstrates self-reflective pipeline execution where the
-// LLM can invoke pipeline steps as tools to build upon itself
-// ==========================================================
+// <copyright file="MetaAiPipelineExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Examples;
 
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.CLI;
-
-namespace LangChainPipeline.Examples;
 
 /// <summary>
 /// Demonstrates meta-AI capabilities where the pipeline can think about its own thinking.
@@ -19,6 +17,7 @@ public static class MetaAiPipelineExample
     /// <summary>
     /// Demonstrates basic meta-AI capability where the LLM uses pipeline tools.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunBasicMetaAiExample()
     {
         Console.WriteLine("=== Meta-AI Pipeline Example ===\n");
@@ -41,7 +40,7 @@ public static class MetaAiPipelineExample
             Tools = tools,
             Embed = embedModel,
             RetrievalK = 8,
-            Trace = true
+            Trace = true,
         };
 
         // Register pipeline steps as tools - this enables meta-AI capabilities
@@ -61,6 +60,7 @@ public static class MetaAiPipelineExample
         {
             Console.WriteLine($"  - {tool.Name}: {tool.Description}");
         }
+
         Console.WriteLine();
 
         // Create a meta-AI prompt
@@ -102,6 +102,7 @@ Think step-by-step:
                     Console.WriteLine($"  Args: {call.Arguments}");
                     Console.WriteLine($"  Result: {call.Output}");
                 }
+
                 Console.WriteLine("\n✓ Meta-AI demonstration successful!");
             }
             else
@@ -128,6 +129,7 @@ Think step-by-step:
     /// <summary>
     /// Demonstrates selective pipeline tool registration for controlled meta-AI behavior.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunSelectiveMetaAiExample()
     {
         Console.WriteLine("\n=== Selective Meta-AI Example ===\n");
@@ -149,7 +151,7 @@ Think step-by-step:
             Tools = tools,
             Embed = embedModel,
             RetrievalK = 8,
-            Trace = false
+            Trace = false,
         };
 
         // Register only specific pipeline steps as tools

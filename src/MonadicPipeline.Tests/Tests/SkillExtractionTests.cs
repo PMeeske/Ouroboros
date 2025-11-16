@@ -1,13 +1,12 @@
-// ==========================================================
-// Skill Extraction Tests
-// Tests for automatic skill learning from successful executions
-// ==========================================================
+// <copyright file="SkillExtractionTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
 
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for skill extraction and learning capabilities.
@@ -17,6 +16,7 @@ public static class SkillExtractionTests
     /// <summary>
     /// Tests basic skill extraction from a successful execution.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestBasicSkillExtraction()
     {
         Console.WriteLine("=== Test: Basic Skill Extraction ===");
@@ -34,7 +34,7 @@ public static class SkillExtractionTests
             {
                 new PlanStep("get_number_1", new Dictionary<string, object> { ["value"] = 42 }, "42", 0.9),
                 new PlanStep("get_number_2", new Dictionary<string, object> { ["value"] = 58 }, "58", 0.9),
-                new PlanStep("add_numbers", new Dictionary<string, object> { ["a"] = 42, ["b"] = 58 }, "100", 0.95)
+                new PlanStep("add_numbers", new Dictionary<string, object> { ["a"] = 42, ["b"] = 58 }, "100", 0.95),
             },
             new Dictionary<string, double> { ["overall"] = 0.9 },
             DateTime.UtcNow);
@@ -45,7 +45,7 @@ public static class SkillExtractionTests
             {
                 new StepResult(plan.Steps[0], true, "42", null, TimeSpan.FromMilliseconds(10), new()),
                 new StepResult(plan.Steps[1], true, "58", null, TimeSpan.FromMilliseconds(10), new()),
-                new StepResult(plan.Steps[2], true, "100", null, TimeSpan.FromMilliseconds(20), new())
+                new StepResult(plan.Steps[2], true, "100", null, TimeSpan.FromMilliseconds(20), new()),
             },
             Success: true,
             FinalOutput: "100",
@@ -66,6 +66,7 @@ public static class SkillExtractionTests
         {
             throw new Exception("High-quality execution should be eligible for skill extraction");
         }
+
         Console.WriteLine("✓ Extraction eligibility check passed");
 
         // Test skill extraction
@@ -92,6 +93,7 @@ public static class SkillExtractionTests
     /// <summary>
     /// Tests that low-quality executions are not extracted as skills.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestLowQualityRejection()
     {
         Console.WriteLine("=== Test: Low Quality Rejection ===");
@@ -137,6 +139,7 @@ public static class SkillExtractionTests
     /// <summary>
     /// Tests skill extraction with custom configuration.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestCustomExtractionConfig()
     {
         Console.WriteLine("=== Test: Custom Extraction Configuration ===");
@@ -158,7 +161,7 @@ public static class SkillExtractionTests
             {
                 new PlanStep("step1", new(), "out1", 0.8),
                 new PlanStep("step2", new(), "out2", 0.8),
-                new PlanStep("step3", new(), "out3", 0.8)
+                new PlanStep("step3", new(), "out3", 0.8),
             },
             new Dictionary<string, double>(),
             DateTime.UtcNow);
@@ -201,6 +204,7 @@ public static class SkillExtractionTests
     /// <summary>
     /// Tests skill name generation.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestSkillNameGeneration()
     {
         Console.WriteLine("=== Test: Skill Name Generation ===");
@@ -214,7 +218,7 @@ public static class SkillExtractionTests
             "Calculate mathematical sum",
             new List<PlanStep>
             {
-                new PlanStep("add", new() { ["a"] = 5, ["b"] = 10 }, "15", 0.9)
+                new PlanStep("add", new() { ["a"] = 5, ["b"] = 10 }, "15", 0.9),
             },
             new Dictionary<string, double>(),
             DateTime.UtcNow);
@@ -263,6 +267,7 @@ public static class SkillExtractionTests
     /// <summary>
     /// Tests that extracted skills are registered in the skill registry.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestSkillRegistration()
     {
         Console.WriteLine("=== Test: Skill Registration ===");
@@ -279,7 +284,7 @@ public static class SkillExtractionTests
             new List<PlanStep>
             {
                 new PlanStep("action1", new(), "out1", 0.9),
-                new PlanStep("action2", new(), "out2", 0.9)
+                new PlanStep("action2", new(), "out2", 0.9),
             },
             new Dictionary<string, double>(),
             DateTime.UtcNow);

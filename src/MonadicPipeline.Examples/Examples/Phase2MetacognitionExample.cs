@@ -1,12 +1,11 @@
-// ==========================================================
-// Phase 2 Metacognition Example
-// Demonstrates self-model, goal hierarchy, and self-evaluation
-// ==========================================================
+// <copyright file="Phase2MetacognitionExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Examples;
 
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
-
-namespace LangChainPipeline.Examples;
 
 /// <summary>
 /// Example demonstrating Phase 2 metacognitive capabilities.
@@ -19,6 +18,7 @@ public static class Phase2MetacognitionExample
     /// Demonstrates complete Phase 2 workflow: capability assessment,
     /// goal decomposition, and self-evaluation.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunCompleteWorkflow()
     {
         Console.WriteLine("=== Phase 2 Metacognition Example ===\n");
@@ -124,6 +124,7 @@ public static class Phase2MetacognitionExample
                         Console.WriteLine($"   • {subsubgoal.Description}");
                     }
                 }
+
                 Console.WriteLine();
                 subgoalNum++;
             }
@@ -167,6 +168,7 @@ public static class Phase2MetacognitionExample
             {
                 Console.WriteLine($"  ✓ {strength}");
             }
+
             Console.WriteLine();
 
             Console.WriteLine($"Weaknesses ({assessment.Weaknesses.Count}):");
@@ -174,6 +176,7 @@ public static class Phase2MetacognitionExample
             {
                 Console.WriteLine($"  ⚠ {weakness}");
             }
+
             Console.WriteLine();
 
             Console.WriteLine($"Summary: {assessment.Summary}\n");
@@ -192,6 +195,7 @@ public static class Phase2MetacognitionExample
             {
                 Console.WriteLine($"  Evidence: {string.Join(", ", insight.SupportingEvidence.Take(2))}");
             }
+
             Console.WriteLine();
         }
 
@@ -213,6 +217,7 @@ public static class Phase2MetacognitionExample
             {
                 Console.WriteLine($"  {i + 1}. {plan.Actions[i]}");
             }
+
             Console.WriteLine();
 
             if (plan.ExpectedImprovements.Any())
@@ -308,7 +313,7 @@ public static class Phase2MetacognitionExample
                 UsageCount: 200,
                 DateTime.UtcNow.AddDays(-50),
                 DateTime.UtcNow,
-                new Dictionary<string, object>())
+                new Dictionary<string, object>()),
         };
 
         foreach (var cap in capabilities)
@@ -326,7 +331,7 @@ public static class Phase2MetacognitionExample
             "Write a poem about artificial intelligence",
             "Analyze sales data and identify trends",
             "Build a quantum computer",
-            "Calculate the derivative of x^2 + 3x + 5"
+            "Calculate the derivative of x^2 + 3x + 5",
         };
 
         foreach (var task in testTasks)
@@ -347,6 +352,7 @@ public static class Phase2MetacognitionExample
                     }
                 }
             }
+
             Console.WriteLine();
         }
     }
@@ -384,6 +390,7 @@ public static class Phase2MetacognitionExample
                 {
                     Console.WriteLine($"    • {resolution}");
                 }
+
                 Console.WriteLine();
             }
         }
@@ -401,7 +408,7 @@ public static class Phase2MetacognitionExample
         for (int i = 0; i < 20; i++)
         {
             var success = random.NextDouble() > 0.3; // 70% success rate
-            var quality = success ? 0.7 + random.NextDouble() * 0.3 : random.NextDouble() * 0.5;
+            var quality = success ? 0.7 + (random.NextDouble() * 0.3) : random.NextDouble() * 0.5;
 
             var plan = new Plan(
                 $"Simulated task {i + 1}",

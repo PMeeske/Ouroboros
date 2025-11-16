@@ -1,3 +1,7 @@
+// <copyright file="DelegateTool.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Tools;
 
 /// <summary>
@@ -5,7 +9,7 @@ namespace LangChainPipeline.Tools;
 /// </summary>
 public sealed class DelegateTool : ITool
 {
-    private readonly Func<string, CancellationToken, Task<Result<string, string>>> _executor;
+    private readonly Func<string, CancellationToken, Task<Result<string, string>>> executor;
 
     /// <inheritdoc />
     public string Name { get; }
@@ -25,10 +29,10 @@ public sealed class DelegateTool : ITool
     /// <param name="schema">Optional JSON schema for the tool's input.</param>
     public DelegateTool(string name, string description, Func<string, CancellationToken, Task<Result<string, string>>> executor, string? schema = null)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        Description = description ?? throw new ArgumentNullException(nameof(description));
-        _executor = executor ?? throw new ArgumentNullException(nameof(executor));
-        JsonSchema = schema;
+        this.Name = name ?? throw new ArgumentNullException(nameof(name));
+        this.Description = description ?? throw new ArgumentNullException(nameof(description));
+        this.executor = executor ?? throw new ArgumentNullException(nameof(executor));
+        this.JsonSchema = schema;
     }
 
     /// <summary>
@@ -50,7 +54,8 @@ public sealed class DelegateTool : ITool
                 return Result<string, string>.Failure(ex.Message);
             }
         })
-    { }
+    {
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DelegateTool"/> class with a synchronous function.
@@ -71,7 +76,8 @@ public sealed class DelegateTool : ITool
                 return Task.FromResult(Result<string, string>.Failure(ex.Message));
             }
         })
-    { }
+    {
+    }
 
     /// <summary>
     /// Creates a delegate tool from a strongly-typed JSON function.
@@ -101,5 +107,5 @@ public sealed class DelegateTool : ITool
 
     /// <inheritdoc />
     public Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
-        => _executor(input, ct);
+        => this.executor(input, ct);
 }

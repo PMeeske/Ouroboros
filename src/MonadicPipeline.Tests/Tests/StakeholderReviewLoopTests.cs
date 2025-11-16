@@ -1,12 +1,11 @@
-// ==========================================================
-// Stakeholder Review Loop Tests
-// Tests for PR-based approval workflows
-// ==========================================================
+// <copyright file="StakeholderReviewLoopTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests.Agent;
 
 using LangChainPipeline.Agent.MetaAI;
 using Xunit;
-
-namespace LangChainPipeline.Tests.Agent;
 
 /// <summary>
 /// Tests for stakeholder review loop functionality.
@@ -16,6 +15,7 @@ public class StakeholderReviewLoopTests
     /// <summary>
     /// Tests basic stakeholder review loop workflow.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task TestBasicReviewLoop()
     {
@@ -64,6 +64,7 @@ public class StakeholderReviewLoopTests
     /// <summary>
     /// Tests review loop with comments that need resolution.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task TestReviewLoopWithComments()
     {
@@ -110,6 +111,7 @@ public class StakeholderReviewLoopTests
     /// <summary>
     /// Tests monitoring review progress.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task TestMonitorReviewProgress()
     {
@@ -159,6 +161,7 @@ public class StakeholderReviewLoopTests
     /// <summary>
     /// Tests review loop with minimum required approvals (not all reviewers).
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task TestMinimumRequiredApprovals()
     {
@@ -202,6 +205,7 @@ public class StakeholderReviewLoopTests
     /// <summary>
     /// Tests review state transitions.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task TestReviewStateTransitions()
     {
@@ -221,14 +225,18 @@ public class StakeholderReviewLoopTests
             requiredReviewers);
 
         if (!prResult.IsSuccess)
+        {
             throw new Exception("PR creation should succeed");
+        }
 
         var pr = prResult.Value;
 
         // State 1: AwaitingReview (no reviews yet)
         var reviewsResult1 = await mockProvider.GetReviewDecisionsAsync(pr.Id);
         if (!reviewsResult1.IsSuccess || reviewsResult1.Value.Any())
+        {
             throw new Exception("Should start with no reviews");
+        }
 
         Console.WriteLine("✓ State 1: AwaitingReview (no reviews)");
 

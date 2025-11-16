@@ -1,10 +1,14 @@
+// <copyright file="MeTTaIntegrationExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Examples;
+
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Providers;
 using LangChainPipeline.Tools;
 using LangChainPipeline.Tools.MeTTa;
-
-namespace LangChainPipeline.Examples;
 
 /// <summary>
 /// Demonstrates MeTTa symbolic reasoning integration with MonadicPipeline.
@@ -15,6 +19,7 @@ public static class MeTTaIntegrationExample
     /// <summary>
     /// Demonstrates basic MeTTa symbolic reasoning capabilities.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunBasicMeTTaExample()
     {
         Console.WriteLine("╔══════════════════════════════════════════════════════╗");
@@ -33,7 +38,7 @@ public static class MeTTaIntegrationExample
         {
             "(human Socrates)",
             "(human Plato)",
-            "(mortal $x) :- (human $x)"
+            "(mortal $x) :- (human $x)",
         };
 
         foreach (var fact in facts)
@@ -41,8 +46,7 @@ public static class MeTTaIntegrationExample
             var result = await engine.AddFactAsync(fact);
             result.Match(
                 _ => Console.WriteLine($"✓ Added: {fact}"),
-                error => Console.WriteLine($"✗ Failed to add fact: {error}")
-            );
+                error => Console.WriteLine($"✗ Failed to add fact: {error}"));
         }
 
         Console.WriteLine("\nStep 2: Querying the knowledge base");
@@ -53,8 +57,7 @@ public static class MeTTaIntegrationExample
 
         queryResult.Match(
             success => Console.WriteLine($"✓ Query result: {success}"),
-            error => Console.WriteLine($"✗ Query failed: {error}")
-        );
+            error => Console.WriteLine($"✗ Query failed: {error}"));
 
         Console.WriteLine("\nStep 3: Applying inference rules");
         Console.WriteLine("─────────────────────────────────────────────────────");
@@ -64,8 +67,7 @@ public static class MeTTaIntegrationExample
 
         ruleResult.Match(
             success => Console.WriteLine($"✓ Rule result: {success}"),
-            error => Console.WriteLine($"✗ Rule failed: {error}")
-        );
+            error => Console.WriteLine($"✗ Rule failed: {error}"));
 
         Console.WriteLine("\n✓ Basic MeTTa example completed!\n");
     }
@@ -73,6 +75,7 @@ public static class MeTTaIntegrationExample
     /// <summary>
     /// Demonstrates MeTTa integration with the tool system.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunMeTTaToolsExample()
     {
         Console.WriteLine("╔══════════════════════════════════════════════════════╗");
@@ -106,8 +109,7 @@ public static class MeTTaIntegrationExample
             var result = await tool.InvokeAsync("(+ 2 3)");
             result.Match(
                 success => Console.WriteLine($"✓ metta_query result: {success}"),
-                error => Console.WriteLine($"Note: {error}")
-            );
+                error => Console.WriteLine($"Note: {error}"));
         }
         else
         {
@@ -122,8 +124,7 @@ public static class MeTTaIntegrationExample
             var result = await tool.InvokeAsync("(likes Alice coding)");
             result.Match(
                 success => Console.WriteLine($"✓ metta_add_fact: {success}"),
-                error => Console.WriteLine($"Note: {error}")
-            );
+                error => Console.WriteLine($"Note: {error}"));
         }
         else
         {
@@ -137,6 +138,7 @@ public static class MeTTaIntegrationExample
     /// <summary>
     /// Demonstrates HTTP-based MeTTa client for Python Hyperon service.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunHttpMeTTaExample()
     {
         Console.WriteLine("╔══════════════════════════════════════════════════════╗");
@@ -158,8 +160,7 @@ public static class MeTTaIntegrationExample
 
         result.Match(
             success => Console.WriteLine($"✓ HTTP query succeeded: {success}"),
-            error => Console.WriteLine($"Note: Service not available - {error.Substring(0, Math.Min(60, error.Length))}...")
-        );
+            error => Console.WriteLine($"Note: Service not available - {error.Substring(0, Math.Min(60, error.Length))}..."));
 
         Console.WriteLine("\n✓ HTTP MeTTa example completed!");
         Console.WriteLine("  To use this example, start a Python Hyperon service on port 8000\n");
@@ -168,6 +169,7 @@ public static class MeTTaIntegrationExample
     /// <summary>
     /// Demonstrates integrating MeTTa with Meta-AI orchestrator.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunMeTTaOrchestratorExample()
     {
         Console.WriteLine("╔══════════════════════════════════════════════════════╗");
@@ -220,8 +222,7 @@ public static class MeTTaIntegrationExample
                     Console.WriteLine($"\n✓ Plan created with {plan.Steps.Count} steps");
                     Console.WriteLine("  (Plan can be verified using metta_verify_plan tool)");
                 },
-                error => Console.WriteLine($"Note: Planning skipped - {error}")
-            );
+                error => Console.WriteLine($"Note: Planning skipped - {error}"));
 
             engine.Dispose();
             Console.WriteLine("\n✓ Orchestrator integration example completed!\n");
@@ -243,6 +244,7 @@ public static class MeTTaIntegrationExample
     /// <summary>
     /// Demonstrates bridging orchestrator memory to MeTTa facts.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunMemoryBridgeExample()
     {
         Console.WriteLine("╔══════════════════════════════════════════════════════╗");
@@ -271,8 +273,7 @@ public static class MeTTaIntegrationExample
 
             syncResult.Match(
                 count => Console.WriteLine($"✓ Synchronized {count} facts from memory to MeTTa"),
-                error => Console.WriteLine($"Note: {error}")
-            );
+                error => Console.WriteLine($"Note: {error}"));
 
             // Query experiences using MeTTa
             Console.WriteLine("\nQuerying experiences with symbolic reasoning:");
@@ -280,8 +281,7 @@ public static class MeTTaIntegrationExample
 
             queryResult.Match(
                 result => Console.WriteLine($"✓ Query result: {result}"),
-                error => Console.WriteLine($"Note: {error}")
-            );
+                error => Console.WriteLine($"Note: {error}"));
 
             engine.Dispose();
             Console.WriteLine("\n✓ Memory bridge example completed!\n");
@@ -302,6 +302,7 @@ public static class MeTTaIntegrationExample
     /// <summary>
     /// Runs all MeTTa integration examples.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllExamples()
     {
         Console.WriteLine("\n");

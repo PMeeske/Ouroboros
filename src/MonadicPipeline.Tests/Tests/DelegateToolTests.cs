@@ -1,9 +1,13 @@
+// <copyright file="DelegateToolTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChainPipeline.Core.Monads;
 using LangChainPipeline.Tools;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for the DelegateTool implementation.
@@ -17,8 +21,7 @@ public class DelegateToolTests
         var tool = new DelegateTool(
             "test",
             "description",
-            (input, ct) => Task.FromResult(Result<string, string>.Success("result"))
-        );
+            (input, ct) => Task.FromResult(Result<string, string>.Success("result")));
 
         // Assert
         tool.Name.Should().Be("test");
@@ -34,8 +37,7 @@ public class DelegateToolTests
             "test",
             "description",
             (input, ct) => Task.FromResult(Result<string, string>.Success("result")),
-            "{\"type\": \"object\"}"
-        );
+            "{\"type\": \"object\"}");
 
         // Assert
         tool.JsonSchema.Should().Be("{\"type\": \"object\"}");
@@ -49,9 +51,7 @@ public class DelegateToolTests
             new DelegateTool(
                 null!,
                 "description",
-                (input, ct) => Task.FromResult(Result<string, string>.Success("result"))
-            )
-        );
+                (input, ct) => Task.FromResult(Result<string, string>.Success("result"))));
     }
 
     [Fact]
@@ -62,9 +62,7 @@ public class DelegateToolTests
             new DelegateTool(
                 "test",
                 null!,
-                (input, ct) => Task.FromResult(Result<string, string>.Success("result"))
-            )
-        );
+                (input, ct) => Task.FromResult(Result<string, string>.Success("result"))));
     }
 
     [Fact]
@@ -75,9 +73,7 @@ public class DelegateToolTests
             new DelegateTool(
                 "test",
                 "description",
-                (Func<string, CancellationToken, Task<Result<string, string>>>)null!
-            )
-        );
+                (Func<string, CancellationToken, Task<Result<string, string>>>)null!));
     }
 
     [Fact]
@@ -87,8 +83,7 @@ public class DelegateToolTests
         var tool = new DelegateTool(
             "test",
             "description",
-            (input, ct) => Task.FromResult(Result<string, string>.Success($"processed: {input}"))
-        );
+            (input, ct) => Task.FromResult(Result<string, string>.Success($"processed: {input}")));
 
         // Act
         var result = await tool.InvokeAsync("input");
@@ -105,8 +100,7 @@ public class DelegateToolTests
         var tool = new DelegateTool(
             "test",
             "description",
-            (input, ct) => Task.FromResult(Result<string, string>.Failure("error occurred"))
-        );
+            (input, ct) => Task.FromResult(Result<string, string>.Failure("error occurred")));
 
         // Act
         var result = await tool.InvokeAsync("input");
@@ -128,8 +122,7 @@ public class DelegateToolTests
             {
                 receivedToken = ct;
                 return Task.FromResult(Result<string, string>.Success("result"));
-            }
-        );
+            });
         using var cts = new CancellationTokenSource();
 
         // Act
@@ -146,8 +139,7 @@ public class DelegateToolTests
         var tool = new DelegateTool(
             "test",
             "description",
-            (Func<string, Task<string>>)(input => Task.FromResult($"result: {input}"))
-        );
+            (Func<string, Task<string>>)(input => Task.FromResult($"result: {input}")));
 
         // Assert
         tool.Name.Should().Be("test");
@@ -161,8 +153,7 @@ public class DelegateToolTests
         var tool = new DelegateTool(
             "test",
             "description",
-            (Func<string, Task<string>>)(input => Task.FromResult($"processed: {input}"))
-        );
+            (Func<string, Task<string>>)(input => Task.FromResult($"processed: {input}")));
 
         // Act
         var result = await tool.InvokeAsync("data");
@@ -182,8 +173,7 @@ public class DelegateToolTests
             (Func<string, Task<string>>)(input =>
             {
                 throw new InvalidOperationException("test error");
-            })
-        );
+            }));
 
         // Act
         var result = await tool.InvokeAsync("input");
@@ -200,8 +190,7 @@ public class DelegateToolTests
         var tool = new DelegateTool(
             "test",
             "description",
-            (input) => $"result: {input}"
-        );
+            (input) => $"result: {input}");
 
         // Assert
         tool.Name.Should().Be("test");
@@ -215,8 +204,7 @@ public class DelegateToolTests
         var tool = new DelegateTool(
             "test",
             "description",
-            (input) => $"processed: {input}"
-        );
+            (input) => $"processed: {input}");
 
         // Act
         var result = await tool.InvokeAsync("data");
@@ -233,8 +221,7 @@ public class DelegateToolTests
         var tool = new DelegateTool(
             "test",
             "description",
-            (Func<string, string>)(input => throw new InvalidOperationException("sync error"))
-        );
+            (Func<string, string>)(input => throw new InvalidOperationException("sync error")));
 
         // Act
         var result = await tool.InvokeAsync("input");
@@ -251,8 +238,7 @@ public class DelegateToolTests
         var tool = DelegateTool.FromJson<TestArgs>(
             "test",
             "description",
-            args => Task.FromResult($"Value: {args.Value}")
-        );
+            args => Task.FromResult($"Value: {args.Value}"));
 
         // Act & Assert
         tool.Name.Should().Be("test");
@@ -267,8 +253,7 @@ public class DelegateToolTests
         var tool = DelegateTool.FromJson<TestArgs>(
             "test",
             "description",
-            args => Task.FromResult($"Received: {args.Value}")
-        );
+            args => Task.FromResult($"Received: {args.Value}"));
 
         // Act
         var result = await tool.InvokeAsync("{\"value\": \"test\"}");
@@ -285,8 +270,7 @@ public class DelegateToolTests
         var tool = DelegateTool.FromJson<TestArgs>(
             "test",
             "description",
-            args => Task.FromResult("result")
-        );
+            args => Task.FromResult("result"));
 
         // Act
         var result = await tool.InvokeAsync("invalid json");
@@ -303,8 +287,7 @@ public class DelegateToolTests
         var tool = DelegateTool.FromJson<TestArgs>(
             "test",
             "description",
-            args => throw new InvalidOperationException("function error")
-        );
+            args => throw new InvalidOperationException("function error"));
 
         // Act
         var result = await tool.InvokeAsync("{\"value\": \"test\"}");

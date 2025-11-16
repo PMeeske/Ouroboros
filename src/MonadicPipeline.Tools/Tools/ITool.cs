@@ -1,3 +1,7 @@
+// <copyright file="ITool.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Tools;
 
 /// <summary>

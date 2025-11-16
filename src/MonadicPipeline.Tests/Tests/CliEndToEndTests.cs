@@ -1,11 +1,15 @@
+// <copyright file="CliEndToEndTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using System.Diagnostics;
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.CLI;
 using LangChainPipeline.Providers;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Comprehensive end-to-end tests for all CLI commands and their variations.
@@ -59,8 +63,6 @@ public static class CliEndToEndTests
         Console.WriteLine("✓ All CLI end-to-end tests passed!");
     }
 
-    #region Ask Command Tests
-
     private static async Task TestAskCommandBasic()
     {
         Console.WriteLine("Testing ask command (basic)...");
@@ -77,6 +79,7 @@ public static class CliEndToEndTests
             {
                 throw new Exception("Basic ask should return non-empty response");
             }
+
             Console.WriteLine("  ✓ Basic ask command works correctly");
         }
         catch (Exception ex)
@@ -190,7 +193,7 @@ public static class CliEndToEndTests
         var modelMap = new Dictionary<string, IChatCompletionModel>(StringComparer.OrdinalIgnoreCase)
         {
             ["general"] = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3")),
-            ["coder"] = new OllamaChatAdapter(new OllamaChatModel(provider, "deepseek-coder:33b"))
+            ["coder"] = new OllamaChatAdapter(new OllamaChatModel(provider, "deepseek-coder:33b")),
         };
 
         var router = new MultiModelRouter(modelMap, "general");
@@ -219,6 +222,7 @@ public static class CliEndToEndTests
             {
                 throw new Exception("Debug environment variable should be set");
             }
+
             Console.WriteLine("  ✓ Debug mode environment variable works correctly");
         }
         finally
@@ -319,10 +323,12 @@ public static class CliEndToEndTests
             {
                 throw new Exception($"CLI override should take precedence for endpoint, got {endpoint}");
             }
+
             if (key != "cli-key")
             {
                 throw new Exception($"CLI override should take precedence for key, got {key}");
             }
+
             if (type != ChatEndpointType.OpenAiCompatible)
             {
                 throw new Exception($"CLI override should set endpoint type, got {type}");
@@ -338,10 +344,6 @@ public static class CliEndToEndTests
 
         return Task.CompletedTask;
     }
-
-    #endregion
-
-    #region Pipeline Command Tests
 
     private static Task TestPipelineCommandBasic()
     {
@@ -385,7 +387,7 @@ public static class CliEndToEndTests
             Llm = llm,
             Tools = tools,
             Embed = embed,
-            Trace = false
+            Trace = false,
         };
 
         // UseDir step should handle directory setup
@@ -441,7 +443,7 @@ public static class CliEndToEndTests
             Tools = tools,
             Embed = embed,
             Topic = "Test refinement",
-            Trace = false
+            Trace = false,
         };
 
         try
@@ -461,10 +463,12 @@ public static class CliEndToEndTests
             {
                 throw new Exception("Complete refinement loop should create a Draft");
             }
+
             if (!hasCritique)
             {
                 throw new Exception("Complete refinement loop should create a Critique");
             }
+
             if (!hasImprove)
             {
                 throw new Exception("Complete refinement loop should create a FinalSpec (Improve)");
@@ -521,7 +525,7 @@ public static class CliEndToEndTests
             Llm = llm,
             Tools = tools,
             Embed = embed,
-            Trace = false
+            Trace = false,
         };
 
         var traceOnStep = CliSteps.TraceOn();
@@ -567,10 +571,6 @@ public static class CliEndToEndTests
         return Task.CompletedTask;
     }
 
-    #endregion
-
-    #region List Command Tests
-
     private static void TestListCommand()
     {
         Console.WriteLine("Testing list command...");
@@ -596,10 +596,6 @@ public static class CliEndToEndTests
 
         Console.WriteLine("  ✓ List command token enumeration works correctly");
     }
-
-    #endregion
-
-    #region Explain Command Tests
 
     private static void TestExplainCommand()
     {
@@ -646,10 +642,6 @@ public static class CliEndToEndTests
         Console.WriteLine("  ✓ Explain command with complex DSL works correctly");
     }
 
-    #endregion
-
-    #region Test Command Tests
-
     private static void TestTestCommandStructure()
     {
         Console.WriteLine("Testing test command structure...");
@@ -658,7 +650,6 @@ public static class CliEndToEndTests
         var integrationTestType = typeof(OllamaCloudIntegrationTests);
         var vectorTestType = typeof(TrackedVectorStoreTests);
         var memoryTestType = typeof(MemoryContextTests);
-        var conversationTestType = typeof(LangChainConversationTests);
 
         if (integrationTestType == null)
         {
@@ -675,17 +666,10 @@ public static class CliEndToEndTests
             throw new Exception("MemoryContextTests should exist");
         }
 
-        if (conversationTestType == null)
-        {
-            throw new Exception("LangChainConversationTests should exist");
-        }
+        // Note: LangChainConversationTests are temporarily excluded while LangChain integration is disabled.
 
         Console.WriteLine("  ✓ Test command structure is complete");
     }
-
-    #endregion
-
-    #region Validation and Error Handling Tests
 
     private static void TestCommandValidation()
     {
@@ -762,10 +746,6 @@ public static class CliEndToEndTests
         }
     }
 
-    #endregion
-
-    #region Orchestrator Command Tests
-
     private static void TestOrchestratorCommand()
     {
         Console.WriteLine("Testing orchestrator command structure...");
@@ -805,10 +785,6 @@ public static class CliEndToEndTests
         Console.WriteLine("  ✓ Orchestrator command structure is valid");
     }
 
-    #endregion
-
-    #region MeTTa Command Tests
-
     private static void TestMeTTaCommand()
     {
         Console.WriteLine("Testing MeTTa command structure...");
@@ -827,7 +803,8 @@ public static class CliEndToEndTests
         }
 
         // Verify builder has expected methods
-        var createDefaultMethod = mettaBuilderType.GetMethod("CreateDefault",
+        var createDefaultMethod = mettaBuilderType.GetMethod(
+            "CreateDefault",
             System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
         if (createDefaultMethod == null)
         {
@@ -861,6 +838,4 @@ public static class CliEndToEndTests
 
         Console.WriteLine("  ✓ MeTTa command structure is valid");
     }
-
-    #endregion
 }

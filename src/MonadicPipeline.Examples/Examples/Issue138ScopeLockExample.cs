@@ -1,13 +1,12 @@
-// ==========================================================
-// Example: Issue #138 - Lock & Tag Scope
-// Demonstrates using GitHubScopeLockTool to prevent scope creep
-// ==========================================================
+// <copyright file="Issue138ScopeLockExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Examples.EpicWorkflow;
 
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Core.Monads;
 using LangChainPipeline.Tools;
-
-namespace LangChainPipeline.Examples.EpicWorkflow;
 
 /// <summary>
 /// Example demonstrating Issue #138 workflow for locking scope to prevent uncontrolled scope creep.
@@ -21,6 +20,7 @@ public static class Issue138ScopeLockExample
     /// <param name="githubToken">GitHub personal access token with repo permissions.</param>
     /// <param name="owner">Repository owner (username or organization).</param>
     /// <param name="repo">Repository name.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunScopeLockWorkflowAsync(string githubToken, string owner, string repo)
     {
         Console.WriteLine("=== Issue #138: Lock & Tag Scope ===\n");
@@ -81,7 +81,7 @@ public static class Issue138ScopeLockExample
                 var lockArgs = System.Text.Json.JsonSerializer.Serialize(new
                 {
                     IssueNumber = 2,
-                    Milestone = "v1.0"
+                    Milestone = "v1.0",
                 });
 
                 var lockResult = await scopeLockTool.InvokeAsync(lockArgs);
@@ -142,6 +142,7 @@ public static class Issue138ScopeLockExample
     /// <param name="githubToken">GitHub personal access token with repo permissions.</param>
     /// <param name="owner">Repository owner (username or organization).</param>
     /// <param name="repo">Repository name.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunDirectScopeLockAsync(string githubToken, string owner, string repo)
     {
         Console.WriteLine("=== Direct Scope Lock Example ===\n");
@@ -154,7 +155,7 @@ public static class Issue138ScopeLockExample
         var lockArgs = System.Text.Json.JsonSerializer.Serialize(new
         {
             IssueNumber = 2,
-            Milestone = "v1.0"
+            Milestone = "v1.0",
         });
 
         var result = await scopeLockTool.InvokeAsync(lockArgs);
@@ -174,6 +175,7 @@ public static class Issue138ScopeLockExample
     /// Main entry point for the example.
     /// Note: Requires GITHUB_TOKEN environment variable to be set.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task Main(string[] args)
     {
         try

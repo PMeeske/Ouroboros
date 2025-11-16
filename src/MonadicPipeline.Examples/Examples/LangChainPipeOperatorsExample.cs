@@ -1,25 +1,24 @@
-// ============================================================================
-// LangChain Pipe Operators Example
-// Demonstrates the enhanced CLI steps that leverage LangChain's native
-// pipe operators (Set, RetrieveSimilarDocuments, CombineDocuments, Template, LLM)
-// ============================================================================
-
-using static LangChainPipeline.CLI.Interop.Pipe;
+// <copyright file="LangChainPipeOperatorsExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Examples;
+
+using static LangChainPipeline.CLI.Interop.Pipe;
 
 /// <summary>
 /// Demonstrates the LangChain-style pipe operators that have been added to
 /// the MonadicPipeline system. These operators mirror the original LangChain
-/// approach shown in OriginalLangChainPivotExample.cs
+/// approach shown in OriginalLangChainPivotExample.cs.
 /// </summary>
 public static class LangChainPipeOperatorsExample
 {
     /// <summary>
     /// Demonstrates using LangChain-style pipe operators in the MonadicPipeline system.
     /// This mirrors the pivot example pattern:
-    /// Set | RetrieveSimilarDocuments | CombineDocuments | Template | LLM
+    /// Set | RetrieveSimilarDocuments | CombineDocuments | Template | LLM.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static Task RunLangChainPipelineExample()
     {
         Console.WriteLine("=== LANGCHAIN PIPE OPERATORS EXAMPLE ===");
@@ -111,6 +110,7 @@ public static class LangChainPipeOperatorsExample
     /// <summary>
     /// Shows the complete example workflow.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunCompleteExample()
     {
         await RunLangChainPipelineExample();

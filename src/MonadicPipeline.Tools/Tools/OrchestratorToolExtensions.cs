@@ -1,8 +1,6 @@
-// ==========================================================
-// Orchestrator-Aware Tool Extensions
-// Extends tool system with orchestrator integration and
-// performance tracking for composable tools
-// ==========================================================
+// <copyright file="OrchestratorToolExtensions.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Tools;
 
@@ -15,6 +13,7 @@ public static class OrchestratorToolExtensions
     /// <summary>
     /// Creates a performance-tracked wrapper around a tool.
     /// </summary>
+    /// <returns></returns>
     public static ITool WithPerformanceTracking(
         this ITool tool,
         Action<string, double, bool> metricsCallback)
@@ -45,6 +44,7 @@ public static class OrchestratorToolExtensions
     /// <summary>
     /// Creates a tool that selects between multiple implementations based on input.
     /// </summary>
+    /// <returns></returns>
     public static ITool WithDynamicSelection(
         string name,
         string description,
@@ -64,6 +64,7 @@ public static class OrchestratorToolExtensions
                         return Result<string, string>.Failure(
                             "No suitable tool selected for input");
                     }
+
                     return await selected.InvokeAsync(input, ct);
                 }
                 catch (Exception ex)
@@ -77,6 +78,7 @@ public static class OrchestratorToolExtensions
     /// <summary>
     /// Creates a tool that executes tools in parallel and combines results.
     /// </summary>
+    /// <returns></returns>
     public static ITool Parallel(
         string name,
         string description,
@@ -118,6 +120,7 @@ public static class OrchestratorToolExtensions
     /// <summary>
     /// Creates a tool with retry logic.
     /// </summary>
+    /// <returns></returns>
     public static ITool WithRetry(
         this ITool tool,
         int maxRetries = 3,
@@ -158,6 +161,7 @@ public static class OrchestratorToolExtensions
     /// <summary>
     /// Creates a tool with caching of results.
     /// </summary>
+    /// <returns></returns>
     public static ITool WithCaching(
         this ITool tool,
         TimeSpan cacheDuration)
@@ -178,6 +182,7 @@ public static class OrchestratorToolExtensions
                     {
                         return Result<string, string>.Success(cached.Item2);
                     }
+
                     // Remove stale entry
                     cache.TryRemove(input, out _);
                 }
@@ -201,6 +206,7 @@ public static class OrchestratorToolExtensions
     /// <summary>
     /// Creates a tool with timeout protection.
     /// </summary>
+    /// <returns></returns>
     public static ITool WithTimeout(
         this ITool tool,
         TimeSpan timeout)
@@ -229,6 +235,7 @@ public static class OrchestratorToolExtensions
     /// <summary>
     /// Creates a tool that falls back to another tool on failure.
     /// </summary>
+    /// <returns></returns>
     public static ITool WithFallback(
         this ITool primary,
         ITool fallback)
@@ -260,6 +267,7 @@ public static class AdvancedToolBuilder
     /// <summary>
     /// Creates a pipeline of tools that execute sequentially.
     /// </summary>
+    /// <returns></returns>
     public static ITool Pipeline(
         string name,
         string description,
@@ -271,6 +279,7 @@ public static class AdvancedToolBuilder
     /// <summary>
     /// Creates a conditional tool that routes to different tools based on predicate.
     /// </summary>
+    /// <returns></returns>
     public static ITool Switch(
         string name,
         string description,
@@ -297,6 +306,7 @@ public static class AdvancedToolBuilder
     /// <summary>
     /// Creates a tool that aggregates results from multiple tools.
     /// </summary>
+    /// <returns></returns>
     public static ITool Aggregate(
         string name,
         string description,

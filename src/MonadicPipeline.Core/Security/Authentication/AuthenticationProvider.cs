@@ -1,3 +1,7 @@
+// <copyright file="AuthenticationProvider.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Core.Security.Authentication;
 
 /// <summary>
@@ -6,62 +10,66 @@ namespace LangChainPipeline.Core.Security.Authentication;
 public class AuthenticationPrincipal
 {
     /// <summary>
-    /// Unique identifier for the principal.
+    /// Gets unique identifier for the principal.
     /// </summary>
     public string Id { get; init; } = string.Empty;
 
     /// <summary>
-    /// Username or service name.
+    /// Gets username or service name.
     /// </summary>
     public string Name { get; init; } = string.Empty;
 
     /// <summary>
-    /// Email address (for users).
+    /// Gets email address (for users).
     /// </summary>
     public string? Email { get; init; }
 
     /// <summary>
-    /// Roles assigned to the principal.
+    /// Gets roles assigned to the principal.
     /// </summary>
     public List<string> Roles { get; init; } = new();
 
     /// <summary>
-    /// Claims/attributes of the principal.
+    /// Gets claims/attributes of the principal.
     /// </summary>
     public Dictionary<string, string> Claims { get; init; } = new();
 
     /// <summary>
-    /// When the authentication expires.
+    /// Gets when the authentication expires.
     /// </summary>
     public DateTime ExpiresAt { get; init; }
 
     /// <summary>
-    /// Checks if the principal is expired.
+    /// Gets a value indicating whether checks if the principal is expired.
     /// </summary>
-    public bool IsExpired => DateTime.UtcNow > ExpiresAt;
+    public bool IsExpired => DateTime.UtcNow > this.ExpiresAt;
 
     /// <summary>
     /// Checks if the principal has a specific role.
     /// </summary>
-    public bool HasRole(string role) => Roles.Contains(role, StringComparer.OrdinalIgnoreCase);
+    /// <returns></returns>
+    public bool HasRole(string role) => this.Roles.Contains(role, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Checks if the principal has any of the specified roles.
     /// </summary>
+    /// <returns></returns>
     public bool HasAnyRole(params string[] roles) =>
-        roles.Any(r => HasRole(r));
+        roles.Any(r => this.HasRole(r));
 
     /// <summary>
     /// Checks if the principal has all of the specified roles.
     /// </summary>
+    /// <returns></returns>
     public bool HasAllRoles(params string[] roles) =>
-        roles.All(r => HasRole(r));
+        roles.All(r => this.HasRole(r));
 
     /// <summary>
     /// Gets a claim value.
     /// </summary>
+    /// <returns></returns>
     public string? GetClaim(string key) =>
-        Claims.TryGetValue(key, out var value) ? value : null;
+        this.Claims.TryGetValue(key, out var value) ? value : null;
 }
 
 /// <summary>
@@ -70,44 +78,46 @@ public class AuthenticationPrincipal
 public class AuthenticationResult
 {
     /// <summary>
-    /// Whether authentication was successful.
+    /// Gets a value indicating whether whether authentication was successful.
     /// </summary>
     public bool IsSuccess { get; init; }
 
     /// <summary>
-    /// Authenticated principal (if successful).
+    /// Gets authenticated principal (if successful).
     /// </summary>
     public AuthenticationPrincipal? Principal { get; init; }
 
     /// <summary>
-    /// Authentication token (e.g., JWT).
+    /// Gets authentication token (e.g., JWT).
     /// </summary>
     public string? Token { get; init; }
 
     /// <summary>
-    /// Error message (if failed).
+    /// Gets error message (if failed).
     /// </summary>
     public string? ErrorMessage { get; init; }
 
     /// <summary>
     /// Creates a successful authentication result.
     /// </summary>
+    /// <returns></returns>
     public static AuthenticationResult Success(AuthenticationPrincipal principal, string token) =>
         new()
         {
             IsSuccess = true,
             Principal = principal,
-            Token = token
+            Token = token,
         };
 
     /// <summary>
     /// Creates a failed authentication result.
     /// </summary>
+    /// <returns></returns>
     public static AuthenticationResult Failure(string errorMessage) =>
         new()
         {
             IsSuccess = false,
-            ErrorMessage = errorMessage
+            ErrorMessage = errorMessage,
         };
 }
 
@@ -119,21 +129,25 @@ public interface IAuthenticationProvider
     /// <summary>
     /// Authenticates a user with username and password.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<AuthenticationResult> AuthenticateAsync(string username, string password, CancellationToken ct = default);
 
     /// <summary>
     /// Validates an authentication token.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<AuthenticationResult> ValidateTokenAsync(string token, CancellationToken ct = default);
 
     /// <summary>
     /// Refreshes an authentication token.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<AuthenticationResult> RefreshTokenAsync(string token, CancellationToken ct = default);
 
     /// <summary>
     /// Revokes an authentication token.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<bool> RevokeTokenAsync(string token, CancellationToken ct = default);
 }
 
@@ -142,29 +156,30 @@ public interface IAuthenticationProvider
 /// </summary>
 public class InMemoryAuthenticationProvider : IAuthenticationProvider
 {
-    private readonly Dictionary<string, (string Password, AuthenticationPrincipal Principal)> _users = new();
-    private readonly HashSet<string> _revokedTokens = new();
-    private readonly object _lock = new();
+    private readonly Dictionary<string, (string Password, AuthenticationPrincipal Principal)> users = new();
+    private readonly HashSet<string> revokedTokens = new();
+    private readonly object @lock = new();
 
     /// <summary>
     /// Registers a user.
     /// </summary>
     public void RegisterUser(string username, string password, AuthenticationPrincipal principal)
     {
-        lock (_lock)
+        lock (this.@lock)
         {
-            _users[username] = (password, principal);
+            this.users[username] = (password, principal);
         }
     }
 
     /// <summary>
     /// Authenticates a user with username and password.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task<AuthenticationResult> AuthenticateAsync(string username, string password, CancellationToken ct = default)
     {
-        lock (_lock)
+        lock (this.@lock)
         {
-            if (!_users.TryGetValue(username, out var user))
+            if (!this.users.TryGetValue(username, out var user))
             {
                 return Task.FromResult(AuthenticationResult.Failure("Invalid username or password"));
             }
@@ -184,11 +199,12 @@ public class InMemoryAuthenticationProvider : IAuthenticationProvider
     /// <summary>
     /// Validates an authentication token.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task<AuthenticationResult> ValidateTokenAsync(string token, CancellationToken ct = default)
     {
-        lock (_lock)
+        lock (this.@lock)
         {
-            if (_revokedTokens.Contains(token))
+            if (this.revokedTokens.Contains(token))
             {
                 return Task.FromResult(AuthenticationResult.Failure("Token has been revoked"));
             }
@@ -202,6 +218,7 @@ public class InMemoryAuthenticationProvider : IAuthenticationProvider
     /// <summary>
     /// Refreshes an authentication token.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task<AuthenticationResult> RefreshTokenAsync(string token, CancellationToken ct = default)
     {
         return Task.FromResult(AuthenticationResult.Failure("Token refresh not implemented"));
@@ -210,11 +227,12 @@ public class InMemoryAuthenticationProvider : IAuthenticationProvider
     /// <summary>
     /// Revokes an authentication token.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task<bool> RevokeTokenAsync(string token, CancellationToken ct = default)
     {
-        lock (_lock)
+        lock (this.@lock)
         {
-            _revokedTokens.Add(token);
+            this.revokedTokens.Add(token);
             return Task.FromResult(true);
         }
     }

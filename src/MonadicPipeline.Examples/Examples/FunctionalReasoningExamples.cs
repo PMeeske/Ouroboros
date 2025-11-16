@@ -1,11 +1,10 @@
-// ==========================================================
-// Functional Reasoning Pipeline Demonstrations
-// Shows the refactored monadic patterns in action
-// ==========================================================
-
-using LangChain.DocumentLoaders;
+// <copyright file="FunctionalReasoningExamples.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Examples;
+
+using LangChain.DocumentLoaders;
 
 /// <summary>
 /// Demonstrates the refactored functional programming patterns in the MonadicPipeline.
@@ -68,21 +67,18 @@ public static class FunctionalReasoningExamples
         var mathTool = registry.GetTool("math");
         mathTool.Match(
             tool => Console.WriteLine($"✅ Found tool: {tool.Name} - {tool.Description}"),
-            () => Console.WriteLine("❌ Tool not found")
-        );
+            () => Console.WriteLine("❌ Tool not found"));
 
         var nonExistentTool = registry.GetTool("nonexistent");
         nonExistentTool.Match(
             tool => Console.WriteLine($"Found unexpected tool: {tool.Name}"),
-            () => Console.WriteLine("✅ Correctly returned None for non-existent tool")
-        );
+            () => Console.WriteLine("✅ Correctly returned None for non-existent tool"));
 
         // Safe schema export
         var schemaResult = registry.SafeExportSchemas();
         schemaResult.Match(
             json => Console.WriteLine($"✅ Schemas exported: {json.Length} characters"),
-            error => Console.WriteLine($"❌ Schema export failed: {error}")
-        );
+            error => Console.WriteLine($"❌ Schema export failed: {error}"));
 
         Console.WriteLine("✅ Functional registry operations maintain immutability and type safety");
     }
@@ -100,27 +96,26 @@ public static class FunctionalReasoningExamples
         var goodVars = new Dictionary<string, string>
         {
             ["name"] = "Alice",
-            ["count"] = "3"
+            ["count"] = "3",
         };
 
         var successResult = template.SafeFormat(goodVars);
         successResult.Match(
             formatted => Console.WriteLine($"✅ Success: {formatted}"),
-            error => Console.WriteLine($"❌ Error: {error}")
-        );
+            error => Console.WriteLine($"❌ Error: {error}"));
 
         // Safe formatting with missing variables
         var badVars = new Dictionary<string, string>
         {
-            ["name"] = "Bob"
+            ["name"] = "Bob",
+
             // Missing 'count'
         };
 
         var failureResult = template.SafeFormat(badVars);
         failureResult.Match(
             formatted => Console.WriteLine($"Unexpected success: {formatted}"),
-            error => Console.WriteLine($"✅ Expected error: {error}")
-        );
+            error => Console.WriteLine($"✅ Expected error: {error}"));
 
         // Show required variables
         Console.WriteLine($"Template requires: {string.Join(", ", template.RequiredVariables)}");
@@ -154,9 +149,8 @@ public static class FunctionalReasoningExamples
         var combinedResult = result1.Bind(r1 => result2.Map(r2 => (r1, r2)));
 
         combinedResult.Match(
-            combined => Console.WriteLine($"✅ Combined: ({combined.Item1}, {combined.Item2})"),
-            error => Console.WriteLine($"❌ Combination failed: {error}")
-        );
+            combined => Console.WriteLine($"✅ Combined: ({combined.r1}, {combined.r2})"),
+            error => Console.WriteLine($"❌ Combination failed: {error}"));
 
         // Demonstrate fallback values using GetValueOrDefault
         var fallbackValue = failureResult.GetValueOrDefault(100);
@@ -190,8 +184,7 @@ public static class FunctionalReasoningExamples
 
         result.Match(
             value => Console.WriteLine($"✅ Result: {value}"),
-            error => Console.WriteLine($"❌ {error}")
-        );
+            error => Console.WriteLine($"❌ {error}"));
 
         // Same operation with invalid input
         var failureResult = parseNumber("not-a-number")
@@ -200,8 +193,7 @@ public static class FunctionalReasoningExamples
 
         failureResult.Match(
             value => Console.WriteLine($"Unexpected: {value}"),
-            error => Console.WriteLine($"✅ Expected error: {error}")
-        );
+            error => Console.WriteLine($"✅ Expected error: {error}"));
 
         Console.WriteLine("✅ Basic monadic operations provide safe computation chains");
     }
@@ -209,6 +201,7 @@ public static class FunctionalReasoningExamples
     /// <summary>
     /// Demonstrates a complete functional pipeline with proper error handling.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateFunctionalPipeline()
     {
         Console.WriteLine("\n=== Complete Functional Pipeline ===");
@@ -228,8 +221,7 @@ public static class FunctionalReasoningExamples
         var result = await mockPipeline(branch);
         result.Match(
             successBranch => Console.WriteLine($"✅ Pipeline completed with {successBranch.Events.Count} events"),
-            error => Console.WriteLine($"❌ Pipeline failed: {error}")
-        );
+            error => Console.WriteLine($"❌ Pipeline failed: {error}"));
 
         Console.WriteLine("✅ Functional pipelines provide composable, error-safe operations");
     }
@@ -264,6 +256,7 @@ public static class FunctionalReasoningExamples
     /// <summary>
     /// Runs all demonstrations.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllDemonstrations()
     {
         Console.WriteLine("==========================================");

@@ -1,3 +1,7 @@
+// <copyright file="Option.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Core.Monads;
 
 /// <summary>
@@ -7,18 +11,18 @@ namespace LangChainPipeline.Core.Monads;
 /// <typeparam name="T">The type of the value.</typeparam>
 public readonly struct Option<T>
 {
-    private readonly T? _value;
-    private readonly bool _hasValue;
+    private readonly T? value;
+    private readonly bool hasValue;
 
     /// <summary>
     /// Gets the underlying value if present.
     /// </summary>
-    public T? Value => _value;
+    public T? Value => this.value;
 
     /// <summary>
     /// Gets a value indicating whether this instance contains a value.
     /// </summary>
-    public bool HasValue => _hasValue;
+    public bool HasValue => this.hasValue;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Option{T}"/> struct.
@@ -26,8 +30,8 @@ public readonly struct Option<T>
     /// <param name="value">The optional value.</param>
     public Option(T? value)
     {
-        _value = value;
-        _hasValue = value is not null;
+        this.value = value;
+        this.hasValue = value is not null;
     }
 
     /// <summary>
@@ -51,7 +55,7 @@ public readonly struct Option<T>
     /// <returns>The result of the function, or None if this Option is empty.</returns>
     public Option<TResult> Bind<TResult>(Func<T, Option<TResult>> func)
     {
-        return HasValue && _value is not null ? func(_value) : Option<TResult>.None();
+        return this.HasValue && this.value is not null ? func(this.value) : Option<TResult>.None();
     }
 
     /// <summary>
@@ -62,7 +66,7 @@ public readonly struct Option<T>
     /// <returns>An Option containing the transformed value, or None if this Option is empty.</returns>
     public Option<TResult> Map<TResult>(Func<T, TResult> func)
     {
-        return HasValue && _value is not null ? Option<TResult>.Some(func(_value)) : Option<TResult>.None();
+        return this.HasValue && this.value is not null ? Option<TResult>.Some(func(this.value)) : Option<TResult>.None();
     }
 
     /// <summary>
@@ -74,7 +78,7 @@ public readonly struct Option<T>
     /// <returns>The result of the function or the default value.</returns>
     public TResult Match<TResult>(Func<T, TResult> func, TResult defaultValue)
     {
-        return HasValue && _value is not null ? func(_value) : defaultValue;
+        return this.HasValue && this.value is not null ? func(this.value) : defaultValue;
     }
 
     /// <summary>
@@ -84,10 +88,14 @@ public readonly struct Option<T>
     /// <param name="onNone">Action to execute if value is absent.</param>
     public void Match(Action<T> onSome, Action onNone)
     {
-        if (HasValue && _value is not null)
-            onSome(_value);
+        if (this.HasValue && this.value is not null)
+        {
+            onSome(this.value);
+        }
         else
+        {
             onNone();
+        }
     }
 
     /// <summary>
@@ -97,7 +105,7 @@ public readonly struct Option<T>
     /// <returns>The wrapped value or the default value.</returns>
     public T GetValueOrDefault(T defaultValue)
     {
-        return HasValue && _value is not null ? _value : defaultValue;
+        return this.HasValue && this.value is not null ? this.value : defaultValue;
     }
 
     /// <summary>
@@ -108,35 +116,47 @@ public readonly struct Option<T>
     /// <summary>
     /// Returns a string representation of the Option.
     /// </summary>
+    /// <returns></returns>
     public override string ToString()
     {
-        return HasValue ? $"Some({_value})" : "None";
+        return this.HasValue ? $"Some({this.value})" : "None";
     }
 
     /// <summary>
     /// Determines equality between two Options.
     /// </summary>
+    /// <returns></returns>
     public bool Equals(Option<T> other)
     {
-        if (!HasValue && !other.HasValue) return true;
-        if (HasValue != other.HasValue) return false;
-        return EqualityComparer<T>.Default.Equals(_value, other._value);
+        if (!this.HasValue && !other.HasValue)
+        {
+            return true;
+        }
+
+        if (this.HasValue != other.HasValue)
+        {
+            return false;
+        }
+
+        return EqualityComparer<T>.Default.Equals(this.value, other.value);
     }
 
     /// <summary>
     /// Determines equality with an object.
     /// </summary>
+    /// <returns></returns>
     public override bool Equals(object? obj)
     {
-        return obj is Option<T> other && Equals(other);
+        return obj is Option<T> other && this.Equals(other);
     }
 
     /// <summary>
     /// Gets the hash code for this Option.
     /// </summary>
+    /// <returns></returns>
     public override int GetHashCode()
     {
-        return HasValue ? EqualityComparer<T>.Default.GetHashCode(_value!) : 0;
+        return this.HasValue ? EqualityComparer<T>.Default.GetHashCode(this.value!) : 0;
     }
 
     /// <summary>

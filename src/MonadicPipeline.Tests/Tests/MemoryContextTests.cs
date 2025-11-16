@@ -1,9 +1,13 @@
+// <copyright file="MemoryContextTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for memory context functionality including conversation management.
 /// </summary>
-public class MemoryContextTests
+public static class MemoryContextTests
 {
     /// <summary>
     /// Tests basic memory context creation and property management.
@@ -18,7 +22,9 @@ public class MemoryContextTests
 
         // Test input property
         if (memoryContext.Data != input)
+        {
             throw new Exception("Input property not set correctly");
+        }
 
         // Test property management
         var contextWithKey1 = memoryContext.SetProperty("key1", "value1");
@@ -28,10 +34,14 @@ public class MemoryContextTests
         var value2 = contextWithKey2.GetProperty<int>("key2");
 
         if (value1 != "value1")
+        {
             throw new Exception("String property not retrieved correctly");
+        }
 
         if (value2 != 42)
+        {
             throw new Exception("Integer property not retrieved correctly");
+        }
 
         Console.WriteLine("✓ MemoryContext basics test passed");
     }
@@ -53,16 +63,22 @@ public class MemoryContextTests
         // Original context should not have the property
         var originalValue = originalContext.GetProperty<string>("key1");
         if (originalValue != null)
+        {
             throw new Exception("Original context was mutated - immutability broken!");
+        }
 
         // New context should have the property
         var newValue = newContext.GetProperty<string>("key1");
         if (newValue != "value1")
+        {
             throw new Exception("New context does not have the expected property");
+        }
 
         // Contexts should be different instances
         if (ReferenceEquals(originalContext, newContext))
+        {
             throw new Exception("SetProperty returned the same instance - immutability broken!");
+        }
 
         Console.WriteLine("✓ MemoryContext immutability test passed");
     }
@@ -85,14 +101,20 @@ public class MemoryContextTests
 
         // Should only keep the last 2 turns
         if (turns.Count != 2)
+        {
             throw new Exception($"Expected 2 turns, got {turns.Count}");
+        }
 
         var turnList = turns.ToList();
         if (turnList[0].HumanInput != "How are you?")
+        {
             throw new Exception("First turn not correct after limit reached");
+        }
 
         if (turnList[1].HumanInput != "What's your name?")
+        {
             throw new Exception("Second turn not correct after limit reached");
+        }
 
         Console.WriteLine("✓ Conversation turn management test passed");
     }
@@ -109,10 +131,14 @@ public class MemoryContextTests
 
         var history = memory.GetFormattedHistory();
         if (string.IsNullOrEmpty(history))
+        {
             throw new Exception("Conversation history not generated");
+        }
 
         if (!history.Contains("User question") || !history.Contains("AI response"))
+        {
             throw new Exception("Conversation history missing content");
+        }
 
         Console.WriteLine("✓ Conversation history formatting test passed");
     }

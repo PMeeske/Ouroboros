@@ -1,7 +1,11 @@
-using LangChainPipeline.Diagnostics;
-using Xunit;
+// <copyright file="MetricsCollectorTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Tests;
+
+using LangChainPipeline.Diagnostics;
+using Xunit;
 
 public class MetricsCollectorTests
 {
@@ -144,6 +148,7 @@ public class MetricsCollectorTests
         {
             System.Threading.Thread.Sleep(10);
         }
+
         var metrics = collector.GetMetrics();
 
         // Assert

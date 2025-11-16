@@ -1,12 +1,12 @@
-// ==========================================================
-// Tests for Meta-AI Convenience Layer
-// ==========================================================
+// <copyright file="MetaAIConvenienceTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
 
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for the Meta-AI convenience layer.
@@ -16,6 +16,7 @@ public static class MetaAIConvenienceTests
     /// <summary>
     /// Tests simple orchestrator creation.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestSimpleOrchestratorCreation()
     {
         Console.WriteLine("=== Test: Simple Orchestrator Creation ===");
@@ -55,6 +56,7 @@ public static class MetaAIConvenienceTests
     /// <summary>
     /// Tests standard orchestrator creation.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestStandardOrchestratorCreation()
     {
         Console.WriteLine("=== Test: Standard Orchestrator Creation ===");
@@ -96,6 +98,7 @@ public static class MetaAIConvenienceTests
     /// <summary>
     /// Tests AskQuestion convenience method.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestAskQuestion()
     {
         Console.WriteLine("=== Test: AskQuestion Convenience Method ===");
@@ -142,6 +145,7 @@ public static class MetaAIConvenienceTests
     /// <summary>
     /// Tests preset orchestrators.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestPresetOrchestrators()
     {
         Console.WriteLine("=== Test: Preset Orchestrators ===");
@@ -191,6 +195,7 @@ public static class MetaAIConvenienceTests
     /// <summary>
     /// Tests CompleteWorkflow convenience method.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestCompleteWorkflow()
     {
         Console.WriteLine("=== Test: CompleteWorkflow Convenience Method ===");
@@ -241,6 +246,7 @@ public static class MetaAIConvenienceTests
     /// <summary>
     /// Runs all convenience layer tests.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAll()
     {
         Console.WriteLine("\n" + new string('=', 60));

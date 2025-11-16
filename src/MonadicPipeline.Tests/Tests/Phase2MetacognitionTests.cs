@@ -1,13 +1,12 @@
-// ==========================================================
-// Phase 2 Tests: Self-Model & Metacognition
-// Tests for CapabilityRegistry, GoalHierarchy, and SelfEvaluator
-// ==========================================================
+// <copyright file="Phase2MetacognitionTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
 
 using LangChain.Databases;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for Phase 2 metacognitive capabilities.
@@ -17,6 +16,7 @@ public static class Phase2MetacognitionTests
     /// <summary>
     /// Tests capability registry functionality.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestCapabilityRegistry()
     {
         Console.WriteLine("\n=== Testing Capability Registry ===");
@@ -107,6 +107,7 @@ public static class Phase2MetacognitionTests
     /// <summary>
     /// Tests goal hierarchy and decomposition.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestGoalHierarchy()
     {
         Console.WriteLine("\n=== Testing Goal Hierarchy ===");
@@ -210,6 +211,7 @@ public static class Phase2MetacognitionTests
     /// <summary>
     /// Tests self-evaluator functionality.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestSelfEvaluator()
     {
         Console.WriteLine("\n=== Testing Self-Evaluator ===");
@@ -310,11 +312,13 @@ public static class Phase2MetacognitionTests
             {
                 Console.WriteLine($"    • {strength}");
             }
+
             Console.WriteLine($"  - Weaknesses: {assessment.Weaknesses.Count}");
             foreach (var weakness in assessment.Weaknesses.Take(3))
             {
                 Console.WriteLine($"    • {weakness}");
             }
+
             Console.WriteLine($"  - Summary: {assessment.Summary.Substring(0, Math.Min(100, assessment.Summary.Length))}...");
         }
         else
@@ -343,6 +347,7 @@ public static class Phase2MetacognitionTests
             {
                 Console.WriteLine($"    • {action}");
             }
+
             Console.WriteLine($"  - Priority: {plan.Priority:F2}");
             Console.WriteLine($"  - Duration: {plan.EstimatedDuration.TotalDays:F0} days");
         }
@@ -362,6 +367,7 @@ public static class Phase2MetacognitionTests
     /// <summary>
     /// Tests integration of all Phase 2 components.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task TestPhase2Integration()
     {
         Console.WriteLine("\n=== Testing Phase 2 Integration ===");
@@ -443,6 +449,7 @@ public static class Phase2MetacognitionTests
     /// <summary>
     /// Runs all Phase 2 tests.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllTests()
     {
         Console.WriteLine("=== Phase 2: Self-Model & Metacognition Tests ===");

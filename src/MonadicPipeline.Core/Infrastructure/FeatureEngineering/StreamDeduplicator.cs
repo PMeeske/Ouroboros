@@ -1,3 +1,7 @@
+// <copyright file="StreamDeduplicator.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 namespace LangChainPipeline.Infrastructure.FeatureEngineering;
 
 using System;
@@ -14,12 +18,12 @@ using System.Threading.Tasks;
 /// </summary>
 public sealed class StreamDeduplicator
 {
-    private readonly float _similarityThreshold;
-    private readonly int _maxCacheSize;
-    private readonly LinkedList<VectorEntry> _lruList;
-    private readonly Dictionary<int, LinkedListNode<VectorEntry>> _cache;
-    private int _nextId;
-    private readonly object _lock = new();
+    private readonly float similarityThreshold;
+    private readonly int maxCacheSize;
+    private readonly LinkedList<VectorEntry> lruList;
+    private readonly Dictionary<int, LinkedListNode<VectorEntry>> cache;
+    private int nextId;
+    private readonly object @lock = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StreamDeduplicator"/> class.
@@ -51,11 +55,11 @@ public sealed class StreamDeduplicator
                 "Max cache size must be at least 1");
         }
 
-        _similarityThreshold = similarityThreshold;
-        _maxCacheSize = maxCacheSize;
-        _lruList = new LinkedList<VectorEntry>();
-        _cache = new Dictionary<int, LinkedListNode<VectorEntry>>();
-        _nextId = 0;
+        this.similarityThreshold = similarityThreshold;
+        this.maxCacheSize = maxCacheSize;
+        this.lruList = new LinkedList<VectorEntry>();
+        this.cache = new Dictionary<int, LinkedListNode<VectorEntry>>();
+        this.nextId = 0;
     }
 
     /// <summary>
@@ -72,24 +76,24 @@ public sealed class StreamDeduplicator
             throw new ArgumentNullException(nameof(vector));
         }
 
-        lock (_lock)
+        lock (this.@lock)
         {
             // Check against cached vectors
-            foreach (var node in _lruList)
+            foreach (var node in this.lruList)
             {
                 var similarity = CSharpHashVectorizer.CosineSimilarity(vector, node.Vector);
-                if (similarity >= _similarityThreshold)
+                if (similarity >= this.similarityThreshold)
                 {
                     // Move to front (most recently used)
-                    var cacheNode = _cache[node.Id];
-                    _lruList.Remove(cacheNode);
-                    _lruList.AddFirst(cacheNode);
+                    var cacheNode = this.cache[node.Id];
+                    this.lruList.Remove(cacheNode);
+                    this.lruList.AddFirst(cacheNode);
                     return true;
                 }
             }
 
             // Not a duplicate, add to cache
-            AddToCache(vector);
+            this.AddToCache(vector);
             return false;
         }
     }
@@ -109,7 +113,7 @@ public sealed class StreamDeduplicator
             throw new ArgumentNullException(nameof(vectors));
         }
 
-        return FilterStreamAsyncCore(vectors, cancellationToken);
+        return this.FilterStreamAsyncCore(vectors, cancellationToken);
     }
 
     private async IAsyncEnumerable<float[]> FilterStreamAsyncCore(
@@ -118,7 +122,7 @@ public sealed class StreamDeduplicator
     {
         await foreach (var vector in vectors.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
-            if (!IsDuplicate(vector))
+            if (!this.IsDuplicate(vector))
             {
                 yield return vector;
             }
@@ -140,7 +144,7 @@ public sealed class StreamDeduplicator
         var result = new List<float[]>();
         foreach (var vector in vectors)
         {
-            if (!IsDuplicate(vector))
+            if (!this.IsDuplicate(vector))
             {
                 result.Add(vector);
             }
@@ -154,10 +158,10 @@ public sealed class StreamDeduplicator
     /// </summary>
     public void ClearCache()
     {
-        lock (_lock)
+        lock (this.@lock)
         {
-            _lruList.Clear();
-            _cache.Clear();
+            this.lruList.Clear();
+            this.cache.Clear();
         }
     }
 
@@ -168,9 +172,9 @@ public sealed class StreamDeduplicator
     {
         get
         {
-            lock (_lock)
+            lock (this.@lock)
             {
-                return _lruList.Count;
+                return this.lruList.Count;
             }
         }
     }
@@ -181,28 +185,28 @@ public sealed class StreamDeduplicator
     /// <returns>A tuple containing (cacheSize, maxCacheSize, similarityThreshold).</returns>
     public (int CacheSize, int MaxCacheSize, float SimilarityThreshold) GetStatistics()
     {
-        lock (_lock)
+        lock (this.@lock)
         {
-            return (_lruList.Count, _maxCacheSize, _similarityThreshold);
+            return (this.lruList.Count, this.maxCacheSize, this.similarityThreshold);
         }
     }
 
     private void AddToCache(float[] vector)
     {
-        var entry = new VectorEntry(_nextId++, vector);
+        var entry = new VectorEntry(this.nextId++, vector);
         var node = new LinkedListNode<VectorEntry>(entry);
 
-        _lruList.AddFirst(node);
-        _cache[entry.Id] = node;
+        this.lruList.AddFirst(node);
+        this.cache[entry.Id] = node;
 
         // Evict least recently used if cache is full
-        if (_lruList.Count > _maxCacheSize)
+        if (this.lruList.Count > this.maxCacheSize)
         {
-            var lastNode = _lruList.Last;
+            var lastNode = this.lruList.Last;
             if (lastNode is not null)
             {
-                _cache.Remove(lastNode.Value.Id);
-                _lruList.RemoveLast();
+                this.cache.Remove(lastNode.Value.Id);
+                this.lruList.RemoveLast();
             }
         }
     }

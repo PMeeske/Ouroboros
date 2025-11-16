@@ -1,7 +1,6 @@
-// ============================================================================
-// Memory-Integrated Kleisli Pipeline Examples
-// Demonstrates the integration of LangChain memory concepts with Kleisli pipes
-// ============================================================================
+// <copyright file="ConversationalKleisliExamples.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Examples;
 
@@ -13,8 +12,9 @@ public static class ConversationalKleisliExamples
 {
     /// <summary>
     /// Demonstrates the LangChain-style conversational chain using Kleisli pipes
-    /// This mirrors the example from the problem statement but uses our monadic system
+    /// This mirrors the example from the problem statement but uses our monadic system.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunConversationalChainDemo()
     {
         Console.WriteLine("=== LangChain-Style Conversational Chain with Kleisli Pipes ===\n");
@@ -45,7 +45,7 @@ AI: ";
             "Hello! What's your name?",
             "What did I just ask you about?",
             "Can you remember our conversation so far?",
-            "What was my first question?"
+            "What was my first question?",
         };
 
         foreach (var input in conversationInputs)
@@ -75,8 +75,9 @@ AI: ";
     }
 
     /// <summary>
-    /// Demonstrates different memory strategies integrated with Kleisli pipes
+    /// Demonstrates different memory strategies integrated with Kleisli pipes.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunMemoryStrategyDemo()
     {
         Console.WriteLine("=== Memory Strategy Demonstration ===\n");
@@ -132,8 +133,9 @@ AI: ";
     }
 
     /// <summary>
-    /// Demonstrates integration with the existing Kleisli composition patterns
+    /// Demonstrates integration with the existing Kleisli composition patterns.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunKleisliCompositionDemo()
     {
         Console.WriteLine("=== Kleisli Composition with Memory Integration ===\n");
@@ -171,8 +173,9 @@ AI: ";
     }
 
     /// <summary>
-    /// Demonstrates error handling with memory-aware pipelines
+    /// Demonstrates error handling with memory-aware pipelines.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunErrorHandlingDemo()
     {
         Console.WriteLine("=== Error Handling with Memory Pipelines ===\n");
@@ -215,8 +218,9 @@ AI: ";
     }
 
     /// <summary>
-    /// Run all conversational Kleisli demonstrations
+    /// Run all conversational Kleisli demonstrations.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllDemonstrations()
     {
         Console.WriteLine("=== CONVERSATIONAL KLEISLI PIPELINE DEMONSTRATIONS ===\n");

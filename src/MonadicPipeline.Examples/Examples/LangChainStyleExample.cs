@@ -1,8 +1,6 @@
-// ============================================================================
-// Direct LangChain Memory Example Integration
-// This example mirrors the exact structure from the problem statement
-// but uses our Kleisli pipeline system instead of LangChain's Chain syntax
-// ============================================================================
+// <copyright file="LangChainStyleExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Examples;
 
@@ -15,8 +13,9 @@ public static class LangChainStyleExample
 {
     /// <summary>
     /// Runs a conversation loop that mirrors the LangChain example but uses Kleisli pipes
-    /// This is the main demonstration requested in the problem statement
+    /// This is the main demonstration requested in the problem statement.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunLangChainStyleConversation()
     {
         Console.WriteLine("=== LANGCHAIN STYLE CONVERSATION WITH KLEISLI PIPES ===");
@@ -38,8 +37,8 @@ AI: ";
         // Build the chain that will be used for each turn in our conversation.
         // This is the Kleisli pipeline equivalent of:
         // LoadMemory(memory, outputKey: "history")
-        // | Template(template) 
-        // | LLM(model) 
+        // | Template(template)
+        // | LLM(model)
         // | UpdateMemory(memory, requestKey: "input", responseKey: "text");
         var conversationalChain = string.Empty
             .StartConversation(memory)
@@ -59,7 +58,7 @@ AI: ";
             "What did I tell you my name was?",
             "Can you tell me a joke?",
             "Do you remember my name from earlier?",
-            "exit"
+            "exit",
         };
 
         foreach (var input in conversationInputs)
@@ -102,19 +101,18 @@ AI: ";
 
     /// <summary>
     /// Demonstrates different memory strategies similar to the LangChain example
-    /// This mirrors the PickMemoryStrategy method from the problem statement
+    /// This mirrors the PickMemoryStrategy method from the problem statement.
     /// </summary>
     private static ConversationMemory PickMemoryStrategy()
     {
         // For demo purposes, we'll show different strategies
         // In the real LangChain example, this would prompt the user for choice
-
         var strategies = new[]
         {
             "ConversationBufferMemory",
             "ConversationWindowBufferMemory",
             "ConversationSummaryMemory",
-            "ConversationSummaryBufferMemory"
+            "ConversationSummaryBufferMemory",
         };
 
         Console.WriteLine("Memory strategies available (auto-selecting for demo):");
@@ -133,13 +131,13 @@ AI: ";
             "ConversationWindowBufferMemory" => GetConversationWindowBufferMemory(),
             "ConversationSummaryMemory" => GetConversationSummaryMemory(),
             "ConversationSummaryBufferMemory" => GetConversationSummaryBufferMemory(),
-            _ => throw new InvalidOperationException($"Unexpected memory class name: '{selectedStrategy}'")
+            _ => throw new InvalidOperationException($"Unexpected memory class name: '{selectedStrategy}'"),
         };
     }
 
     /// <summary>
     /// Creates buffer memory that keeps all conversation history
-    /// Mirrors GetConversationBufferMemory from the LangChain example
+    /// Mirrors GetConversationBufferMemory from the LangChain example.
     /// </summary>
     private static ConversationMemory GetConversationBufferMemory()
     {
@@ -149,7 +147,7 @@ AI: ";
 
     /// <summary>
     /// Creates window buffer memory that keeps only recent conversation history
-    /// Mirrors GetConversationWindowBufferMemory from the LangChain example
+    /// Mirrors GetConversationWindowBufferMemory from the LangChain example.
     /// </summary>
     private static ConversationMemory GetConversationWindowBufferMemory()
     {
@@ -159,7 +157,7 @@ AI: ";
 
     /// <summary>
     /// Creates summary memory (simplified version for demo)
-    /// In real LangChain, this would use an LLM to summarize old conversations
+    /// In real LangChain, this would use an LLM to summarize old conversations.
     /// </summary>
     private static ConversationMemory GetConversationSummaryMemory()
     {
@@ -170,7 +168,7 @@ AI: ";
 
     /// <summary>
     /// Creates summary buffer memory (simplified version for demo)
-    /// In real LangChain, this combines token counting with summarization
+    /// In real LangChain, this combines token counting with summarization.
     /// </summary>
     private static ConversationMemory GetConversationSummaryBufferMemory()
     {
@@ -180,8 +178,9 @@ AI: ";
     }
 
     /// <summary>
-    /// Demonstrates the exact LangChain chain composition pattern using Kleisli pipes
+    /// Demonstrates the exact LangChain chain composition pattern using Kleisli pipes.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task DemonstrateLangChainEquivalence()
     {
         Console.WriteLine("=== LANGCHAIN EQUIVALENCE DEMONSTRATION ===");

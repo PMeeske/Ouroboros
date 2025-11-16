@@ -1,7 +1,11 @@
-using System.Diagnostics;
-using System.Text;
+// <copyright file="SubprocessMeTTaEngine.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace LangChainPipeline.Tools.MeTTa;
+
+using System.Diagnostics;
+using System.Text;
 
 /// <summary>
 /// Subprocess-based MeTTa engine implementation that communicates with metta-stdlib
@@ -9,14 +13,15 @@ namespace LangChainPipeline.Tools.MeTTa;
 /// </summary>
 public sealed class SubprocessMeTTaEngine : IMeTTaEngine
 {
-    private readonly Process? _process;
-    private readonly StreamWriter? _stdin;
-    private readonly StreamReader? _stdout;
-    private readonly StreamReader? _stderr;
-    private readonly SemaphoreSlim _lock = new(1, 1);
-    private bool _disposed;
+    private readonly Process? process;
+    private readonly StreamWriter? stdin;
+    private readonly StreamReader? stdout;
+    private readonly StreamReader? stderr;
+    private readonly SemaphoreSlim @lock = new(1, 1);
+    private bool disposed;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="SubprocessMeTTaEngine"/> class.
     /// Creates a new subprocess-based MeTTa engine.
     /// </summary>
     /// <param name="mettaExecutablePath">Path to the MeTTa executable (defaults to 'metta' in PATH).</param>
@@ -36,16 +41,16 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
                 RedirectStandardError = true,
                 CreateNoWindow = true,
                 StandardOutputEncoding = Encoding.UTF8,
-                StandardErrorEncoding = Encoding.UTF8
+                StandardErrorEncoding = Encoding.UTF8,
             };
 
-            _process = Process.Start(startInfo);
+            this.process = Process.Start(startInfo);
 
-            if (_process != null)
+            if (this.process != null)
             {
-                _stdin = _process.StandardInput;
-                _stdout = _process.StandardOutput;
-                _stderr = _process.StandardError;
+                this.stdin = this.process.StandardInput;
+                this.stdout = this.process.StandardOutput;
+                this.stderr = this.process.StandardError;
             }
         }
         catch (Exception ex)
@@ -59,23 +64,23 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
     /// <inheritdoc />
     public async Task<Result<string, string>> ExecuteQueryAsync(string query, CancellationToken ct = default)
     {
-        if (_process == null || _stdin == null || _stdout == null)
+        if (this.process == null || this.stdin == null || this.stdout == null)
         {
             return Result<string, string>.Failure("MeTTa engine is not initialized. Ensure metta executable is in PATH.");
         }
 
-        await _lock.WaitAsync(ct);
+        await this.@lock.WaitAsync(ct);
         try
         {
             // Send query to MeTTa
-            await _stdin.WriteLineAsync(query.AsMemory(), ct);
-            await _stdin.FlushAsync();
+            await this.stdin.WriteLineAsync(query.AsMemory(), ct);
+            await this.stdin.FlushAsync();
 
             // Read response with timeout
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(10));
 
-            var response = await _stdout.ReadLineAsync();
+            var response = await this.stdout.ReadLineAsync();
 
             if (string.IsNullOrEmpty(response))
             {
@@ -94,25 +99,25 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
         }
         finally
         {
-            _lock.Release();
+            this.@lock.Release();
         }
     }
 
     /// <inheritdoc />
     public async Task<Result<Unit, string>> AddFactAsync(string fact, CancellationToken ct = default)
     {
-        if (_process == null || _stdin == null)
+        if (this.process == null || this.stdin == null)
         {
             return Result<Unit, string>.Failure("MeTTa engine is not initialized");
         }
 
-        await _lock.WaitAsync(ct);
+        await this.@lock.WaitAsync(ct);
         try
         {
             // Add fact using MeTTa assertion syntax
             var command = $"!(add-atom &self {fact})";
-            await _stdin.WriteLineAsync(command.AsMemory(), ct);
-            await _stdin.FlushAsync();
+            await this.stdin.WriteLineAsync(command.AsMemory(), ct);
+            await this.stdin.FlushAsync();
 
             return Result<Unit, string>.Success(Unit.Value);
         }
@@ -122,29 +127,29 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
         }
         finally
         {
-            _lock.Release();
+            this.@lock.Release();
         }
     }
 
     /// <inheritdoc />
     public async Task<Result<string, string>> ApplyRuleAsync(string rule, CancellationToken ct = default)
     {
-        if (_process == null || _stdin == null || _stdout == null)
+        if (this.process == null || this.stdin == null || this.stdout == null)
         {
             return Result<string, string>.Failure("MeTTa engine is not initialized");
         }
 
-        await _lock.WaitAsync(ct);
+        await this.@lock.WaitAsync(ct);
         try
         {
             // Apply rule and get result
-            await _stdin.WriteLineAsync(rule.AsMemory(), ct);
-            await _stdin.FlushAsync();
+            await this.stdin.WriteLineAsync(rule.AsMemory(), ct);
+            await this.stdin.FlushAsync();
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(10));
 
-            var response = await _stdout.ReadLineAsync();
+            var response = await this.stdout.ReadLineAsync();
 
             return !string.IsNullOrEmpty(response)
                 ? Result<string, string>.Success(response)
@@ -160,7 +165,7 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
         }
         finally
         {
-            _lock.Release();
+            this.@lock.Release();
         }
     }
 
@@ -169,31 +174,30 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
     {
         // Use MeTTa query to verify plan
         var query = $"!(match &self (verify-plan {plan}) $result)";
-        var result = await ExecuteQueryAsync(query, ct);
+        var result = await this.ExecuteQueryAsync(query, ct);
 
         return result.Match(
             success => success.Contains("True") || success.Contains("true")
                 ? Result<bool, string>.Success(true)
                 : Result<bool, string>.Success(false),
-            error => Result<bool, string>.Failure(error)
-        );
+            error => Result<bool, string>.Failure(error));
     }
 
     /// <inheritdoc />
     public async Task<Result<Unit, string>> ResetAsync(CancellationToken ct = default)
     {
-        if (_process == null || _stdin == null)
+        if (this.process == null || this.stdin == null)
         {
             return Result<Unit, string>.Failure("MeTTa engine is not initialized");
         }
 
-        await _lock.WaitAsync(ct);
+        await this.@lock.WaitAsync(ct);
         try
         {
             // Clear the space
             var command = "!(clear-space &self)";
-            await _stdin.WriteLineAsync(command.AsMemory(), ct);
-            await _stdin.FlushAsync();
+            await this.stdin.WriteLineAsync(command.AsMemory(), ct);
+            await this.stdin.FlushAsync();
 
             return Result<Unit, string>.Success(Unit.Value);
         }
@@ -203,35 +207,38 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
         }
         finally
         {
-            _lock.Release();
+            this.@lock.Release();
         }
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
-        if (_disposed) return;
+        if (this.disposed)
+        {
+            return;
+        }
 
-        _lock.Wait();
+        this.@lock.Wait();
         try
         {
-            _stdin?.Close();
-            _stdout?.Close();
-            _stderr?.Close();
+            this.stdin?.Close();
+            this.stdout?.Close();
+            this.stderr?.Close();
 
-            if (_process != null && !_process.HasExited)
+            if (this.process != null && !this.process.HasExited)
             {
-                _process.Kill();
-                _process.WaitForExit(1000);
+                this.process.Kill();
+                this.process.WaitForExit(1000);
             }
 
-            _process?.Dispose();
-            _disposed = true;
+            this.process?.Dispose();
+            this.disposed = true;
         }
         finally
         {
-            _lock.Release();
-            _lock.Dispose();
+            this.@lock.Release();
+            this.@lock.Dispose();
         }
     }
 }

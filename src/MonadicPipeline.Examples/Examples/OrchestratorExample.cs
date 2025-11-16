@@ -1,15 +1,13 @@
-// ==========================================================
-// AI Orchestrator Example
-// Demonstrates intelligent model and tool selection based
-// on use case analysis and performance metrics
-// ==========================================================
+// <copyright file="OrchestratorExample.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Examples;
 
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
 using LangChainPipeline.CLI;
-
-namespace LangChainPipeline.Examples;
 
 /// <summary>
 /// Demonstrates the AI orchestrator capabilities for intelligent model and tool selection.
@@ -20,6 +18,7 @@ public static class OrchestratorExample
     /// <summary>
     /// Demonstrates basic orchestrator setup and model selection.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunBasicOrchestratorExample()
     {
         Console.WriteLine("=== AI Orchestrator - Basic Example ===\n");
@@ -68,7 +67,7 @@ public static class OrchestratorExample
             ("Code generation", "Write a function to calculate fibonacci numbers"),
             ("Reasoning", "Explain why the sky is blue using physics principles"),
             ("General chat", "What's your favorite color and why?"),
-            ("Code debugging", "Debug this code: def fib(n) return fib(n-1) + fib(n-2)")
+            ("Code debugging", "Debug this code: def fib(n) return fib(n-1) + fib(n-2)"),
         };
 
         foreach (var (category, prompt) in testPrompts)
@@ -100,6 +99,7 @@ public static class OrchestratorExample
     /// <summary>
     /// Demonstrates orchestrator with tool selection and performance tracking.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunOrchestratorWithToolsExample()
     {
         Console.WriteLine("\n=== AI Orchestrator - Tools & Performance ===\n");
@@ -120,7 +120,7 @@ public static class OrchestratorExample
             Tools = tools,
             Embed = embedModel,
             RetrievalK = 8,
-            Trace = false
+            Trace = false,
         };
 
         // Add pipeline steps as tools
@@ -216,7 +216,7 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
             "Create a short story about a robot",
             "Summarize this long document...",
             "Use the search tool to find information about AI",
-            "Hello, how are you today?"
+            "Hello, how are you today?",
         };
 
         foreach (var prompt in prompts)
@@ -236,6 +236,7 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
     /// <summary>
     /// Demonstrates composable tools with orchestrator.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunComposableToolsExample()
     {
         Console.WriteLine("\n=== Composable Tools with Orchestrator ===\n");
@@ -318,6 +319,7 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
     /// <summary>
     /// Runs all orchestrator examples.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllExamples()
     {
         Console.WriteLine("\n" + new string('=', 70));

@@ -1,10 +1,14 @@
+// <copyright file="EventStoreTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using FluentAssertions;
 using LangChainPipeline.Domain.Events;
 using LangChainPipeline.Domain.Persistence;
 using LangChainPipeline.Domain.States;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for event store functionality.
@@ -20,7 +24,7 @@ public class EventStoreTests
         var events = new List<PipelineEvent>
         {
             CreateTestEvent(),
-            CreateTestEvent()
+            CreateTestEvent(),
         };
 
         // Act
@@ -40,7 +44,7 @@ public class EventStoreTests
         {
             CreateTestEvent(),
             CreateTestEvent(),
-            CreateTestEvent()
+            CreateTestEvent(),
         };
         await store.AppendEventsAsync(branchId, events);
 
@@ -75,7 +79,7 @@ public class EventStoreTests
             CreateTestEvent(),
             CreateTestEvent(),
             CreateTestEvent(),
-            CreateTestEvent()
+            CreateTestEvent(),
         };
         await store.AppendEventsAsync(branchId, events);
 
@@ -95,7 +99,7 @@ public class EventStoreTests
         var events = new List<PipelineEvent>
         {
             CreateTestEvent(),
-            CreateTestEvent()
+            CreateTestEvent(),
         };
         await store.AppendEventsAsync(branchId, events);
 

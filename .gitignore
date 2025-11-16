@@ -21,6 +21,9 @@ appsettings.*.local.json
 TestCoverageReport/
 coverage/
 **/coverage.cobertura.xml
+StrykerOutput/
+**/StrykerOutput/
+.stryker-temp/
 
 # Node.js dependencies and Playwright
 node_modules/

@@ -1,9 +1,13 @@
+// <copyright file="StreamDeduplicatorTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests;
+
 using System.Runtime.CompilerServices;
 using FluentAssertions;
 using LangChainPipeline.Infrastructure.FeatureEngineering;
 using Xunit;
-
-namespace LangChainPipeline.Tests;
 
 /// <summary>
 /// Tests for StreamDeduplicator functionality.
@@ -169,7 +173,7 @@ public class StreamDeduplicatorTests
             new float[] { 1f, 0f, 0f, 0f },
             new float[] { 0f, 1f, 0f, 0f },
             new float[] { 0f, 0f, 1f, 0f },
-            new float[] { 0f, 0f, 0f, 1f }
+            new float[] { 0f, 0f, 0f, 1f },
         };
 
         // Act
@@ -199,7 +203,7 @@ public class StreamDeduplicatorTests
             new float[] { 1f, 0f, 0f, 0f },
             new float[] { 1f, 0f, 0f, 0f }, // Duplicate
             new float[] { 0f, 1f, 0f, 0f },
-            new float[] { 0f, 1f, 0f, 0f }  // Duplicate
+            new float[] { 0f, 1f, 0f, 0f },  // Duplicate
         };
 
         // Act
@@ -237,7 +241,7 @@ public class StreamDeduplicatorTests
         {
             new float[] { 1f, 0f, 0f, 0f },
             new float[] { 0f, 1f, 0f, 0f },
-            new float[] { 0f, 0f, 1f, 0f }
+            new float[] { 0f, 0f, 1f, 0f },
         };
 
         // Act
@@ -261,7 +265,7 @@ public class StreamDeduplicatorTests
         var vectors = new[]
         {
             new float[] { 1f, 0f, 0f, 0f },
-            new float[] { 0f, 1f, 0f, 0f }
+            new float[] { 0f, 1f, 0f, 0f },
         };
 
         foreach (var vector in vectors)
@@ -299,6 +303,7 @@ public class StreamDeduplicatorTests
     /// <summary>
     /// Tests async stream filtering.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task FilterStreamAsync_WithDuplicates_RemovesDuplicates()
     {
@@ -309,7 +314,7 @@ public class StreamDeduplicatorTests
             new float[] { 1f, 0f, 0f, 0f },
             new float[] { 1f, 0f, 0f, 0f }, // Duplicate
             new float[] { 0f, 1f, 0f, 0f },
-            new float[] { 0f, 1f, 0f, 0f }  // Duplicate
+            new float[] { 0f, 1f, 0f, 0f },  // Duplicate
         };
 
         async IAsyncEnumerable<float[]> GetVectorsAsync()
@@ -335,6 +340,7 @@ public class StreamDeduplicatorTests
     /// <summary>
     /// Tests async stream filtering with null throws exception.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task FilterStreamAsync_WithNull_ThrowsArgumentNullException()
     {
@@ -357,6 +363,7 @@ public class StreamDeduplicatorTests
     /// <summary>
     /// Tests async stream filtering respects cancellation token.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task FilterStreamAsync_WithCancellation_RespectsCancellationToken()
     {
@@ -402,7 +409,7 @@ public class StreamDeduplicatorTests
         {
             new float[] { 1f, 0f, 0f, 0f },
             new float[] { 1f, 0f, 0f, 0f }, // Duplicate
-            new float[] { 0f, 1f, 0f, 0f }
+            new float[] { 0f, 1f, 0f, 0f },
         };
 
         // Act
@@ -431,6 +438,7 @@ public class StreamDeduplicatorTests
     /// <summary>
     /// Tests extension method Deduplicate for IAsyncEnumerable.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
     [Fact]
     public async Task DeduplicateExtension_WithAsyncEnumerable_RemovesDuplicates()
     {
@@ -440,7 +448,7 @@ public class StreamDeduplicatorTests
         {
             new float[] { 1f, 0f, 0f, 0f },
             new float[] { 1f, 0f, 0f, 0f }, // Duplicate
-            new float[] { 0f, 1f, 0f, 0f }
+            new float[] { 0f, 1f, 0f, 0f },
         };
 
         async IAsyncEnumerable<float[]> GetVectorsAsync()
