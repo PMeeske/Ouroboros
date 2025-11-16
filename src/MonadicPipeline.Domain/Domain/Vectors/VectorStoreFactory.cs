@@ -53,15 +53,7 @@ public class VectorStoreFactory
         _logger?.LogInformation("Creating Qdrant vector store with connection: {Connection}",
             MaskConnectionString(_config.ConnectionString));
 
-        // FUTURE: Implement QdrantVectorStore when Qdrant package is added
-        // Steps to implement:
-        // 1. Add NuGet package: dotnet add package Qdrant.Client
-        // 2. Create QdrantVectorStore class implementing IVectorStore
-        // 3. Replace this exception with: return new QdrantVectorStore(_config.ConnectionString, _logger);
-        throw new NotImplementedException(
-            "Qdrant vector store implementation requires Qdrant.Client package. " +
-            "Add the package and implement QdrantVectorStore class. " +
-            "See docs/VECTOR_STORES.md for implementation guide.");
+        return new QdrantVectorStore(_config.ConnectionString, _config.DefaultCollection, _logger);
     }
 
     private IVectorStore CreatePineconeStore()

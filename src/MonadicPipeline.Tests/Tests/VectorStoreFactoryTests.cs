@@ -89,7 +89,7 @@ public class VectorStoreFactoryTests
     }
 
     [Fact]
-    public void Create_QdrantTypeWithConnectionString_ThrowsNotImplementedException()
+    public void Create_QdrantTypeWithConnectionString_ReturnsQdrantVectorStore()
     {
         // Arrange
         var config = new VectorStoreConfiguration
@@ -100,11 +100,11 @@ public class VectorStoreFactoryTests
         var factory = new VectorStoreFactory(config);
 
         // Act
-        Action act = () => factory.Create();
+        var store = factory.Create();
 
         // Assert
-        act.Should().Throw<NotImplementedException>()
-            .WithMessage("*Qdrant vector store implementation*");
+        store.Should().NotBeNull();
+        store.Should().BeOfType<QdrantVectorStore>();
     }
 
     [Fact]
