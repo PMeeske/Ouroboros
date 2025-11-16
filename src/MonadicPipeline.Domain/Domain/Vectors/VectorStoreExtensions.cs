@@ -29,7 +29,7 @@ public static class VectorStoreExtensions
         if (embeddingModel is null) throw new ArgumentNullException(nameof(embeddingModel));
         if (query is null) query = string.Empty;
 
-        var embedding = await embeddingModel.CreateEmbeddingsAsync(query, cancellationToken).ConfigureAwait(false);
+        float[] embedding = await embeddingModel.CreateEmbeddingsAsync(query, cancellationToken).ConfigureAwait(false);
         return await store.GetSimilarDocumentsAsync(embedding, amount, cancellationToken).ConfigureAwait(false);
     }
 }

@@ -50,7 +50,7 @@ public static class OllamaPresets
             long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            var settings = new OllamaChatSettings
+            OllamaChatSettings settings = new OllamaChatSettings
             {
                 NumCtx = memMb > 32000 ? 8192 : 4096,
                 NumThread = Math.Max(1, cores - 1),
@@ -81,7 +81,7 @@ public static class OllamaPresets
             long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            var settings = new OllamaChatSettings
+            OllamaChatSettings settings = new OllamaChatSettings
             {
                 NumCtx = memMb > 32000 ? 8192 : 4096,
                 NumThread = Math.Max(1, cores - 1),
@@ -112,7 +112,7 @@ public static class OllamaPresets
             long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            var settings = new OllamaChatSettings
+            OllamaChatSettings settings = new OllamaChatSettings
             {
                 NumCtx = memMb > 64000 ? 12288 : 8192, // reasoning benefits from larger ctx
                 NumThread = Math.Max(1, cores - 1),
@@ -143,7 +143,7 @@ public static class OllamaPresets
             long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            var settings = new OllamaChatSettings
+            OllamaChatSettings settings = new OllamaChatSettings
             {
                 NumCtx = memMb > 96000 ? 16384 : (memMb > 64000 ? 12288 : 8192),
                 NumThread = Math.Max(1, cores - 1),
@@ -174,7 +174,7 @@ public static class OllamaPresets
             long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            var settings = new OllamaChatSettings
+            OllamaChatSettings settings = new OllamaChatSettings
             {
                 NumCtx = memMb > 16000 ? 4096 : 3072,
                 NumThread = Math.Max(1, cores - 1),
@@ -204,7 +204,7 @@ public static class OllamaPresets
             long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            var settings = new OllamaChatSettings
+            OllamaChatSettings settings = new OllamaChatSettings
             {
                 NumCtx = memMb > 16000 ? 4096 : 3072,
                 NumThread = Math.Max(1, cores - 1),
@@ -234,7 +234,7 @@ public static class OllamaPresets
             long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            var settings = new OllamaChatSettings
+            OllamaChatSettings settings = new OllamaChatSettings
             {
                 NumCtx = 4096,
                 NumThread = Math.Max(1, cores - 1),

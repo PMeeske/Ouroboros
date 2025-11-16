@@ -33,9 +33,9 @@ public sealed class SafetyGuard : ISafetyGuard
         ArgumentNullException.ThrowIfNull(operation);
         ArgumentNullException.ThrowIfNull(parameters);
 
-        var violations = new List<string>();
-        var warnings = new List<string>();
-        var requiredLevel = GetRequiredPermission(operation);
+        List<string> violations = new List<string>();
+        List<string> warnings = new List<string>();
+        PermissionLevel requiredLevel = GetRequiredPermission(operation);
 
         // Check if current permission level is sufficient
         if (currentLevel < requiredLevel)
@@ -50,7 +50,7 @@ public sealed class SafetyGuard : ISafetyGuard
         }
 
         // Check parameter safety
-        foreach (var param in parameters)
+        foreach (KeyValuePair<string, object> param in parameters)
         {
             if (param.Value is string strValue)
             {
@@ -61,7 +61,7 @@ public sealed class SafetyGuard : ISafetyGuard
             }
         }
 
-        var isSafe = violations.Count == 0;
+        bool isSafe = violations.Count == 0;
         return new SafetyCheckResult(isSafe, violations, warnings, requiredLevel);
     }
 
@@ -76,7 +76,7 @@ public sealed class SafetyGuard : ISafetyGuard
         if (string.IsNullOrWhiteSpace(toolName))
             return false;
 
-        var requiredLevel = GetRequiredPermission(toolName);
+        PermissionLevel requiredLevel = GetRequiredPermission(toolName);
 
         if (currentLevel < requiredLevel)
             return false;
@@ -104,9 +104,9 @@ public sealed class SafetyGuard : ISafetyGuard
         ArgumentNullException.ThrowIfNull(step);
 
         // Create sandboxed version with restricted parameters
-        var sandboxedParams = new Dictionary<string, object>();
+        Dictionary<string, object> sandboxedParams = new Dictionary<string, object>();
 
-        foreach (var param in step.Parameters)
+        foreach (KeyValuePair<string, object> param in step.Parameters)
         {
             if (param.Value is string strValue)
             {
@@ -135,13 +135,13 @@ public sealed class SafetyGuard : ISafetyGuard
             return _defaultLevel;
 
         // Check registered permissions
-        if (_permissions.TryGetValue(action, out var permission))
+        if (_permissions.TryGetValue(action, out Permission? permission))
         {
             return permission.Level;
         }
 
         // Determine based on action patterns
-        var actionLower = action.ToLowerInvariant();
+        string actionLower = action.ToLowerInvariant();
 
         if (actionLower.Contains("read") || actionLower.Contains("get") || actionLower.Contains("list"))
             return PermissionLevel.ReadOnly;
@@ -215,14 +215,14 @@ public sealed class SafetyGuard : ISafetyGuard
 
     private bool ContainsDangerousPatterns(string operation, Dictionary<string, object> parameters)
     {
-        var dangerousPatterns = new[]
+        string[] dangerousPatterns = new[]
         {
             "eval", "exec", "system", "shell", "subprocess",
             "rm -rf", "delete *", "drop table", "truncate"
         };
 
-        var combined = operation + " " + string.Join(" ", parameters.Values.Select(v => v?.ToString() ?? ""));
-        var lowerCombined = combined.ToLowerInvariant();
+        string combined = operation + " " + string.Join(" ", parameters.Values.Select(v => v?.ToString() ?? ""));
+        string lowerCombined = combined.ToLowerInvariant();
 
         return dangerousPatterns.Any(pattern => lowerCombined.Contains(pattern));
     }
@@ -232,7 +232,7 @@ public sealed class SafetyGuard : ISafetyGuard
         if (string.IsNullOrWhiteSpace(value))
             return false;
 
-        var injectionPatterns = new[]
+        string[] injectionPatterns = new[]
         {
             "';", "\"; ", "' OR '1'='1", "\" OR \"1\"=\"1",
             "../", "..\\", "<script", "javascript:",
@@ -249,7 +249,7 @@ public sealed class SafetyGuard : ISafetyGuard
             return value;
 
         // Remove potentially dangerous characters
-        var sanitized = value
+        string sanitized = value
             .Replace("<", "&lt;")
             .Replace(">", "&gt;")
             .Replace("'", "&#39;")

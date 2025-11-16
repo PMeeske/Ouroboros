@@ -62,13 +62,13 @@ public sealed class EvaluationHarness
     {
         ArgumentNullException.ThrowIfNull(testCase);
 
-        var startTime = DateTime.UtcNow;
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        DateTime startTime = DateTime.UtcNow;
+        System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
             // Plan
-            var planResult = await _orchestrator.PlanAsync(testCase.Goal, testCase.Context, ct);
+            Result<Plan, string> planResult = await _orchestrator.PlanAsync(testCase.Goal, testCase.Context, ct);
 
             Plan? plan = null;
             planResult.Match(
@@ -79,7 +79,7 @@ public sealed class EvaluationHarness
                 throw new Exception("Plan is null");
 
             // Execute
-            var execResult = await _orchestrator.ExecuteAsync(plan, ct);
+            Result<ExecutionResult, string> execResult = await _orchestrator.ExecuteAsync(plan, ct);
 
             ExecutionResult? execution = null;
             execResult.Match(
@@ -90,7 +90,7 @@ public sealed class EvaluationHarness
                 throw new Exception("Execution is null");
 
             // Verify
-            var verifyResult = await _orchestrator.VerifyAsync(execution, ct);
+            Result<VerificationResult, string> verifyResult = await _orchestrator.VerifyAsync(execution, ct);
 
             VerificationResult? verification = null;
             verifyResult.Match(
@@ -106,13 +106,13 @@ public sealed class EvaluationHarness
             stopwatch.Stop();
 
             // Apply custom validator if provided
-            var success = verification.Verified;
+            bool success = verification.Verified;
             if (testCase.CustomValidator != null)
             {
                 success = success && testCase.CustomValidator(verification);
             }
 
-            var metrics = new EvaluationMetrics(
+            EvaluationMetrics metrics = new EvaluationMetrics(
                 testCase.Name,
                 success,
                 verification.QualityScore,
@@ -133,7 +133,7 @@ public sealed class EvaluationHarness
         {
             stopwatch.Stop();
 
-            var failedMetrics = new EvaluationMetrics(
+            EvaluationMetrics failedMetrics = new EvaluationMetrics(
                 testCase.Name,
                 Success: false,
                 QualityScore: 0.0,
@@ -160,15 +160,15 @@ public sealed class EvaluationHarness
     {
         ArgumentNullException.ThrowIfNull(testCases);
 
-        var testList = testCases.ToList();
-        var batchResults = new List<EvaluationMetrics>();
+        List<TestCase> testList = testCases.ToList();
+        List<EvaluationMetrics> batchResults = new List<EvaluationMetrics>();
 
-        foreach (var testCase in testList)
+        foreach (TestCase? testCase in testList)
         {
             if (ct.IsCancellationRequested)
                 break;
 
-            var result = await EvaluateTestCaseAsync(testCase, ct);
+            EvaluationMetrics result = await EvaluateTestCaseAsync(testCase, ct);
             batchResults.Add(result);
         }
 
@@ -180,7 +180,7 @@ public sealed class EvaluationHarness
     /// </summary>
     public async Task<EvaluationResults> RunBenchmarkAsync(CancellationToken ct = default)
     {
-        var benchmarkCases = new List<TestCase>
+        List<TestCase> benchmarkCases = new List<TestCase>
         {
             new TestCase(
                 "Simple Calculation",
@@ -228,17 +228,17 @@ public sealed class EvaluationHarness
 
     private EvaluationResults AggregateResults(List<EvaluationMetrics> results)
     {
-        var total = results.Count;
-        var successful = results.Count(r => r.Success);
-        var failed = total - successful;
+        int total = results.Count;
+        int successful = results.Count(r => r.Success);
+        int failed = total - successful;
 
-        var avgQuality = results.Any() ? results.Average(r => r.QualityScore) : 0.0;
-        var avgConfidence = results.Any() ? results.Average(r => r.ConfidenceScore) : 0.0;
-        var avgTime = results.Any()
+        double avgQuality = results.Any() ? results.Average(r => r.QualityScore) : 0.0;
+        double avgConfidence = results.Any() ? results.Average(r => r.ConfidenceScore) : 0.0;
+        TimeSpan avgTime = results.Any()
             ? TimeSpan.FromMilliseconds(results.Average(r => r.ExecutionTime.TotalMilliseconds))
             : TimeSpan.Zero;
 
-        var aggregated = new Dictionary<string, double>
+        Dictionary<string, double> aggregated = new Dictionary<string, double>
         {
             ["success_rate"] = total > 0 ? successful / (double)total : 0.0,
             ["avg_plan_steps"] = results.Any() ? results.Average(r => r.PlanSteps) : 0.0,
@@ -248,10 +248,10 @@ public sealed class EvaluationHarness
         };
 
         // Add custom metric aggregations
-        var allCustomMetrics = results.SelectMany(r => r.CustomMetrics.Keys).Distinct();
-        foreach (var metricKey in allCustomMetrics)
+        IEnumerable<string> allCustomMetrics = results.SelectMany(r => r.CustomMetrics.Keys).Distinct();
+        foreach (string? metricKey in allCustomMetrics)
         {
-            var values = results
+            IEnumerable<double> values = results
                 .Where(r => r.CustomMetrics.ContainsKey(metricKey))
                 .Select(r => r.CustomMetrics[metricKey]);
 

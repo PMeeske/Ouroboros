@@ -17,7 +17,7 @@ public static class EnvironmentDetector
     public static bool IsLocalDevelopment()
     {
         // Check ASPNETCORE_ENVIRONMENT or DOTNET_ENVIRONMENT first
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+        string? environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
                          ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
 
         if (!string.IsNullOrWhiteSpace(environment))
@@ -44,7 +44,7 @@ public static class EnvironmentDetector
         }
 
         // Check for localhost Ollama endpoint as indicator of local development
-        var ollamaEndpoint = Environment.GetEnvironmentVariable("PIPELINE__LlmProvider__OllamaEndpoint");
+        string? ollamaEndpoint = Environment.GetEnvironmentVariable("PIPELINE__LlmProvider__OllamaEndpoint");
         if (!string.IsNullOrWhiteSpace(ollamaEndpoint) &&
             (ollamaEndpoint.Contains("localhost", StringComparison.OrdinalIgnoreCase) ||
              ollamaEndpoint.Contains("127.0.0.1")))
@@ -69,7 +69,7 @@ public static class EnvironmentDetector
         }
 
         // Check for KUBERNETES_SERVICE_HOST environment variable
-        var k8sHost = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST");
+        string? k8sHost = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST");
         if (!string.IsNullOrWhiteSpace(k8sHost))
         {
             return true;
@@ -94,7 +94,7 @@ public static class EnvironmentDetector
     /// <returns>True if running in production, false otherwise.</returns>
     public static bool IsProduction()
     {
-        var environment = GetEnvironmentName();
+        string? environment = GetEnvironmentName();
 
         if (!string.IsNullOrWhiteSpace(environment))
         {
@@ -117,7 +117,7 @@ public static class EnvironmentDetector
     /// <returns>True if running in staging, false otherwise.</returns>
     public static bool IsStaging()
     {
-        var environment = GetEnvironmentName();
+        string? environment = GetEnvironmentName();
         return !string.IsNullOrWhiteSpace(environment) &&
                environment.Equals("Staging", StringComparison.OrdinalIgnoreCase);
     }

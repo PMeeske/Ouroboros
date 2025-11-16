@@ -12,7 +12,7 @@ public static class MinimalHost
     public static async Task<IHost> BuildAsync(string[] args)
     {
         // Seed settings object (pure)
-        var settings = new HostApplicationBuilderSettings
+        HostApplicationBuilderSettings settings = new HostApplicationBuilderSettings
         {
             Args = args,
             Configuration = new ConfigurationManager(),
@@ -20,7 +20,7 @@ public static class MinimalHost
         };
 
         // Define configuration pipeline
-        var configDef = new StepDefinition<ConfigurationManager, ConfigurationManager>(c => c)
+        StepDefinition<ConfigurationManager, ConfigurationManager> configDef = new StepDefinition<ConfigurationManager, ConfigurationManager>(c => c)
             | HostStepExtensions.Use(c => { c.AddJsonFile("hostsettings.json", optional: true); return c; })
             | HostStepExtensions.Use(c => { c.AddEnvironmentVariables(prefix: "PREFIX_"); return c; })
             | HostStepExtensions.Use(c => { c.AddCommandLine(args); return c; });
@@ -29,11 +29,11 @@ public static class MinimalHost
         settings.Configuration = await configDef.Build()(settings.Configuration);
 
         // Host builder pipeline (extensible)
-        var hostDef = new StepDefinition<HostApplicationBuilder, HostApplicationBuilder>(b => b)
+        StepDefinition<HostApplicationBuilder, HostApplicationBuilder> hostDef = new StepDefinition<HostApplicationBuilder, HostApplicationBuilder>(b => b)
             // Add interchangeable model registration (OpenAI key presence => remote reflective provider else local Ollama)
             | HostStepExtensions.AddInterchangeableLlm();
 
-        var builder = await hostDef.Build()(Host.CreateApplicationBuilder(settings));
+        HostApplicationBuilder builder = await hostDef.Build()(Host.CreateApplicationBuilder(settings));
         return builder.Build();
     }
 }

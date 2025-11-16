@@ -31,8 +31,8 @@ public sealed class MeTTaMemoryBridge
     {
         try
         {
-            var stats = await _memory.GetStatisticsAsync();
-            var experiences = new List<Experience>();
+            MemoryStatistics stats = await _memory.GetStatisticsAsync();
+            List<Experience> experiences = new List<Experience>();
 
             // Retrieve all experiences (this is a simplified approach)
             // In a real implementation, you'd want pagination or streaming
@@ -42,11 +42,11 @@ public sealed class MeTTaMemoryBridge
                 // The actual MemoryStore API might need extension for this
             }
 
-            var factCount = 0;
+            int factCount = 0;
 
             // For now, sync memory statistics as facts
-            var statsFact = $"(memory-stats (total {stats.TotalExperiences}) (avg-quality {stats.AverageQualityScore}))";
-            var result = await _engine.AddFactAsync(statsFact, ct);
+            string statsFact = $"(memory-stats (total {stats.TotalExperiences}) (avg-quality {stats.AverageQualityScore}))";
+            Result<Unit, string> result = await _engine.AddFactAsync(statsFact, ct);
 
             if (result.IsFailure)
             {
@@ -79,18 +79,18 @@ public sealed class MeTTaMemoryBridge
         try
         {
             // Convert experience to MeTTa facts
-            var goalFact = $"(experience-goal \"{experience.Id}\" \"{EscapeString(experience.Goal)}\")";
-            var qualityFact = $"(experience-quality \"{experience.Id}\" {experience.Verification.QualityScore})";
-            var successFact = $"(experience-success \"{experience.Id}\" {experience.Execution.Success.ToString().ToLower()})";
+            string goalFact = $"(experience-goal \"{experience.Id}\" \"{EscapeString(experience.Goal)}\")";
+            string qualityFact = $"(experience-quality \"{experience.Id}\" {experience.Verification.QualityScore})";
+            string successFact = $"(experience-success \"{experience.Id}\" {experience.Execution.Success.ToString().ToLower()})";
 
-            var results = new[]
+            Result<Unit, string>[] results = new[]
             {
                 await _engine.AddFactAsync(goalFact, ct),
                 await _engine.AddFactAsync(qualityFact, ct),
                 await _engine.AddFactAsync(successFact, ct)
             };
 
-            var failures = results.Where(r => r.IsFailure).ToList();
+            List<Result<Unit, string>> failures = results.Where(r => r.IsFailure).ToList();
             if (failures.Any())
             {
                 return Result<Unit, string>.Failure($"Failed to add {failures.Count} facts");
@@ -160,7 +160,7 @@ public static class MemoryStoreMeTTaExtensions
         IMeTTaEngine engine,
         CancellationToken ct = default)
     {
-        var bridge = memory.CreateMeTTaBridge(engine);
+        MeTTaMemoryBridge bridge = memory.CreateMeTTaBridge(engine);
         return await bridge.SyncAllExperiencesAsync(ct);
     }
 }

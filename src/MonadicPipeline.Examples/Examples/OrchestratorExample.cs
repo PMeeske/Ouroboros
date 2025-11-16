@@ -25,16 +25,16 @@ public static class OrchestratorExample
         Console.WriteLine("This example shows how the orchestrator intelligently selects models based on use case.\n");
 
         // Setup models
-        var provider = new OllamaProvider();
-        var generalModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var codeModel = new OllamaChatAdapter(new OllamaChatModel(provider, "codellama"));
-        var reasoningModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter generalModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        OllamaChatAdapter codeModel = new OllamaChatAdapter(new OllamaChatModel(provider, "codellama"));
+        OllamaChatAdapter reasoningModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
 
         // Setup tools
-        var tools = ToolRegistry.CreateDefault();
+        ToolRegistry tools = ToolRegistry.CreateDefault();
 
         // Build orchestrator with multiple models
-        var orchestrator = new OrchestratorBuilder(tools, "general")
+        OrchestratedChatModel orchestrator = new OrchestratorBuilder(tools, "general")
             .WithModel(
                 "general",
                 generalModel,
@@ -62,7 +62,7 @@ public static class OrchestratorExample
         Console.WriteLine("✓ Orchestrator configured with 3 models\n");
 
         // Test different prompt types
-        var testPrompts = new[]
+        (string, string)[] testPrompts = new[]
         {
             ("Code generation", "Write a function to calculate fibonacci numbers"),
             ("Reasoning", "Explain why the sky is blue using physics principles"),
@@ -70,14 +70,14 @@ public static class OrchestratorExample
             ("Code debugging", "Debug this code: def fib(n) return fib(n-1) + fib(n-2)"),
         };
 
-        foreach (var (category, prompt) in testPrompts)
+        foreach ((string category, string prompt) in testPrompts)
         {
             Console.WriteLine($"--- {category} ---");
             Console.WriteLine($"Prompt: {prompt}");
 
             try
             {
-                var response = await orchestrator.GenerateTextAsync(prompt);
+                string response = await orchestrator.GenerateTextAsync(prompt);
                 Console.WriteLine($"Response: {response.Substring(0, Math.Min(150, response.Length))}...\n");
             }
             catch (Exception ex)
@@ -105,15 +105,15 @@ public static class OrchestratorExample
         Console.WriteLine("\n=== AI Orchestrator - Tools & Performance ===\n");
         Console.WriteLine("This example shows orchestrator selecting tools and tracking performance.\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        OllamaEmbeddingAdapter embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
 
-        var tools = new ToolRegistry();
-        var store = new TrackedVectorStore();
-        var branch = new PipelineBranch("orchestrator-test", store, DataSource.FromPath(Environment.CurrentDirectory));
+        ToolRegistry tools = new ToolRegistry();
+        TrackedVectorStore store = new TrackedVectorStore();
+        PipelineBranch branch = new PipelineBranch("orchestrator-test", store, DataSource.FromPath(Environment.CurrentDirectory));
 
-        var state = new CliPipelineState
+        CliPipelineState state = new CliPipelineState
         {
             Branch = branch,
             Llm = null!,
@@ -128,7 +128,7 @@ public static class OrchestratorExample
         Console.WriteLine($"✓ Registered {tools.Count} tools\n");
 
         // Build orchestrator
-        var orchestratorBuilder = new OrchestratorBuilder(tools, "default")
+        OrchestratorBuilder orchestratorBuilder = new OrchestratorBuilder(tools, "default")
             .WithModel(
                 "default",
                 chatModel,
@@ -137,18 +137,18 @@ public static class OrchestratorExample
                 avgLatencyMs: 1000)
             .WithMetricTracking(true);
 
-        var orchestratedModel = orchestratorBuilder.Build();
-        var underlyingOrchestrator = orchestratorBuilder.GetOrchestrator();
+        OrchestratedChatModel orchestratedModel = orchestratorBuilder.Build();
+        IModelOrchestrator underlyingOrchestrator = orchestratorBuilder.GetOrchestrator();
 
         Console.WriteLine("Testing orchestrator with tool-aware prompts:\n");
 
-        var toolPrompt = @"Analyze the concept of 'monadic composition' in functional programming.
+        string toolPrompt = @"Analyze the concept of 'monadic composition' in functional programming.
 Consider using available pipeline tools to enhance your analysis.
 Available tools include: run_usedraft, run_usecritique, run_useimprove.";
 
         try
         {
-            var (response, toolCalls, decision) = await orchestratedModel
+            (string response, List<ToolExecution> toolCalls, OrchestratorDecision decision) = await orchestratedModel
                 .GenerateWithOrchestratedToolsAsync(toolPrompt);
 
             Console.WriteLine("=== Orchestrator Decision ===");
@@ -166,7 +166,7 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
             if (toolCalls.Any())
             {
                 Console.WriteLine($"\n✓ Invoked {toolCalls.Count} tools:");
-                foreach (var call in toolCalls)
+                foreach (ToolExecution call in toolCalls)
                 {
                     Console.WriteLine($"  - {call.ToolName}");
                 }
@@ -174,8 +174,8 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
 
             // Show performance metrics
             Console.WriteLine("\n=== Performance Metrics ===");
-            var metrics = underlyingOrchestrator.GetMetrics();
-            foreach (var (name, metric) in metrics.Take(5))
+            IReadOnlyDictionary<string, PerformanceMetrics> metrics = underlyingOrchestrator.GetMetrics();
+            foreach ((string name, PerformanceMetrics metric) in metrics.Take(5))
             {
                 Console.WriteLine($"{name}:");
                 Console.WriteLine($"  Executions: {metric.ExecutionCount}");
@@ -206,10 +206,10 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
         Console.WriteLine("\n=== Use Case Classification ===\n");
         Console.WriteLine("This example shows how the orchestrator classifies different prompt types.\n");
 
-        var tools = ToolRegistry.CreateDefault();
-        var orchestrator = new SmartModelOrchestrator(tools, "default");
+        ToolRegistry tools = ToolRegistry.CreateDefault();
+        SmartModelOrchestrator orchestrator = new SmartModelOrchestrator(tools, "default");
 
-        var prompts = new[]
+        string[] prompts = new[]
         {
             "Write a Python function to sort a list",
             "Explain quantum entanglement in simple terms",
@@ -219,9 +219,9 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
             "Hello, how are you today?",
         };
 
-        foreach (var prompt in prompts)
+        foreach (string? prompt in prompts)
         {
-            var useCase = orchestrator.ClassifyUseCase(prompt);
+            UseCase useCase = orchestrator.ClassifyUseCase(prompt);
             Console.WriteLine($"Prompt: \"{prompt.Substring(0, Math.Min(50, prompt.Length))}...\"");
             Console.WriteLine($"  → Type: {useCase.Type}");
             Console.WriteLine($"  → Complexity: {useCase.EstimatedComplexity}");
@@ -242,18 +242,18 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
         Console.WriteLine("\n=== Composable Tools with Orchestrator ===\n");
         Console.WriteLine("This example shows advanced tool composition with performance tracking.\n");
 
-        var tools = ToolRegistry.CreateDefault();
-        var orchestrator = new SmartModelOrchestrator(tools, "default");
+        ToolRegistry tools = ToolRegistry.CreateDefault();
+        SmartModelOrchestrator orchestrator = new SmartModelOrchestrator(tools, "default");
 
         // Create composable tools with performance tracking
-        var mathTool = tools.Get("math");
+        ITool? mathTool = tools.Get("math");
         if (mathTool != null)
         {
             // Add retry logic
-            var reliableMath = mathTool.WithRetry(maxRetries: 3, delayMs: 100);
+            ITool reliableMath = mathTool.WithRetry(maxRetries: 3, delayMs: 100);
 
             // Add performance tracking
-            var trackedMath = reliableMath.WithPerformanceTracking(
+            ITool trackedMath = reliableMath.WithPerformanceTracking(
                 (name, latency, success) =>
                 {
                     orchestrator.RecordMetric(name, latency, success);
@@ -261,10 +261,10 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
                 });
 
             // Add caching
-            var cachedMath = trackedMath.WithCaching(TimeSpan.FromMinutes(5));
+            ITool cachedMath = trackedMath.WithCaching(TimeSpan.FromMinutes(5));
 
             // Add timeout protection
-            var safeMath = cachedMath.WithTimeout(TimeSpan.FromSeconds(10));
+            ITool safeMath = cachedMath.WithTimeout(TimeSpan.FromSeconds(10));
 
             Console.WriteLine("✓ Created composable math tool with:");
             Console.WriteLine("  - Retry logic (3 attempts)");
@@ -273,11 +273,11 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
             Console.WriteLine("  - Timeout protection (10s)\n");
 
             // Test the tool
-            var testInputs = new[] { "2+2", "10*5", "100/4", "2+2" }; // Last is cached
+            string[] testInputs = new[] { "2+2", "10*5", "100/4", "2+2" }; // Last is cached
 
-            foreach (var input in testInputs)
+            foreach (string? input in testInputs)
             {
-                var result = await safeMath.InvokeAsync(input);
+                Result<string, string> result = await safeMath.InvokeAsync(input);
                 result.Match(
                     success => Console.WriteLine($"Input: {input} → Result: {success}"),
                     failure => Console.WriteLine($"Input: {input} → Error: {failure}"));
@@ -287,7 +287,7 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
         }
 
         // Create parallel tool execution
-        var parallelTool = OrchestratorToolExtensions.Parallel(
+        ITool parallelTool = OrchestratorToolExtensions.Parallel(
             "parallel_math",
             "Executes multiple calculations in parallel",
             results => string.Join(", ", results),
@@ -295,14 +295,14 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
             tools.Get("math") ?? new MathTool());
 
         Console.WriteLine("\n=== Parallel Tool Execution ===");
-        var parallelResult = await parallelTool.InvokeAsync("5*5");
+        Result<string, string> parallelResult = await parallelTool.InvokeAsync("5*5");
         parallelResult.Match(
             success => Console.WriteLine($"Parallel result: {success}"),
             failure => Console.WriteLine($"Error: {failure}"));
 
         Console.WriteLine("\n=== Performance Metrics ===");
-        var metrics = orchestrator.GetMetrics();
-        foreach (var (name, metric) in metrics)
+        IReadOnlyDictionary<string, PerformanceMetrics> metrics = orchestrator.GetMetrics();
+        foreach ((string name, PerformanceMetrics metric) in metrics)
         {
             Console.WriteLine($"{name}:");
             Console.WriteLine($"  Executions: {metric.ExecutionCount}");

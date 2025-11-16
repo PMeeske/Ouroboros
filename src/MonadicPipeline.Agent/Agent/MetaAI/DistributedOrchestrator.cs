@@ -139,29 +139,29 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
         if (plan == null)
             return Result<ExecutionResult, string>.Failure("Plan cannot be null");
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        var stepResults = new List<StepResult>();
-        var overallSuccess = true;
+        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+        List<StepResult> stepResults = new List<StepResult>();
+        bool overallSuccess = true;
 
         try
         {
             // Remove offline agents
             CleanupOfflineAgents();
 
-            var availableAgents = GetAvailableAgents();
+            List<AgentInfo> availableAgents = GetAvailableAgents();
             if (availableAgents.Count == 0)
             {
                 return Result<ExecutionResult, string>.Failure("No agents available for execution");
             }
 
             // Assign steps to agents
-            var assignments = AssignStepsToAgents(plan.Steps, availableAgents);
+            List<TaskAssignment> assignments = AssignStepsToAgents(plan.Steps, availableAgents);
 
             // Execute steps in parallel across agents
-            var tasks = assignments.Select(async assignment =>
+            IEnumerable<Task<StepResult>> tasks = assignments.Select(async assignment =>
             {
-                var agent = _agents[assignment.AgentId];
-                var step = assignment.Step;
+                AgentInfo agent = _agents[assignment.AgentId];
+                PlanStep step = assignment.Step;
 
                 // Mark agent as busy
                 _agents[assignment.AgentId] = agent with { Status = AgentStatus.Busy };
@@ -169,7 +169,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
                 try
                 {
                     // Simulate step execution (in real implementation, would delegate to actual agent)
-                    var result = await ExecuteStepOnAgentAsync(assignment, ct);
+                    StepResult result = await ExecuteStepOnAgentAsync(assignment, ct);
 
                     // Update assignment status
                     _assignments[assignment.TaskId] = assignment with
@@ -191,9 +191,9 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
             overallSuccess = stepResults.All(r => r.Success);
             sw.Stop();
 
-            var finalOutput = string.Join("\n", stepResults.Select(r => r.Output));
+            string finalOutput = string.Join("\n", stepResults.Select(r => r.Output));
 
-            var execution = new ExecutionResult(
+            ExecutionResult execution = new ExecutionResult(
                 plan,
                 stepResults,
                 overallSuccess,
@@ -224,7 +224,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
     /// </summary>
     public void UpdateHeartbeat(string agentId)
     {
-        if (_agents.TryGetValue(agentId, out var agent))
+        if (_agents.TryGetValue(agentId, out AgentInfo? agent))
         {
             _agents[agentId] = agent with { LastHeartbeat = DateTime.UtcNow };
         }
@@ -239,15 +239,15 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
 
     private List<TaskAssignment> AssignStepsToAgents(List<PlanStep> steps, List<AgentInfo> agents)
     {
-        var assignments = new List<TaskAssignment>();
+        List<TaskAssignment> assignments = new List<TaskAssignment>();
 
         if (_config.EnableLoadBalancing)
         {
             // Round-robin load balancing
             for (int i = 0; i < steps.Count; i++)
             {
-                var agent = agents[i % agents.Count];
-                var assignment = new TaskAssignment(
+                AgentInfo agent = agents[i % agents.Count];
+                TaskAssignment assignment = new TaskAssignment(
                     Guid.NewGuid().ToString(),
                     agent.AgentId,
                     steps[i],
@@ -261,12 +261,12 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
         else
         {
             // Capability-based assignment
-            foreach (var step in steps)
+            foreach (PlanStep step in steps)
             {
-                var suitableAgent = FindSuitableAgent(step, agents);
+                AgentInfo? suitableAgent = FindSuitableAgent(step, agents);
                 if (suitableAgent != null)
                 {
-                    var assignment = new TaskAssignment(
+                    TaskAssignment assignment = new TaskAssignment(
                         Guid.NewGuid().ToString(),
                         suitableAgent.AgentId,
                         step,
@@ -290,12 +290,12 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
 
     private async Task<StepResult> ExecuteStepOnAgentAsync(TaskAssignment assignment, CancellationToken ct)
     {
-        var sw = System.Diagnostics.Stopwatch.StartNew();
+        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
             // Apply safety checks
-            var sandboxedStep = _safety.SandboxStep(assignment.Step);
+            PlanStep sandboxedStep = _safety.SandboxStep(assignment.Step);
 
             // In real implementation, this would delegate to the actual agent
             // For now, simulate execution
@@ -334,14 +334,14 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
 
     private void CleanupOfflineAgents()
     {
-        var timeout = _config.HeartbeatTimeout;
-        var now = DateTime.UtcNow;
+        TimeSpan timeout = _config.HeartbeatTimeout;
+        DateTime now = DateTime.UtcNow;
 
-        var offlineAgents = _agents.Values
+        List<AgentInfo> offlineAgents = _agents.Values
             .Where(a => now - a.LastHeartbeat > timeout)
             .ToList();
 
-        foreach (var agent in offlineAgents)
+        foreach (AgentInfo? agent in offlineAgents)
         {
             _agents[agent.AgentId] = agent with { Status = AgentStatus.Offline };
         }

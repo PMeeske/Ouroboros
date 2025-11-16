@@ -69,7 +69,7 @@ public class AuthenticationPrincipal
     /// </summary>
     /// <returns></returns>
     public string? GetClaim(string key) =>
-        this.Claims.TryGetValue(key, out var value) ? value : null;
+        this.Claims.TryGetValue(key, out string? value) ? value : null;
 }
 
 /// <summary>
@@ -179,7 +179,7 @@ public class InMemoryAuthenticationProvider : IAuthenticationProvider
     {
         lock (this.@lock)
         {
-            if (!this.users.TryGetValue(username, out var user))
+            if (!this.users.TryGetValue(username, out (string Password, AuthenticationPrincipal Principal) user))
             {
                 return Task.FromResult(AuthenticationResult.Failure("Invalid username or password"));
             }
@@ -190,7 +190,7 @@ public class InMemoryAuthenticationProvider : IAuthenticationProvider
             }
 
             // Generate a simple token (in production, use JWT)
-            var token = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+            string token = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
 
             return Task.FromResult(AuthenticationResult.Success(user.Principal, token));
         }

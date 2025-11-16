@@ -77,7 +77,7 @@ public sealed record PipelineBranch
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(prompt);
 
-        var newEvent = new ReasoningStep(Guid.NewGuid(), state.Kind, state, DateTime.UtcNow, prompt, tools);
+        ReasoningStep newEvent = new ReasoningStep(Guid.NewGuid(), state.Kind, state, DateTime.UtcNow, prompt, tools);
         return new PipelineBranch(Name, Store, Source, _events.Add(newEvent));
     }
 
@@ -92,7 +92,7 @@ public sealed record PipelineBranch
         ArgumentNullException.ThrowIfNull(sourceString);
         ArgumentNullException.ThrowIfNull(ids);
 
-        var newEvent = new IngestBatch(Guid.NewGuid(), sourceString, ids.ToList(), DateTime.UtcNow);
+        IngestBatch newEvent = new IngestBatch(Guid.NewGuid(), sourceString, ids.ToList(), DateTime.UtcNow);
         return new PipelineBranch(Name, Store, Source, _events.Add(newEvent));
     }
 

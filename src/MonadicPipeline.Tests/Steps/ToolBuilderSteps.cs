@@ -43,6 +43,7 @@ public class ToolBuilderSteps
             new DelegateTool("first", "First", (_, __) => Task.FromResult(Result<string, string>.Failure("fail"))),
             new DelegateTool("second", "Second", async (value, ct) =>
             {
+                await Task.CompletedTask;
                 _secondToolInvocations++;
                 return Result<string, string>.Success(value);
             })

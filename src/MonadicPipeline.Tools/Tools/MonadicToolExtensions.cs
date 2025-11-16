@@ -31,7 +31,7 @@ public static class MonadicToolExtensions
     {
         return async input =>
         {
-            var firstResult = await first.InvokeAsync(input);
+            Result<string, string> firstResult = await first.InvokeAsync(input);
             return await firstResult.Match(
                 success => second.InvokeAsync(success),
                 failure => Task.FromResult(Result<string, string>.Failure(failure)));
@@ -46,7 +46,7 @@ public static class MonadicToolExtensions
     {
         return async input =>
         {
-            var firstResult = await first.InvokeAsync(input);
+            Result<string, string> firstResult = await first.InvokeAsync(input);
             return firstResult.IsSuccess
                 ? firstResult
                 : await fallback.InvokeAsync(input);
@@ -61,7 +61,7 @@ public static class MonadicToolExtensions
     {
         return async input =>
         {
-            var result = await tool.InvokeAsync(input);
+            Result<string, string> result = await tool.InvokeAsync(input);
             return result.Map(mapper);
         };
     }
@@ -76,8 +76,8 @@ public static class MonadicToolExtensions
     {
         return async (input, context) =>
         {
-            var result = await tool.InvokeAsync(input);
-            var log = logMessage ?? $"Tool '{tool.Name}' executed";
+            Result<string, string> result = await tool.InvokeAsync(input);
+            string log = logMessage ?? $"Tool '{tool.Name}' executed";
             return (result, [log]);
         };
     }
@@ -96,9 +96,9 @@ public static class ToolBuilder
     {
         return new DelegateTool(name, description, async (input, ct) =>
         {
-            var result = Result<string, string>.Success(input);
+            Result<string, string> result = Result<string, string>.Success(input);
 
-            foreach (var tool in tools)
+            foreach (ITool tool in tools)
             {
                 if (ct.IsCancellationRequested)
                 {
@@ -127,14 +127,14 @@ public static class ToolBuilder
     {
         return new DelegateTool(name, description, async (input, ct) =>
         {
-            foreach (var tool in tools)
+            foreach (ITool tool in tools)
             {
                 if (ct.IsCancellationRequested)
                 {
                     return Result<string, string>.Failure("Operation cancelled");
                 }
 
-                var result = await tool.InvokeAsync(input, ct);
+                Result<string, string> result = await tool.InvokeAsync(input, ct);
                 if (result.IsSuccess)
                 {
                     return result;
@@ -156,7 +156,7 @@ public static class ToolBuilder
         {
             try
             {
-                var selectedTool = selector(input);
+                ITool selectedTool = selector(input);
                 return await selectedTool.InvokeAsync(input, ct);
             }
             catch (Exception ex)

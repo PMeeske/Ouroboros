@@ -31,11 +31,11 @@ public sealed class MathTool : ITool
 
         try
         {
-            var dataTable = new DataTable();
-            var result = dataTable.Compute(input, string.Empty);
+            DataTable dataTable = new DataTable();
+            object result = dataTable.Compute(input, string.Empty);
 
             // Use InvariantCulture to ensure consistent decimal separator (always '.')
-            var resultString = Convert.ToString(result, CultureInfo.InvariantCulture) ?? "null";
+            string resultString = Convert.ToString(result, CultureInfo.InvariantCulture) ?? "null";
             return Task.FromResult(Result<string, string>.Success(resultString));
         }
         catch (Exception ex)

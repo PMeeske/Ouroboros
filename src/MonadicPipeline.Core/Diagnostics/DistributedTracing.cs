@@ -29,11 +29,11 @@ public static class DistributedTracing
         ActivityKind kind = ActivityKind.Internal,
         Dictionary<string, object?>? tags = null)
     {
-        var activity = ActivitySource.StartActivity(name, kind);
+        Activity? activity = ActivitySource.StartActivity(name, kind);
 
         if (activity != null && tags != null)
         {
-            foreach (var (key, value) in tags)
+            foreach ((string key, object value) in tags)
             {
                 activity.SetTag(key, value);
             }
@@ -49,13 +49,13 @@ public static class DistributedTracing
     /// <param name="tags">Optional tags for the event.</param>
     public static void RecordEvent(string name, Dictionary<string, object?>? tags = null)
     {
-        var activity = Activity.Current;
+        Activity? activity = Activity.Current;
         if (activity == null)
         {
             return;
         }
 
-        var tagsArray = tags?.Select(kvp => new KeyValuePair<string, object?>(kvp.Key, kvp.Value))
+        IEnumerable<KeyValuePair<string, object?>> tagsArray = tags?.Select(kvp => new KeyValuePair<string, object?>(kvp.Key, kvp.Value))
             ?? Array.Empty<KeyValuePair<string, object?>>();
 
         activity.AddEvent(new ActivityEvent(name, tags: new ActivityTagsCollection(tagsArray)));
@@ -67,7 +67,7 @@ public static class DistributedTracing
     /// <param name="exception">Exception to record.</param>
     public static void RecordException(Exception exception)
     {
-        var activity = Activity.Current;
+        Activity? activity = Activity.Current;
         if (activity == null)
         {
             return;
@@ -86,7 +86,7 @@ public static class DistributedTracing
     /// <param name="description">Optional description.</param>
     public static void SetStatus(ActivityStatusCode code, string? description = null)
     {
-        var activity = Activity.Current;
+        Activity? activity = Activity.Current;
         if (activity == null)
         {
             return;
@@ -102,7 +102,7 @@ public static class DistributedTracing
     /// <param name="value">Tag value.</param>
     public static void AddTag(string key, object? value)
     {
-        var activity = Activity.Current;
+        Activity? activity = Activity.Current;
         if (activity == null)
         {
             return;
@@ -143,7 +143,7 @@ public static class TracingExtensions
     /// <returns>Activity for the tool execution.</returns>
     public static Activity? TraceToolExecution(string toolName, string input)
     {
-        var tags = new Dictionary<string, object?>
+        Dictionary<string, object?> tags = new Dictionary<string, object?>
         {
             ["tool.name"] = toolName,
             ["tool.input_length"] = input.Length,
@@ -159,7 +159,7 @@ public static class TracingExtensions
     /// <returns>Activity for the pipeline execution.</returns>
     public static Activity? TracePipelineExecution(string pipelineName)
     {
-        var tags = new Dictionary<string, object?>
+        Dictionary<string, object?> tags = new Dictionary<string, object?>
         {
             ["pipeline.name"] = pipelineName,
         };
@@ -175,7 +175,7 @@ public static class TracingExtensions
     /// <returns>Activity for the LLM request.</returns>
     public static Activity? TraceLlmRequest(string model, int promptLength)
     {
-        var tags = new Dictionary<string, object?>
+        Dictionary<string, object?> tags = new Dictionary<string, object?>
         {
             ["llm.model"] = model,
             ["llm.prompt_length"] = promptLength,
@@ -192,7 +192,7 @@ public static class TracingExtensions
     /// <returns>Activity for the vector operation.</returns>
     public static Activity? TraceVectorOperation(string operation, int vectorCount)
     {
-        var tags = new Dictionary<string, object?>
+        Dictionary<string, object?> tags = new Dictionary<string, object?>
         {
             ["vector.operation"] = operation,
             ["vector.count"] = vectorCount,
@@ -288,14 +288,14 @@ public static class TracingConfiguration
             onActivityStarted: activity =>
             {
                 Console.WriteLine($"[TRACE START] {activity.OperationName} - TraceId: {activity.TraceId}, SpanId: {activity.SpanId}");
-                foreach (var tag in activity.Tags)
+                foreach (KeyValuePair<string, string?> tag in activity.Tags)
                 {
                     Console.WriteLine($"  {tag.Key}: {tag.Value}");
                 }
             },
             onActivityStopped: activity =>
             {
-                var status = activity.Status == ActivityStatusCode.Ok ? "✓" :
+                string status = activity.Status == ActivityStatusCode.Ok ? "✓" :
                             activity.Status == ActivityStatusCode.Error ? "✗" : "?";
                 Console.WriteLine($"[TRACE END  ] {status} {activity.OperationName} - Duration: {activity.Duration.TotalMilliseconds:F2}ms");
             });

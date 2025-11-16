@@ -134,19 +134,19 @@ public sealed class MetaAIBuilder
             throw new InvalidOperationException("LLM must be configured using WithLLM()");
 
         // Create default implementations for optional components
-        var tools = _tools ?? ToolRegistry.CreateDefault();
-        var memory = _memory ?? new MemoryStore(_embedding, _vectorStore);
-        var skills = _skills ?? new SkillRegistry(_embedding);
+        ToolRegistry tools = _tools ?? ToolRegistry.CreateDefault();
+        IMemoryStore memory = _memory ?? new MemoryStore(_embedding, _vectorStore);
+        ISkillRegistry skills = _skills ?? new SkillRegistry(_embedding);
 
         // Safety guard is required first for router
-        var safety = _safety ?? new SafetyGuard(_defaultPermissionLevel);
+        ISafetyGuard safety = _safety ?? new SafetyGuard(_defaultPermissionLevel);
 
         // Router needs orchestrator - create a simple one if not provided
         IUncertaintyRouter router;
         if (_router == null)
         {
             // Create a basic orchestrator for routing
-            var basicOrchestrator = new SmartModelOrchestrator(tools, "default");
+            SmartModelOrchestrator basicOrchestrator = new SmartModelOrchestrator(tools, "default");
             router = new UncertaintyRouter(basicOrchestrator, _confidenceThreshold);
         }
         else

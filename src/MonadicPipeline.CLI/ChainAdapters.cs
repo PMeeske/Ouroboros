@@ -23,11 +23,11 @@ public static class ChainAdapters
 
     private static readonly Dictionary<string, Action<StackableChainValues, CliPipelineState>> Import = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Prompt"] = (v, s) => s.Prompt = v.Value.TryGetValue("Prompt", out var o) ? o?.ToString() ?? string.Empty : s.Prompt,
-        ["Query"] = (v, s) => s.Query = v.Value.TryGetValue("Query", out var o) ? o?.ToString() ?? string.Empty : s.Query,
-        ["Topic"] = (v, s) => s.Topic = v.Value.TryGetValue("Topic", out var o) ? o?.ToString() ?? string.Empty : s.Topic,
-        ["Context"] = (v, s) => s.Context = v.Value.TryGetValue("Context", out var o) ? o?.ToString() ?? string.Empty : s.Context,
-        ["Output"] = (v, s) => s.Output = v.Value.TryGetValue("Output", out var o) ? o?.ToString() ?? string.Empty : s.Output
+        ["Prompt"] = (v, s) => s.Prompt = v.Value.TryGetValue("Prompt", out object? o) ? o?.ToString() ?? string.Empty : s.Prompt,
+        ["Query"] = (v, s) => s.Query = v.Value.TryGetValue("Query", out object? o) ? o?.ToString() ?? string.Empty : s.Query,
+        ["Topic"] = (v, s) => s.Topic = v.Value.TryGetValue("Topic", out object? o) ? o?.ToString() ?? string.Empty : s.Topic,
+        ["Context"] = (v, s) => s.Context = v.Value.TryGetValue("Context", out object? o) ? o?.ToString() ?? string.Empty : s.Context,
+        ["Output"] = (v, s) => s.Output = v.Value.TryGetValue("Output", out object? o) ? o?.ToString() ?? string.Empty : s.Output
     };
 
     /// <summary>
@@ -43,23 +43,23 @@ public static class ChainAdapters
         IEnumerable<string>? outputKeys = null,
         bool trace = false)
     {
-        var inKeys = (inputKeys ?? Array.Empty<string>()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        var outKeys = (outputKeys ?? Array.Empty<string>()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        string[] inKeys = (inputKeys ?? Array.Empty<string>()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        string[] outKeys = (outputKeys ?? Array.Empty<string>()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
         return async state =>
         {
-            var values = new StackableChainValues();
+            StackableChainValues values = new StackableChainValues();
             // export selected keys
-            foreach (var k in inKeys)
-                if (Export.TryGetValue(k, out var exporter)) exporter(state, values);
+            foreach (string? k in inKeys)
+                if (Export.TryGetValue(k, out Action<CliPipelineState, StackableChainValues>? exporter)) exporter(state, values);
             if (trace) Console.WriteLine($"[chain] export keys={string.Join(',', inKeys)} -> values={values.Value.Count}");
 
             // execute chain
             IChainValues _ = await chain.CallAsync(values).ConfigureAwait(false); // return value often same ref
 
             // import back
-            foreach (var k in outKeys)
-                if (Import.TryGetValue(k, out var importer)) importer(values, state);
+            foreach (string? k in outKeys)
+                if (Import.TryGetValue(k, out Action<StackableChainValues, CliPipelineState>? importer)) importer(values, state);
             if (trace) Console.WriteLine($"[chain] import keys={string.Join(',', outKeys)}");
             return state;
         };
@@ -75,7 +75,7 @@ public static class ChainAdapters
         IEnumerable<string>? outputKeys = null,
         bool trace = false)
     {
-        var stack = new StackChain(first, second);
+        StackChain stack = new StackChain(first, second);
         return stack.ToStep(inputKeys, outputKeys, trace);
     }
 }

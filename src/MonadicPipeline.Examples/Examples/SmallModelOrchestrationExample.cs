@@ -42,23 +42,23 @@ public static class SmallModelOrchestrationExample
         try
         {
             // Setup small, specialized models
-            var provider = new OllamaProvider();
+            OllamaProvider provider = new OllamaProvider();
 
             // General purpose model for coordination (phi3:mini - 2.3GB)
-            var generalModel = new OllamaChatAdapter(new OllamaChatModel(provider, "phi3"));
+            OllamaChatAdapter generalModel = new OllamaChatAdapter(new OllamaChatModel(provider, "phi3"));
 
             // Code-specialized model for syntax/bug detection (deepseek-coder:1.3b - 800MB)
-            var coderModel = new OllamaChatAdapter(new OllamaChatModel(provider, "deepseek-coder:1.3b"));
+            OllamaChatAdapter coderModel = new OllamaChatAdapter(new OllamaChatModel(provider, "deepseek-coder:1.3b"));
 
             // Reasoning model for architecture decisions (qwen2.5:3b - 2GB)
-            var reasoningModel = new OllamaChatAdapter(new OllamaChatModel(provider, "qwen2.5:3b"));
+            OllamaChatAdapter reasoningModel = new OllamaChatAdapter(new OllamaChatModel(provider, "qwen2.5:3b"));
 
             // Setup tools for code analysis
-            var tools = ToolRegistry.CreateDefault();
+            ToolRegistry tools = ToolRegistry.CreateDefault();
             Console.WriteLine($"✓ Initialized {tools.Count} analysis tools\n");
 
             // Build orchestrator with specialized small models
-            var orchestratorBuilder = new OrchestratorBuilder(tools, "general")
+            OrchestratorBuilder orchestratorBuilder = new OrchestratorBuilder(tools, "general")
                 .WithModel(
                     "general",
                     generalModel,
@@ -82,8 +82,8 @@ public static class SmallModelOrchestrationExample
                     avgLatencyMs: 1000)
                 .WithMetricTracking(true);
 
-            var orchestrator = orchestratorBuilder.Build();
-            var underlyingOrchestrator = orchestratorBuilder.GetOrchestrator();
+            OrchestratedChatModel orchestrator = orchestratorBuilder.Build();
+            IModelOrchestrator underlyingOrchestrator = orchestratorBuilder.GetOrchestrator();
 
             Console.WriteLine("✓ Orchestrator configured with 3 specialized small models\n");
 
@@ -106,23 +106,23 @@ def process_user_data(user_id):
 
             Console.WriteLine("Step 1: Syntax & Bug Detection (deepseek-coder:1.3b)");
             Console.WriteLine("───────────────────────────────────────────────────────");
-            var syntaxPrompt = $"Analyze this Python code for syntax errors and security vulnerabilities:\n\n{codeToReview}";
+            string syntaxPrompt = $"Analyze this Python code for syntax errors and security vulnerabilities:\n\n{codeToReview}";
 
-            var syntaxAnalysis = await orchestrator.GenerateTextAsync(syntaxPrompt);
+            string syntaxAnalysis = await orchestrator.GenerateTextAsync(syntaxPrompt);
             Console.WriteLine($"Analysis: {TruncateOutput(syntaxAnalysis, 300)}\n");
 
             Console.WriteLine("Step 2: Architecture Review (qwen2.5:3b)");
             Console.WriteLine("───────────────────────────────────────────────────────");
-            var architecturePrompt = $"Review this code's architecture and suggest improvements following best practices:\n\n{codeToReview}";
+            string architecturePrompt = $"Review this code's architecture and suggest improvements following best practices:\n\n{codeToReview}";
 
-            var architectureReview = await orchestrator.GenerateTextAsync(architecturePrompt);
+            string architectureReview = await orchestrator.GenerateTextAsync(architecturePrompt);
             Console.WriteLine($"Review: {TruncateOutput(architectureReview, 300)}\n");
 
             Console.WriteLine("Step 3: Summary & Recommendations (phi3:mini)");
             Console.WriteLine("───────────────────────────────────────────────────────");
-            var summaryPrompt = $"Summarize the key issues and provide actionable recommendations based on:\n\nSyntax Analysis:\n{syntaxAnalysis}\n\nArchitecture Review:\n{architectureReview}";
+            string summaryPrompt = $"Summarize the key issues and provide actionable recommendations based on:\n\nSyntax Analysis:\n{syntaxAnalysis}\n\nArchitecture Review:\n{architectureReview}";
 
-            var summary = await orchestrator.GenerateTextAsync(summaryPrompt);
+            string summary = await orchestrator.GenerateTextAsync(summaryPrompt);
             Console.WriteLine($"Summary: {TruncateOutput(summary, 400)}\n");
 
             // Show performance metrics
@@ -130,9 +130,9 @@ def process_user_data(user_id):
             Console.WriteLine("Performance Metrics");
             Console.WriteLine("═══════════════════════════════════════════════════════════════════");
 
-            var metrics = underlyingOrchestrator.GetMetrics();
+            IReadOnlyDictionary<string, PerformanceMetrics> metrics = underlyingOrchestrator.GetMetrics();
 
-            foreach (var (modelName, metric) in metrics)
+            foreach ((string modelName, PerformanceMetrics metric) in metrics)
             {
                 Console.WriteLine($"\n{modelName} Model:");
                 Console.WriteLine($"  • Executions: {metric.ExecutionCount}");
@@ -190,20 +190,20 @@ def process_user_data(user_id):
 
         try
         {
-            var provider = new OllamaProvider();
-            var generalModel = new OllamaChatAdapter(new OllamaChatModel(provider, "phi3"));
-            var reasoningModel = new OllamaChatAdapter(new OllamaChatModel(provider, "qwen2.5:3b"));
+            OllamaProvider provider = new OllamaProvider();
+            OllamaChatAdapter generalModel = new OllamaChatAdapter(new OllamaChatModel(provider, "phi3"));
+            OllamaChatAdapter reasoningModel = new OllamaChatAdapter(new OllamaChatModel(provider, "qwen2.5:3b"));
 
-            var tools = ToolRegistry.CreateDefault();
+            ToolRegistry tools = ToolRegistry.CreateDefault();
 
-            var orchestratorBuilder = new OrchestratorBuilder(tools, "general")
+            OrchestratorBuilder orchestratorBuilder = new OrchestratorBuilder(tools, "general")
                 .WithModel("general", generalModel, ModelType.General,
                     new[] { "data-gathering", "synthesis", "summary" }, 2048, 800)
                 .WithModel("reasoner", reasoningModel, ModelType.Reasoning,
                     new[] { "analysis", "reasoning", "evaluation", "critical-thinking" }, 3072, 1000)
                 .WithMetricTracking(true);
 
-            var orchestrator = orchestratorBuilder.Build();
+            OrchestratedChatModel orchestrator = orchestratorBuilder.Build();
 
             Console.WriteLine("✓ Research orchestrator initialized\n");
 
@@ -214,22 +214,22 @@ def process_user_data(user_id):
             // Phase 1: Information Gathering
             Console.WriteLine("Phase 1: Information Gathering (phi3)");
             Console.WriteLine("─────────────────────────────────────");
-            var gatherPrompt = $"List the key concepts and challenges related to: {researchTopic}";
-            var keyPoints = await orchestrator.GenerateTextAsync(gatherPrompt);
+            string gatherPrompt = $"List the key concepts and challenges related to: {researchTopic}";
+            string keyPoints = await orchestrator.GenerateTextAsync(gatherPrompt);
             Console.WriteLine($"{TruncateOutput(keyPoints, 250)}\n");
 
             // Phase 2: Deep Analysis
             Console.WriteLine("Phase 2: Deep Analysis (qwen2.5:3b)");
             Console.WriteLine("─────────────────────────────────────");
-            var analysisPrompt = $"Analyze the following points in depth and identify critical challenges:\n\n{keyPoints}";
-            var analysis = await orchestrator.GenerateTextAsync(analysisPrompt);
+            string analysisPrompt = $"Analyze the following points in depth and identify critical challenges:\n\n{keyPoints}";
+            string analysis = await orchestrator.GenerateTextAsync(analysisPrompt);
             Console.WriteLine($"{TruncateOutput(analysis, 250)}\n");
 
             // Phase 3: Synthesis
             Console.WriteLine("Phase 3: Synthesis & Conclusions (phi3)");
             Console.WriteLine("─────────────────────────────────────");
-            var synthesisPrompt = $"Synthesize the following analysis into key conclusions and recommendations:\n\n{analysis}";
-            var synthesis = await orchestrator.GenerateTextAsync(synthesisPrompt);
+            string synthesisPrompt = $"Synthesize the following analysis into key conclusions and recommendations:\n\n{analysis}";
+            string synthesis = await orchestrator.GenerateTextAsync(synthesisPrompt);
             Console.WriteLine($"{TruncateOutput(synthesis, 300)}\n");
 
             Console.WriteLine("✨ Research orchestration complete!\n");

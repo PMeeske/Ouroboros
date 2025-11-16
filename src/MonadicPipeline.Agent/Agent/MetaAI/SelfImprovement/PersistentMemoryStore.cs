@@ -63,7 +63,7 @@ public sealed class PersistentMemoryStore : IMemoryStore
         ArgumentNullException.ThrowIfNull(experience);
 
         // Calculate importance score
-        var importance = CalculateImportance(experience);
+        double importance = CalculateImportance(experience);
 
         // Store in short-term episodic memory initially
         _experiences[experience.Id] = (experience, MemoryType.Episodic, importance);
@@ -103,7 +103,7 @@ public sealed class PersistentMemoryStore : IMemoryStore
         }
 
         // Fallback to simple filtering
-        var experiences = _experiences.Values
+        List<Experience> experiences = _experiences.Values
             .Where(e => e.experience.Verification.Verified)
             .OrderByDescending(e => e.importance)
             .Take(query.MaxResults)
@@ -118,9 +118,9 @@ public sealed class PersistentMemoryStore : IMemoryStore
     /// </summary>
     public Task<MemoryStatistics> GetStatisticsAsync()
     {
-        var experiences = _experiences.Values.Select(v => v.experience).ToList();
+        List<Experience> experiences = _experiences.Values.Select(v => v.experience).ToList();
 
-        var stats = new MemoryStatistics(
+        MemoryStatistics stats = new MemoryStatistics(
             TotalExperiences: experiences.Count,
             SuccessfulExecutions: experiences.Count(e => e.Verification.Verified),
             FailedExecutions: experiences.Count(e => !e.Verification.Verified),
@@ -154,7 +154,7 @@ public sealed class PersistentMemoryStore : IMemoryStore
     /// </summary>
     public Task<Experience?> GetExperienceAsync(Guid id, CancellationToken ct = default)
     {
-        var found = _experiences.TryGetValue(id, out var entry);
+        bool found = _experiences.TryGetValue(id, out (Experience experience, MemoryType type, double importance) entry);
         return Task.FromResult(found ? entry.experience : null);
     }
 
@@ -176,17 +176,17 @@ public sealed class PersistentMemoryStore : IMemoryStore
     private double CalculateImportance(Experience experience)
     {
         // Base importance from quality
-        var qualityScore = experience.Verification.QualityScore;
+        double qualityScore = experience.Verification.QualityScore;
 
         // Recency bonus (newer memories are more important initially)
-        var recencyHours = (DateTime.UtcNow - experience.Timestamp).TotalHours;
-        var recencyBonus = Math.Max(0, 1.0 - (recencyHours / 24.0)); // Decays over 24 hours
+        double recencyHours = (DateTime.UtcNow - experience.Timestamp).TotalHours;
+        double recencyBonus = Math.Max(0, 1.0 - (recencyHours / 24.0)); // Decays over 24 hours
 
         // Success bonus
-        var successBonus = experience.Verification.Verified ? 0.2 : 0.0;
+        double successBonus = experience.Verification.Verified ? 0.2 : 0.0;
 
         // Combined importance (weighted average)
-        var importance = (qualityScore * 0.5) + (recencyBonus * 0.3) + successBonus;
+        double importance = (qualityScore * 0.5) + (recencyBonus * 0.3) + successBonus;
 
         return Math.Clamp(importance, 0.0, 1.0);
     }
@@ -201,7 +201,7 @@ public sealed class PersistentMemoryStore : IMemoryStore
             return false;
 
         // Check capacity-based consolidation
-        var episodicCount = _experiences.Values.Count(e => e.type == MemoryType.Episodic);
+        int episodicCount = _experiences.Values.Count(e => e.type == MemoryType.Episodic);
         return episodicCount > _config.ShortTermCapacity;
     }
 
@@ -213,13 +213,13 @@ public sealed class PersistentMemoryStore : IMemoryStore
         _lastConsolidation = DateTime.UtcNow;
 
         // Find high-importance episodic memories to consolidate
-        var toConsolidate = _experiences.Values
+        List<(Experience experience, MemoryType type, double importance)> toConsolidate = _experiences.Values
             .Where(e => e.type == MemoryType.Episodic && e.importance >= _config.ConsolidationThreshold)
             .OrderByDescending(e => e.importance)
             .Take(_config.ShortTermCapacity / 2)
             .ToList();
 
-        foreach (var (experience, _, importance) in toConsolidate)
+        foreach ((Experience experience, MemoryType _, double importance) in toConsolidate)
         {
             // Mark as semantic (long-term)
             _experiences[experience.Id] = (experience, MemoryType.Semantic, importance);
@@ -237,13 +237,13 @@ public sealed class PersistentMemoryStore : IMemoryStore
     /// </summary>
     private async Task ForgetLowImportanceMemoriesAsync()
     {
-        var toForget = _experiences.Values
+        List<(Experience experience, MemoryType type, double importance)> toForget = _experiences.Values
             .Where(e => e.importance < _config.ForgettingThreshold)
             .OrderBy(e => e.importance)
             .Take(_experiences.Count - _config.LongTermCapacity)
             .ToList();
 
-        foreach (var (experience, _, _) in toForget)
+        foreach ((Experience experience, MemoryType _, double _) in toForget)
         {
             _experiences.TryRemove(experience.Id, out _);
         }
@@ -262,14 +262,14 @@ public sealed class PersistentMemoryStore : IMemoryStore
         if (_embedding == null || _vectorStore == null)
             return;
 
-        var text = $"[{type}] Goal: {experience.Goal}\n" +
+        string text = $"[{type}] Goal: {experience.Goal}\n" +
                    $"Plan: {string.Join(", ", experience.Plan.Steps.Select(s => s.Action))}\n" +
                    $"Quality: {experience.Verification.QualityScore:P0}\n" +
                    $"Verified: {experience.Verification.Verified}";
 
-        var embedding = await _embedding.CreateEmbeddingsAsync(text, ct);
+        float[] embedding = await _embedding.CreateEmbeddingsAsync(text, ct);
 
-        var vector = new Vector
+        Vector vector = new Vector
         {
             Id = experience.Id.ToString(),
             Text = text,
@@ -300,19 +300,19 @@ public sealed class PersistentMemoryStore : IMemoryStore
 
         try
         {
-            var queryEmbedding = await _embedding.CreateEmbeddingsAsync(query.Goal, ct);
+            float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query.Goal, ct);
 
-            var searchResults = await _vectorStore.GetSimilarDocuments(
+            IReadOnlyCollection<LangChain.DocumentLoaders.Document> searchResults = await _vectorStore.GetSimilarDocuments(
                 _embedding,
                 query.Goal,
                 amount: query.MaxResults);
 
-            var experiences = new List<Experience>();
-            foreach (var doc in searchResults)
+            List<Experience> experiences = new List<Experience>();
+            foreach (LangChain.DocumentLoaders.Document doc in searchResults)
             {
-                if (doc.Metadata?.TryGetValue("id", out var idObj) == true &&
-                    Guid.TryParse(idObj?.ToString(), out var id) &&
-                    _experiences.TryGetValue(id, out var entry))
+                if (doc.Metadata?.TryGetValue("id", out object? idObj) == true &&
+                    Guid.TryParse(idObj?.ToString(), out Guid id) &&
+                    _experiences.TryGetValue(id, out (Experience experience, MemoryType type, double importance) entry))
                 {
                     experiences.Add(entry.experience);
                 }

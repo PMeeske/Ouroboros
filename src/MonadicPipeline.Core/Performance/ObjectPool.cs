@@ -40,7 +40,7 @@ public class ObjectPool<T>
     /// <returns></returns>
     public T Rent()
     {
-        if (this.objects.TryTake(out var obj))
+        if (this.objects.TryTake(out T? obj))
         {
             Interlocked.Decrement(ref this.currentPoolSize);
             return obj;
@@ -192,8 +192,8 @@ public static class PooledHelpers
     /// <returns></returns>
     public static string WithStringBuilder(Action<StringBuilder> action)
     {
-        using var pooled = CommonPools.StringBuilder.RentDisposable();
-        var sb = pooled.Object;
+        using PooledObject<StringBuilder> pooled = CommonPools.StringBuilder.RentDisposable();
+        StringBuilder sb = pooled.Object;
         action(sb);
         return sb.ToString();
     }
@@ -206,7 +206,7 @@ public static class PooledHelpers
     /// <returns>The result of the function.</returns>
     public static TResult WithStringList<TResult>(Func<List<string>, TResult> func)
     {
-        using var pooled = CommonPools.StringList.RentDisposable();
+        using PooledObject<List<string>> pooled = CommonPools.StringList.RentDisposable();
         return func(pooled.Object);
     }
 
@@ -218,7 +218,7 @@ public static class PooledHelpers
     /// <returns>The result of the function.</returns>
     public static TResult WithStringDictionary<TResult>(Func<Dictionary<string, string>, TResult> func)
     {
-        using var pooled = CommonPools.StringDictionary.RentDisposable();
+        using PooledObject<Dictionary<string, string>> pooled = CommonPools.StringDictionary.RentDisposable();
         return func(pooled.Object);
     }
 
@@ -228,7 +228,7 @@ public static class PooledHelpers
     /// <returns></returns>
     public static TResult WithMemoryStream<TResult>(Func<MemoryStream, TResult> func)
     {
-        using var pooled = CommonPools.MemoryStream.RentDisposable();
+        using PooledObject<MemoryStream> pooled = CommonPools.MemoryStream.RentDisposable();
         return func(pooled.Object);
     }
 }

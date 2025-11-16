@@ -30,26 +30,26 @@ public sealed class MeTTaRepresentation
     {
         try
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
 
             // Add plan goal as a fact
-            var planId = $"plan_{Guid.NewGuid():N}";
+            string planId = $"plan_{Guid.NewGuid():N}";
             sb.AppendLine($"(goal {planId} \"{EscapeMeTTa(plan.Goal)}\")");
 
             // Add each step as a fact with ordering
             for (int i = 0; i < plan.Steps.Count; i++)
             {
-                var step = plan.Steps[i];
-                var stepId = $"step_{i}";
+                PlanStep step = plan.Steps[i];
+                string stepId = $"step_{i}";
 
                 sb.AppendLine($"(step {planId} {stepId} {i} \"{EscapeMeTTa(step.Action)}\")");
                 sb.AppendLine($"(expected {stepId} \"{EscapeMeTTa(step.ExpectedOutcome)}\")");
                 sb.AppendLine($"(confidence {stepId} {step.ConfidenceScore:F2})");
 
                 // Add step parameters
-                foreach (var param in step.Parameters)
+                foreach (KeyValuePair<string, object> param in step.Parameters)
                 {
-                    var value = param.Value?.ToString() ?? "null";
+                    string value = param.Value?.ToString() ?? "null";
                     sb.AppendLine($"(param {stepId} \"{EscapeMeTTa(param.Key)}\" \"{EscapeMeTTa(value)}\")");
                 }
 
@@ -67,7 +67,7 @@ public sealed class MeTTaRepresentation
             _stateAtoms[plan.Goal] = planId;
 
             // Add all facts to MeTTa
-            var factResult = await _engine.AddFactAsync(sb.ToString(), ct);
+            Result<Unit, string> factResult = await _engine.AddFactAsync(sb.ToString(), ct);
             return factResult.MapError(_ => "Failed to add plan facts to MeTTa");
         }
         catch (Exception ex)
@@ -85,8 +85,8 @@ public sealed class MeTTaRepresentation
     {
         try
         {
-            var sb = new StringBuilder();
-            var execId = $"exec_{Guid.NewGuid():N}";
+            StringBuilder sb = new StringBuilder();
+            string execId = $"exec_{Guid.NewGuid():N}";
 
             sb.AppendLine($"(execution {execId} {(execution.Success ? "success" : "failure")})");
             sb.AppendLine($"(duration {execId} {execution.Duration.TotalSeconds:F2})");
@@ -94,8 +94,8 @@ public sealed class MeTTaRepresentation
             // Add step results
             for (int i = 0; i < execution.StepResults.Count; i++)
             {
-                var stepResult = execution.StepResults[i];
-                var resultId = $"result_{i}";
+                StepResult stepResult = execution.StepResults[i];
+                string resultId = $"result_{i}";
 
                 sb.AppendLine($"(step-result {execId} {resultId} {(stepResult.Success ? "success" : "failure")})");
 
@@ -105,14 +105,14 @@ public sealed class MeTTaRepresentation
                 }
 
                 // Add observed state
-                foreach (var state in stepResult.ObservedState)
+                foreach (KeyValuePair<string, object> state in stepResult.ObservedState)
                 {
-                    var value = state.Value?.ToString() ?? "null";
+                    string value = state.Value?.ToString() ?? "null";
                     sb.AppendLine($"(observed {resultId} \"{EscapeMeTTa(state.Key)}\" \"{EscapeMeTTa(value)}\")");
                 }
             }
 
-            var result = await _engine.AddFactAsync(sb.ToString(), ct);
+            Result<Unit, string> result = await _engine.AddFactAsync(sb.ToString(), ct);
             return result.MapError(_ => "Failed to add execution state to MeTTa");
         }
         catch (Exception ex)
@@ -130,11 +130,11 @@ public sealed class MeTTaRepresentation
     {
         try
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
 
-            foreach (var tool in tools.All)
+            foreach (ITool tool in tools.All)
             {
-                var toolId = $"tool_{tool.Name.Replace("_", "-")}";
+                string toolId = $"tool_{tool.Name.Replace("_", "-")}";
                 sb.AppendLine($"(tool {toolId} \"{EscapeMeTTa(tool.Name)}\")");
                 sb.AppendLine($"(tool-desc {toolId} \"{EscapeMeTTa(tool.Description)}\")");
 
@@ -153,7 +153,7 @@ public sealed class MeTTaRepresentation
                 }
             }
 
-            var result = await _engine.AddFactAsync(sb.ToString(), ct);
+            Result<Unit, string> result = await _engine.AddFactAsync(sb.ToString(), ct);
             return result.MapError(_ => "Failed to add tool facts to MeTTa");
         }
         catch (Exception ex)
@@ -173,7 +173,7 @@ public sealed class MeTTaRepresentation
         try
         {
             // Build query to find valid next nodes
-            var query = $@"!(match &self 
+            string query = $@"!(match &self 
                 (and 
                     (step $plan {currentStepId} $order $action)
                     (step $plan $next-step $next-order $next-action)
@@ -181,7 +181,7 @@ public sealed class MeTTaRepresentation
                 )
                 (cons $next-step $next-action))";
 
-            var queryResult = await _engine.ExecuteQueryAsync(query, ct);
+            Result<string, string> queryResult = await _engine.ExecuteQueryAsync(query, ct);
 
             return queryResult.Match(
                 success => ParseNextNodeCandidates(success),
@@ -201,7 +201,7 @@ public sealed class MeTTaRepresentation
         string constraint,
         CancellationToken ct = default)
     {
-        var result = await _engine.AddFactAsync(constraint, ct);
+        Result<Unit, string> result = await _engine.AddFactAsync(constraint, ct);
         return result.Match(
             _ => Result<Unit, string>.Success(Unit.Value),
             error => Result<Unit, string>.Failure($"Failed to add constraint: {constraint} - {error}")
@@ -215,14 +215,14 @@ public sealed class MeTTaRepresentation
         string goal,
         CancellationToken ct = default)
     {
-        var query = $@"!(match &self 
+        string query = $@"!(match &self 
             (and 
                 (goal $plan ""{EscapeMeTTa(goal)}"")
                 (capability $tool $cap)
             )
             $tool)";
 
-        var result = await _engine.ExecuteQueryAsync(query, ct);
+        Result<string, string> result = await _engine.ExecuteQueryAsync(query, ct);
 
         return result.Match(
             success => Result<List<string>, string>.Success(ParseToolList(success)),
@@ -232,13 +232,13 @@ public sealed class MeTTaRepresentation
 
     private List<NextNodeCandidate> ParseNextNodeCandidates(string mettaOutput)
     {
-        var candidates = new List<NextNodeCandidate>();
+        List<NextNodeCandidate> candidates = new List<NextNodeCandidate>();
 
         // Parse MeTTa output format: (cons step_id action)
-        var lines = mettaOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        foreach (var line in lines)
+        string[] lines = mettaOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        foreach (string line in lines)
         {
-            var match = System.Text.RegularExpressions.Regex.Match(
+            System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(
                 line,
                 @"\(cons\s+(\S+)\s+""?([^""]+)""?\)"
             );
@@ -258,12 +258,12 @@ public sealed class MeTTaRepresentation
 
     private List<string> ParseToolList(string mettaOutput)
     {
-        var tools = new List<string>();
-        var lines = mettaOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        List<string> tools = new List<string>();
+        string[] lines = mettaOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
-            var trimmed = line.Trim();
+            string trimmed = line.Trim();
             if (trimmed.StartsWith("tool_"))
             {
                 tools.Add(trimmed.Replace("tool_", "").Replace("-", "_"));

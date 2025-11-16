@@ -52,7 +52,7 @@ public sealed record AskResponse
     /// The generated answer text
     /// </summary>
     public required string Answer { get; init; }
-    
+
     /// <summary>
     /// The model used to generate the answer (optional)
     /// </summary>
@@ -68,7 +68,7 @@ public sealed record PipelineResponse
     /// The final result text from the pipeline execution
     /// </summary>
     public required string Result { get; init; }
-    
+
     /// <summary>
     /// The final state of the pipeline (optional)
     /// </summary>

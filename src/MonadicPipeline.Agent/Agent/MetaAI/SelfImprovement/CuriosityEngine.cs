@@ -49,28 +49,28 @@ public sealed class CuriosityEngine : ICuriosityEngine
         try
         {
             // Check similarity to past experiences
-            var query = new MemoryQuery(
+            MemoryQuery query = new MemoryQuery(
                 plan.Goal,
                 null,
                 MaxResults: 20,
                 MinSimilarity: 0.0);
 
-            var experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            List<Experience> experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
 
             if (!experiences.Any())
                 return 1.0; // Completely novel - no similar experiences
 
             // Calculate average similarity to past experiences
-            var similarities = new List<double>();
+            List<double> similarities = new List<double>();
 
-            foreach (var exp in experiences)
+            foreach (Experience exp in experiences)
             {
-                var similarity = CalculateActionSimilarity(plan, exp.Plan);
+                double similarity = CalculateActionSimilarity(plan, exp.Plan);
                 similarities.Add(similarity);
             }
 
-            var avgSimilarity = similarities.Average();
-            var novelty = 1.0 - avgSimilarity; // Higher novelty when less similar to past
+            double avgSimilarity = similarities.Average();
+            double novelty = 1.0 - avgSimilarity; // Higher novelty when less similar to past
 
             return Math.Clamp(novelty, 0.0, 1.0);
         }
@@ -89,7 +89,7 @@ public sealed class CuriosityEngine : ICuriosityEngine
         try
         {
             // Identify unexplored areas
-            var opportunities = await IdentifyExplorationOpportunitiesAsync(5, ct);
+            List<ExplorationOpportunity> opportunities = await IdentifyExplorationOpportunitiesAsync(5, ct);
 
             if (!opportunities.Any())
             {
@@ -97,10 +97,10 @@ public sealed class CuriosityEngine : ICuriosityEngine
             }
 
             // Pick the most promising opportunity
-            var bestOpportunity = opportunities.OrderByDescending(o => o.InformationGainEstimate).First();
+            ExplorationOpportunity bestOpportunity = opportunities.OrderByDescending(o => o.InformationGainEstimate).First();
 
             // Generate plan for exploration
-            var prompt = $@"Create an exploratory plan for learning:
+            string prompt = $@"Create an exploratory plan for learning:
 
 Exploration Goal: {bestOpportunity.Description}
 Expected Information Gain: {bestOpportunity.InformationGainEstimate:P0}
@@ -120,17 +120,17 @@ CONFIDENCE: [0-1]
 
 STEP 2: ...";
 
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct);
 
             // Parse plan
-            var steps = ParseExploratorySteps(response);
+            List<PlanStep> steps = ParseExploratorySteps(response);
 
             // Safety check all steps
             if (_config.EnableSafeExploration)
             {
-                foreach (var step in steps)
+                foreach (PlanStep step in steps)
                 {
-                    var safetyCheck = _safety.CheckSafety(
+                    SafetyCheckResult safetyCheck = _safety.CheckSafety(
                         step.Action,
                         step.Parameters,
                         PermissionLevel.UserDataWithConfirmation);
@@ -143,7 +143,7 @@ STEP 2: ...";
                 }
             }
 
-            var plan = new Plan(
+            Plan plan = new Plan(
                 $"Explore: {bestOpportunity.Description}",
                 steps,
                 new Dictionary<string, double>
@@ -173,11 +173,11 @@ STEP 2: ...";
             return false;
 
         // Calculate exploration probability using epsilon-greedy strategy
-        var random = new Random();
-        var explorationProbability = 1.0 - _config.ExploitationBias;
+        Random random = new Random();
+        double explorationProbability = 1.0 - _config.ExploitationBias;
 
         // Increase exploration if we haven't explored much recently
-        var recentExplorations = _explorationHistory
+        int recentExplorations = _explorationHistory
             .Where(e => e.when > DateTime.UtcNow.AddHours(-24))
             .Count();
 
@@ -189,8 +189,8 @@ STEP 2: ...";
         // If we have a goal, check if it's novel enough
         if (!string.IsNullOrWhiteSpace(currentGoal))
         {
-            var goalPlan = new Plan(currentGoal, new List<PlanStep>(), new Dictionary<string, double>(), DateTime.UtcNow);
-            var novelty = await ComputeNoveltyAsync(goalPlan, ct);
+            Plan goalPlan = new Plan(currentGoal, new List<PlanStep>(), new Dictionary<string, double>(), DateTime.UtcNow);
+            double novelty = await ComputeNoveltyAsync(goalPlan, ct);
 
             if (novelty > _config.ExplorationThreshold)
             {
@@ -209,15 +209,15 @@ STEP 2: ...";
         int maxOpportunities = 5,
         CancellationToken ct = default)
     {
-        var opportunities = new List<ExplorationOpportunity>();
+        List<ExplorationOpportunity> opportunities = new List<ExplorationOpportunity>();
 
         try
         {
             // Analyze what hasn't been explored
-            var allSkills = _skills.GetAllSkills();
-            var experiences = await GetAllExperiences(ct);
+            IReadOnlyList<Skill> allSkills = _skills.GetAllSkills();
+            List<Experience> experiences = await GetAllExperiences(ct);
 
-            var prompt = $@"Identify unexplored areas for learning:
+            string prompt = $@"Identify unexplored areas for learning:
 
 Current Skills ({allSkills.Count}):
 {string.Join("\n", allSkills.Take(10).Select(s => $"- {s.Name}: {s.Description}"))}
@@ -237,17 +237,17 @@ NOVELTY: [0-1]
 INFO_GAIN: [0-1]
 ";
 
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct);
 
             // Parse opportunities
-            var lines = response.Split('\n');
+            string[] lines = response.Split('\n');
             string? description = null;
             double novelty = 0.7;
             double infoGain = 0.6;
 
-            foreach (var line in lines)
+            foreach (string line in lines)
             {
-                var trimmed = line.Trim();
+                string trimmed = line.Trim();
 
                 if (trimmed.StartsWith("OPPORTUNITY:", StringComparison.OrdinalIgnoreCase))
                 {
@@ -267,14 +267,14 @@ INFO_GAIN: [0-1]
                 }
                 else if (trimmed.StartsWith("NOVELTY:", StringComparison.OrdinalIgnoreCase))
                 {
-                    var novStr = trimmed.Substring("NOVELTY:".Length).Trim();
-                    if (double.TryParse(novStr, out var nov))
+                    string novStr = trimmed.Substring("NOVELTY:".Length).Trim();
+                    if (double.TryParse(novStr, out double nov))
                         novelty = Math.Clamp(nov, 0.0, 1.0);
                 }
                 else if (trimmed.StartsWith("INFO_GAIN:", StringComparison.OrdinalIgnoreCase))
                 {
-                    var gainStr = trimmed.Substring("INFO_GAIN:".Length).Trim();
-                    if (double.TryParse(gainStr, out var gain))
+                    string gainStr = trimmed.Substring("INFO_GAIN:".Length).Trim();
+                    if (double.TryParse(gainStr, out double gain))
                         infoGain = Math.Clamp(gain, 0.0, 1.0);
                 }
             }
@@ -310,20 +310,20 @@ INFO_GAIN: [0-1]
         try
         {
             // Check how much we already know about this area
-            var query = new MemoryQuery(
+            MemoryQuery query = new MemoryQuery(
                 explorationDescription,
                 null,
                 MaxResults: 10,
                 MinSimilarity: 0.5);
 
-            var experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            List<Experience> experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
 
             // Less knowledge = higher potential information gain
             if (!experiences.Any())
                 return 0.9; // High potential
 
-            var coverage = Math.Min(experiences.Count / 10.0, 1.0);
-            var informationGain = 1.0 - (coverage * 0.7); // Some gain even with knowledge
+            double coverage = Math.Min(experiences.Count / 10.0, 1.0);
+            double informationGain = 1.0 - (coverage * 0.7); // Some gain even with knowledge
 
             return Math.Clamp(informationGain, 0.1, 1.0);
         }
@@ -351,12 +351,12 @@ INFO_GAIN: [0-1]
     /// </summary>
     public Dictionary<string, double> GetExplorationStats()
     {
-        var stats = new Dictionary<string, double>();
+        Dictionary<string, double> stats = new Dictionary<string, double>();
 
         stats["total_explorations"] = _totalExplorations;
         stats["session_explorations"] = _sessionExplorations;
 
-        var recent = _explorationHistory
+        List<(Plan plan, double novelty, DateTime when)> recent = _explorationHistory
             .Where(e => e.when > DateTime.UtcNow.AddDays(-7))
             .ToList();
 
@@ -373,18 +373,18 @@ INFO_GAIN: [0-1]
         if (plan1.Steps.Count == 0 || plan2.Steps.Count == 0)
             return 0.0;
 
-        var actions1 = plan1.Steps.Select(s => s.Action).ToHashSet();
-        var actions2 = plan2.Steps.Select(s => s.Action).ToHashSet();
+        HashSet<string> actions1 = plan1.Steps.Select(s => s.Action).ToHashSet();
+        HashSet<string> actions2 = plan2.Steps.Select(s => s.Action).ToHashSet();
 
-        var intersection = actions1.Intersect(actions2).Count();
-        var union = actions1.Union(actions2).Count();
+        int intersection = actions1.Intersect(actions2).Count();
+        int union = actions1.Union(actions2).Count();
 
         return union > 0 ? (double)intersection / union : 0.0;
     }
 
     private async Task<List<Experience>> GetAllExperiences(CancellationToken ct)
     {
-        var query = new MemoryQuery(
+        MemoryQuery query = new MemoryQuery(
             Goal: "",
             Context: null,
             MaxResults: 100,
@@ -395,16 +395,16 @@ INFO_GAIN: [0-1]
 
     private List<PlanStep> ParseExploratorySteps(string response)
     {
-        var steps = new List<PlanStep>();
-        var lines = response.Split('\n');
+        List<PlanStep> steps = new List<PlanStep>();
+        string[] lines = response.Split('\n');
 
         string? currentAction = null;
         string? currentExpected = null;
         double currentConfidence = 0.7;
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
-            var trimmed = line.Trim();
+            string trimmed = line.Trim();
 
             if (trimmed.StartsWith("STEP"))
             {
@@ -427,8 +427,8 @@ INFO_GAIN: [0-1]
             }
             else if (trimmed.StartsWith("CONFIDENCE:", StringComparison.OrdinalIgnoreCase))
             {
-                var confStr = trimmed.Substring("CONFIDENCE:".Length).Trim();
-                if (double.TryParse(confStr, out var conf))
+                string confStr = trimmed.Substring("CONFIDENCE:".Length).Trim();
+                if (double.TryParse(confStr, out double conf))
                 {
                     currentConfidence = Math.Clamp(conf, 0.0, 1.0);
                 }

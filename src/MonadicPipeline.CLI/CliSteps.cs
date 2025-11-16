@@ -23,8 +23,8 @@ public static class CliSteps
 {
     private static (string topic, string query) Normalize(CliPipelineState s)
     {
-        var topic = string.IsNullOrWhiteSpace(s.Topic) ? (string.IsNullOrWhiteSpace(s.Prompt) ? "topic" : s.Prompt) : s.Topic;
-        var query = string.IsNullOrWhiteSpace(s.Query) ? (string.IsNullOrWhiteSpace(s.Prompt) ? topic : s.Prompt) : s.Query;
+        string topic = string.IsNullOrWhiteSpace(s.Topic) ? (string.IsNullOrWhiteSpace(s.Prompt) ? "topic" : s.Prompt) : s.Topic;
+        string query = string.IsNullOrWhiteSpace(s.Query) ? (string.IsNullOrWhiteSpace(s.Prompt) ? topic : s.Prompt) : s.Query;
         return (topic, query);
     }
 
@@ -34,7 +34,7 @@ public static class CliSteps
         {
             try
             {
-                var ingest = IngestionArrows.IngestArrow<FileLoader>(s.Embed, tag: "cli");
+                Step<PipelineBranch, PipelineBranch> ingest = IngestionArrows.IngestArrow<FileLoader>(s.Embed, tag: "cli");
                 s.Branch = await ingest(s.Branch);
             }
             catch (Exception ex)
@@ -50,20 +50,20 @@ public static class CliSteps
         {
             string root = s.Branch.Source.Value as string ?? Environment.CurrentDirectory;
             bool recursive = true;
-            var exts = new List<string>();
-            var excludeDirs = new List<string>();
-            var patterns = new List<string>();
+            List<string> exts = new List<string>();
+            List<string> excludeDirs = new List<string>();
+            List<string> patterns = new List<string>();
             long maxBytes = 0;
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             if (!string.IsNullOrWhiteSpace(raw))
             {
-                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     if (part.StartsWith("root=", StringComparison.OrdinalIgnoreCase)) root = Path.GetFullPath(part.Substring(5));
                     else if (part.StartsWith("ext=", StringComparison.OrdinalIgnoreCase)) exts.AddRange(part.Substring(4).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
                     else if (part.StartsWith("exclude=", StringComparison.OrdinalIgnoreCase)) excludeDirs.AddRange(part.Substring(8).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
                     else if (part.StartsWith("pattern=", StringComparison.OrdinalIgnoreCase)) patterns.AddRange(part.Substring(8).Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-                    else if (part.StartsWith("max=", StringComparison.OrdinalIgnoreCase) && long.TryParse(part.AsSpan(4), out var m)) maxBytes = m;
+                    else if (part.StartsWith("max=", StringComparison.OrdinalIgnoreCase) && long.TryParse(part.AsSpan(4), out long m)) maxBytes = m;
                     else if (part.Equals("norec", StringComparison.OrdinalIgnoreCase)) recursive = false;
                 }
             }
@@ -74,7 +74,7 @@ public static class CliSteps
             }
             try
             {
-                var options = new DirectoryIngestionOptions
+                DirectoryIngestionOptions options = new DirectoryIngestionOptions
                 {
                     Recursive = recursive,
                     Extensions = exts.Count == 0 ? null : exts.ToArray(),
@@ -84,15 +84,15 @@ public static class CliSteps
                     ChunkSize = 1800,
                     ChunkOverlap = 180
                 };
-                var loader = new DirectoryDocumentLoader<FileLoader>(options);
-                var stats = new DirectoryIngestionStats();
+                DirectoryDocumentLoader<FileLoader> loader = new DirectoryDocumentLoader<FileLoader>(options);
+                DirectoryIngestionStats stats = new DirectoryIngestionStats();
                 loader.AttachStats(stats);
-                var store = s.Branch.Store as TrackedVectorStore ?? new TrackedVectorStore();
-                var splitter = new RecursiveCharacterTextSplitter(chunkSize: options.ChunkSize, chunkOverlap: options.ChunkOverlap);
-                var docs = await loader.LoadAsync(DataSource.FromPath(root));
-                var vectors = new List<Vector>();
+                TrackedVectorStore store = s.Branch.Store as TrackedVectorStore ?? new TrackedVectorStore();
+                RecursiveCharacterTextSplitter splitter = new RecursiveCharacterTextSplitter(chunkSize: options.ChunkSize, chunkOverlap: options.ChunkOverlap);
+                IReadOnlyCollection<Document> docs = await loader.LoadAsync(DataSource.FromPath(root));
+                List<Vector> vectors = new List<Vector>();
                 int fileIndex = 0;
-                foreach (var doc in docs)
+                foreach (Document doc in docs)
                 {
                     if (string.IsNullOrWhiteSpace(doc.PageContent))
                     {
@@ -100,19 +100,19 @@ public static class CliSteps
                         continue;
                     }
 
-                    var chunks = splitter.SplitText(doc.PageContent);
+                    IReadOnlyList<string> chunks = splitter.SplitText(doc.PageContent);
                     int chunkCount = chunks.Count;
-                    var baseMetadata = BuildDocumentMetadata(doc, root, fileIndex);
+                    Dictionary<string, object> baseMetadata = BuildDocumentMetadata(doc, root, fileIndex);
 
                     int chunkIdx = 0;
-                    foreach (var chunk in chunks)
+                    foreach (string chunk in chunks)
                     {
                         string vectorId = $"dir:{fileIndex}:{chunkIdx}";
-                        var chunkMetadata = BuildChunkMetadata(baseMetadata, chunkIdx, chunkCount, vectorId);
+                        Dictionary<string, object> chunkMetadata = BuildChunkMetadata(baseMetadata, chunkIdx, chunkCount, vectorId);
 
                         try
                         {
-                            var emb = await s.Embed.CreateEmbeddingsAsync(chunk);
+                            float[] emb = await s.Embed.CreateEmbeddingsAsync(chunk);
                             vectors.Add(new Vector
                             {
                                 Id = vectorId,
@@ -154,23 +154,23 @@ public static class CliSteps
         {
             string root = s.Branch.Source.Value as string ?? Environment.CurrentDirectory;
             bool recursive = true;
-            var exts = new List<string>();
-            var excludeDirs = new List<string>();
-            var patterns = new List<string>();
+            List<string> exts = new List<string>();
+            List<string> excludeDirs = new List<string>();
+            List<string> patterns = new List<string>();
             long maxBytes = 0;
             int addEvery = 256; // number of vectors per AddAsync batch
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             if (!string.IsNullOrWhiteSpace(raw))
             {
-                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     if (part.StartsWith("root=", StringComparison.OrdinalIgnoreCase)) root = Path.GetFullPath(part.Substring(5));
                     else if (part.StartsWith("ext=", StringComparison.OrdinalIgnoreCase)) exts.AddRange(part.Substring(4).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
                     else if (part.StartsWith("exclude=", StringComparison.OrdinalIgnoreCase)) excludeDirs.AddRange(part.Substring(8).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
                     else if (part.StartsWith("pattern=", StringComparison.OrdinalIgnoreCase)) patterns.AddRange(part.Substring(8).Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-                    else if (part.StartsWith("max=", StringComparison.OrdinalIgnoreCase) && long.TryParse(part.AsSpan(4), out var m)) maxBytes = m;
+                    else if (part.StartsWith("max=", StringComparison.OrdinalIgnoreCase) && long.TryParse(part.AsSpan(4), out long m)) maxBytes = m;
                     else if (part.Equals("norec", StringComparison.OrdinalIgnoreCase)) recursive = false;
-                    else if (part.StartsWith("addEvery=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(9), out var ae) && ae > 0) addEvery = ae;
+                    else if (part.StartsWith("addEvery=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(9), out int ae) && ae > 0) addEvery = ae;
                 }
             }
             if (!Directory.Exists(root))
@@ -180,7 +180,7 @@ public static class CliSteps
             }
             try
             {
-                var options = new DirectoryIngestionOptions
+                DirectoryIngestionOptions options = new DirectoryIngestionOptions
                 {
                     Recursive = recursive,
                     Extensions = exts.Count == 0 ? null : exts.ToArray(),
@@ -190,28 +190,28 @@ public static class CliSteps
                     ChunkSize = 1800,
                     ChunkOverlap = 180
                 };
-                var loader = new DirectoryDocumentLoader<FileLoader>(options);
-                var stats = new DirectoryIngestionStats();
+                DirectoryDocumentLoader<FileLoader> loader = new DirectoryDocumentLoader<FileLoader>(options);
+                DirectoryIngestionStats stats = new DirectoryIngestionStats();
                 loader.AttachStats(stats);
-                var store = s.Branch.Store as TrackedVectorStore ?? new TrackedVectorStore();
-                var splitter = new RecursiveCharacterTextSplitter(chunkSize: options.ChunkSize, chunkOverlap: options.ChunkOverlap);
-                var docs = await loader.LoadAsync(DataSource.FromPath(root));
-                var buffer = new List<Vector>(capacity: addEvery);
+                TrackedVectorStore store = s.Branch.Store as TrackedVectorStore ?? new TrackedVectorStore();
+                RecursiveCharacterTextSplitter splitter = new RecursiveCharacterTextSplitter(chunkSize: options.ChunkSize, chunkOverlap: options.ChunkOverlap);
+                IReadOnlyCollection<Document> docs = await loader.LoadAsync(DataSource.FromPath(root));
+                List<Vector> buffer = new List<Vector>(capacity: addEvery);
                 int fileIndex = 0;
-                foreach (var doc in docs)
+                foreach (Document doc in docs)
                 {
                     if (string.IsNullOrWhiteSpace(doc.PageContent)) { fileIndex++; continue; }
-                    var chunks = splitter.SplitText(doc.PageContent);
+                    IReadOnlyList<string> chunks = splitter.SplitText(doc.PageContent);
                     int chunkCount = chunks.Count;
-                    var baseMetadata = BuildDocumentMetadata(doc, root, fileIndex);
+                    Dictionary<string, object> baseMetadata = BuildDocumentMetadata(doc, root, fileIndex);
                     int chunkIdx = 0;
-                    foreach (var chunk in chunks)
+                    foreach (string chunk in chunks)
                     {
                         string vectorId = $"dir:{fileIndex}:{chunkIdx}";
-                        var chunkMetadata = BuildChunkMetadata(baseMetadata, chunkIdx, chunkCount, vectorId);
+                        Dictionary<string, object> chunkMetadata = BuildChunkMetadata(baseMetadata, chunkIdx, chunkCount, vectorId);
                         try
                         {
-                            var emb = await s.Embed.CreateEmbeddingsAsync(chunk);
+                            float[] emb = await s.Embed.CreateEmbeddingsAsync(chunk);
                             buffer.Add(new Vector { Id = vectorId, Text = chunk, Embedding = emb, Metadata = chunkMetadata });
                         }
                         catch
@@ -249,20 +249,20 @@ public static class CliSteps
         {
             try
             {
-                var opts = Pipeline.Ingestion.SolutionIngestion.ParseOptions(ParseString(args));
+                SolutionIngestion.SolutionIngestionOptions opts = Pipeline.Ingestion.SolutionIngestion.ParseOptions(ParseString(args));
                 // Recover root path: prefer last source:set event; fallback to current directory.
                 string root = Environment.CurrentDirectory;
-                var sourceEvent = s.Branch.Events
+                string? sourceEvent = s.Branch.Events
                     .OfType<IngestBatch>()
                     .Select(e => e.Source)
                     .Reverse()
                     .FirstOrDefault(src => src.StartsWith("source:set:"));
                 if (sourceEvent is not null)
                 {
-                    var parts = sourceEvent.Split(':', 3);
+                    string[] parts = sourceEvent.Split(':', 3);
                     if (parts.Length == 3 && Directory.Exists(parts[2])) root = parts[2];
                 }
-                var vectors = await Pipeline.Ingestion.SolutionIngestion.IngestAsync(
+                List<Vector> vectors = await Pipeline.Ingestion.SolutionIngestion.IngestAsync(
                     s.Branch.Store as LangChainPipeline.Domain.Vectors.TrackedVectorStore ?? new LangChainPipeline.Domain.Vectors.TrackedVectorStore(),
                     root,
                     s.Embed,
@@ -280,8 +280,8 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> UseDraft(string? args = null)
         => async s =>
         {
-            var (topic, query) = Normalize(s);
-            var step = ReasoningArrows.DraftArrow(s.Llm, s.Tools, s.Embed, topic, query, s.RetrievalK);
+            (string topic, string query) = Normalize(s);
+            Step<PipelineBranch, PipelineBranch> step = ReasoningArrows.DraftArrow(s.Llm, s.Tools, s.Embed, topic, query, s.RetrievalK);
             s.Branch = await step(s.Branch);
             if (s.Trace) Console.WriteLine("[trace] Draft produced");
             return s;
@@ -291,8 +291,8 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> UseCritique(string? args = null)
         => async s =>
         {
-            var (topic, query) = Normalize(s);
-            var step = ReasoningArrows.CritiqueArrow(s.Llm, s.Tools, s.Embed, topic, query, s.RetrievalK);
+            (string topic, string query) = Normalize(s);
+            Step<PipelineBranch, PipelineBranch> step = ReasoningArrows.CritiqueArrow(s.Llm, s.Tools, s.Embed, topic, query, s.RetrievalK);
             s.Branch = await step(s.Branch);
             if (s.Trace) Console.WriteLine("[trace] Critique produced");
             return s;
@@ -302,8 +302,8 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> UseImprove(string? args = null)
         => async s =>
         {
-            var (topic, query) = Normalize(s);
-            var step = ReasoningArrows.ImproveArrow(s.Llm, s.Tools, s.Embed, topic, query, s.RetrievalK);
+            (string topic, string query) = Normalize(s);
+            Step<PipelineBranch, PipelineBranch> step = ReasoningArrows.ImproveArrow(s.Llm, s.Tools, s.Embed, topic, query, s.RetrievalK);
             s.Branch = await step(s.Branch);
             if (s.Trace) Console.WriteLine("[trace] Improvement produced");
             return s;
@@ -325,8 +325,8 @@ public static class CliSteps
             int count = 1;
             if (!string.IsNullOrWhiteSpace(args))
             {
-                var m = Regex.Match(args, @"\s*(\d+)\s*");
-                if (m.Success && int.TryParse(m.Groups[1].Value, out var n)) count = n;
+                Match m = Regex.Match(args, @"\s*(\d+)\s*");
+                if (m.Success && int.TryParse(m.Groups[1].Value, out int n)) count = n;
             }
 
             // Check if a draft already exists
@@ -384,19 +384,19 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> SetSource(string? args = null)
         => s =>
         {
-            var path = ParseString(args);
+            string path = ParseString(args);
             if (string.IsNullOrWhiteSpace(path)) return Task.FromResult(s);
             // Expand ~ and relative paths
-            var expanded = path.StartsWith("~")
+            string expanded = path.StartsWith("~")
                 ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path.TrimStart('~', '/', '\\'))
                 : path;
-            var full = Path.GetFullPath(expanded);
+            string full = Path.GetFullPath(expanded);
             string finalPath = full;
             bool accessible = false;
             try
             {
                 if (!Directory.Exists(full)) Directory.CreateDirectory(full);
-                var testFile = Path.Combine(full, ".__pipeline_access_test");
+                string testFile = Path.Combine(full, ".__pipeline_access_test");
                 using (File.Create(testFile)) { }
                 File.Delete(testFile);
                 accessible = true;
@@ -407,7 +407,7 @@ public static class CliSteps
             }
             if (!accessible)
             {
-                var fallback = Path.Combine(Environment.CurrentDirectory, "pipeline_source_" + Guid.NewGuid().ToString("N").Substring(0, 6));
+                string fallback = Path.Combine(Environment.CurrentDirectory, "pipeline_source_" + Guid.NewGuid().ToString("N").Substring(0, 6));
                 try
                 {
                     Directory.CreateDirectory(fallback);
@@ -429,8 +429,8 @@ public static class CliSteps
         {
             if (!string.IsNullOrWhiteSpace(args))
             {
-                var m = Regex.Match(args, @"\s*(\d+)\s*");
-                if (m.Success && int.TryParse(m.Groups[1].Value, out var k))
+                Match m = Regex.Match(args, @"\s*(\d+)\s*");
+                if (m.Success && int.TryParse(m.Groups[1].Value, out int k))
                 {
                     s.RetrievalK = k;
                     if (s.Trace) Console.WriteLine($"[trace] RetrievalK set to {k}");
@@ -461,7 +461,7 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> ZipIngest(string? args = null)
         => async s =>
         {
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             string? path = raw;
             bool includeXmlText = true;
             int csvMaxLines = 50;
@@ -475,23 +475,23 @@ public static class CliSteps
             // Allow modifiers separated by |, e.g. 'archive.zip|noText'
             if (!string.IsNullOrWhiteSpace(raw) && raw.Contains('|'))
             {
-                var parts = raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                string[] parts = raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 if (parts.Length > 0) path = parts[0];
-                foreach (var mod in parts.Skip(1))
+                foreach (string? mod in parts.Skip(1))
                 {
                     if (mod.Equals("noText", StringComparison.OrdinalIgnoreCase))
                         includeXmlText = false;
                     else if (mod.Equals("noEmbed", StringComparison.OrdinalIgnoreCase))
                         noEmbed = true;
-                    else if (mod.StartsWith("maxLines=", StringComparison.OrdinalIgnoreCase) && int.TryParse(mod.AsSpan(9), out var ml))
+                    else if (mod.StartsWith("maxLines=", StringComparison.OrdinalIgnoreCase) && int.TryParse(mod.AsSpan(9), out int ml))
                         csvMaxLines = ml;
-                    else if (mod.StartsWith("binPreview=", StringComparison.OrdinalIgnoreCase) && int.TryParse(mod.AsSpan(11), out var bp))
+                    else if (mod.StartsWith("binPreview=", StringComparison.OrdinalIgnoreCase) && int.TryParse(mod.AsSpan(11), out int bp))
                         binaryMaxBytes = bp;
-                    else if (mod.StartsWith("maxBytes=", StringComparison.OrdinalIgnoreCase) && long.TryParse(mod.AsSpan(9), out var mb))
+                    else if (mod.StartsWith("maxBytes=", StringComparison.OrdinalIgnoreCase) && long.TryParse(mod.AsSpan(9), out long mb))
                         sizeBudget = mb;
-                    else if (mod.StartsWith("maxRatio=", StringComparison.OrdinalIgnoreCase) && double.TryParse(mod.AsSpan(9), out var mr))
+                    else if (mod.StartsWith("maxRatio=", StringComparison.OrdinalIgnoreCase) && double.TryParse(mod.AsSpan(9), out double mr))
                         maxRatio = mr;
-                    else if (mod.StartsWith("batch=", StringComparison.OrdinalIgnoreCase) && int.TryParse(mod.AsSpan(6), out var bs) && bs > 0)
+                    else if (mod.StartsWith("batch=", StringComparison.OrdinalIgnoreCase) && int.TryParse(mod.AsSpan(6), out int bs) && bs > 0)
                         batchSize = bs;
                     else if (mod.StartsWith("skip=", StringComparison.OrdinalIgnoreCase))
                         skipKinds = [.. mod.Substring(5).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(v => v.ToLowerInvariant())];
@@ -502,18 +502,18 @@ public static class CliSteps
             if (string.IsNullOrWhiteSpace(path)) return s;
             try
             {
-                var full = Path.GetFullPath(path);
+                string full = Path.GetFullPath(path);
                 if (!File.Exists(full))
                 {
                     s.Branch = s.Branch.WithIngestEvent($"zip:missing:{full}", Array.Empty<string>());
                     return s;
                 }
-                var scanned = await ZipIngestion.ScanAsync(full, maxTotalBytes: sizeBudget, maxCompressionRatio: maxRatio);
-                var parsed = await ZipIngestion.ParseAsync(scanned, csvMaxLines, binaryMaxBytes, includeXmlText: includeXmlText);
-                var docs = new List<(string id, string text)>();
-                foreach (var rec in parsed)
+                IReadOnlyList<ZipFileRecord> scanned = await ZipIngestion.ScanAsync(full, maxTotalBytes: sizeBudget, maxCompressionRatio: maxRatio);
+                IReadOnlyList<ZipFileRecord> parsed = await ZipIngestion.ParseAsync(scanned, csvMaxLines, binaryMaxBytes, includeXmlText: includeXmlText);
+                List<(string id, string text)> docs = new List<(string id, string text)>();
+                foreach (ZipFileRecord rec in parsed)
                 {
-                    if (rec.Parsed is not null && rec.Parsed.TryGetValue("type", out var t) && t?.ToString() == "skipped")
+                    if (rec.Parsed is not null && rec.Parsed.TryGetValue("type", out object? t) && t?.ToString() == "skipped")
                     {
                         s.Branch = s.Branch.WithIngestEvent($"zip:skipped:{rec.FullPath}", Array.Empty<string>());
                         continue;
@@ -532,7 +532,7 @@ public static class CliSteps
                     string text = rec.Kind switch
                     {
                         ZipContentKind.Csv => CsvToText((CsvTable)rec.Parsed!["table"]),
-                        ZipContentKind.Xml => (string)(rec.Parsed!.TryGetValue("textPreview", out var preview) ? preview ?? string.Empty : ((XmlDoc)rec.Parsed!["doc"]).Document.Root?.Value ?? string.Empty),
+                        ZipContentKind.Xml => (string)(rec.Parsed!.TryGetValue("textPreview", out object? preview) ? preview ?? string.Empty : ((XmlDoc)rec.Parsed!["doc"]).Document.Root?.Value ?? string.Empty),
                         ZipContentKind.Text => (string)rec.Parsed!["preview"],
                         ZipContentKind.Binary => $"[BINARY {rec.FileName} size={rec.Length} sha256={rec.Parsed!["sha256"]}]",
                         _ => string.Empty
@@ -543,7 +543,7 @@ public static class CliSteps
 
                 if (noEmbed)
                 {
-                    foreach (var (id, text) in docs)
+                    foreach ((string id, string text) in docs)
                     {
                         DeferredZipTextCache.Store(id, text);
                     }
@@ -553,22 +553,22 @@ public static class CliSteps
                 {
                     for (int i = 0; i < docs.Count; i += batchSize)
                     {
-                        var batch = docs.Skip(i).Take(batchSize).ToList();
+                        List<(string id, string text)> batch = docs.Skip(i).Take(batchSize).ToList();
                         try
                         {
-                            var texts = batch.Select(b => b.text).ToArray();
-                            var emb = await s.Embed.CreateEmbeddingsAsync(texts);
-                            var vectors = new List<Vector>();
+                            string[] texts = batch.Select(b => b.text).ToArray();
+                            IReadOnlyList<float[]> emb = await s.Embed.CreateEmbeddingsAsync(texts);
+                            List<Vector> vectors = new List<Vector>();
                             for (int idx = 0; idx < emb.Count; idx++)
                             {
-                                var (id, text) = batch[idx];
+                                (string id, string text) = batch[idx];
                                 vectors.Add(new Vector { Id = id, Text = text, Embedding = emb[idx] });
                             }
                             await s.Branch.Store.AddAsync(vectors);
                         }
                         catch (Exception exBatch)
                         {
-                            foreach (var (id, _) in batch)
+                            foreach ((string id, string _) in batch)
                             {
                                 s.Branch = s.Branch.WithIngestEvent($"zip:doc-error:{id}:{exBatch.GetType().Name}", Array.Empty<string>());
                             }
@@ -588,38 +588,38 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> ZipStream(string? args = null)
         => async s =>
         {
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             if (string.IsNullOrWhiteSpace(raw)) return s;
-            var path = raw.Split('|', 2)[0];
+            string path = raw.Split('|', 2)[0];
             int batchSize = 8;
             bool includeXmlText = true;
             bool noEmbed = false;
             if (raw.Contains('|'))
             {
-                var mods = raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Skip(1);
-                foreach (var mod in mods)
+                IEnumerable<string> mods = raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Skip(1);
+                foreach (string? mod in mods)
                 {
-                    if (mod.StartsWith("batch=", StringComparison.OrdinalIgnoreCase) && int.TryParse(mod.AsSpan(6), out var bs) && bs > 0) batchSize = bs;
+                    if (mod.StartsWith("batch=", StringComparison.OrdinalIgnoreCase) && int.TryParse(mod.AsSpan(6), out int bs) && bs > 0) batchSize = bs;
                     else if (mod.Equals("noText", StringComparison.OrdinalIgnoreCase)) includeXmlText = false;
                     else if (mod.Equals("noEmbed", StringComparison.OrdinalIgnoreCase)) noEmbed = true;
                 }
             }
-            var full = Path.GetFullPath(path);
+            string full = Path.GetFullPath(path);
             if (!File.Exists(full)) { s.Branch = s.Branch.WithIngestEvent($"zip:missing:{full}", Array.Empty<string>()); return s; }
-            var buffer = new List<(string id, string text)>();
+            List<(string id, string text)> buffer = new List<(string id, string text)>();
             try
             {
-                await foreach (var rec in ZipIngestionStreaming.EnumerateAsync(full))
+                await foreach (ZipFileRecord rec in ZipIngestionStreaming.EnumerateAsync(full))
                 {
                     string text;
                     if (rec.Kind == ZipContentKind.Csv || rec.Kind == ZipContentKind.Xml || rec.Kind == ZipContentKind.Text)
                     {
-                        var parsedList = await ZipIngestion.ParseAsync(new[] { rec }, csvMaxLines: 20, binaryMaxBytes: 32 * 1024, includeXmlText: includeXmlText);
-                        var parsed = parsedList[0];
+                        IReadOnlyList<ZipFileRecord> parsedList = await ZipIngestion.ParseAsync(new[] { rec }, csvMaxLines: 20, binaryMaxBytes: 32 * 1024, includeXmlText: includeXmlText);
+                        ZipFileRecord parsed = parsedList[0];
                         text = parsed.Kind switch
                         {
                             ZipContentKind.Csv => CsvToText((CsvTable)parsed.Parsed!["table"]),
-                            ZipContentKind.Xml => (string)(parsed.Parsed!.TryGetValue("textPreview", out var preview) ? preview ?? string.Empty : ((XmlDoc)parsed.Parsed!["doc"]).Document.Root?.Value ?? string.Empty),
+                            ZipContentKind.Xml => (string)(parsed.Parsed!.TryGetValue("textPreview", out object? preview) ? preview ?? string.Empty : ((XmlDoc)parsed.Parsed!["doc"]).Document.Root?.Value ?? string.Empty),
                             ZipContentKind.Text => (string)parsed.Parsed!["preview"],
                             _ => string.Empty
                         };
@@ -659,28 +659,28 @@ public static class CliSteps
     {
         try
         {
-            var texts = batch.Select(b => b.text).ToArray();
-            var emb = await s.Embed.CreateEmbeddingsAsync(texts);
-            var vectors = new List<Vector>();
+            string[] texts = batch.Select(b => b.text).ToArray();
+            IReadOnlyList<float[]> emb = await s.Embed.CreateEmbeddingsAsync(texts);
+            List<Vector> vectors = new List<Vector>();
             for (int i = 0; i < emb.Count; i++)
             {
-                var (id, text) = batch[i];
+                (string id, string text) = batch[i];
                 vectors.Add(new Vector { Id = id, Text = text, Embedding = emb[i] });
             }
             await s.Branch.Store.AddAsync(vectors);
         }
         catch (Exception ex)
         {
-            foreach (var (id, _) in batch)
+            foreach ((string id, string _) in batch)
                 s.Branch = s.Branch.WithIngestEvent($"zipstream:batch-error:{id}:{ex.GetType().Name}", Array.Empty<string>());
         }
     }
 
     private static string CsvToText(CsvTable table)
     {
-        var sb = new System.Text.StringBuilder();
+        StringBuilder sb = new System.Text.StringBuilder();
         sb.AppendLine(string.Join(" | ", table.Header));
-        foreach (var row in table.Rows)
+        foreach (string[] row in table.Rows)
             sb.AppendLine(string.Join(" | ", row));
         return sb.ToString();
     }
@@ -689,16 +689,16 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> ListVectors(string? args = null)
         => s =>
         {
-            var all = s.Branch.Store switch
+            IEnumerable<Vector> all = s.Branch.Store switch
             {
                 LangChainPipeline.Domain.Vectors.TrackedVectorStore tvs => tvs.GetAll(),
                 _ => Enumerable.Empty<LangChain.Databases.Vector>()
             };
-            var count = all.Count();
+            int count = all.Count();
             Console.WriteLine($"[vectors] count={count}");
             if (!string.IsNullOrWhiteSpace(args) && args.Contains("ids", StringComparison.OrdinalIgnoreCase))
             {
-                foreach (var v in all.Take(100)) Console.WriteLine($" - {v.Id}");
+                foreach (Vector? v in all.Take(100)) Console.WriteLine($" - {v.Id}");
                 if (count > 100) Console.WriteLine($" ... (truncated) ...");
             }
             return Task.FromResult(s);
@@ -709,10 +709,10 @@ public static class CliSteps
         => async s =>
         {
             int batchSize = 16;
-            if (!string.IsNullOrWhiteSpace(args) && args.StartsWith("batch=", StringComparison.OrdinalIgnoreCase) && int.TryParse(args.AsSpan(6), out var bs) && bs > 0)
+            if (!string.IsNullOrWhiteSpace(args) && args.StartsWith("batch=", StringComparison.OrdinalIgnoreCase) && int.TryParse(args.AsSpan(6), out int bs) && bs > 0)
                 batchSize = bs;
             // Heuristic: any events zip:no-embed OR zipstream:no-embed; we can't recover original text fully unless stored; for now embed placeholders.
-            var pendingIds = s.Branch.Events
+            List<string> pendingIds = s.Branch.Events
                 .Where(e => e is IngestBatch ib && (ib.Source.StartsWith("zip:no-embed") || ib.Source.StartsWith("zipstream:no-embed")))
                 .SelectMany(e => ((IngestBatch)e).Ids)
                 .Distinct()
@@ -725,16 +725,16 @@ public static class CliSteps
             Console.WriteLine($"[embedzip] embedding {pendingIds.Count} placeholder docs");
             for (int i = 0; i < pendingIds.Count; i += batchSize)
             {
-                var batch = pendingIds.Skip(i).Take(batchSize).ToList();
-                var texts = batch.Select(id =>
+                List<string> batch = pendingIds.Skip(i).Take(batchSize).ToList();
+                string[] texts = batch.Select(id =>
                 {
-                    if (DeferredZipTextCache.TryTake(id, out var original) && !string.IsNullOrWhiteSpace(original)) return original;
+                    if (DeferredZipTextCache.TryTake(id, out string? original) && !string.IsNullOrWhiteSpace(original)) return original;
                     return $"[DEFERRED ZIP DOC] {id}";
                 }).ToArray();
                 try
                 {
-                    var emb = await s.Embed.CreateEmbeddingsAsync(texts);
-                    var vectors = new List<Vector>();
+                    IReadOnlyList<float[]> emb = await s.Embed.CreateEmbeddingsAsync(texts);
+                    List<Vector> vectors = new List<Vector>();
                     for (int idx = 0; idx < emb.Count; idx++)
                     {
                         string id = batch[idx];
@@ -744,7 +744,7 @@ public static class CliSteps
                 }
                 catch (Exception ex)
                 {
-                    foreach (var id in batch)
+                    foreach (string? id in batch)
                         s.Branch = s.Branch.WithIngestEvent($"zipembed:error:{id}:{ex.GetType().Name}", Array.Empty<string>());
                 }
             }
@@ -755,7 +755,7 @@ public static class CliSteps
     private static string ParseString(string? arg)
     {
         arg ??= string.Empty;
-        var m = Regex.Match(arg, @"^'(?<s>.*)'$");
+        Match m = Regex.Match(arg, @"^'(?<s>.*)'$");
         if (m.Success) return m.Groups["s"].Value;
         m = Regex.Match(arg, @"^""(?<s>.*)""$");
         if (m.Success) return m.Groups["s"].Value;
@@ -770,12 +770,12 @@ public static class CliSteps
         {
             int amount = s.RetrievalK;
             string? overrideQuery = null;
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             if (!string.IsNullOrWhiteSpace(raw))
             {
-                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
-                    if (part.StartsWith("amount=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(7), out var a) && a > 0)
+                    if (part.StartsWith("amount=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(7), out int a) && a > 0)
                         amount = a;
                     else if (part.StartsWith("query=", StringComparison.OrdinalIgnoreCase))
                         overrideQuery = part.Substring(6);
@@ -787,7 +787,7 @@ public static class CliSteps
             {
                 if (s.Branch.Store is TrackedVectorStore tvs)
                 {
-                    var hits = await tvs.GetSimilarDocuments(s.Embed, query, amount);
+                    IReadOnlyCollection<Document> hits = await tvs.GetSimilarDocuments(s.Embed, query, amount);
                     s.Retrieved.Clear();
                     s.Retrieved.AddRange(hits.Select(h => h.PageContent));
                     s.Branch = s.Branch.WithIngestEvent($"retrieve:{amount}:{query.Replace('|', ':').Replace('\n', ' ')}", Enumerable.Range(0, s.Retrieved.Count).Select(i => $"doc:{i}"));
@@ -804,7 +804,7 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> CombineDocuments(string? args = null)
         => s =>
         {
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             string separator = "\n---\n";
             string prefix = string.Empty;
             string suffix = string.Empty;
@@ -814,14 +814,14 @@ public static class CliSteps
 
             if (!string.IsNullOrWhiteSpace(raw))
             {
-                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     if (part.StartsWith("sep=", StringComparison.OrdinalIgnoreCase))
                     {
-                        var value = part.Substring(4);
+                        string value = part.Substring(4);
                         separator = value.Replace("\\n", "\n").Replace("\\t", "\t");
                     }
-                    else if (part.StartsWith("take=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(5), out var t) && t > 0)
+                    else if (part.StartsWith("take=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(5), out int t) && t > 0)
                     {
                         take = Math.Min(t, s.Retrieved.Count);
                     }
@@ -847,11 +847,11 @@ public static class CliSteps
             if (take <= 0 || s.Retrieved.Count == 0)
                 return Task.FromResult(s);
 
-            var blocks = s.Retrieved.Take(take).Where(static r => !string.IsNullOrWhiteSpace(r)).ToList();
+            List<string> blocks = s.Retrieved.Take(take).Where(static r => !string.IsNullOrWhiteSpace(r)).ToList();
             if (blocks.Count == 0)
                 return Task.FromResult(s);
 
-            var combined = string.Join(separator, blocks);
+            string combined = string.Join(separator, blocks);
             if (!string.IsNullOrEmpty(prefix))
                 combined = prefix + combined;
             if (!string.IsNullOrEmpty(suffix))
@@ -877,11 +877,11 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> TemplateStep(string? args = null)
         => s =>
         {
-            var templateRaw = ParseString(args);
+            string templateRaw = ParseString(args);
             if (string.IsNullOrWhiteSpace(templateRaw)) return Task.FromResult(s);
-            var pt = new PromptTemplate(templateRaw);
-            var question = string.IsNullOrWhiteSpace(s.Query) ? (string.IsNullOrWhiteSpace(s.Prompt) ? s.Topic : s.Prompt) : s.Query;
-            var formatted = pt.Format(new() { ["context"] = s.Context, ["question"] = question, ["prompt"] = s.Prompt, ["topic"] = s.Topic });
+            PromptTemplate pt = new PromptTemplate(templateRaw);
+            string question = string.IsNullOrWhiteSpace(s.Query) ? (string.IsNullOrWhiteSpace(s.Prompt) ? s.Topic : s.Prompt) : s.Query;
+            string formatted = pt.Format(new() { ["context"] = s.Context, ["question"] = question, ["prompt"] = s.Prompt, ["topic"] = s.Topic });
             s.Prompt = formatted; // prepared for LLM
             return Task.FromResult(s);
         };
@@ -893,7 +893,7 @@ public static class CliSteps
             if (string.IsNullOrWhiteSpace(s.Prompt)) return s;
             try
             {
-                var (text, toolCalls) = await s.Llm.GenerateWithToolsAsync(s.Prompt);
+                (string text, List<ToolExecution> toolCalls) = await s.Llm.GenerateWithToolsAsync(s.Prompt);
                 s.Output = text;
                 s.Branch = s.Branch.WithReasoning(new FinalSpec(text), s.Prompt, toolCalls);
                 if (s.Trace) Console.WriteLine("[trace] LLM output length=" + text.Length);
@@ -921,20 +921,20 @@ public static class CliSteps
             string? finalTemplate = null;
             bool streamPartials = false; // print intermediate outputs to console
 
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             if (!string.IsNullOrWhiteSpace(raw))
             {
-                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
-                    if (part.StartsWith("k=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(2), out var kv) && kv > 0) k = kv;
-                    else if (part.StartsWith("group=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(6), out var gv) && gv > 0) group = gv;
+                    if (part.StartsWith("k=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(2), out int kv) && kv > 0) k = kv;
+                    else if (part.StartsWith("group=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(6), out int gv) && gv > 0) group = gv;
                     else if (part.StartsWith("sep=", StringComparison.OrdinalIgnoreCase)) sep = part.Substring(4).Replace("\\n", "\n");
                     else if (part.StartsWith("template=", StringComparison.OrdinalIgnoreCase)) template = part.Substring(9);
                     else if (part.StartsWith("final=", StringComparison.OrdinalIgnoreCase)) finalTemplate = part.Substring(6);
                     else if (part.Equals("stream", StringComparison.OrdinalIgnoreCase)) streamPartials = true;
                     else if (part.StartsWith("stream=", StringComparison.OrdinalIgnoreCase))
                     {
-                        var v = part.Substring(7);
+                        string v = part.Substring(7);
                         streamPartials = v.Equals("1") || v.Equals("true", StringComparison.OrdinalIgnoreCase) || v.Equals("on", StringComparison.OrdinalIgnoreCase) || v.Equals("yes", StringComparison.OrdinalIgnoreCase);
                     }
                 }
@@ -955,28 +955,28 @@ public static class CliSteps
             finalTemplate ??= "You are to synthesize a final, precise answer from multiple partial answers.\nQuestion: {question}\n\nPartial Answers:\n{partials}\n\nFinal Answer:";
 
             // Partition into groups
-            var docs = s.Retrieved.Where(static r => !string.IsNullOrWhiteSpace(r)).Take(k).ToList();
+            List<string> docs = s.Retrieved.Where(static r => !string.IsNullOrWhiteSpace(r)).Take(k).ToList();
             if (docs.Count == 0) return s;
 
-            var groups = new List<List<string>>();
+            List<List<string>> groups = new List<List<string>>();
             for (int i = 0; i < docs.Count; i += group)
             {
                 groups.Add(docs.Skip(i).Take(group).ToList());
             }
 
-            var partials = new List<string>(groups.Count);
+            List<string> partials = new List<string>(groups.Count);
             for (int gi = 0; gi < groups.Count; gi++)
             {
-                var g = groups[gi];
-                var ctx = string.Join(sep, g);
-                var prompt = template!
+                List<string> g = groups[gi];
+                string ctx = string.Join(sep, g);
+                string prompt = template!
                     .Replace("{context}", ctx)
                     .Replace("{question}", question)
                     .Replace("{prompt}", s.Prompt ?? string.Empty)
                     .Replace("{topic}", s.Topic ?? string.Empty);
                 try
                 {
-                    var (answer, toolCalls) = await s.Llm.GenerateWithToolsAsync(prompt);
+                    (string answer, List<ToolExecution> toolCalls) = await s.Llm.GenerateWithToolsAsync(prompt);
                     partials.Add(answer ?? string.Empty);
                     // Record as reasoning step for traceability
                     s.Branch = s.Branch.WithReasoning(new FinalSpec(answer ?? string.Empty), prompt, toolCalls);
@@ -997,8 +997,8 @@ public static class CliSteps
             }
 
             // Synthesize final
-            var partialText = string.Join("\n\n---\n\n", partials.Where(p => !string.IsNullOrWhiteSpace(p)));
-            var finalPrompt = finalTemplate!
+            string partialText = string.Join("\n\n---\n\n", partials.Where(p => !string.IsNullOrWhiteSpace(p)));
+            string finalPrompt = finalTemplate!
                 .Replace("{partials}", partialText)
                 .Replace("{question}", question)
                 .Replace("{prompt}", s.Prompt ?? string.Empty)
@@ -1006,7 +1006,7 @@ public static class CliSteps
 
             try
             {
-                var (finalAnswer, finalToolCalls) = await s.Llm.GenerateWithToolsAsync(finalPrompt);
+                (string finalAnswer, List<ToolExecution> finalToolCalls) = await s.Llm.GenerateWithToolsAsync(finalPrompt);
                 s.Output = finalAnswer ?? string.Empty;
                 s.Prompt = finalPrompt;
                 s.Branch = s.Branch.WithReasoning(new FinalSpec(s.Output), finalPrompt, finalToolCalls);
@@ -1052,19 +1052,19 @@ public static class CliSteps
             string? subTpl = null;
             string? finalTpl = null;
 
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             if (!string.IsNullOrWhiteSpace(raw))
             {
-                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
-                    if (part.StartsWith("subs=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(5), out var sv) && sv > 0) subs = sv;
-                    else if (part.StartsWith("per=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(4), out var pv) && pv > 0) per = pv;
-                    else if (part.StartsWith("k=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(2), out var kv) && kv > 0) k = kv;
+                    if (part.StartsWith("subs=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(5), out int sv) && sv > 0) subs = sv;
+                    else if (part.StartsWith("per=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(4), out int pv) && pv > 0) per = pv;
+                    else if (part.StartsWith("k=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(2), out int kv) && kv > 0) k = kv;
                     else if (part.StartsWith("sep=", StringComparison.OrdinalIgnoreCase)) sep = part.Substring(4).Replace("\\n", "\n");
                     else if (part.Equals("stream", StringComparison.OrdinalIgnoreCase)) stream = true;
                     else if (part.StartsWith("stream=", StringComparison.OrdinalIgnoreCase))
                     {
-                        var v = part.Substring(7);
+                        string v = part.Substring(7);
                         stream = v.Equals("1") || v.Equals("true", StringComparison.OrdinalIgnoreCase) || v.Equals("on", StringComparison.OrdinalIgnoreCase) || v.Equals("yes", StringComparison.OrdinalIgnoreCase);
                     }
                     else if (part.StartsWith("decompose=", StringComparison.OrdinalIgnoreCase)) decomposeTpl = part.Substring(10);
@@ -1102,13 +1102,13 @@ public static class CliSteps
             List<string> subQuestions = new();
             try
             {
-                var (subText, subCalls) = await s.Llm.GenerateWithToolsAsync(decomposePrompt);
+                (string subText, List<ToolExecution> subCalls) = await s.Llm.GenerateWithToolsAsync(decomposePrompt);
                 s.Branch = s.Branch.WithReasoning(new FinalSpec(subText ?? string.Empty), decomposePrompt, subCalls);
                 if (!string.IsNullOrWhiteSpace(subText))
                 {
-                    foreach (var line in subText.Split('\n'))
+                    foreach (string line in subText.Split('\n'))
                     {
-                        var t = line.Trim();
+                        string t = line.Trim();
                         if (string.IsNullOrWhiteSpace(t)) continue;
                         // Accept formats like: "1. ...", "1) ...", "- ..." or plain line
                         t = Regex.Replace(t, @"^\s*(\d+\.|\d+\)|[-*])\s*", string.Empty);
@@ -1132,7 +1132,7 @@ public static class CliSteps
             }
 
             // 2) Answer each sub-question with retrieval
-            var qaPairs = new List<(string q, string a)>(subQuestions.Count);
+            List<(string q, string a)> qaPairs = new List<(string q, string a)>(subQuestions.Count);
             for (int i = 0; i < subQuestions.Count; i++)
             {
                 string sq = subQuestions[i];
@@ -1142,8 +1142,8 @@ public static class CliSteps
                 {
                     if (s.Branch.Store is TrackedVectorStore tvs)
                     {
-                        var hits = await tvs.GetSimilarDocuments(s.Embed, sq, per);
-                        foreach (var doc in hits)
+                        IReadOnlyCollection<Document> hits = await tvs.GetSimilarDocuments(s.Embed, sq, per);
+                        foreach (Document doc in hits)
                         {
                             if (!string.IsNullOrWhiteSpace(doc.PageContent))
                                 blocks.Add(doc.PageContent);
@@ -1164,7 +1164,7 @@ public static class CliSteps
                     .Replace("{topic}", s.Topic ?? string.Empty);
                 try
                 {
-                    var (ans, toolCalls) = await s.Llm.GenerateWithToolsAsync(subPrompt);
+                    (string ans, List<ToolExecution> toolCalls) = await s.Llm.GenerateWithToolsAsync(subPrompt);
                     string answer = ans ?? string.Empty;
                     qaPairs.Add((sq, answer));
                     s.Branch = s.Branch.WithReasoning(new FinalSpec(answer), subPrompt, toolCalls);
@@ -1182,10 +1182,10 @@ public static class CliSteps
             }
 
             // 3) Final synthesis
-            var sbPairs = new StringBuilder();
+            StringBuilder sbPairs = new StringBuilder();
             for (int i = 0; i < qaPairs.Count; i++)
             {
-                var (q, a) = qaPairs[i];
+                (string q, string a) = qaPairs[i];
                 sbPairs.AppendLine($"Sub-question {i + 1}: {q}");
                 sbPairs.AppendLine("Answer:");
                 sbPairs.AppendLine(a);
@@ -1200,7 +1200,7 @@ public static class CliSteps
 
             try
             {
-                var (finalAnswer, finalCalls) = await s.Llm.GenerateWithToolsAsync(finalPrompt);
+                (string finalAnswer, List<ToolExecution> finalCalls) = await s.Llm.GenerateWithToolsAsync(finalPrompt);
                 s.Output = finalAnswer ?? string.Empty;
                 s.Prompt = finalPrompt;
                 s.Branch = s.Branch.WithReasoning(new FinalSpec(s.Output), finalPrompt, finalCalls);
@@ -1224,33 +1224,33 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> EnhanceMarkdown(string? args = null)
         => async s =>
         {
-            var options = ParseKeyValueArgs(args);
-            if (!options.TryGetValue("file", out var fileValue) || string.IsNullOrWhiteSpace(fileValue))
+            Dictionary<string, string> options = ParseKeyValueArgs(args);
+            if (!options.TryGetValue("file", out string? fileValue) || string.IsNullOrWhiteSpace(fileValue))
             {
                 s.Branch = s.Branch.WithIngestEvent("markdown:error:no-file", Array.Empty<string>());
                 return s;
             }
 
             int iterations = 1;
-            if (options.TryGetValue("iterations", out var iterationsRaw) && int.TryParse(iterationsRaw, out var parsedIterations) && parsedIterations > 0)
+            if (options.TryGetValue("iterations", out string? iterationsRaw) && int.TryParse(iterationsRaw, out int parsedIterations) && parsedIterations > 0)
             {
                 iterations = Math.Min(parsedIterations, 10);
             }
 
             int contextCount = s.RetrievalK;
-            if (options.TryGetValue("context", out var contextRaw) && int.TryParse(contextRaw, out var parsedContext) && parsedContext >= 0)
+            if (options.TryGetValue("context", out string? contextRaw) && int.TryParse(contextRaw, out int parsedContext) && parsedContext >= 0)
             {
                 contextCount = parsedContext;
             }
             contextCount = Math.Clamp(contextCount, 0, 16);
 
             bool createBackup = true;
-            if (options.TryGetValue("backup", out var backupRaw))
+            if (options.TryGetValue("backup", out string? backupRaw))
             {
                 createBackup = ParseBool(backupRaw, true);
             }
 
-            string? goal = options.TryGetValue("goal", out var goalValue) ? goalValue : null;
+            string? goal = options.TryGetValue("goal", out string? goalValue) ? goalValue : null;
             goal = ChooseFirstNonEmpty(goal, s.Prompt, s.Topic, s.Query);
 
             string basePath = s.Branch.Source.Value as string ?? Environment.CurrentDirectory;
@@ -1283,13 +1283,13 @@ public static class CliSteps
             for (int iteration = 1; iteration <= iterations; iteration++)
             {
                 string original = await File.ReadAllTextAsync(resolvedFile);
-                var contextBlocks = await BuildMarkdownContextAsync(s, resolvedFile, goal, contextCount);
+                List<string> contextBlocks = await BuildMarkdownContextAsync(s, resolvedFile, goal, contextCount);
                 string prompt = BuildMarkdownRewritePrompt(resolvedFile, original, goal, contextBlocks, iteration, iterations);
 
                 try
                 {
-                    var (response, toolCalls) = await s.Llm.GenerateWithToolsAsync(prompt);
-                    var improved = NormalizeMarkdownOutput(response);
+                    (string response, List<ToolExecution> toolCalls) = await s.Llm.GenerateWithToolsAsync(prompt);
+                    string improved = NormalizeMarkdownOutput(response);
                     if (string.IsNullOrWhiteSpace(improved))
                     {
                         improved = original;
@@ -1301,7 +1301,7 @@ public static class CliSteps
                         await File.WriteAllTextAsync(resolvedFile, improved);
                     }
 
-                    var revision = new DocumentRevision(resolvedFile, improved, iteration, goal);
+                    DocumentRevision revision = new DocumentRevision(resolvedFile, improved, iteration, goal);
                     s.Branch = s.Branch.WithReasoning(revision, prompt, toolCalls);
                     s.Output = improved;
                     s.Context = string.Join("\n---\n", contextBlocks);
@@ -1328,10 +1328,10 @@ public static class CliSteps
             await Task.Yield(); // ensure truly async to satisfy analyzer (treat warnings as errors)
             // Parse args
             string? newModel = null; string? newEmbed = null; bool forceRemote = false;
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             if (!string.IsNullOrWhiteSpace(raw))
             {
-                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     if (part.StartsWith("model=", StringComparison.OrdinalIgnoreCase)) newModel = part.Substring(6);
                     else if (part.StartsWith("embed=", StringComparison.OrdinalIgnoreCase)) newEmbed = part.Substring(6);
@@ -1340,7 +1340,7 @@ public static class CliSteps
             }
             if (string.IsNullOrWhiteSpace(newModel) && string.IsNullOrWhiteSpace(newEmbed)) return s; // nothing to do
             // Rebuild chat model similar to Program.cs logic but simplified, prioritizing remote if key present OR remote flag
-            var (endpoint, key, endpointType) = ChatConfig.Resolve();
+            (string endpoint, string key, ChatEndpointType endpointType) = ChatConfig.Resolve();
             IChatCompletionModel? model = null;
             if (!string.IsNullOrWhiteSpace(key) && (forceRemote || !string.IsNullOrWhiteSpace(newModel)))
             {
@@ -1363,8 +1363,8 @@ public static class CliSteps
             }
             if (model == null && !string.IsNullOrWhiteSpace(newModel))
             {
-                var provider = new OllamaProvider();
-                var oc = new OllamaChatModel(provider, newModel);
+                OllamaProvider provider = new OllamaProvider();
+                OllamaChatModel oc = new OllamaChatModel(provider, newModel);
                 if (newModel == "deepseek-coder:33b") oc.Settings = OllamaPresets.DeepSeekCoder33B;
                 model = new OllamaChatAdapter(oc);
             }
@@ -1378,8 +1378,8 @@ public static class CliSteps
             {
                 try
                 {
-                    var provider = new OllamaProvider();
-                    var oe = new OllamaEmbeddingModel(provider, newEmbed);
+                    OllamaProvider provider = new OllamaProvider();
+                    OllamaEmbeddingModel oe = new OllamaEmbeddingModel(provider, newEmbed);
                     s.Embed = new LangChainPipeline.Providers.OllamaEmbeddingAdapter(oe);
                     s.Branch = s.Branch.WithIngestEvent($"switchmodel:embed:{newEmbed}", Array.Empty<string>());
                 }
@@ -1395,10 +1395,10 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> UseExternalChain(string? args = null)
         => async s =>
         {
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             if (string.IsNullOrWhiteSpace(raw)) return s;
             string? name = null; string[] inKeys = Array.Empty<string>(); string[] outKeys = ["Output"]; bool trace = false;
-            foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 if (part.StartsWith("name=", StringComparison.OrdinalIgnoreCase)) name = part.Substring(5);
                 else if (part.StartsWith("in=", StringComparison.OrdinalIgnoreCase)) inKeys = part.Substring(3).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -1406,7 +1406,7 @@ public static class CliSteps
                 else if (part.Equals("trace", StringComparison.OrdinalIgnoreCase)) trace = true;
             }
             if (string.IsNullOrWhiteSpace(name)) { s.Branch = s.Branch.WithIngestEvent("chain:error:no-name", Array.Empty<string>()); return s; }
-            if (!ExternalChainRegistry.TryGet(name, out var chain) || chain is null)
+            if (!ExternalChainRegistry.TryGet(name, out object? chain) || chain is null)
             {
                 s.Branch = s.Branch.WithIngestEvent($"chain:error:not-found:{name}", Array.Empty<string>());
                 return s;
@@ -1414,15 +1414,15 @@ public static class CliSteps
             try
             {
                 // Locate CallAsync via reflection
-                var type = chain.GetType();
-                var call = type.GetMethod("CallAsync", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                Type type = chain.GetType();
+                MethodInfo? call = type.GetMethod("CallAsync", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 if (call is null)
                 {
                     s.Branch = s.Branch.WithIngestEvent($"chain:error:no-call:{name}", Array.Empty<string>()); return s;
                 }
                 // Try to create StackableChainValues if present
                 object valuesObj;
-                var valuesType = Type.GetType("LangChain.Chains.StackableChains.Context.StackableChainValues, LangChain");
+                Type? valuesType = Type.GetType("LangChain.Chains.StackableChains.Context.StackableChainValues, LangChain");
                 if (valuesType is not null)
                 {
                     valuesObj = Activator.CreateInstance(valuesType)!;
@@ -1434,7 +1434,7 @@ public static class CliSteps
                 }
                 // Attempt to set Hook=null and populate Value dict
                 IDictionary<string, object?>? dict = null;
-                var valueProp = valuesObj.GetType().GetProperty("Value", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                PropertyInfo? valueProp = valuesObj.GetType().GetProperty("Value", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 if (valueProp?.GetValue(valuesObj) is IDictionary<string, object?> existing)
                 {
                     dict = existing;
@@ -1446,9 +1446,9 @@ public static class CliSteps
                 // export selected keys
                 if (dict is not null)
                 {
-                    foreach (var key in inKeys)
+                    foreach (string key in inKeys)
                     {
-                        var val = key switch
+                        string? val = key switch
                         {
                             "Prompt" => s.Prompt,
                             "Query" => s.Query,
@@ -1461,7 +1461,7 @@ public static class CliSteps
                     }
                 }
                 if (trace) Console.WriteLine($"[chain] {name} export={dict?.Count ?? 0}");
-                var taskObj = call.Invoke(chain, [valuesObj]);
+                object? taskObj = call.Invoke(chain, [valuesObj]);
                 if (taskObj is Task t) await t.ConfigureAwait(false);
                 // if Task<T> try to get Result object as updated values
                 if (taskObj?.GetType().IsGenericType == true && taskObj.GetType().GetProperty("Result") is { } rp)
@@ -1473,9 +1473,9 @@ public static class CliSteps
                 // import
                 if (dict is not null)
                 {
-                    foreach (var key in outKeys)
+                    foreach (string key in outKeys)
                     {
-                        if (dict.TryGetValue(key, out var v) && v is not null)
+                        if (dict.TryGetValue(key, out object? v) && v is not null)
                         {
                             switch (key)
                             {
@@ -1501,16 +1501,16 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> VectorStats(string? args = null)
         => s =>
         {
-            var all = s.Branch.Store is TrackedVectorStore tvs ? tvs.GetAll() : Enumerable.Empty<Vector>();
+            IEnumerable<Vector> all = s.Branch.Store is TrackedVectorStore tvs ? tvs.GetAll() : Enumerable.Empty<Vector>();
             int count = 0;
             double sumNorm = 0;
-            foreach (var v in all)
+            foreach (Vector v in all)
             {
                 count++;
                 if (v.Embedding is { Length: > 0 })
                 {
                     double norm = 0;
-                    foreach (var f in v.Embedding) norm += f * f;
+                    foreach (float f in v.Embedding) norm += f * f;
                     sumNorm += Math.Sqrt(norm);
                 }
             }
@@ -1526,7 +1526,7 @@ public static class CliSteps
             var groups = StepRegistry.GetTokenGroups()
                 .Select(g => new { g.Method, g.Names })
                 .OrderBy(g => g.Names.First(), StringComparer.OrdinalIgnoreCase);
-            var lines = new List<string>
+            List<string> lines = new List<string>
             {
                 "# Pipeline Tokens Index",
                 "",
@@ -1537,7 +1537,7 @@ public static class CliSteps
             {
                 lines.Add($"| {string.Join(", ", g.Names)} | {g.Method.DeclaringType?.Name}.{g.Method.Name}() |");
             }
-            var docPath = Path.Combine(Environment.CurrentDirectory, "docs", "TOKENS.md");
+            string docPath = Path.Combine(Environment.CurrentDirectory, "docs", "TOKENS.md");
             Directory.CreateDirectory(Path.GetDirectoryName(docPath)!);
             File.WriteAllText(docPath, string.Join(Environment.NewLine, lines));
             Console.WriteLine($"[tokendocs] updated {docPath}");
@@ -1555,14 +1555,14 @@ public static class CliSteps
         => async s =>
         {
             await Task.Yield(); // Ensure truly async
-            
-            var raw = ParseString(args);
+
+            string raw = ParseString(args);
             string? dependencyName = null;
             string? errorMessage = null;
-            
+
             if (!string.IsNullOrWhiteSpace(raw))
             {
-                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     if (part.StartsWith("dep=", StringComparison.OrdinalIgnoreCase))
                         dependencyName = part.Substring(4);
@@ -1570,44 +1570,44 @@ public static class CliSteps
                         errorMessage = part.Substring(6);
                 }
             }
-            
+
             Console.WriteLine("[guided-install] Dependency installation step triggered");
-            
+
             if (!string.IsNullOrWhiteSpace(dependencyName))
             {
                 Console.WriteLine($"[guided-install] Missing dependency: {dependencyName}");
             }
-            
+
             if (!string.IsNullOrWhiteSpace(errorMessage))
             {
                 Console.WriteLine($"[guided-install] Error context: {errorMessage}");
             }
-            
+
             // Record the guided installation event
-            var eventSource = string.IsNullOrWhiteSpace(dependencyName) 
+            string eventSource = string.IsNullOrWhiteSpace(dependencyName)
                 ? "guided-install:triggered:generic"
                 : $"guided-install:triggered:{dependencyName}";
-                
+
             s.Branch = s.Branch.WithIngestEvent(eventSource, Array.Empty<string>());
-            
+
             Console.WriteLine("[guided-install] To install dependencies, please run the appropriate package manager:");
             Console.WriteLine("  - For .NET: dotnet restore");
             Console.WriteLine("  - For npm: npm install");
             Console.WriteLine("  - For Python: pip install -r requirements.txt");
-            
+
             return s;
         };
 
     private static Dictionary<string, string> ParseKeyValueArgs(string? args)
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var raw = ParseString(args);
+        Dictionary<string, string> map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        string raw = ParseString(args);
         if (string.IsNullOrWhiteSpace(raw))
         {
             return map;
         }
 
-        foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             int idx = part.IndexOf('=');
             if (idx > 0)
@@ -1648,7 +1648,7 @@ public static class CliSteps
         string? goal,
         int count)
     {
-        var blocks = new List<string>();
+        List<string> blocks = new List<string>();
         if (count <= 0) return blocks;
         if (state.Branch.Store is not TrackedVectorStore store) return blocks;
 
@@ -1658,22 +1658,22 @@ public static class CliSteps
         try
         {
             IReadOnlyCollection<Document> docs = await store.GetSimilarDocuments(state.Embed, query, count);
-            foreach (var doc in docs)
+            foreach (Document? doc in docs)
             {
                 if (doc is null || string.IsNullOrWhiteSpace(doc.PageContent))
                 {
                     continue;
                 }
 
-                var metadata = doc.Metadata ?? new Dictionary<string, object>();
-                if (metadata.TryGetValue("source", out var sourceObj) && sourceObj is string src && PathsEqual(src, filePath))
+                IDictionary<string, object> metadata = doc.Metadata ?? new Dictionary<string, object>();
+                if (metadata.TryGetValue("source", out object? sourceObj) && sourceObj is string src && PathsEqual(src, filePath))
                 {
                     continue;
                 }
 
-                string sourceLabel = metadata.TryGetValue("relative", out var relObj) && relObj is string rel && !string.IsNullOrWhiteSpace(rel)
+                string sourceLabel = metadata.TryGetValue("relative", out object? relObj) && relObj is string rel && !string.IsNullOrWhiteSpace(rel)
                     ? rel
-                    : metadata.TryGetValue("source", out var srcObj2) && srcObj2 is string src2
+                    : metadata.TryGetValue("source", out object? srcObj2) && srcObj2 is string src2
                         ? src2
                         : "unknown source";
 
@@ -1701,7 +1701,7 @@ public static class CliSteps
         int iteration,
         int totalIterations)
     {
-        var sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         sb.AppendLine("You are an expert technical writer and software engineer.");
         sb.AppendLine($"File path: {filePath}");
         sb.AppendLine($"Iteration: {iteration} of {Math.Max(totalIterations, 1)}.");
@@ -1722,7 +1722,7 @@ public static class CliSteps
         {
             sb.AppendLine();
             sb.AppendLine("Supporting context:");
-            foreach (var block in contextBlocks)
+            foreach (string block in contextBlocks)
             {
                 sb.AppendLine("---");
                 sb.AppendLine(block);
@@ -1807,21 +1807,21 @@ public static class CliSteps
 
     private static Dictionary<string, object> BuildDocumentMetadata(Document doc, string root, int fileIndex)
     {
-        var metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, object> metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         if (doc.Metadata is not null)
         {
-            foreach (var kvp in doc.Metadata)
+            foreach (KeyValuePair<string, object> kvp in doc.Metadata)
             {
                 metadata[kvp.Key] = kvp.Value ?? string.Empty;
             }
         }
 
         string? sourcePath = null;
-        if (metadata.TryGetValue("source", out var sourceObj) && sourceObj is string sourceStr)
+        if (metadata.TryGetValue("source", out object? sourceObj) && sourceObj is string sourceStr)
         {
             sourcePath = sourceStr;
         }
-        else if (metadata.TryGetValue("path", out var pathObj) && pathObj is string pathStr)
+        else if (metadata.TryGetValue("path", out object? pathObj) && pathObj is string pathStr)
         {
             sourcePath = pathStr;
         }
@@ -1854,7 +1854,7 @@ public static class CliSteps
         int chunkCount,
         string vectorId)
     {
-        var metadata = new Dictionary<string, object>(baseMetadata, StringComparer.OrdinalIgnoreCase)
+        Dictionary<string, object> metadata = new Dictionary<string, object>(baseMetadata, StringComparer.OrdinalIgnoreCase)
         {
             ["chunkIndex"] = chunkIndex,
             ["chunkCount"] = chunkCount,
@@ -1873,12 +1873,12 @@ public static class CliSteps
     private static async Task<CliPipelineState> HandleDependencyExceptionAsync(CliPipelineState state, Exception exception)
     {
         await Task.Yield(); // Ensure truly async
-        
-        var exceptionMessage = exception.Message;
-        var exceptionType = exception.GetType().Name;
-        
+
+        string exceptionMessage = exception.Message;
+        string exceptionType = exception.GetType().Name;
+
         // Known dependency-related exception patterns
-        var dependencyPatterns = new Dictionary<string, string[]>
+        Dictionary<string, string[]> dependencyPatterns = new Dictionary<string, string[]>
         {
             ["NuGet"] = new[] { "nuget", "package", "restore", "project.assets.json" },
             ["NPM"] = new[] { "npm", "node_modules", "package.json" },
@@ -1887,10 +1887,10 @@ public static class CliSteps
             ["Ollama"] = new[] { "ollama", "model not found", "pull model" },
             ["LangChain"] = new[] { "langchain", "provider not found" }
         };
-        
+
         // Check if exception matches known dependency patterns
         string? matchedDependency = null;
-        foreach (var (depName, patterns) in dependencyPatterns)
+        foreach ((string depName, string[] patterns) in dependencyPatterns)
         {
             if (patterns.Any(pattern => exceptionMessage.Contains(pattern, StringComparison.OrdinalIgnoreCase)))
             {
@@ -1898,31 +1898,31 @@ public static class CliSteps
                 break;
             }
         }
-        
+
         if (matchedDependency != null)
         {
             // Schedule guided-install step via ingest-event for known dependency issues
             Console.WriteLine($"[dependency-handler] Detected {matchedDependency} dependency issue");
-            
-            var eventSource = $"dependency:missing:{matchedDependency}:{exceptionType}";
+
+            string eventSource = $"dependency:missing:{matchedDependency}:{exceptionType}";
             state.Branch = state.Branch.WithIngestEvent(eventSource, Array.Empty<string>());
-            
+
             // Schedule the guided installation step to run
-            var scheduleEvent = $"schedule:guided-install|dep={matchedDependency}|error={exceptionMessage.Replace('|', ':')}";
+            string scheduleEvent = $"schedule:guided-install|dep={matchedDependency}|error={exceptionMessage.Replace('|', ':')}";
             state.Branch = state.Branch.WithIngestEvent(scheduleEvent, Array.Empty<string>());
-            
+
             Console.WriteLine($"[dependency-handler] Scheduled guided installation for {matchedDependency}");
             Console.WriteLine($"[dependency-handler] You can manually run: InstallDependenciesGuided('dep={matchedDependency}')");
         }
         else
         {
             // For non-dependency errors, record generic error event (preserve previous behavior)
-            var errorEvent = $"error:generic:{exceptionType}:{exceptionMessage.Replace('|', ':')}";
+            string errorEvent = $"error:generic:{exceptionType}:{exceptionMessage.Replace('|', ':')}";
             state.Branch = state.Branch.WithIngestEvent(errorEvent, Array.Empty<string>());
-            
+
             Console.WriteLine($"[dependency-handler] Recorded generic error: {exceptionType}");
         }
-        
+
         return state;
     }
 
@@ -1940,12 +1940,12 @@ public static class CliSteps
     [PipelineToken("LangChainSet", "ChainSet")]
     public static Step<CliPipelineState, CliPipelineState> LangChainSetStep(string? args = null)
     {
-        var raw = ParseString(args);
-        var parts = raw?.Split('|', 2, StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
-        var value = parts.Length > 0 ? parts[0] : string.Empty;
-        var key = parts.Length > 1 ? parts[1] : "text";
+        string raw = ParseString(args);
+        string[] parts = raw?.Split('|', 2, StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+        string value = parts.Length > 0 ? parts[0] : string.Empty;
+        string key = parts.Length > 1 ? parts[1] : "text";
 
-        var chain = LangChain.Chains.Chain.Set(value, key);
+        LangChain.Chains.HelperChains.SetChain chain = LangChain.Chains.Chain.Set(value, key);
         return chain.ToStep(
             inputKeys: Array.Empty<string>(),
             outputKeys: new[] { key },
@@ -1963,11 +1963,11 @@ public static class CliSteps
         {
             int amount = 5;
 
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             if (!string.IsNullOrWhiteSpace(raw))
             {
-                var m = Regex.Match(raw, @"amount=(\d+)");
-                if (m.Success && int.TryParse(m.Groups[1].Value, out var amt))
+                Match m = Regex.Match(raw, @"amount=(\d+)");
+                if (m.Success && int.TryParse(m.Groups[1].Value, out int amt))
                     amount = amt;
             }
 
@@ -1979,7 +1979,7 @@ public static class CliSteps
             }
 
             // Set the input text from Query or Prompt
-            var query = string.IsNullOrWhiteSpace(s.Query) ? s.Prompt : s.Query;
+            string query = string.IsNullOrWhiteSpace(s.Query) ? s.Prompt : s.Query;
             if (string.IsNullOrWhiteSpace(query))
             {
                 if (s.Trace) Console.WriteLine("[trace] LangChainRetrieve: no query text");
@@ -1990,24 +1990,24 @@ public static class CliSteps
             try
             {
                 // Create embedding for the query
-                var queryEmbedding = await s.Embed.CreateEmbeddingsAsync(query);
+                float[] queryEmbedding = await s.Embed.CreateEmbeddingsAsync(query);
 
                 // Create search request
-                var request = new LangChain.Databases.VectorSearchRequest
+                VectorSearchRequest request = new LangChain.Databases.VectorSearchRequest
                 {
                     Embeddings = new[] { queryEmbedding }
                 };
 
-                var settings = new LangChain.Databases.VectorSearchSettings
+                VectorSearchSettings settings = new LangChain.Databases.VectorSearchSettings
                 {
                     NumberOfResults = amount
                 };
 
                 // Search in vector store
-                var results = await vectorCollection.SearchAsync(request, settings);
+                VectorSearchResponse results = await vectorCollection.SearchAsync(request, settings);
 
                 s.Retrieved.Clear();
-                foreach (var result in results.Items)
+                foreach (Vector result in results.Items)
                 {
                     if (!string.IsNullOrWhiteSpace(result.Text))
                     {
@@ -2037,10 +2037,10 @@ public static class CliSteps
             string inputKey = "documents";
             string outputKey = "context";
 
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             if (!string.IsNullOrWhiteSpace(raw))
             {
-                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     if (part.StartsWith("inputKey=", StringComparison.OrdinalIgnoreCase))
                         inputKey = part.Substring(9);
@@ -2049,10 +2049,10 @@ public static class CliSteps
                 }
             }
 
-            var chain = LangChain.Chains.Chain.CombineDocuments(inputKey, outputKey);
+            LangChain.Chains.HelperChains.StuffDocumentsChain chain = LangChain.Chains.Chain.CombineDocuments(inputKey, outputKey);
 
             // Prepare documents from Retrieved list
-            var docs = s.Retrieved
+            List<Document> docs = s.Retrieved
                 .Where(r => !string.IsNullOrWhiteSpace(r))
                 .Select(text => new Document { PageContent = text })
                 .ToList();
@@ -2063,12 +2063,12 @@ public static class CliSteps
                 return s;
             }
 
-            var values = new StackableChainValues();
+            StackableChainValues values = new StackableChainValues();
             values.Value[inputKey] = docs;
 
-            var result = await chain.CallAsync(values);
+            LangChain.Abstractions.Schema.IChainValues result = await chain.CallAsync(values);
 
-            if (result.Value.TryGetValue(outputKey, out var context))
+            if (result.Value.TryGetValue(outputKey, out object? context))
             {
                 s.Context = context?.ToString() ?? string.Empty;
                 if (s.Trace) Console.WriteLine($"[trace] LangChainCombine: combined context length={s.Context.Length}");
@@ -2086,16 +2086,16 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> LangChainTemplateStep(string? args = null)
         => async s =>
         {
-            var templateText = ParseString(args);
+            string templateText = ParseString(args);
             if (string.IsNullOrWhiteSpace(templateText))
             {
                 if (s.Trace) Console.WriteLine("[trace] LangChainTemplate: no template provided");
                 return s;
             }
 
-            var chain = LangChain.Chains.Chain.Template(templateText, "text");
+            LangChain.Chains.HelperChains.PromptChain chain = LangChain.Chains.Chain.Template(templateText, "text");
 
-            var values = new StackableChainValues();
+            StackableChainValues values = new StackableChainValues();
             values.Value["context"] = s.Context;
             values.Value["text"] = string.IsNullOrWhiteSpace(s.Query) ? s.Prompt : s.Query;
             values.Value["question"] = values.Value["text"];
@@ -2104,9 +2104,9 @@ public static class CliSteps
             values.Value["topic"] = s.Topic;
             values.Value["query"] = s.Query;
 
-            var result = await chain.CallAsync(values);
+            LangChain.Abstractions.Schema.IChainValues result = await chain.CallAsync(values);
 
-            if (result.Value.TryGetValue("text", out var output))
+            if (result.Value.TryGetValue("text", out object? output))
             {
                 s.Prompt = output?.ToString() ?? string.Empty;
                 if (s.Trace) Console.WriteLine($"[trace] LangChainTemplate: formatted prompt length={s.Prompt.Length}");
@@ -2127,10 +2127,10 @@ public static class CliSteps
             string inputKey = "text";
             string outputKey = "text";
 
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             if (!string.IsNullOrWhiteSpace(raw))
             {
-                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     if (part.StartsWith("inputKey=", StringComparison.OrdinalIgnoreCase))
                         inputKey = part.Substring(9);
@@ -2140,28 +2140,28 @@ public static class CliSteps
             }
 
             // Extract the underlying IChatModel from ToolAwareChatModel
-            var llmField = s.Llm.GetType().GetField("_model", BindingFlags.NonPublic | BindingFlags.Instance);
+            FieldInfo? llmField = s.Llm.GetType().GetField("_model", BindingFlags.NonPublic | BindingFlags.Instance);
             if (llmField == null)
             {
                 if (s.Trace) Console.WriteLine("[trace] LangChainLLM: cannot access underlying chat model");
                 return s;
             }
 
-            var chatModel = llmField.GetValue(s.Llm) as IChatModel;
+            IChatModel? chatModel = llmField.GetValue(s.Llm) as IChatModel;
             if (chatModel == null)
             {
                 if (s.Trace) Console.WriteLine("[trace] LangChainLLM: chat model is null");
                 return s;
             }
 
-            var chain = LangChain.Chains.Chain.LLM(chatModel, inputKey, outputKey);
+            LangChain.Chains.HelperChains.LLMChain chain = LangChain.Chains.Chain.LLM(chatModel, inputKey, outputKey);
 
-            var values = new StackableChainValues();
+            StackableChainValues values = new StackableChainValues();
             values.Value[inputKey] = s.Prompt;
 
-            var result = await chain.CallAsync(values);
+            LangChain.Abstractions.Schema.IChainValues result = await chain.CallAsync(values);
 
-            if (result.Value.TryGetValue(outputKey, out var output))
+            if (result.Value.TryGetValue(outputKey, out object? output))
             {
                 s.Output = output?.ToString() ?? string.Empty;
                 s.Branch = s.Branch.WithReasoning(new FinalSpec(s.Output), s.Prompt, null);
@@ -2184,16 +2184,16 @@ public static class CliSteps
             string? template = null;
             int k = 5;
 
-            var raw = ParseString(args);
+            string raw = ParseString(args);
             if (!string.IsNullOrWhiteSpace(raw))
             {
-                foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     if (part.StartsWith("question=", StringComparison.OrdinalIgnoreCase))
                         question = part.Substring(9);
                     else if (part.StartsWith("template=", StringComparison.OrdinalIgnoreCase))
                         template = part.Substring(9);
-                    else if (part.StartsWith("k=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(2), out var kVal))
+                    else if (part.StartsWith("k=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(2), out int kVal))
                         k = kVal;
                 }
             }

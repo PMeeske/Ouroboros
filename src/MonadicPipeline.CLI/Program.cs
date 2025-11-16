@@ -58,25 +58,25 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
 {
     // Setup minimal environment for reasoning/ingest arrows
     // Remote model support (OpenAI-compatible and Ollama Cloud) via environment variables or CLI overrides
-    var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(
+    (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
         pipelineOpts?.Endpoint,
         pipelineOpts?.ApiKey,
         pipelineOpts?.EndpointType);
 
-    var provider = new OllamaProvider();
+    OllamaProvider provider = new OllamaProvider();
     IChatCompletionModel chatModel;
 
     if (pipelineOpts is not null && pipelineOpts.Router.Equals("auto", StringComparison.OrdinalIgnoreCase))
     {
         // Build router using provided model overrides; fallback to primary modelName
-        var modelMap = new Dictionary<string, IChatCompletionModel>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, IChatCompletionModel> modelMap = new Dictionary<string, IChatCompletionModel>(StringComparer.OrdinalIgnoreCase);
         IChatCompletionModel MakeLocal(string name, string role)
         {
-            var m = new OllamaChatModel(provider, name);
+            OllamaChatModel m = new OllamaChatModel(provider, name);
             // Apply presets based on model name and role
             try
             {
-                var n = (name ?? string.Empty).ToLowerInvariant();
+                string n = (name ?? string.Empty).ToLowerInvariant();
                 if (n.StartsWith("deepseek-coder:33b"))
                 {
                     m.Settings = OllamaPresets.DeepSeekCoder33B;
@@ -127,22 +127,22 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
         catch (Exception ex) when (pipelineOpts is not null && !pipelineOpts.StrictModel && ex.Message.Contains("Invalid model", StringComparison.OrdinalIgnoreCase))
         {
             Console.WriteLine($"[WARN] Remote model '{modelName}' invalid. Falling back to local 'llama3'. Use --strict-model to disable fallback.");
-            var local = new OllamaChatModel(provider, "llama3");
+            OllamaChatModel local = new OllamaChatModel(provider, "llama3");
             chatModel = new OllamaChatAdapter(local);
         }
         catch (Exception ex) when (pipelineOpts is not null && !pipelineOpts.StrictModel)
         {
             Console.WriteLine($"[WARN] Remote model '{modelName}' unavailable ({ex.GetType().Name}). Falling back to local 'llama3'. Use --strict-model to disable fallback.");
-            var local = new OllamaChatModel(provider, "llama3");
+            OllamaChatModel local = new OllamaChatModel(provider, "llama3");
             chatModel = new OllamaChatAdapter(local);
         }
     }
     else
     {
-        var chat = new OllamaChatModel(provider, modelName);
+        OllamaChatModel chat = new OllamaChatModel(provider, modelName);
         try
         {
-            var n = (modelName ?? string.Empty).ToLowerInvariant();
+            string n = (modelName ?? string.Empty).ToLowerInvariant();
             if (n.StartsWith("deepseek-coder:33b")) chat.Settings = OllamaPresets.DeepSeekCoder33B;
             else if (n.StartsWith("llama3")) chat.Settings = OllamaPresets.Llama3General;
             else if (n.StartsWith("deepseek-r1:32") || n.Contains("32b")) chat.Settings = OllamaPresets.DeepSeekR1_32B_Reason;
@@ -156,16 +156,16 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
     }
     IEmbeddingModel embed = CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);
 
-    var tools = new ToolRegistry();
-    var resolvedSource = string.IsNullOrWhiteSpace(sourcePath) ? Environment.CurrentDirectory : Path.GetFullPath(sourcePath);
+    ToolRegistry tools = new ToolRegistry();
+    string resolvedSource = string.IsNullOrWhiteSpace(sourcePath) ? Environment.CurrentDirectory : Path.GetFullPath(sourcePath);
     if (!Directory.Exists(resolvedSource))
     {
         Console.WriteLine($"Source path '{resolvedSource}' does not exist - creating.");
         Directory.CreateDirectory(resolvedSource);
     }
-    var branch = new PipelineBranch("cli", new TrackedVectorStore(), DataSource.FromPath(resolvedSource));
+    PipelineBranch branch = new PipelineBranch("cli", new TrackedVectorStore(), DataSource.FromPath(resolvedSource));
 
-    var state = new CliPipelineState
+    CliPipelineState state = new CliPipelineState
     {
         Branch = branch,
         Llm = null!, // Will be set after tools are registered
@@ -180,16 +180,16 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
     tools = tools.WithPipelineSteps(state);
 
     // Now create the LLM with all tools (including pipeline steps) registered
-    var llm = new ToolAwareChatModel(chatModel, tools);
+    ToolAwareChatModel llm = new ToolAwareChatModel(chatModel, tools);
     state.Llm = llm;
     state.Tools = tools;
 
     try
     {
-        var step = PipelineDsl.Build(dsl); // Steps will use embed & llm from state; k optionally influences reasoning if we extend arrows
+        Step<CliPipelineState, CliPipelineState> step = PipelineDsl.Build(dsl); // Steps will use embed & llm from state; k optionally influences reasoning if we extend arrows
         state = await step(state);
 
-        var last = state.Branch.Events.OfType<ReasoningStep>().LastOrDefault();
+        ReasoningStep? last = state.Branch.Events.OfType<ReasoningStep>().LastOrDefault();
         if (last is not null)
         {
             Console.WriteLine("\n=== PIPELINE RESULT ===");
@@ -213,8 +213,8 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
     return Arrow.LiftAsync<string, string>(async question =>
     {
         // Initialize models
-        var provider = new OllamaProvider();
-        var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(
+        OllamaProvider provider = new OllamaProvider();
+        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
             askOpts?.Endpoint,
             askOpts?.ApiKey,
             askOpts?.EndpointType);
@@ -222,13 +222,13 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
         if (askOpts is not null && askOpts.Router.Equals("auto", StringComparison.OrdinalIgnoreCase))
         {
             // Build router using provided model overrides; fallback to primary modelName
-            var modelMap = new Dictionary<string, IChatCompletionModel>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, IChatCompletionModel> modelMap = new Dictionary<string, IChatCompletionModel>(StringComparer.OrdinalIgnoreCase);
             IChatCompletionModel MakeLocal(string name, string role)
             {
-                var m = new OllamaChatModel(provider, name);
+                OllamaChatModel m = new OllamaChatModel(provider, name);
                 try
                 {
-                    var n = (name ?? string.Empty).ToLowerInvariant();
+                    string n = (name ?? string.Empty).ToLowerInvariant();
                     if (n.StartsWith("deepseek-coder:33b")) m.Settings = OllamaPresets.DeepSeekCoder33B;
                     else if (n.StartsWith("llama3")) m.Settings = role.Equals("summarize", StringComparison.OrdinalIgnoreCase) ? OllamaPresets.Llama3Summarize : OllamaPresets.Llama3General;
                     else if (n.StartsWith("deepseek-r1:32") || n.Contains("32b")) m.Settings = OllamaPresets.DeepSeekR1_32B_Reason;
@@ -260,22 +260,22 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
             catch (Exception ex) when (askOpts is not null && !askOpts.StrictModel && ex.Message.Contains("Invalid model", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine($"[WARN] Remote model '{modelName}' invalid. Falling back to local 'llama3'. Use --strict-model to disable fallback.");
-                var local = new OllamaChatModel(provider, "llama3");
+                OllamaChatModel local = new OllamaChatModel(provider, "llama3");
                 chatModel = new OllamaChatAdapter(local);
             }
             catch (Exception ex) when (askOpts is not null && !askOpts.StrictModel)
             {
                 Console.WriteLine($"[WARN] Remote model '{modelName}' unavailable ({ex.GetType().Name}). Falling back to local 'llama3'. Use --strict-model to disable fallback.");
-                var local = new OllamaChatModel(provider, "llama3");
+                OllamaChatModel local = new OllamaChatModel(provider, "llama3");
                 chatModel = new OllamaChatAdapter(local);
             }
         }
         else
         {
-            var chat = new OllamaChatModel(provider, modelName);
+            OllamaChatModel chat = new OllamaChatModel(provider, modelName);
             try
             {
-                var n = (modelName ?? string.Empty).ToLowerInvariant();
+                string n = (modelName ?? string.Empty).ToLowerInvariant();
                 if (n.StartsWith("deepseek-coder:33b")) chat.Settings = OllamaPresets.DeepSeekCoder33B;
                 else if (n.StartsWith("llama3")) chat.Settings = OllamaPresets.Llama3General;
                 else if (n.StartsWith("deepseek-r1:32") || n.Contains("32b")) chat.Settings = OllamaPresets.DeepSeekR1_32B_Reason;
@@ -293,25 +293,25 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
         IEmbeddingModel embed = CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);
 
         // Tool-aware LLM and in-memory vector store
-        var tools = new ToolRegistry();
-        var llm = new ToolAwareChatModel(chatModel, tools);
-        var store = new TrackedVectorStore();
+        ToolRegistry tools = new ToolRegistry();
+        ToolAwareChatModel llm = new ToolAwareChatModel(chatModel, tools);
+        TrackedVectorStore store = new TrackedVectorStore();
 
         // Optional minimal RAG: seed a few docs
         if (withRag)
         {
-            var docs = new[]
+            string[] docs = new[]
             {
                 "API versioning best practices with backward compatibility",
                 "Circuit breaker using Polly in .NET",
                 "Event sourcing and CQRS patterns overview"
             };
-            foreach (var (text, idx) in docs.Select((d, i) => (d, i)))
+            foreach ((string text, int idx) in docs.Select((d, i) => (d, i)))
             {
                 try
                 {
                     Telemetry.RecordEmbeddingInput(new[] { text });
-                    var resp = await embed.CreateEmbeddingsAsync(text);
+                    float[] resp = await embed.CreateEmbeddingsAsync(text);
                     await store.AddAsync(new[]
                     {
                         new Vector
@@ -348,18 +348,18 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
         // Answer
         if (!withRag)
         {
-            var (text, _) = await llm.GenerateWithToolsAsync($"Answer the following question clearly and concisely.\nQuestion: {{q}}".Replace("{q}", question));
+            (string text, List<ToolExecution> _) = await llm.GenerateWithToolsAsync($"Answer the following question clearly and concisely.\nQuestion: {{q}}".Replace("{q}", question));
             return text;
         }
         else
         {
             Telemetry.RecordEmbeddingInput(new[] { question });
-            var qEmb = await embed.CreateEmbeddingsAsync(question);
+            float[] qEmb = await embed.CreateEmbeddingsAsync(question);
             Telemetry.RecordEmbeddingSuccess(qEmb.Length);
-            var hits = await store.GetSimilarDocumentsAsync(qEmb, k);
-            var ctx = string.Join("\n- ", hits.Select(h => h.PageContent));
-            var prompt = $"Use the following context to answer.\nContext:\n- {ctx}\n\nQuestion: {{q}}".Replace("{q}", question);
-            var (ragText, _) = await llm.GenerateWithToolsAsync(prompt);
+            IReadOnlyCollection<Document> hits = await store.GetSimilarDocumentsAsync(qEmb, k);
+            string ctx = string.Join("\n- ", hits.Select(h => h.PageContent));
+            string prompt = $"Use the following context to answer.\nContext:\n- {ctx}\n\nQuestion: {{q}}".Replace("{q}", question);
+            (string ragText, List<ToolExecution> _) = await llm.GenerateWithToolsAsync(prompt);
             return ragText;
         }
     });
@@ -370,7 +370,7 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
 static Task RunListTokensAsync()
 {
     Console.WriteLine("Available token groups:");
-    foreach (var (method, names) in StepRegistry.GetTokenGroups())
+    foreach ((System.Reflection.MethodInfo method, IReadOnlyList<string> names) in StepRegistry.GetTokenGroups())
     {
         Console.WriteLine($"- {method.DeclaringType?.Name}.{method.Name}(): {string.Join(", ", names)}");
     }
@@ -413,7 +413,7 @@ static async Task RunPipelineAsync(PipelineOptions o)
 {
     if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase)) Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
     if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
-    var settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
+    ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
     await RunPipelineDslAsync(o.Dsl, o.Model, o.Embed, o.Source, o.K, o.Trace, settings, o);
 }
 
@@ -421,15 +421,15 @@ static async Task RunAskAsync(AskOptions o)
 {
     if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase)) Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
     if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
-    var settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
+    ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
     ValidateSecrets(o);
     LogBackendSelection(o.Model, settings, o);
-    var sw = Stopwatch.StartNew();
+    Stopwatch sw = Stopwatch.StartNew();
     if (o.Agent)
     {
         // Build minimal environment (always RAG off for initial agent version; agent can internally call tools)
-        var provider = new OllamaProvider();
-        var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(o.Endpoint, o.ApiKey, o.EndpointType);
+        OllamaProvider provider = new OllamaProvider();
+        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(o.Endpoint, o.ApiKey, o.EndpointType);
         IChatCompletionModel chatModel;
         if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
         {
@@ -448,7 +448,7 @@ static async Task RunAskAsync(AskOptions o)
             chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
         }
 
-        var tools = new ToolRegistry();
+        ToolRegistry tools = new ToolRegistry();
         // Register a couple of default utility tools if absent
         if (!tools.All.Any())
         {
@@ -460,20 +460,20 @@ static async Task RunAskAsync(AskOptions o)
         IEmbeddingModel? embedModel = null;
         if (o.Rag)
         {
-            var provider2 = new OllamaProvider();
+            OllamaProvider provider2 = new OllamaProvider();
             embedModel = CreateEmbeddingModel(endpoint, apiKey, endpointType, o.Embed, provider2);
             ragStore = new TrackedVectorStore();
-            var seedDocs = new[]
+            string[] seedDocs = new[]
             {
                 "Event sourcing captures all changes as immutable events.",
                 "Circuit breakers prevent cascading failures in distributed systems.",
                 "CQRS separates reads from writes for scalability.",
             };
-            foreach (var (text, idx) in seedDocs.Select((d, i) => (d, i)))
+            foreach ((string text, int idx) in seedDocs.Select((d, i) => (d, i)))
             {
                 try
                 {
-                    var emb = await embedModel.CreateEmbeddingsAsync(text);
+                    float[] emb = await embedModel.CreateEmbeddingsAsync(text);
                     await ragStore.AddAsync(new[] { new Vector { Id = (idx + 1).ToString(), Text = text, Embedding = emb } });
                 }
                 catch
@@ -487,7 +487,7 @@ static async Task RunAskAsync(AskOptions o)
             }
         }
 
-        var agentInstance = LangChainPipeline.Agent.AgentFactory.Create(o.AgentMode, chatModel, tools, o.Debug, o.AgentMaxSteps, o.Rag, o.Embed, jsonTools: o.JsonTools, stream: o.Stream);
+        AgentInstance agentInstance = LangChainPipeline.Agent.AgentFactory.Create(o.AgentMode, chatModel, tools, o.Debug, o.AgentMaxSteps, o.Rag, o.Embed, jsonTools: o.JsonTools, stream: o.Stream);
         try
         {
             string questionForAgent = o.Question;
@@ -495,16 +495,16 @@ static async Task RunAskAsync(AskOptions o)
             {
                 try
                 {
-                    var results = await ragStore.GetSimilarDocuments(embedModel, o.Question, 3);
+                    IReadOnlyCollection<Document> results = await ragStore.GetSimilarDocuments(embedModel, o.Question, 3);
                     if (results.Count > 0)
                     {
-                        var ctx = string.Join("\n- ", results.Select(r => r.PageContent.Length > 160 ? r.PageContent[..160] + "..." : r.PageContent));
+                        string ctx = string.Join("\n- ", results.Select(r => r.PageContent.Length > 160 ? r.PageContent[..160] + "..." : r.PageContent));
                         questionForAgent = $"Context:\n- {ctx}\n\nQuestion: {o.Question}";
                     }
                 }
                 catch { /* fallback silently */ }
             }
-            var answer = await agentInstance.RunAsync(questionForAgent);
+            string answer = await agentInstance.RunAsync(questionForAgent);
             sw.Stop();
             Console.WriteLine(answer);
             Console.WriteLine($"[timing] total={sw.ElapsedMilliseconds}ms (agent-{agentInstance.Mode})");
@@ -517,7 +517,7 @@ static async Task RunAskAsync(AskOptions o)
         }
     }
 
-    var run = await CreateSemanticCliPipeline(o.Rag, o.Model, o.Embed, o.K, settings, o)
+    Result<string, Exception> run = await CreateSemanticCliPipeline(o.Rag, o.Model, o.Embed, o.K, settings, o)
         .Catch()
         .Invoke(o.Question);
     sw.Stop();
@@ -538,7 +538,7 @@ static async Task RunAskAsync(AskOptions o)
 
 static void ValidateSecrets(AskOptions? askOpts = null)
 {
-    var (endpoint, apiKey, _) = ChatConfig.ResolveWithOverrides(askOpts?.Endpoint, askOpts?.ApiKey, askOpts?.EndpointType);
+    (string endpoint, string apiKey, ChatEndpointType _) = ChatConfig.ResolveWithOverrides(askOpts?.Endpoint, askOpts?.ApiKey, askOpts?.EndpointType);
     if (!string.IsNullOrWhiteSpace(endpoint) ^ !string.IsNullOrWhiteSpace(apiKey))
     {
         Console.WriteLine("[WARN] Only one of CHAT_ENDPOINT / CHAT_API_KEY is set; remote backend will be ignored.");
@@ -547,7 +547,7 @@ static void ValidateSecrets(AskOptions? askOpts = null)
 
 static void LogBackendSelection(string model, ChatRuntimeSettings settings, AskOptions? askOpts = null)
 {
-    var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(askOpts?.Endpoint, askOpts?.ApiKey, askOpts?.EndpointType);
+    (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(askOpts?.Endpoint, askOpts?.ApiKey, askOpts?.EndpointType);
     string backend = (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
         ? $"remote-{endpointType.ToString().ToLowerInvariant()}"
         : "ollama-local";
@@ -631,11 +631,11 @@ static async Task RunOrchestratorAsync(OrchestratorOptions o)
 
     try
     {
-        var provider = new OllamaProvider();
-        var settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false);
+        OllamaProvider provider = new OllamaProvider();
+        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false);
 
         // Check for remote endpoint configuration
-        var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(
+        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
             o.Endpoint,
             o.ApiKey,
             o.EndpointType);
@@ -650,9 +650,9 @@ static async Task RunOrchestratorAsync(OrchestratorOptions o)
             return new OllamaChatAdapter(new OllamaChatModel(provider, modelName));
         }
 
-        var generalModel = CreateModel(o.Model);
-        var coderModel = o.CoderModel != null ? CreateModel(o.CoderModel) : generalModel;
-        var reasonModel = o.ReasonModel != null ? CreateModel(o.ReasonModel) : generalModel;
+        IChatCompletionModel generalModel = CreateModel(o.Model);
+        IChatCompletionModel coderModel = o.CoderModel != null ? CreateModel(o.CoderModel) : generalModel;
+        IChatCompletionModel reasonModel = o.ReasonModel != null ? CreateModel(o.ReasonModel) : generalModel;
 
         // Log backend selection
         string backend = (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
@@ -661,11 +661,11 @@ static async Task RunOrchestratorAsync(OrchestratorOptions o)
         Console.WriteLine($"[INIT] Backend={backend} Endpoint={(endpoint ?? "local")}\n");
 
         // Create tool registry
-        var tools = ToolRegistry.CreateDefault();
+        ToolRegistry tools = ToolRegistry.CreateDefault();
         Console.WriteLine($"✓ Tool registry created with {tools.Count} tools\n");
 
         // Build orchestrator with multiple models
-        var builder = new OrchestratorBuilder(tools, "general")
+        OrchestratorBuilder builder = new OrchestratorBuilder(tools, "general")
             .WithModel(
                 "general",
                 generalModel,
@@ -689,13 +689,13 @@ static async Task RunOrchestratorAsync(OrchestratorOptions o)
                 avgLatencyMs: 1200)
             .WithMetricTracking(true);
 
-        var orchestrator = builder.Build();
+        OrchestratedChatModel orchestrator = builder.Build();
 
         Console.WriteLine($"✓ Orchestrator configured with multiple models\n");
         Console.WriteLine($"Goal: {o.Goal}\n");
 
-        var sw = Stopwatch.StartNew();
-        var response = await orchestrator.GenerateTextAsync(o.Goal);
+        Stopwatch sw = Stopwatch.StartNew();
+        string response = await orchestrator.GenerateTextAsync(o.Goal);
         sw.Stop();
 
         Console.WriteLine("=== Response ===");
@@ -706,10 +706,10 @@ static async Task RunOrchestratorAsync(OrchestratorOptions o)
         if (o.ShowMetrics)
         {
             Console.WriteLine("\n=== Performance Metrics ===");
-            var underlyingOrchestrator = builder.GetOrchestrator();
-            var metrics = underlyingOrchestrator.GetMetrics();
+            IModelOrchestrator underlyingOrchestrator = builder.GetOrchestrator();
+            IReadOnlyDictionary<string, PerformanceMetrics> metrics = underlyingOrchestrator.GetMetrics();
 
-            foreach (var (modelName, metric) in metrics)
+            foreach ((string modelName, PerformanceMetrics metric) in metrics)
             {
                 Console.WriteLine($"\nModel: {modelName}");
                 Console.WriteLine($"  Executions: {metric.ExecutionCount}");
@@ -749,11 +749,11 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
 
     try
     {
-        var provider = new OllamaProvider();
-        var settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false);
+        OllamaProvider provider = new OllamaProvider();
+        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false);
 
         // Check for remote endpoint configuration
-        var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(
+        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
             o.Endpoint,
             o.ApiKey,
             o.EndpointType);
@@ -780,20 +780,20 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
 
         // Build MeTTa orchestrator using the builder
         Console.WriteLine("✓ Initializing MeTTa orchestrator...");
-        var orchestratorBuilder = MeTTaOrchestratorBuilder.CreateDefault(embedModel)
+        MeTTaOrchestratorBuilder orchestratorBuilder = MeTTaOrchestratorBuilder.CreateDefault(embedModel)
             .WithLLM(chatModel);
 
-        var orchestrator = orchestratorBuilder.Build();
+        MeTTaOrchestrator orchestrator = orchestratorBuilder.Build();
         Console.WriteLine($"✓ MeTTa orchestrator v3.0 initialized\n");
 
         Console.WriteLine($"Goal: {o.Goal}\n");
 
         // Plan phase
         Console.WriteLine("=== Planning Phase ===");
-        var sw = Stopwatch.StartNew();
-        var planResult = await orchestrator.PlanAsync(o.Goal);
+        Stopwatch sw = Stopwatch.StartNew();
+        Result<Plan, string> planResult = await orchestrator.PlanAsync(o.Goal);
 
-        var plan = planResult.Match(
+        Plan plan = planResult.Match(
             success => success,
             error =>
             {
@@ -810,7 +810,7 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
 
         for (int i = 0; i < plan.Steps.Count; i++)
         {
-            var step = plan.Steps[i];
+            PlanStep step = plan.Steps[i];
             Console.WriteLine($"  {i + 1}. {step.Action}");
             Console.WriteLine($"     Expected: {step.ExpectedOutcome}");
             Console.WriteLine($"     Confidence: {step.ConfidenceScore:P2}");
@@ -826,7 +826,7 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
         // Execution phase
         Console.WriteLine("=== Execution Phase ===");
         sw.Restart();
-        var executionResult = await orchestrator.ExecuteAsync(plan);
+        Result<ExecutionResult, string> executionResult = await orchestrator.ExecuteAsync(plan);
         sw.Stop();
 
         executionResult.Match(
@@ -843,7 +843,7 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
                 Console.WriteLine($"\nStep Results:");
                 for (int i = 0; i < success.StepResults.Count; i++)
                 {
-                    var stepResult = success.StepResults[i];
+                    StepResult stepResult = success.StepResults[i];
                     Console.WriteLine($"  {i + 1}. {stepResult.Step.Action}");
                     Console.WriteLine($"     Success: {stepResult.Success}");
                     Console.WriteLine($"     Output: {stepResult.Output}");
@@ -863,9 +863,9 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
         if (o.ShowMetrics)
         {
             Console.WriteLine("\n=== Performance Metrics ===");
-            var metrics = orchestrator.GetMetrics();
+            IReadOnlyDictionary<string, PerformanceMetrics> metrics = orchestrator.GetMetrics();
 
-            foreach (var (key, metric) in metrics)
+            foreach ((string key, PerformanceMetrics metric) in metrics)
             {
                 Console.WriteLine($"\n{key}:");
                 Console.WriteLine($"  Executions: {metric.ExecutionCount}");

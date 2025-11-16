@@ -115,7 +115,7 @@ public static class Arrow
         {
             try
             {
-                var result = await func(input);
+                TOutput? result = await func(input);
                 return Result<TOutput, Exception>.Success(result);
             }
             catch (Exception ex)

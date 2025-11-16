@@ -89,7 +89,7 @@ public sealed class ExperienceReplay : IExperienceReplay
         try
         {
             // Select experiences for training
-            var experiences = await SelectTrainingExperiencesAsync(config, ct);
+            List<Experience> experiences = await SelectTrainingExperiencesAsync(config, ct);
 
             if (experiences.Count == 0)
             {
@@ -98,14 +98,14 @@ public sealed class ExperienceReplay : IExperienceReplay
             }
 
             // Analyze patterns
-            var patterns = await AnalyzeExperiencePatternsAsync(experiences, ct);
+            List<string> patterns = await AnalyzeExperiencePatternsAsync(experiences, ct);
 
             // Extract skills from high-quality experiences
-            var skillsExtracted = 0;
-            foreach (var exp in experiences.Where(e => e.Verification.QualityScore > 0.8))
+            int skillsExtracted = 0;
+            foreach (Experience? exp in experiences.Where(e => e.Verification.QualityScore > 0.8))
             {
-                var skillName = $"learned_skill_{Guid.NewGuid().ToString("N").Substring(0, 8)}";
-                var skillResult = await _skills.ExtractSkillAsync(
+                string skillName = $"learned_skill_{Guid.NewGuid().ToString("N").Substring(0, 8)}";
+                Result<Skill, string> skillResult = await _skills.ExtractSkillAsync(
                     exp.Execution,
                     skillName,
                     $"Learned from goal: {exp.Goal}");
@@ -117,14 +117,14 @@ public sealed class ExperienceReplay : IExperienceReplay
             }
 
             // Calculate improved metrics
-            var improvedMetrics = new Dictionary<string, double>
+            Dictionary<string, double> improvedMetrics = new Dictionary<string, double>
             {
                 ["patterns_discovered"] = patterns.Count,
                 ["skills_extracted"] = skillsExtracted,
                 ["avg_quality"] = experiences.Average(e => e.Verification.QualityScore)
             };
 
-            var result = new TrainingResult(
+            TrainingResult result = new TrainingResult(
                 experiences.Count,
                 improvedMetrics,
                 patterns,
@@ -145,23 +145,23 @@ public sealed class ExperienceReplay : IExperienceReplay
         List<Experience> experiences,
         CancellationToken ct = default)
     {
-        var patterns = new List<string>();
+        List<string> patterns = new List<string>();
 
         try
         {
             // Group experiences by goal similarity
-            var goalGroups = experiences
+            IEnumerable<IGrouping<string, Experience>> goalGroups = experiences
                 .GroupBy(e => ExtractGoalType(e.Goal))
                 .Where(g => g.Count() > 1);
 
-            foreach (var group in goalGroups)
+            foreach (IGrouping<string, Experience>? group in goalGroups)
             {
                 // Find common successful patterns
-                var successfulExperiences = group.Where(e => e.Verification.Verified).ToList();
+                List<Experience> successfulExperiences = group.Where(e => e.Verification.Verified).ToList();
 
                 if (successfulExperiences.Count > 0)
                 {
-                    var commonActions = FindCommonActions(successfulExperiences);
+                    List<string> commonActions = FindCommonActions(successfulExperiences);
                     if (commonActions.Any())
                     {
                         patterns.Add($"Pattern for {group.Key}: {string.Join(" -> ", commonActions)}");
@@ -172,11 +172,11 @@ public sealed class ExperienceReplay : IExperienceReplay
             // Use LLM to identify deeper patterns if available
             if (patterns.Any())
             {
-                var patternPrompt = BuildPatternAnalysisPrompt(experiences);
-                var analysis = await _llm.GenerateTextAsync(patternPrompt, ct);
+                string patternPrompt = BuildPatternAnalysisPrompt(experiences);
+                string analysis = await _llm.GenerateTextAsync(patternPrompt, ct);
 
                 // Extract insights from LLM analysis
-                var insights = ExtractInsights(analysis);
+                List<string> insights = ExtractInsights(analysis);
                 patterns.AddRange(insights);
             }
         }
@@ -195,19 +195,19 @@ public sealed class ExperienceReplay : IExperienceReplay
         ExperienceReplayConfig config,
         CancellationToken ct = default)
     {
-        var stats = await _memory.GetStatisticsAsync();
+        MemoryStatistics stats = await _memory.GetStatisticsAsync();
 
         // Get all experiences and filter
-        var query = new MemoryQuery(
+        MemoryQuery query = new MemoryQuery(
             Goal: "",
             Context: null,
             MaxResults: config.MaxExperiences,
             MinSimilarity: 0.0);
 
-        var allExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+        List<Experience> allExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
 
         // Filter by quality
-        var qualityFiltered = allExperiences
+        List<Experience> qualityFiltered = allExperiences
             .Where(e => e.Verification.QualityScore >= config.MinQualityScore)
             .ToList();
 
@@ -235,7 +235,7 @@ public sealed class ExperienceReplay : IExperienceReplay
     private string ExtractGoalType(string goal)
     {
         // Simple categorization - in production use more sophisticated NLP
-        var goalLower = goal.ToLowerInvariant();
+        string goalLower = goal.ToLowerInvariant();
 
         if (goalLower.Contains("calculate") || goalLower.Contains("compute"))
             return "calculation";
@@ -252,14 +252,14 @@ public sealed class ExperienceReplay : IExperienceReplay
     private List<string> FindCommonActions(List<Experience> experiences)
     {
         // Find actions that appear in all successful experiences
-        var actionLists = experiences
+        List<List<string>> actionLists = experiences
             .Select(e => e.Plan.Steps.Select(s => s.Action).ToList())
             .ToList();
 
         if (!actionLists.Any())
             return new List<string>();
 
-        var commonActions = actionLists
+        List<string> commonActions = actionLists
             .SelectMany(actions => actions)
             .GroupBy(a => a)
             .Where(g => g.Count() >= actionLists.Count * 0.5) // Present in at least 50%
@@ -271,9 +271,9 @@ public sealed class ExperienceReplay : IExperienceReplay
 
     private string BuildPatternAnalysisPrompt(List<Experience> experiences)
     {
-        var prompt = "Analyze the following successful experiences and identify common patterns:\n\n";
+        string prompt = "Analyze the following successful experiences and identify common patterns:\n\n";
 
-        foreach (var exp in experiences.Take(5))
+        foreach (Experience? exp in experiences.Take(5))
         {
             prompt += $"Goal: {exp.Goal}\n";
             prompt += $"Steps: {string.Join(" -> ", exp.Plan.Steps.Select(s => s.Action))}\n";
@@ -288,10 +288,10 @@ public sealed class ExperienceReplay : IExperienceReplay
     private List<string> ExtractInsights(string analysis)
     {
         // Simple extraction - in production use more sophisticated parsing
-        var insights = new List<string>();
-        var lines = analysis.Split('\n');
+        List<string> insights = new List<string>();
+        string[] lines = analysis.Split('\n');
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
             if (line.Trim().StartsWith("-") || line.Trim().StartsWith("•"))
             {

@@ -24,13 +24,13 @@ public static class MetaAIv2Example
         Console.WriteLine("=== Meta-AI v2 Basic Orchestration Example ===\n");
 
         // Setup LLM and tools
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
-        var tools = ToolRegistry.CreateDefault();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        OllamaEmbeddingAdapter embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
 
         // Build Meta-AI orchestrator
-        var orchestrator = MetaAIBuilder.CreateDefault()
+        MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
             .WithLLM(chatModel)
             .WithTools(tools)
             .WithEmbedding(embedModel)
@@ -43,13 +43,13 @@ public static class MetaAIv2Example
         try
         {
             // Goal to accomplish
-            var goal = "Create a detailed plan to explain functional programming concepts to a beginner";
+            string goal = "Create a detailed plan to explain functional programming concepts to a beginner";
 
             Console.WriteLine($"GOAL: {goal}\n");
 
             // Step 1: Plan
             Console.WriteLine("=== PLANNING ===");
-            var planResult = await orchestrator.PlanAsync(goal);
+            Result<Plan, string> planResult = await orchestrator.PlanAsync(goal);
 
             Plan? plan = null;
             planResult.Match(
@@ -77,7 +77,7 @@ public static class MetaAIv2Example
 
             // Step 2: Execute
             Console.WriteLine("\n=== EXECUTING ===");
-            var execResult = await orchestrator.ExecuteAsync(plan);
+            Result<ExecutionResult, string> execResult = await orchestrator.ExecuteAsync(plan);
 
             ExecutionResult? execution = null;
             execResult.Match(
@@ -102,7 +102,7 @@ public static class MetaAIv2Example
 
             // Step 3: Verify
             Console.WriteLine("\n=== VERIFYING ===");
-            var verifyResult = await orchestrator.VerifyAsync(execution);
+            Result<VerificationResult, string> verifyResult = await orchestrator.VerifyAsync(execution);
 
             VerificationResult? verification = null;
             verifyResult.Match(
@@ -140,8 +140,8 @@ public static class MetaAIv2Example
 
             // Show metrics
             Console.WriteLine("\n=== METRICS ===");
-            var metrics = orchestrator.GetMetrics();
-            foreach (var (component, metric) in metrics)
+            IReadOnlyDictionary<string, PerformanceMetrics> metrics = orchestrator.GetMetrics();
+            foreach ((string component, PerformanceMetrics metric) in metrics)
             {
                 Console.WriteLine($"{component}:");
                 Console.WriteLine($"  Executions: {metric.ExecutionCount}");
@@ -171,16 +171,16 @@ public static class MetaAIv2Example
     {
         Console.WriteLine("\n=== Meta-AI v2 Skill Acquisition Example ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
-        var tools = ToolRegistry.CreateDefault();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        OllamaEmbeddingAdapter embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
 
         // Create components
-        var memory = new MemoryStore(embedModel, new TrackedVectorStore());
-        var skills = new SkillRegistry(embedModel);
+        MemoryStore memory = new MemoryStore(embedModel, new TrackedVectorStore());
+        SkillRegistry skills = new SkillRegistry(embedModel);
 
-        var orchestrator = MetaAIBuilder.CreateDefault()
+        MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
             .WithLLM(chatModel)
             .WithTools(tools)
             .WithMemoryStore(memory)
@@ -192,15 +192,15 @@ public static class MetaAIv2Example
         try
         {
             // First task - will be learned as a skill
-            var goal1 = "Explain what a monad is in functional programming";
+            string goal1 = "Explain what a monad is in functional programming";
             Console.WriteLine($"TASK 1: {goal1}");
 
-            var result1 = await ExecuteFullCycle(orchestrator, goal1);
+            VerificationResult? result1 = await ExecuteFullCycle(orchestrator, goal1);
 
             if (result1 != null && result1.Verified && result1.QualityScore > 0.8)
             {
                 // Extract skill
-                var skillResult = await skills.ExtractSkillAsync(
+                Result<Skill, string> skillResult = await skills.ExtractSkillAsync(
                     result1.Execution,
                     "explain_monad",
                     "Explains functional programming concepts like monads");
@@ -211,14 +211,14 @@ public static class MetaAIv2Example
             }
 
             // Second task - similar to first, should use learned skill
-            var goal2 = "Explain functional programming pattern: functors";
+            string goal2 = "Explain functional programming pattern: functors";
             Console.WriteLine($"\nTASK 2: {goal2}");
 
-            var matchingSkills = await skills.FindMatchingSkillsAsync(goal2);
+            List<Skill> matchingSkills = await skills.FindMatchingSkillsAsync(goal2);
             if (matchingSkills.Any())
             {
                 Console.WriteLine($"✓ Found {matchingSkills.Count} matching skills to reuse:");
-                foreach (var skill in matchingSkills.Take(3))
+                foreach (Skill? skill in matchingSkills.Take(3))
                 {
                     Console.WriteLine($"  - {skill.Name} (success rate: {skill.SuccessRate:P0})");
                 }
@@ -249,23 +249,23 @@ public static class MetaAIv2Example
     {
         Console.WriteLine("\n=== Meta-AI v2 Evaluation Example ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
 
-        var orchestrator = MetaAIBuilder.CreateDefault()
+        MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
             .WithLLM(chatModel)
             .WithTools(tools)
             .Build();
 
-        var harness = new EvaluationHarness(orchestrator);
+        EvaluationHarness harness = new EvaluationHarness(orchestrator);
 
         Console.WriteLine("✓ Evaluation harness initialized\n");
 
         try
         {
             Console.WriteLine("Running benchmark suite...\n");
-            var results = await harness.RunBenchmarkAsync();
+            EvaluationResults results = await harness.RunBenchmarkAsync();
 
             Console.WriteLine("=== BENCHMARK RESULTS ===");
             Console.WriteLine($"Total Tests: {results.TotalTests}");
@@ -276,9 +276,9 @@ public static class MetaAIv2Example
             Console.WriteLine($"Average Execution Time: {results.AverageExecutionTime.TotalMilliseconds:F0}ms");
 
             Console.WriteLine("\n=== INDIVIDUAL RESULTS ===");
-            foreach (var test in results.TestResults)
+            foreach (EvaluationMetrics test in results.TestResults)
             {
-                var status = test.Success ? "✓" : "✗";
+                string status = test.Success ? "✓" : "✗";
                 Console.WriteLine($"{status} {test.TestCase}:");
                 Console.WriteLine($"  Quality: {test.QualityScore:P0}, Time: {test.ExecutionTime.TotalMilliseconds:F0}ms");
             }
@@ -302,37 +302,37 @@ public static class MetaAIv2Example
         IMetaAIPlannerOrchestrator orchestrator,
         string goal)
     {
-        var planResult = await orchestrator.PlanAsync(goal);
+        Result<Plan, string> planResult = await orchestrator.PlanAsync(goal);
         if (!planResult.IsSuccess)
         {
             return null;
         }
 
-        var plan = planResult.Match(p => p, _ => (Plan?)null);
+        Plan? plan = planResult.Match(p => p, _ => (Plan?)null);
         if (plan == null)
         {
             return null;
         }
 
-        var execResult = await orchestrator.ExecuteAsync(plan);
+        Result<ExecutionResult, string> execResult = await orchestrator.ExecuteAsync(plan);
         if (!execResult.IsSuccess)
         {
             return null;
         }
 
-        var execution = execResult.Match(e => e, _ => (ExecutionResult?)null);
+        ExecutionResult? execution = execResult.Match(e => e, _ => (ExecutionResult?)null);
         if (execution == null)
         {
             return null;
         }
 
-        var verifyResult = await orchestrator.VerifyAsync(execution);
+        Result<VerificationResult, string> verifyResult = await orchestrator.VerifyAsync(execution);
         if (!verifyResult.IsSuccess)
         {
             return null;
         }
 
-        var verification = verifyResult.Match(v => v, _ => (VerificationResult?)null);
+        VerificationResult? verification = verifyResult.Match(v => v, _ => (VerificationResult?)null);
         if (verification != null)
         {
             orchestrator.LearnFromExecution(verification);

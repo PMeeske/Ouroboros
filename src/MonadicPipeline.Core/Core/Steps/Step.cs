@@ -33,7 +33,7 @@ public readonly struct SyncStep<TIn, TOut> : IEquatable<SyncStep<TIn, TOut>>
     /// </summary>
     public Step<TIn, TOut> ToAsync()
     {
-        var func = _f; // Capture to avoid struct 'this' issues
+        Func<TIn, TOut> func = _f; // Capture to avoid struct 'this' issues
         return input => Task.FromResult(func(input));
     }
 
@@ -42,7 +42,7 @@ public readonly struct SyncStep<TIn, TOut> : IEquatable<SyncStep<TIn, TOut>>
     /// </summary>
     public SyncStep<TIn, TNext> Pipe<TNext>(SyncStep<TOut, TNext> next)
     {
-        var func = _f; // Capture to avoid struct 'this' issues
+        Func<TIn, TOut> func = _f; // Capture to avoid struct 'this' issues
         return new(input => next.Invoke(func(input)));
     }
 
@@ -51,7 +51,7 @@ public readonly struct SyncStep<TIn, TOut> : IEquatable<SyncStep<TIn, TOut>>
     /// </summary>
     public Step<TIn, TNext> Pipe<TNext>(Step<TOut, TNext> asyncNext)
     {
-        var func = _f; // Capture to avoid struct 'this' issues
+        Func<TIn, TOut> func = _f; // Capture to avoid struct 'this' issues
         return async input => await asyncNext(func(input));
     }
 
@@ -60,7 +60,7 @@ public readonly struct SyncStep<TIn, TOut> : IEquatable<SyncStep<TIn, TOut>>
     /// </summary>
     public SyncStep<TIn, TNext> Map<TNext>(Func<TOut, TNext> map)
     {
-        var func = _f; // Capture to avoid struct 'this' issues
+        Func<TIn, TOut> func = _f; // Capture to avoid struct 'this' issues
         return new(input => map(func(input)));
     }
 
@@ -69,11 +69,11 @@ public readonly struct SyncStep<TIn, TOut> : IEquatable<SyncStep<TIn, TOut>>
     /// </summary>
     public SyncStep<TIn, TNext> Bind<TNext>(Func<TOut, SyncStep<TIn, TNext>> binder)
     {
-        var func = _f; // Capture to avoid struct 'this' issues
+        Func<TIn, TOut> func = _f; // Capture to avoid struct 'this' issues
         return new(input =>
         {
-            var intermediate = func(input);
-            var nextStep = binder(intermediate);
+            TOut? intermediate = func(input);
+            SyncStep<TIn, TNext> nextStep = binder(intermediate);
             return nextStep.Invoke(input);
         });
     }
@@ -128,7 +128,7 @@ public static class SyncStepExtensions
         Step<TMid, TNext> asyncStep)
         => async input =>
         {
-            var intermediate = syncStep.Invoke(input);
+            TMid? intermediate = syncStep.Invoke(input);
             return await asyncStep(intermediate);
         };
 
@@ -140,7 +140,7 @@ public static class SyncStepExtensions
         SyncStep<TMid, TNext> syncStep)
         => async input =>
         {
-            var intermediate = await asyncStep(input);
+            TMid? intermediate = await asyncStep(input);
             return syncStep.Invoke(intermediate);
         };
 
@@ -153,7 +153,7 @@ public static class SyncStepExtensions
         {
             try
             {
-                var result = syncStep.Invoke(input);
+                TOut? result = syncStep.Invoke(input);
                 return Result<TOut, Exception>.Success(result);
             }
             catch (Exception ex)
@@ -172,7 +172,7 @@ public static class SyncStepExtensions
         {
             try
             {
-                var result = syncStep.Invoke(input);
+                TOut? result = syncStep.Invoke(input);
                 return predicate(result) ? Option<TOut>.Some(result) : Option<TOut>.None();
             }
             catch

@@ -21,15 +21,15 @@ namespace MonadicPipeline.CLI.Setup
             {
                 // A simple way to check is to try to create a chat model.
                 // This will throw an exception if it can't connect.
-                var provider = new LangChain.Providers.Ollama.OllamaProvider();
-                var model = new LangChain.Providers.Ollama.OllamaChatModel(provider, "llama3");
+                LangChain.Providers.Ollama.OllamaProvider provider = new LangChain.Providers.Ollama.OllamaProvider();
+                LangChain.Providers.Ollama.OllamaChatModel model = new LangChain.Providers.Ollama.OllamaChatModel(provider, "llama3");
 
                 // Try to make a simple request with a timeout
-                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
-                var stream = model.GenerateAsync("test", cancellationToken: cts.Token);
+                using CancellationTokenSource cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+                IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = model.GenerateAsync("test", cancellationToken: cts.Token);
 
                 // Get enumerator and move to first element - this will trigger the connection
-                await using var enumerator = stream.GetAsyncEnumerator(cts.Token);
+                await using IAsyncEnumerator<LangChain.Providers.ChatResponse> enumerator = stream.GetAsyncEnumerator(cts.Token);
                 await enumerator.MoveNextAsync();
 
                 return true;

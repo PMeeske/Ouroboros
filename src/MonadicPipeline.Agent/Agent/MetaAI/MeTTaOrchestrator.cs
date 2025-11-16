@@ -58,36 +58,36 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 
         try
         {
-            var sw = Stopwatch.StartNew();
+            Stopwatch sw = Stopwatch.StartNew();
 
             // Get past experiences and skills
-            var query = new MemoryQuery(goal, context, MaxResults: 5, MinSimilarity: 0.7);
-            var pastExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
-            var matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context);
+            MemoryQuery query = new MemoryQuery(goal, context, MaxResults: 5, MinSimilarity: 0.7);
+            List<Experience> pastExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            List<Skill> matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context);
 
             // Generate initial plan using LLM
-            var planPrompt = BuildPlanPrompt(goal, context, pastExperiences, matchingSkills);
-            var planText = await _llm.GenerateTextAsync(planPrompt, ct);
-            var plan = ParsePlan(planText, goal);
+            string planPrompt = BuildPlanPrompt(goal, context, pastExperiences, matchingSkills);
+            string planText = await _llm.GenerateTextAsync(planPrompt, ct);
+            Plan plan = ParsePlan(planText, goal);
 
             // Translate plan to MeTTa representation
-            var translationResult = await _representation.TranslatePlanAsync(plan, ct);
+            Result<Unit, string> translationResult = await _representation.TranslatePlanAsync(plan, ct);
             if (translationResult.IsFailure)
             {
                 Console.WriteLine($"Warning: Failed to translate plan to MeTTa: {translationResult.Error}");
             }
 
             // Translate tools to MeTTa
-            var toolTranslation = await _representation.TranslateToolsAsync(_tools, ct);
+            Result<Unit, string> toolTranslation = await _representation.TranslateToolsAsync(_tools, ct);
             if (toolTranslation.IsFailure)
             {
                 Console.WriteLine($"Warning: Failed to translate tools to MeTTa: {toolTranslation.Error}");
             }
 
             // Validate plan safety
-            foreach (var step in plan.Steps)
+            foreach (PlanStep step in plan.Steps)
             {
-                var safetyCheck = _safety.CheckSafety(
+                SafetyCheckResult safetyCheck = _safety.CheckSafety(
                     step.Action,
                     step.Parameters,
                     PermissionLevel.UserDataWithConfirmation);
@@ -116,20 +116,20 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         Plan plan,
         CancellationToken ct = default)
     {
-        var stepResults = new List<StepResult>();
-        var sw = Stopwatch.StartNew();
-        var metadata = new Dictionary<string, object>();
+        List<StepResult> stepResults = new List<StepResult>();
+        Stopwatch sw = Stopwatch.StartNew();
+        Dictionary<string, object> metadata = new Dictionary<string, object>();
 
         try
         {
             // Execute each step with MeTTa-guided selection
             for (int i = 0; i < plan.Steps.Count; i++)
             {
-                var step = plan.Steps[i];
-                var stepId = $"step_{i}";
+                PlanStep step = plan.Steps[i];
+                string stepId = $"step_{i}";
 
                 // Query MeTTa for next node validation
-                var context = new Dictionary<string, object>
+                Dictionary<string, object> context = new Dictionary<string, object>
                 {
                     ["step_index"] = i,
                     ["total_steps"] = plan.Steps.Count
@@ -138,7 +138,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                 if (i > 0)
                 {
                     // Use MeTTa to validate this is a valid next step
-                    var nextNodes = await _representation.QueryNextNodesAsync(
+                    Result<List<NextNodeCandidate>, string> nextNodes = await _representation.QueryNextNodesAsync(
                         $"step_{i - 1}",
                         context,
                         ct
@@ -146,17 +146,17 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 
                     if (nextNodes.IsSuccess)
                     {
-                        var validNext = nextNodes.Value.Any(n => n.NodeId == stepId);
+                        bool validNext = nextNodes.Value.Any(n => n.NodeId == stepId);
                         metadata[$"step_{i}_metta_validated"] = validNext;
                     }
                 }
 
                 // Execute the step
-                var stepResult = await ExecuteStepAsync(step, ct);
+                StepResult stepResult = await ExecuteStepAsync(step, ct);
                 stepResults.Add(stepResult);
 
                 // Update MeTTa with execution results
-                var execResult = new ExecutionResult(
+                ExecutionResult execResult = new ExecutionResult(
                     plan,
                     stepResults.ToList(),
                     stepResult.Success,
@@ -178,7 +178,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             sw.Stop();
             RecordMetric("executor", sw.ElapsedMilliseconds, true);
 
-            var finalOutput = stepResults.LastOrDefault()?.Output ?? string.Empty;
+            string finalOutput = stepResults.LastOrDefault()?.Output ?? string.Empty;
             return Result<ExecutionResult, string>.Success(
                 new ExecutionResult(plan, stepResults, true, finalOutput, metadata, sw.Elapsed));
         }
@@ -198,18 +198,18 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     {
         try
         {
-            var sw = Stopwatch.StartNew();
+            Stopwatch sw = Stopwatch.StartNew();
 
             // Build verification prompt
-            var verifyPrompt = BuildVerificationPrompt(execution);
-            var verificationText = await _llm.GenerateTextAsync(verifyPrompt, ct);
+            string verifyPrompt = BuildVerificationPrompt(execution);
+            string verificationText = await _llm.GenerateTextAsync(verifyPrompt, ct);
 
             // Parse verification result
-            var verification = ParseVerification(execution, verificationText);
+            VerificationResult verification = ParseVerification(execution, verificationText);
 
             // Use MeTTa for symbolic plan verification if available
-            var planMetta = FormatPlanForMeTTa(execution.Plan);
-            var mettaVerification = await _mettaEngine.VerifyPlanAsync(planMetta, ct);
+            string planMetta = FormatPlanForMeTTa(execution.Plan);
+            Result<bool, string> mettaVerification = await _mettaEngine.VerifyPlanAsync(planMetta, ct);
 
             if (mettaVerification.IsSuccess)
             {
@@ -239,7 +239,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     public void LearnFromExecution(VerificationResult verification)
     {
         // Create experience for memory
-        var experience = new Experience(
+        Experience experience = new Experience(
             Id: Guid.NewGuid(),
             Goal: verification.Execution.Plan.Goal,
             Plan: verification.Execution.Plan,
@@ -265,13 +265,13 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     // Helper methods
     private async Task<StepResult> ExecuteStepAsync(PlanStep step, CancellationToken ct)
     {
-        var sw = Stopwatch.StartNew();
-        var observedState = new Dictionary<string, object>();
+        Stopwatch sw = Stopwatch.StartNew();
+        Dictionary<string, object> observedState = new Dictionary<string, object>();
 
         try
         {
             // Find and execute the tool
-            var toolOption = _tools.GetTool(step.Action);
+            Option<ITool> toolOption = _tools.GetTool(step.Action);
             if (!toolOption.HasValue)
             {
                 return new StepResult(
@@ -280,9 +280,9 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                     sw.Elapsed, observedState);
             }
 
-            var tool = toolOption.Value!;
-            var toolInput = System.Text.Json.JsonSerializer.Serialize(step.Parameters);
-            var result = await tool.InvokeAsync(toolInput, ct);
+            ITool tool = toolOption.Value!;
+            string toolInput = System.Text.Json.JsonSerializer.Serialize(step.Parameters);
+            Result<string, string> result = await tool.InvokeAsync(toolInput, ct);
 
             return result.Match(
                 output => new StepResult(step, true, output, null, sw.Elapsed, observedState),
@@ -301,25 +301,25 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         List<Experience> pastExperiences,
         List<Skill> matchingSkills)
     {
-        var prompt = $"Create a detailed plan to accomplish: {goal}\n\n";
+        string prompt = $"Create a detailed plan to accomplish: {goal}\n\n";
 
         if (context?.Any() == true)
         {
             prompt += "Context:\n";
-            foreach (var item in context)
+            foreach (KeyValuePair<string, object> item in context)
                 prompt += $"- {item.Key}: {item.Value}\n";
             prompt += "\n";
         }
 
         prompt += "Available tools:\n";
-        foreach (var tool in _tools.All)
+        foreach (ITool tool in _tools.All)
             prompt += $"- {tool.Name}: {tool.Description}\n";
         prompt += "\n";
 
         if (pastExperiences.Count > 0)
         {
             prompt += "Relevant past experiences:\n";
-            foreach (var exp in pastExperiences.Take(3))
+            foreach (Experience? exp in pastExperiences.Take(3))
                 prompt += $"- {exp.Goal} (success: {exp.Verification.Verified}, quality: {exp.Verification.QualityScore:F2})\n";
             prompt += "\n";
         }
@@ -339,28 +339,28 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 
     private Plan ParsePlan(string planText, string goal)
     {
-        var steps = new List<PlanStep>();
-        var confidenceScores = new Dictionary<string, double>();
+        List<PlanStep> steps = new List<PlanStep>();
+        Dictionary<string, double> confidenceScores = new Dictionary<string, double>();
 
         try
         {
-            using var doc = System.Text.Json.JsonDocument.Parse(planText);
-            var array = doc.RootElement;
+            using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(planText);
+            System.Text.Json.JsonElement array = doc.RootElement;
 
             if (array.ValueKind == System.Text.Json.JsonValueKind.Array)
             {
-                foreach (var element in array.EnumerateArray())
+                foreach (System.Text.Json.JsonElement element in array.EnumerateArray())
                 {
-                    var action = element.GetProperty("action").GetString() ?? "";
-                    var expected = element.GetProperty("expected_outcome").GetString() ?? "";
-                    var confidence = element.TryGetProperty("confidence", out var conf)
+                    string action = element.GetProperty("action").GetString() ?? "";
+                    string expected = element.GetProperty("expected_outcome").GetString() ?? "";
+                    double confidence = element.TryGetProperty("confidence", out System.Text.Json.JsonElement conf)
                         ? conf.GetDouble()
                         : 0.5;
 
-                    var parameters = new Dictionary<string, object>();
-                    if (element.TryGetProperty("parameters", out var paramsElement))
+                    Dictionary<string, object> parameters = new Dictionary<string, object>();
+                    if (element.TryGetProperty("parameters", out System.Text.Json.JsonElement paramsElement))
                     {
-                        foreach (var prop in paramsElement.EnumerateObject())
+                        foreach (System.Text.Json.JsonProperty prop in paramsElement.EnumerateObject())
                         {
                             parameters[prop.Name] = prop.Value.ToString();
                         }
@@ -386,12 +386,12 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 
     private string BuildVerificationPrompt(ExecutionResult execution)
     {
-        var prompt = $"Verify the execution of plan: {execution.Plan.Goal}\n\n";
+        string prompt = $"Verify the execution of plan: {execution.Plan.Goal}\n\n";
         prompt += $"Success: {execution.Success}\n";
         prompt += $"Duration: {execution.Duration.TotalSeconds:F2}s\n\n";
 
         prompt += "Steps executed:\n";
-        foreach (var result in execution.StepResults)
+        foreach (StepResult result in execution.StepResults)
         {
             prompt += $"- {result.Step.Action}: {(result.Success ? "✓" : "✗")} {result.Output}\n";
         }
@@ -411,25 +411,25 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     {
         try
         {
-            using var doc = System.Text.Json.JsonDocument.Parse(verificationText);
-            var root = doc.RootElement;
+            using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(verificationText);
+            System.Text.Json.JsonElement root = doc.RootElement;
 
-            var verified = root.GetProperty("verified").GetBoolean();
-            var qualityScore = root.GetProperty("quality_score").GetDouble();
+            bool verified = root.GetProperty("verified").GetBoolean();
+            double qualityScore = root.GetProperty("quality_score").GetDouble();
 
-            var issues = new List<string>();
-            if (root.TryGetProperty("issues", out var issuesArray))
+            List<string> issues = new List<string>();
+            if (root.TryGetProperty("issues", out System.Text.Json.JsonElement issuesArray))
             {
-                foreach (var issue in issuesArray.EnumerateArray())
+                foreach (System.Text.Json.JsonElement issue in issuesArray.EnumerateArray())
                 {
                     issues.Add(issue.GetString() ?? "");
                 }
             }
 
-            var improvements = new List<string>();
-            if (root.TryGetProperty("improvements", out var improvArray))
+            List<string> improvements = new List<string>();
+            if (root.TryGetProperty("improvements", out System.Text.Json.JsonElement improvArray))
             {
-                foreach (var improvement in improvArray.EnumerateArray())
+                foreach (System.Text.Json.JsonElement improvement in improvArray.EnumerateArray())
                 {
                     improvements.Add(improvement.GetString() ?? "");
                 }
@@ -451,7 +451,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 
     private string FormatPlanForMeTTa(Plan plan)
     {
-        var steps = string.Join(" ", plan.Steps.Select((s, i) => $"(step {i} {s.Action})"));
+        string steps = string.Join(" ", plan.Steps.Select((s, i) => $"(step {i} {s.Action})"));
         return $"(plan {steps})";
     }
 
@@ -469,10 +469,10 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             ),
             (_, old) =>
             {
-                var totalCalls = old.ExecutionCount + 1;
-                var successCalls = (int)(old.SuccessRate * old.ExecutionCount) + (success ? 1 : 0);
-                var avgLatency = (old.AverageLatencyMs * old.ExecutionCount + latencyMs) / totalCalls;
-                var successRate = (double)successCalls / totalCalls;
+                int totalCalls = old.ExecutionCount + 1;
+                int successCalls = (int)(old.SuccessRate * old.ExecutionCount) + (success ? 1 : 0);
+                double avgLatency = (old.AverageLatencyMs * old.ExecutionCount + latencyMs) / totalCalls;
+                double successRate = (double)successCalls / totalCalls;
 
                 return new PerformanceMetrics(
                     ResourceName: component,

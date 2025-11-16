@@ -46,11 +46,11 @@ public class ConversationBuilder<TInput, TContext>
         Func<MemoryContext<TInput>, TContext, Task<MemoryContext<TInput>>> processor,
         string? logMessage = null)
     {
-        var step = new ContextualStep<MemoryContext<TInput>, MemoryContext<TInput>, TContext>(
+        ContextualStep<MemoryContext<TInput>, MemoryContext<TInput>, TContext> step = new ContextualStep<MemoryContext<TInput>, MemoryContext<TInput>, TContext>(
             async (input, context) =>
             {
-                var result = await processor(input, context);
-                var logs = logMessage != null ? [logMessage] : new List<string>();
+                MemoryContext<TInput> result = await processor(input, context);
+                List<string> logs = logMessage != null ? [logMessage] : new List<string>();
                 return (result, logs);
             });
 
@@ -81,12 +81,12 @@ public class ConversationBuilder<TInput, TContext>
     {
         return async input =>
         {
-            var currentInput = input;
-            var allLogs = new List<string>();
+            MemoryContext<TInput> currentInput = input;
+            List<string> allLogs = new List<string>();
 
-            foreach (var step in this.steps)
+            foreach (ContextualStep<MemoryContext<TInput>, MemoryContext<TInput>, TContext> step in this.steps)
             {
-                var (result, logs) = await step(currentInput, this.context);
+                (MemoryContext<TInput> result, List<string> logs) = await step(currentInput, this.context);
                 currentInput = result;
                 allLogs.AddRange(logs);
             }
@@ -101,10 +101,10 @@ public class ConversationBuilder<TInput, TContext>
     /// <returns>A step that processes the conversation and returns the result.</returns>
     public Step<MemoryContext<TInput>, MemoryContext<TInput>> BuildAndRun()
     {
-        var pipeline = this.Build();
+        Step<MemoryContext<TInput>, (MemoryContext<TInput> result, List<string> logs)> pipeline = this.Build();
         return async input =>
         {
-            var (result, _) = await pipeline(input);
+            (MemoryContext<TInput> result, List<string> _) = await pipeline(input);
             return result;
         };
     }
@@ -116,7 +116,7 @@ public class ConversationBuilder<TInput, TContext>
     /// <returns>The processed memory context.</returns>
     public async Task<MemoryContext<TInput>> RunAsync(MemoryContext<TInput> input)
     {
-        var pipeline = this.BuildAndRun();
+        Step<MemoryContext<TInput>, MemoryContext<TInput>> pipeline = this.BuildAndRun();
         return await pipeline(input);
     }
 }

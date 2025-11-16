@@ -68,7 +68,7 @@ public class InputValidator
                 : ValidationResult.Failure("Input cannot be empty");
         }
 
-        var errors = new List<string>();
+        List<string> errors = new List<string>();
 
         // Check length
         if (input.Length > context.MaxLength)
@@ -84,14 +84,14 @@ public class InputValidator
         // Check for injection patterns if enabled
         if (this.options.CheckInjectionPatterns)
         {
-            var injectionErrors = this.CheckForInjectionPatterns(input);
+            List<string> injectionErrors = this.CheckForInjectionPatterns(input);
             errors.AddRange(injectionErrors);
         }
 
         // Check for dangerous characters
         if (this.options.CheckDangerousCharacters)
         {
-            var charErrors = this.CheckForDangerousCharacters(input, context);
+            List<string> charErrors = this.CheckForDangerousCharacters(input, context);
             errors.AddRange(charErrors);
         }
 
@@ -101,15 +101,15 @@ public class InputValidator
         }
 
         // Sanitize the input
-        var sanitized = this.SanitizeInput(input, context);
+        string sanitized = this.SanitizeInput(input, context);
 
         return ValidationResult.Success(sanitized);
     }
 
     private List<string> CheckForInjectionPatterns(string input)
     {
-        var errors = new List<string>();
-        var lowerInput = input.ToLowerInvariant();
+        List<string> errors = new List<string>();
+        string lowerInput = input.ToLowerInvariant();
 
         // SQL injection patterns
         string[] sqlPatterns =
@@ -154,7 +154,7 @@ public class InputValidator
 
     private List<string> CheckForDangerousCharacters(string input, ValidationContext context)
     {
-        var errors = new List<string>();
+        List<string> errors = new List<string>();
 
         // Check for null bytes
         if (input.Contains('\0'))
@@ -163,7 +163,7 @@ public class InputValidator
         }
 
         // Check for control characters (except allowed ones like newline, tab)
-        var controlChars = input.Where(c =>
+        List<char> controlChars = input.Where(c =>
             char.IsControl(c) &&
             c != '\n' && c != '\r' && c != '\t').ToList();
 
@@ -175,7 +175,7 @@ public class InputValidator
         // Check against custom blocked characters
         if (context.BlockedCharacters != null)
         {
-            var blockedFound = input.Where(c => context.BlockedCharacters.Contains(c)).ToList();
+            List<char> blockedFound = input.Where(c => context.BlockedCharacters.Contains(c)).ToList();
             if (blockedFound.Any())
             {
                 errors.Add($"Input contains blocked character(s): {string.Join(", ", blockedFound.Distinct())}");
@@ -187,7 +187,7 @@ public class InputValidator
 
     private string SanitizeInput(string input, ValidationContext context)
     {
-        var result = input;
+        string result = input;
 
         // Trim whitespace if enabled
         if (context.TrimWhitespace)

@@ -40,18 +40,18 @@ public sealed class SkillRegistry : ISkillRegistry
         if (string.IsNullOrWhiteSpace(goal))
             return new List<Skill>();
 
-        var allSkills = _skills.Values.ToList();
+        List<Skill> allSkills = _skills.Values.ToList();
 
         if (_embedding != null)
         {
             // Use semantic similarity if embedding model available
-            var goalEmbedding = await _embedding.CreateEmbeddingsAsync(goal);
+            float[] goalEmbedding = await _embedding.CreateEmbeddingsAsync(goal);
 
-            var skillScores = new List<(Skill skill, double score)>();
-            foreach (var skill in allSkills)
+            List<(Skill skill, double score)> skillScores = new List<(Skill skill, double score)>();
+            foreach (Skill? skill in allSkills)
             {
-                var skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description);
-                var similarity = CosineSimilarity(goalEmbedding, skillEmbedding);
+                float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description);
+                double similarity = CosineSimilarity(goalEmbedding, skillEmbedding);
                 skillScores.Add((skill, similarity));
             }
 
@@ -63,7 +63,7 @@ public sealed class SkillRegistry : ISkillRegistry
         else
         {
             // Use simple keyword matching
-            var goalLower = goal.ToLowerInvariant();
+            string goalLower = goal.ToLowerInvariant();
             return allSkills
                 .Where(s => s.Description.ToLowerInvariant().Contains(goalLower) ||
                            goalLower.Contains(s.Name.ToLowerInvariant()))
@@ -81,7 +81,7 @@ public sealed class SkillRegistry : ISkillRegistry
         if (string.IsNullOrWhiteSpace(name))
             return null;
 
-        _skills.TryGetValue(name, out var skill);
+        _skills.TryGetValue(name, out Skill? skill);
         return skill;
     }
 
@@ -98,8 +98,8 @@ public sealed class SkillRegistry : ISkillRegistry
             _ => throw new InvalidOperationException($"Skill '{name}' not found"),
             (_, existing) =>
             {
-                var newCount = existing.UsageCount + 1;
-                var newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
+                int newCount = existing.UsageCount + 1;
+                double newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
 
                 return existing with
                 {
@@ -136,14 +136,14 @@ public sealed class SkillRegistry : ISkillRegistry
         try
         {
             // Extract prerequisites from plan context
-            var prerequisites = execution.Plan.Steps
+            List<string> prerequisites = execution.Plan.Steps
                 .Where(s => s.ConfidenceScore > 0.7)
                 .Select(s => s.Action)
                 .Distinct()
                 .ToList();
 
             // Create skill from successful execution steps
-            var skill = new Skill(
+            Skill skill = new Skill(
                 skillName,
                 description,
                 prerequisites,

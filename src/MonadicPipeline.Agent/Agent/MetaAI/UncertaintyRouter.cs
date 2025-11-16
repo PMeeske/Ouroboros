@@ -39,25 +39,25 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
         try
         {
             // Use orchestrator to determine best route
-            var orchestratorDecision = await _orchestrator.SelectModelAsync(task, context, ct);
+            Result<OrchestratorDecision, string> orchestratorDecision = await _orchestrator.SelectModelAsync(task, context, ct);
 
             return orchestratorDecision.Match(
                 decision =>
                 {
-                    var confidence = decision.ConfidenceScore;
+                    double confidence = decision.ConfidenceScore;
 
                     // If confidence is below threshold, apply fallback strategy
                     if (confidence < MinimumConfidenceThreshold)
                     {
-                        var fallback = DetermineFallback(task, confidence);
-                        var metadata = new Dictionary<string, object>
+                        FallbackStrategy fallback = DetermineFallback(task, confidence);
+                        Dictionary<string, object> metadata = new Dictionary<string, object>
                         {
                             ["original_route"] = decision.ModelName,
                             ["fallback_strategy"] = fallback.ToString(),
                             ["original_confidence"] = confidence
                         };
 
-                        var routingDecision = new RoutingDecision(
+                        RoutingDecision routingDecision = new RoutingDecision(
                             ApplyFallbackRoute(decision.ModelName, fallback),
                             $"Low confidence ({confidence:P0}), using {fallback}",
                             confidence,
@@ -67,7 +67,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
                     }
 
                     // High confidence - use direct route
-                    var directDecision = new RoutingDecision(
+                    RoutingDecision directDecision = new RoutingDecision(
                         decision.ModelName,
                         decision.Reason,
                         confidence,
@@ -130,19 +130,19 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
             return 0.0;
 
         // Get historical performance for this route
-        var history = GetRouteHistory(route);
-        var baseConfidence = history.Any()
+        List<(RoutingDecision decision, bool success)> history = GetRouteHistory(route);
+        double baseConfidence = history.Any()
             ? history.Count(h => h.success) / (double)history.Count
             : 0.5;
 
         // Adjust based on task complexity
-        var complexityFactor = 1.0 - (task.Split(' ').Length / 100.0);
+        double complexityFactor = 1.0 - (task.Split(' ').Length / 100.0);
         complexityFactor = Math.Clamp(complexityFactor, 0.5, 1.0);
 
         // Adjust based on context availability
-        var contextFactor = context != null && context.Any() ? 1.1 : 0.9;
+        double contextFactor = context != null && context.Any() ? 1.1 : 0.9;
 
-        var confidence = baseConfidence * complexityFactor * contextFactor;
+        double confidence = baseConfidence * complexityFactor * contextFactor;
         return await Task.FromResult(Math.Clamp(confidence, 0.0, 1.0));
     }
 
@@ -166,7 +166,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
 
     private List<(RoutingDecision decision, bool success)> GetRouteHistory(string route)
     {
-        return _routingHistory.TryGetValue(route, out var history)
+        return _routingHistory.TryGetValue(route, out List<(RoutingDecision decision, bool success)>? history)
             ? history
             : new List<(RoutingDecision, bool)>();
     }

@@ -49,6 +49,7 @@ public class ToolBuilderTests
             {
                 _ = ct;
                 secondInvocations++;
+                await Task.CompletedTask;
                 return Result<string, string>.Success(value);
             })
         );

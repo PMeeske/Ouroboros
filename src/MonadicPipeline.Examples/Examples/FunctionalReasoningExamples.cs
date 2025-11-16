@@ -20,14 +20,14 @@ public static class FunctionalReasoningExamples
         Console.WriteLine("\n=== Immutable PipelineBranch Operations ===");
 
         // Create initial branch (immutable)
-        var vectorStore = new TrackedVectorStore();
-        var dataSource = DataSource.FromPath(Environment.CurrentDirectory);
-        var branch = new PipelineBranch("demo-branch", vectorStore, dataSource);
+        TrackedVectorStore vectorStore = new TrackedVectorStore();
+        DataSource dataSource = DataSource.FromPath(Environment.CurrentDirectory);
+        PipelineBranch branch = new PipelineBranch("demo-branch", vectorStore, dataSource);
 
         Console.WriteLine($"Initial branch events: {branch.Events.Count}");
 
         // Functional updates return new instances
-        var updatedBranch = branch
+        PipelineBranch updatedBranch = branch
             .WithReasoning(new Draft("Initial draft content"), "Generate draft", null)
             .WithReasoning(new Critique("Needs improvement in clarity"), "Critique draft", null)
             .WithIngestEvent("demo-documents", new[] { "doc1", "doc2" });
@@ -36,7 +36,7 @@ public static class FunctionalReasoningExamples
         Console.WriteLine($"Updated branch events: {updatedBranch.Events.Count}"); // Now 3
 
         // Demonstrate forking
-        var forkedBranch = updatedBranch.Fork("forked-branch", new TrackedVectorStore());
+        PipelineBranch forkedBranch = updatedBranch.Fork("forked-branch", new TrackedVectorStore());
         Console.WriteLine($"Forked branch events: {forkedBranch.Events.Count}"); // Still 3
         Console.WriteLine($"Forked branch name: {forkedBranch.Name}"); // "forked-branch"
 
@@ -51,11 +51,11 @@ public static class FunctionalReasoningExamples
         Console.WriteLine("\n=== Functional ToolRegistry Operations ===");
 
         // Start with empty registry
-        var emptyRegistry = new ToolRegistry();
+        ToolRegistry emptyRegistry = new ToolRegistry();
         Console.WriteLine($"Empty registry tools: {emptyRegistry.Count}");
 
         // Build registry functionally
-        var registry = emptyRegistry
+        ToolRegistry registry = emptyRegistry
             .WithTool(new MathTool())
             .WithFunction("reverse", "Reverses input text", s => new string(s.Reverse().ToArray()))
             .WithFunction("length", "Gets string length", s => s.Length.ToString());
@@ -64,18 +64,18 @@ public static class FunctionalReasoningExamples
         Console.WriteLine($"New registry has: {registry.Count} tools"); // Now 3
 
         // Safe tool retrieval using Option monad
-        var mathTool = registry.GetTool("math");
+        Option<ITool> mathTool = registry.GetTool("math");
         mathTool.Match(
             tool => Console.WriteLine($"✅ Found tool: {tool.Name} - {tool.Description}"),
             () => Console.WriteLine("❌ Tool not found"));
 
-        var nonExistentTool = registry.GetTool("nonexistent");
+        Option<ITool> nonExistentTool = registry.GetTool("nonexistent");
         nonExistentTool.Match(
             tool => Console.WriteLine($"Found unexpected tool: {tool.Name}"),
             () => Console.WriteLine("✅ Correctly returned None for non-existent tool"));
 
         // Safe schema export
-        var schemaResult = registry.SafeExportSchemas();
+        Result<string> schemaResult = registry.SafeExportSchemas();
         schemaResult.Match(
             json => Console.WriteLine($"✅ Schemas exported: {json.Length} characters"),
             error => Console.WriteLine($"❌ Schema export failed: {error}"));
@@ -90,29 +90,29 @@ public static class FunctionalReasoningExamples
     {
         Console.WriteLine("\n=== Result-Based PromptTemplate Operations ===");
 
-        var template = new PromptTemplate("Hello {name}, you have {count} messages.");
+        PromptTemplate template = new PromptTemplate("Hello {name}, you have {count} messages.");
 
         // Safe formatting with all required variables
-        var goodVars = new Dictionary<string, string>
+        Dictionary<string, string> goodVars = new Dictionary<string, string>
         {
             ["name"] = "Alice",
             ["count"] = "3",
         };
 
-        var successResult = template.SafeFormat(goodVars);
+        Result<string> successResult = template.SafeFormat(goodVars);
         successResult.Match(
             formatted => Console.WriteLine($"✅ Success: {formatted}"),
             error => Console.WriteLine($"❌ Error: {error}"));
 
         // Safe formatting with missing variables
-        var badVars = new Dictionary<string, string>
+        Dictionary<string, string> badVars = new Dictionary<string, string>
         {
             ["name"] = "Bob",
 
             // Missing 'count'
         };
 
-        var failureResult = template.SafeFormat(badVars);
+        Result<string> failureResult = template.SafeFormat(badVars);
         failureResult.Match(
             formatted => Console.WriteLine($"Unexpected success: {formatted}"),
             error => Console.WriteLine($"✅ Expected error: {error}"));
@@ -131,29 +131,29 @@ public static class FunctionalReasoningExamples
         Console.WriteLine("\n=== Advanced Result Monad Operations ===");
 
         // Create some test Results
-        var successResult = Result<int>.Success(42);
-        var failureResult = Result<int>.Failure("Something went wrong");
+        Result<int> successResult = Result<int>.Success(42);
+        Result<int> failureResult = Result<int>.Failure("Something went wrong");
 
         // Demonstrate chaining with Bind
-        var chainResult = successResult
+        Result<int> chainResult = successResult
             .Bind(x => x > 0 ? Result<int>.Success(x * 2) : Result<int>.Failure("Negative number"))
             .Map(x => x + 10);
 
         Console.WriteLine($"Chained result: {chainResult}");
 
         // Demonstrate basic operations
-        var result1 = Result<int>.Success(10);
-        var result2 = Result<int>.Success(20);
+        Result<int> result1 = Result<int>.Success(10);
+        Result<int> result2 = Result<int>.Success(20);
 
         // Manual combination since we may not have all extensions working yet
-        var combinedResult = result1.Bind(r1 => result2.Map(r2 => (r1, r2)));
+        Result<(int r1, int r2)> combinedResult = result1.Bind(r1 => result2.Map(r2 => (r1, r2)));
 
         combinedResult.Match(
             combined => Console.WriteLine($"✅ Combined: ({combined.r1}, {combined.r2})"),
             error => Console.WriteLine($"❌ Combination failed: {error}"));
 
         // Demonstrate fallback values using GetValueOrDefault
-        var fallbackValue = failureResult.GetValueOrDefault(100);
+        int fallbackValue = failureResult.GetValueOrDefault(100);
         Console.WriteLine($"Fallback value: {fallbackValue}");
 
         Console.WriteLine("✅ Result extensions enable powerful monadic composition");
@@ -167,18 +167,18 @@ public static class FunctionalReasoningExamples
         Console.WriteLine("\n=== Basic Result Operations ===");
 
         // Create test data
-        var parseNumber = (string s) => int.TryParse(s, out var n)
+        Func<string, Result<int>> parseNumber = (string s) => int.TryParse(s, out int n)
             ? Result<int>.Success(n)
             : Result<int>.Failure($"'{s}' is not a valid number");
 
-        var validatePositive = (int n) => n > 0
+        Func<int, Result<int>> validatePositive = (int n) => n > 0
             ? Result<int>.Success(n)
             : Result<int>.Failure("Number must be positive");
 
-        var sqrt = (int n) => Result<double>.Success(Math.Sqrt(n));
+        Func<int, Result<double>> sqrt = (int n) => Result<double>.Success(Math.Sqrt(n));
 
         // Chain operations using Bind and Map
-        var result = parseNumber("16")
+        Result<double> result = parseNumber("16")
             .Bind(validatePositive)
             .Bind(n => sqrt(n).Map(Math.Round));
 
@@ -187,7 +187,7 @@ public static class FunctionalReasoningExamples
             error => Console.WriteLine($"❌ {error}"));
 
         // Same operation with invalid input
-        var failureResult = parseNumber("not-a-number")
+        Result<double> failureResult = parseNumber("not-a-number")
             .Bind(validatePositive)
             .Bind(n => sqrt(n).Map(Math.Round));
 
@@ -213,12 +213,12 @@ public static class FunctionalReasoningExamples
         // var pipeline = ReasoningArrows.SafeReasoningPipeline(llm, tools, embed, topic, query);
 
         // Demonstrate the pattern with a mock pipeline
-        var mockPipeline = CreateMockSafeReasoningPipeline();
+        KleisliResult<PipelineBranch, PipelineBranch, string> mockPipeline = CreateMockSafeReasoningPipeline();
 
-        var vectorStore = new TrackedVectorStore();
-        var branch = new PipelineBranch("test-branch", vectorStore, DataSource.FromPath(Environment.CurrentDirectory));
+        TrackedVectorStore vectorStore = new TrackedVectorStore();
+        PipelineBranch branch = new PipelineBranch("test-branch", vectorStore, DataSource.FromPath(Environment.CurrentDirectory));
 
-        var result = await mockPipeline(branch);
+        Result<PipelineBranch, string> result = await mockPipeline(branch);
         result.Match(
             successBranch => Console.WriteLine($"✅ Pipeline completed with {successBranch.Events.Count} events"),
             error => Console.WriteLine($"❌ Pipeline failed: {error}"));
@@ -236,13 +236,13 @@ public static class FunctionalReasoningExamples
             try
             {
                 await Task.Delay(10); // Simulate processing
-                var updated1 = branch.WithReasoning(new Draft("Mock draft content"), "Draft prompt", null);
+                PipelineBranch updated1 = branch.WithReasoning(new Draft("Mock draft content"), "Draft prompt", null);
 
                 await Task.Delay(10); // Simulate processing
-                var updated2 = updated1.WithReasoning(new Critique("Mock critique content"), "Critique prompt", null);
+                PipelineBranch updated2 = updated1.WithReasoning(new Critique("Mock critique content"), "Critique prompt", null);
 
                 await Task.Delay(10); // Simulate processing
-                var final = updated2.WithReasoning(new FinalSpec("Mock final content"), "Improve prompt", null);
+                PipelineBranch final = updated2.WithReasoning(new FinalSpec("Mock final content"), "Improve prompt", null);
 
                 return Result<PipelineBranch, string>.Success(final);
             }

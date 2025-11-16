@@ -108,11 +108,11 @@ public sealed class MeTTaOrchestratorBuilder
             throw new InvalidOperationException("Safety is required. Use WithSafety() to set it.");
 
         // Initialize MeTTa engine if not provided
-        var mettaEngine = _mettaEngine ?? new SubprocessMeTTaEngine();
+        IMeTTaEngine mettaEngine = _mettaEngine ?? new SubprocessMeTTaEngine();
 
         // Ensure tools include MeTTa tools
-        var tools = _tools ?? ToolRegistry.CreateDefault();
-        var hasMeTTaTools = tools.All.Any(t => t.Name.StartsWith("metta_") || t.Name == "next_node");
+        ToolRegistry tools = _tools ?? ToolRegistry.CreateDefault();
+        bool hasMeTTaTools = tools.All.Any(t => t.Name.StartsWith("metta_") || t.Name == "next_node");
         if (!hasMeTTaTools)
         {
             tools = tools.WithMeTTaTools(mettaEngine);
@@ -137,16 +137,16 @@ public sealed class MeTTaOrchestratorBuilder
     /// <returns>Configured builder with default components (except LLM and tools).</returns>
     public static MeTTaOrchestratorBuilder CreateDefault(IEmbeddingModel embedModel)
     {
-        var memory = new MemoryStore(embedModel);
-        var skills = new SkillRegistry();
-        var safety = new SafetyGuard();
-        var mettaEngine = new SubprocessMeTTaEngine();
+        MemoryStore memory = new MemoryStore(embedModel);
+        SkillRegistry skills = new SkillRegistry();
+        SafetyGuard safety = new SafetyGuard();
+        SubprocessMeTTaEngine mettaEngine = new SubprocessMeTTaEngine();
 
         // Create a simple orchestrator with default tools
-        var defaultTools = ToolRegistry.CreateDefault();
-        var orchestrator = new SmartModelOrchestrator(defaultTools);
+        ToolRegistry defaultTools = ToolRegistry.CreateDefault();
+        SmartModelOrchestrator orchestrator = new SmartModelOrchestrator(defaultTools);
 
-        var router = new UncertaintyRouter(orchestrator);
+        UncertaintyRouter router = new UncertaintyRouter(orchestrator);
 
         return new MeTTaOrchestratorBuilder()
             .WithMemory(memory)
@@ -163,7 +163,7 @@ public sealed class MeTTaOrchestratorBuilder
     /// <returns>Configured builder with mock MeTTa engine.</returns>
     public static MeTTaOrchestratorBuilder CreateWithMockMeTTa(IEmbeddingModel embedModel)
     {
-        var builder = CreateDefault(embedModel);
+        MeTTaOrchestratorBuilder builder = CreateDefault(embedModel);
         // The mock engine would be created separately and passed via WithMeTTaEngine
         return builder;
     }

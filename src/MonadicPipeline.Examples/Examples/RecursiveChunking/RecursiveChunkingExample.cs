@@ -27,7 +27,7 @@ public static class RecursiveChunkingExample
         Console.WriteLine();
 
         // Simulate a large document (e.g., 100-page document)
-        var largeDocument = GenerateLargeDocument();
+        string largeDocument = GenerateLargeDocument();
         Console.WriteLine($"Document size: {largeDocument.Length} characters (~{largeDocument.Length / 4} tokens)");
         Console.WriteLine();
 
@@ -60,7 +60,7 @@ public static class RecursiveChunkingExample
         {
             // Simulate LLM processing (in real scenario, call actual LLM)
             await Task.Delay(50); // Simulate API call
-            var summary = $"Summary of {chunk.Length} chars: {chunk.Substring(0, Math.Min(100, chunk.Length))}...";
+            string summary = $"Summary of {chunk.Length} chars: {chunk.Substring(0, Math.Min(100, chunk.Length))}...";
             return Result<string>.Success(summary);
         };
 
@@ -68,19 +68,19 @@ public static class RecursiveChunkingExample
         Func<IEnumerable<string>, Task<Result<string>>> combineResults = async summaries =>
         {
             await Task.Delay(50); // Simulate combining
-            var combined = string.Join("\n\n", summaries.Select((s, i) => $"Section {i + 1}: {s}"));
+            string combined = string.Join("\n\n", summaries.Select((s, i) => $"Section {i + 1}: {s}"));
             return Result<string>.Success($"=== Final Summary ===\n{combined}");
         };
 
-        var processor = new RecursiveChunkProcessor(processChunk, combineResults);
+        RecursiveChunkProcessor processor = new RecursiveChunkProcessor(processChunk, combineResults);
 
-        var startTime = DateTime.UtcNow;
-        var result = await processor.ProcessLargeContextAsync<string, string>(
+        DateTime startTime = DateTime.UtcNow;
+        Result<string> result = await processor.ProcessLargeContextAsync<string, string>(
             document,
             maxChunkSize: 512,
             strategy: ChunkingStrategy.Fixed);
 
-        var elapsed = DateTime.UtcNow - startTime;
+        TimeSpan elapsed = DateTime.UtcNow - startTime;
 
         if (result.IsSuccess)
         {
@@ -102,7 +102,7 @@ public static class RecursiveChunkingExample
         Console.WriteLine("Example 2: Document Summarization (Adaptive Chunking)");
         Console.WriteLine("------------------------------------------------------");
 
-        var attemptCount = 0;
+        int attemptCount = 0;
 
         Func<string, Task<Result<string>>> processChunk = async chunk =>
         {
@@ -124,13 +124,13 @@ public static class RecursiveChunkingExample
             return Result<string>.Success($"Combined {summaries.Count()} summaries using adaptive learning");
         };
 
-        var processor = new RecursiveChunkProcessor(processChunk, combineResults);
+        RecursiveChunkProcessor processor = new RecursiveChunkProcessor(processChunk, combineResults);
 
         // Process multiple times to demonstrate adaptive learning
         for (int i = 0; i < 3; i++)
         {
             Console.WriteLine($"\nAttempt {i + 1}:");
-            var result = await processor.ProcessLargeContextAsync<string, string>(
+            Result<string> result = await processor.ProcessLargeContextAsync<string, string>(
                 document,
                 maxChunkSize: 1024,
                 strategy: ChunkingStrategy.Adaptive);
@@ -157,15 +157,15 @@ public static class RecursiveChunkingExample
         Console.WriteLine("Example 3: Multi-Document Question Answering");
         Console.WriteLine("---------------------------------------------");
 
-        var documents = new[]
+        string[] documents = new[]
         {
             "Document 1: MonadicPipeline is a functional programming-based AI pipeline system...",
             "Document 2: IONOS Cloud provides enterprise-grade Kubernetes infrastructure...",
             "Document 3: RecursiveChunkProcessor enables processing of large contexts...",
         };
 
-        var allDocs = string.Join("\n\n", documents);
-        var question = "What are the key features of the system?";
+        string allDocs = string.Join("\n\n", documents);
+        string question = "What are the key features of the system?";
 
         Console.WriteLine($"Question: {question}");
         Console.WriteLine($"Processing {documents.Length} documents...");
@@ -186,12 +186,12 @@ public static class RecursiveChunkingExample
         Func<IEnumerable<string>, Task<Result<string>>> combineAnswers = async answers =>
         {
             await Task.Delay(30);
-            var relevant = answers.Where(a => !a.Contains("No relevant")).ToList();
+            List<string> relevant = answers.Where(a => !a.Contains("No relevant")).ToList();
             return Result<string>.Success($"Answer based on {relevant.Count} relevant chunks:\n{string.Join("\n", relevant)}");
         };
 
-        var processor = new RecursiveChunkProcessor(findAnswersInChunk, combineAnswers);
-        var result = await processor.ProcessLargeContextAsync<string, string>(
+        RecursiveChunkProcessor processor = new RecursiveChunkProcessor(findAnswersInChunk, combineAnswers);
+        Result<string> result = await processor.ProcessLargeContextAsync<string, string>(
             allDocs,
             maxChunkSize: 256,
             strategy: ChunkingStrategy.Fixed);
@@ -214,14 +214,14 @@ public static class RecursiveChunkingExample
         Console.WriteLine("Example 4: Large Codebase Analysis");
         Console.WriteLine("-----------------------------------");
 
-        var codebase = GenerateSampleCodebase();
+        string codebase = GenerateSampleCodebase();
         Console.WriteLine($"Analyzing codebase: {codebase.Length} characters");
 
         Func<string, Task<Result<string>>> analyzeChunk = async chunk =>
         {
             await Task.Delay(40);
-            var functions = chunk.Split("public").Length - 1;
-            var classes = chunk.Split("class").Length - 1;
+            int functions = chunk.Split("public").Length - 1;
+            int classes = chunk.Split("class").Length - 1;
             return Result<string>.Success($"Found {classes} classes, {functions} functions");
         };
 
@@ -231,8 +231,8 @@ public static class RecursiveChunkingExample
             return Result<string>.Success($"Code analysis complete:\n{string.Join("\n", analyses)}");
         };
 
-        var processor = new RecursiveChunkProcessor(analyzeChunk, combineAnalysis);
-        var result = await processor.ProcessLargeContextAsync<string, string>(
+        RecursiveChunkProcessor processor = new RecursiveChunkProcessor(analyzeChunk, combineAnalysis);
+        Result<string> result = await processor.ProcessLargeContextAsync<string, string>(
             codebase,
             maxChunkSize: 768,
             strategy: ChunkingStrategy.Adaptive);
@@ -252,7 +252,7 @@ public static class RecursiveChunkingExample
     /// </summary>
     private static string GenerateLargeDocument()
     {
-        var sections = new[]
+        string[] sections = new[]
         {
             "Introduction: MonadicPipeline is an advanced AI pipeline system built on functional programming principles.",
             "Architecture: The system uses category theory, monadic composition, and Kleisli arrows for type-safe operations.",
@@ -265,10 +265,10 @@ public static class RecursiveChunkingExample
         };
 
         // Repeat sections to create a ~100-page document simulation
-        var paragraphs = new List<string>();
+        List<string> paragraphs = new List<string>();
         for (int i = 0; i < 100; i++)
         {
-            foreach (var section in sections)
+            foreach (string? section in sections)
             {
                 paragraphs.Add($"{section} {new string('x', 200)}"); // Pad to simulate paragraphs
             }
@@ -282,7 +282,7 @@ public static class RecursiveChunkingExample
     /// </summary>
     private static string GenerateSampleCodebase()
     {
-        var code = @"
+        string code = @"
 using System;
 
 namespace Sample

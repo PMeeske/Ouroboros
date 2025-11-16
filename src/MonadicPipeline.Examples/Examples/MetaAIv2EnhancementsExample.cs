@@ -21,17 +21,17 @@ public static class MetaAIv2EnhancementsExample
     {
         Console.WriteLine("=== Parallel Execution Example ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
 
-        var orchestrator = MetaAIBuilder.CreateDefault()
+        MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
             .WithLLM(chatModel)
             .WithTools(tools)
             .Build();
 
         // Create a plan with independent steps
-        var planResult = await orchestrator.PlanAsync(
+        Result<Plan, string> planResult = await orchestrator.PlanAsync(
             "Analyze three different datasets concurrently",
             new Dictionary<string, object>
             {
@@ -40,17 +40,17 @@ public static class MetaAIv2EnhancementsExample
 
         if (planResult.IsSuccess)
         {
-            var plan = planResult.Value;
+            Plan plan = planResult.Value;
             Console.WriteLine($"Plan created with {plan.Steps.Count} steps");
 
             // Execute with automatic parallel detection
-            var execResult = await orchestrator.ExecuteAsync(plan);
+            Result<ExecutionResult, string> execResult = await orchestrator.ExecuteAsync(plan);
 
             if (execResult.IsSuccess)
             {
-                var execution = execResult.Value;
-                var isParallel = execution.Metadata.GetValueOrDefault("parallel_execution", false);
-                var speedup = execution.Metadata.GetValueOrDefault("estimated_speedup", 1.0);
+                ExecutionResult execution = execResult.Value;
+                object isParallel = execution.Metadata.GetValueOrDefault("parallel_execution", false);
+                object speedup = execution.Metadata.GetValueOrDefault("estimated_speedup", 1.0);
 
                 Console.WriteLine($"Parallel execution: {isParallel}");
                 Console.WriteLine($"Estimated speedup: {speedup:F2}x");
@@ -69,36 +69,36 @@ public static class MetaAIv2EnhancementsExample
     {
         Console.WriteLine("=== Hierarchical Planning Example ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
 
-        var orchestrator = MetaAIBuilder.CreateDefault()
+        MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
             .WithLLM(chatModel)
             .WithTools(tools)
             .Build();
 
-        var hierarchicalPlanner = new HierarchicalPlanner(orchestrator, chatModel);
+        HierarchicalPlanner hierarchicalPlanner = new HierarchicalPlanner(orchestrator, chatModel);
 
-        var config = new HierarchicalPlanningConfig(
+        HierarchicalPlanningConfig config = new HierarchicalPlanningConfig(
             MaxDepth: 3,
             MinStepsForDecomposition: 3,
             ComplexityThreshold: 0.6);
 
-        var result = await hierarchicalPlanner.CreateHierarchicalPlanAsync(
+        Result<HierarchicalPlan, string> result = await hierarchicalPlanner.CreateHierarchicalPlanAsync(
             "Design and implement a complete REST API with database",
             null,
             config);
 
         if (result.IsSuccess)
         {
-            var plan = result.Value;
+            HierarchicalPlan plan = result.Value;
             Console.WriteLine($"Hierarchical plan created:");
             Console.WriteLine($"  Top-level steps: {plan.TopLevelPlan.Steps.Count}");
             Console.WriteLine($"  Sub-plans: {plan.SubPlans.Count}");
             Console.WriteLine($"  Max depth: {plan.MaxDepth}");
 
-            foreach (var (stepName, subPlan) in plan.SubPlans.Take(3))
+            foreach ((string stepName, Plan subPlan) in plan.SubPlans.Take(3))
             {
                 Console.WriteLine($"  Sub-plan '{stepName}': {subPlan.Steps.Count} steps");
             }
@@ -115,31 +115,31 @@ public static class MetaAIv2EnhancementsExample
     {
         Console.WriteLine("=== Experience Replay Example ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var memory = new MemoryStore();
-        var skills = new SkillRegistry();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        MemoryStore memory = new MemoryStore();
+        SkillRegistry skills = new SkillRegistry();
 
-        var replay = new ExperienceReplay(memory, skills, chatModel);
+        ExperienceReplay replay = new ExperienceReplay(memory, skills, chatModel);
 
         // Simulate storing some experiences
         Console.WriteLine("Storing experiences...");
         for (int i = 0; i < 5; i++)
         {
-            var experience = CreateSampleExperience($"Task {i + 1}", 0.75 + (i * 0.04));
+            Experience experience = CreateSampleExperience($"Task {i + 1}", 0.75 + (i * 0.04));
             await memory.StoreExperienceAsync(experience);
         }
 
-        var config = new ExperienceReplayConfig(
+        ExperienceReplayConfig config = new ExperienceReplayConfig(
             BatchSize: 3,
             MinQualityScore: 0.75,
             PrioritizeHighQuality: true);
 
-        var result = await replay.TrainOnExperiencesAsync(config);
+        Result<TrainingResult, string> result = await replay.TrainOnExperiencesAsync(config);
 
         if (result.IsSuccess)
         {
-            var training = result.Value;
+            TrainingResult training = result.Value;
             Console.WriteLine($"Training completed:");
             Console.WriteLine($"  Experiences processed: {training.ExperiencesProcessed}");
             Console.WriteLine($"  Patterns discovered: {training.ImprovedMetrics.GetValueOrDefault("patterns_discovered", 0)}");
@@ -158,12 +158,12 @@ public static class MetaAIv2EnhancementsExample
     {
         Console.WriteLine("=== Skill Composition Example ===\n");
 
-        var skills = new SkillRegistry();
-        var memory = new MemoryStore();
-        var composer = new SkillComposer(skills, memory);
+        SkillRegistry skills = new SkillRegistry();
+        MemoryStore memory = new MemoryStore();
+        SkillComposer composer = new SkillComposer(skills, memory);
 
         // Register base skills
-        var extractSkill = new Skill(
+        Skill extractSkill = new Skill(
             "extract_data",
             "Extract data from source",
             new List<string>(),
@@ -173,7 +173,7 @@ public static class MetaAIv2EnhancementsExample
             DateTime.UtcNow,
             DateTime.UtcNow);
 
-        var transformSkill = new Skill(
+        Skill transformSkill = new Skill(
             "transform_data",
             "Transform and clean data",
             new List<string>(),
@@ -183,7 +183,7 @@ public static class MetaAIv2EnhancementsExample
             DateTime.UtcNow,
             DateTime.UtcNow);
 
-        var loadSkill = new Skill(
+        Skill loadSkill = new Skill(
             "load_data",
             "Load data to destination",
             new List<string>(),
@@ -198,21 +198,21 @@ public static class MetaAIv2EnhancementsExample
         skills.RegisterSkill(loadSkill);
 
         // Compose into ETL pipeline skill
-        var compositeResult = await composer.ComposeSkillsAsync(
+        Result<Skill, string> compositeResult = await composer.ComposeSkillsAsync(
             "etl_pipeline",
             "Complete ETL data pipeline",
             new List<string> { "extract_data", "transform_data", "load_data" });
 
         if (compositeResult.IsSuccess)
         {
-            var composite = compositeResult.Value;
+            Skill composite = compositeResult.Value;
             Console.WriteLine($"Composite skill created: {composite.Name}");
             Console.WriteLine($"  Description: {composite.Description}");
             Console.WriteLine($"  Total steps: {composite.Steps.Count}");
             Console.WriteLine($"  Success rate: {composite.SuccessRate:P0}");
 
             // Demonstrate decomposition
-            var decomposeResult = composer.DecomposeSkill("etl_pipeline");
+            Result<List<Skill>, string> decomposeResult = composer.DecomposeSkill("etl_pipeline");
             if (decomposeResult.IsSuccess)
             {
                 Console.WriteLine($"  Components: {string.Join(", ", decomposeResult.Value.Select(s => s.Name))}");
@@ -230,18 +230,18 @@ public static class MetaAIv2EnhancementsExample
     {
         Console.WriteLine("=== Distributed Orchestration Example ===\n");
 
-        var safety = new SafetyGuard(PermissionLevel.Isolated);
-        var orchestrator = new DistributedOrchestrator(safety);
+        SafetyGuard safety = new SafetyGuard(PermissionLevel.Isolated);
+        DistributedOrchestrator orchestrator = new DistributedOrchestrator(safety);
 
         // Register agents with different capabilities
-        var agents = new[]
+        AgentInfo[] agents = new[]
         {
             new AgentInfo("compute-1", "Compute Agent 1", new HashSet<string> { "compute", "analysis" }, AgentStatus.Available, DateTime.UtcNow),
             new AgentInfo("storage-1", "Storage Agent", new HashSet<string> { "storage", "database" }, AgentStatus.Available, DateTime.UtcNow),
             new AgentInfo("compute-2", "Compute Agent 2", new HashSet<string> { "compute", "ml" }, AgentStatus.Available, DateTime.UtcNow),
         };
 
-        foreach (var agent in agents)
+        foreach (AgentInfo? agent in agents)
         {
             orchestrator.RegisterAgent(agent);
         }
@@ -249,7 +249,7 @@ public static class MetaAIv2EnhancementsExample
         Console.WriteLine($"Registered {agents.Length} agents");
 
         // Create a plan for distributed execution
-        var plan = new Plan(
+        Plan plan = new Plan(
             "Distributed data processing",
             new List<PlanStep>
             {
@@ -260,11 +260,11 @@ public static class MetaAIv2EnhancementsExample
             new Dictionary<string, double> { ["overall"] = 0.9 },
             DateTime.UtcNow);
 
-        var result = await orchestrator.ExecuteDistributedAsync(plan);
+        Result<ExecutionResult, string> result = await orchestrator.ExecuteDistributedAsync(plan);
 
         if (result.IsSuccess)
         {
-            var execution = result.Value;
+            ExecutionResult execution = result.Value;
             Console.WriteLine($"Distributed execution completed:");
             Console.WriteLine($"  Agents used: {execution.Metadata.GetValueOrDefault("agents_used", 0)}");
             Console.WriteLine($"  Success: {execution.Success}");
@@ -282,19 +282,19 @@ public static class MetaAIv2EnhancementsExample
     {
         Console.WriteLine("=== Adaptive Planning Example ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
 
-        var orchestrator = MetaAIBuilder.CreateDefault()
+        MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
             .WithLLM(chatModel)
             .WithTools(tools)
             .Build();
 
-        var adaptivePlanner = new AdaptivePlanner(orchestrator, chatModel);
+        AdaptivePlanner adaptivePlanner = new AdaptivePlanner(orchestrator, chatModel);
 
         // Create a plan with varying confidence
-        var plan = new Plan(
+        Plan plan = new Plan(
             "Process data with error handling",
             new List<PlanStep>
             {
@@ -305,24 +305,24 @@ public static class MetaAIv2EnhancementsExample
             new Dictionary<string, double> { ["overall"] = 0.7 },
             DateTime.UtcNow);
 
-        var config = new AdaptivePlanningConfig(
+        AdaptivePlanningConfig config = new AdaptivePlanningConfig(
             MaxRetries: 2,
             EnableAutoReplan: false,
             FailureThreshold: 0.5);
 
-        var result = await adaptivePlanner.ExecuteWithAdaptationAsync(plan, config);
+        Result<ExecutionResult, string> result = await adaptivePlanner.ExecuteWithAdaptationAsync(plan, config);
 
         if (result.IsSuccess)
         {
-            var execution = result.Value;
+            ExecutionResult execution = result.Value;
             Console.WriteLine($"Adaptive execution completed:");
             Console.WriteLine($"  Success: {execution.Success}");
 
-            if (execution.Metadata.TryGetValue("adaptations", out var adaptations))
+            if (execution.Metadata.TryGetValue("adaptations", out object? adaptations))
             {
-                var adaptList = (List<string>)adaptations;
+                List<string> adaptList = (List<string>)adaptations;
                 Console.WriteLine($"  Adaptations made: {adaptList.Count}");
-                foreach (var adaptation in adaptList)
+                foreach (string adaptation in adaptList)
                 {
                     Console.WriteLine($"    - {adaptation}");
                 }
@@ -340,28 +340,28 @@ public static class MetaAIv2EnhancementsExample
     {
         Console.WriteLine("=== Cost-Aware Routing Example ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
 
-        var baseOrchestrator = new SmartModelOrchestrator(tools, "default");
+        SmartModelOrchestrator baseOrchestrator = new SmartModelOrchestrator(tools, "default");
 
         // Register a real model
         baseOrchestrator.RegisterModel(
             new ModelCapability("llama3", new[] { "general" }, 2048, 1.0, 500, ModelType.General),
             chatModel);
 
-        var uncertaintyRouter = new UncertaintyRouter(baseOrchestrator, 0.7);
+        UncertaintyRouter uncertaintyRouter = new UncertaintyRouter(baseOrchestrator, 0.7);
 
-        var orchestrator = MetaAIBuilder.CreateDefault()
+        MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
             .WithLLM(chatModel)
             .WithTools(tools)
             .Build();
 
-        var costRouter = new CostAwareRouter(uncertaintyRouter, orchestrator);
+        CostAwareRouter costRouter = new CostAwareRouter(uncertaintyRouter, orchestrator);
 
         // Try different optimization strategies
-        var strategies = new[]
+        CostOptimizationStrategy[] strategies = new[]
         {
             CostOptimizationStrategy.MinimizeCost,
             CostOptimizationStrategy.MaximizeQuality,
@@ -369,21 +369,21 @@ public static class MetaAIv2EnhancementsExample
             CostOptimizationStrategy.MaximizeValue,
         };
 
-        foreach (var strategy in strategies)
+        foreach (CostOptimizationStrategy strategy in strategies)
         {
-            var config = new CostAwareRoutingConfig(
+            CostAwareRoutingConfig config = new CostAwareRoutingConfig(
                 MaxCostPerPlan: 0.5,
                 MinAcceptableQuality: 0.7,
                 Strategy: strategy);
 
-            var result = await costRouter.RouteWithCostAwarenessAsync(
+            Result<CostBenefitAnalysis, string> result = await costRouter.RouteWithCostAwarenessAsync(
                 "Process complex data analysis",
                 null,
                 config);
 
             if (result.IsSuccess)
             {
-                var analysis = result.Value;
+                CostBenefitAnalysis analysis = result.Value;
                 Console.WriteLine($"Strategy: {strategy}");
                 Console.WriteLine($"  Route: {analysis.RecommendedRoute}");
                 Console.WriteLine($"  Cost: ${analysis.EstimatedCost:F6}");
@@ -403,20 +403,20 @@ public static class MetaAIv2EnhancementsExample
     {
         Console.WriteLine("=== Human-in-the-Loop Example ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
 
-        var orchestrator = MetaAIBuilder.CreateDefault()
+        MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
             .WithLLM(chatModel)
             .WithTools(tools)
             .Build();
 
         // Use auto-approving mock for demonstration
-        var mockProvider = new AutoApprovingFeedbackProvider();
-        var hitlOrchestrator = new HumanInTheLoopOrchestrator(orchestrator, mockProvider);
+        AutoApprovingFeedbackProvider mockProvider = new AutoApprovingFeedbackProvider();
+        HumanInTheLoopOrchestrator hitlOrchestrator = new HumanInTheLoopOrchestrator(orchestrator, mockProvider);
 
-        var plan = new Plan(
+        Plan plan = new Plan(
             "Database maintenance",
             new List<PlanStep>
             {
@@ -427,25 +427,25 @@ public static class MetaAIv2EnhancementsExample
             new Dictionary<string, double> { ["overall"] = 0.91 },
             DateTime.UtcNow);
 
-        var config = new HumanInTheLoopConfig(
+        HumanInTheLoopConfig config = new HumanInTheLoopConfig(
             RequireApprovalForCriticalSteps: true,
             EnableInteractiveRefinement: false,
             DefaultTimeout: TimeSpan.FromMinutes(2),
             CriticalActionPatterns: new List<string> { "delete", "drop", "remove" });
 
-        var result = await hitlOrchestrator.ExecuteWithHumanOversightAsync(plan, config);
+        Result<ExecutionResult, string> result = await hitlOrchestrator.ExecuteWithHumanOversightAsync(plan, config);
 
         if (result.IsSuccess)
         {
-            var execution = result.Value;
+            ExecutionResult execution = result.Value;
             Console.WriteLine($"Human oversight execution:");
             Console.WriteLine($"  Success: {execution.Success}");
 
-            if (execution.Metadata.TryGetValue("approvals", out var approvals))
+            if (execution.Metadata.TryGetValue("approvals", out object? approvals))
             {
-                var approvalList = (List<string>)approvals;
+                List<string> approvalList = (List<string>)approvals;
                 Console.WriteLine($"  Approval events: {approvalList.Count}");
-                foreach (var approval in approvalList)
+                foreach (string approval in approvalList)
                 {
                     Console.WriteLine($"    - {approval}");
                 }
@@ -530,13 +530,13 @@ public static class MetaAIv2EnhancementsExample
     // Helper methods
     private static Experience CreateSampleExperience(string goal, double quality)
     {
-        var plan = new Plan(
+        Plan plan = new Plan(
             goal,
             new List<PlanStep> { CreateSampleStep("action") },
             new Dictionary<string, double> { ["overall"] = quality },
             DateTime.UtcNow);
 
-        var execution = new ExecutionResult(
+        ExecutionResult execution = new ExecutionResult(
             plan,
             new List<StepResult>
             {
@@ -553,7 +553,7 @@ public static class MetaAIv2EnhancementsExample
             new Dictionary<string, object>(),
             TimeSpan.FromSeconds(1));
 
-        var verification = new VerificationResult(
+        VerificationResult verification = new VerificationResult(
             execution,
             true,
             quality,

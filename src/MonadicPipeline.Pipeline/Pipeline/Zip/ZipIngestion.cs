@@ -8,27 +8,27 @@ namespace LangChainPipeline.Pipeline.Ingestion.Zip;
 /// <summary>
 /// Specifies the type of content found in a zip archive entry.
 /// </summary>
-public enum ZipContentKind 
-{ 
+public enum ZipContentKind
+{
     /// <summary>
     /// CSV (Comma-Separated Values) file content.
     /// </summary>
-    Csv, 
-    
+    Csv,
+
     /// <summary>
     /// XML (Extensible Markup Language) document content.
     /// </summary>
-    Xml, 
-    
+    Xml,
+
     /// <summary>
     /// Plain text content.
     /// </summary>
-    Text, 
-    
+    Text,
+
     /// <summary>
     /// Binary or unknown content type.
     /// </summary>
-    Binary 
+    Binary
 }
 
 /// <summary>
@@ -92,13 +92,13 @@ public static class ZipIngestion
         double maxCompressionRatio = 200d,
         CancellationToken ct = default)
     {
-        var holder = ZipArchiveRegistry.Acquire(zipPath);
-        var archive = holder.Archive;
+        ZipArchiveHolder holder = ZipArchiveRegistry.Acquire(zipPath);
+        ZipArchive archive = holder.Archive;
 
-        var results = new List<ZipFileRecord>();
+        List<ZipFileRecord> results = new List<ZipFileRecord>();
         long total = 0;
 
-        foreach (var entry in archive.Entries)
+        foreach (ZipArchiveEntry entry in archive.Entries)
         {
             ct.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(entry.Name)) continue; // directory
@@ -110,7 +110,7 @@ public static class ZipIngestion
             string? dir = full.Contains('/') ? Path.GetDirectoryName(full)?.Replace('\\', '/') : null;
             string file = entry.Name;
             string ext = Path.GetExtension(file).ToLowerInvariant();
-            var kind = Classify(ext);
+            ZipContentKind kind = Classify(ext);
             long compressed = entry.CompressedLength;
             double ratio = compressed == 0 ? double.PositiveInfinity : (double)entry.Length / compressed;
             // Don't mutate original classification on ratio exceed; we will decide to skip during parse
@@ -119,7 +119,7 @@ public static class ZipIngestion
                 // Heuristic: probe first bytes to detect if likely text
                 try
                 {
-                    using var probeStream = entry.Open();
+                    using Stream probeStream = entry.Open();
                     int toRead = (int)Math.Min(2048, entry.Length);
                     byte[] buf = new byte[toRead];
                     int read = probeStream.Read(buf, 0, toRead);
@@ -128,7 +128,7 @@ public static class ZipIngestion
                 }
                 catch { /* ignore heuristic failure */ }
             }
-            var captured = entry; // capture entry while archive kept alive by registry
+            ZipArchiveEntry captured = entry; // capture entry while archive kept alive by registry
             Func<Stream> opener = () => captured.Open();
             results.Add(new ZipFileRecord(full, dir, file, kind, entry.Length, compressed, ratio, opener, null, zipPath, maxCompressionRatio));
         }
@@ -159,8 +159,8 @@ public static class ZipIngestion
         bool includeXmlText = true,
         CancellationToken ct = default)
     {
-        var list = new List<ZipFileRecord>();
-        foreach (var item in items)
+        List<ZipFileRecord> list = new List<ZipFileRecord>();
+        foreach (ZipFileRecord item in items)
         {
             ct.ThrowIfCancellationRequested();
             IDictionary<string, object>? parsed = null;
@@ -203,7 +203,7 @@ public static class ZipIngestion
             list.Add(item with { Parsed = parsed });
         }
         // release archives referenced
-        foreach (var group in list.Select(r => r.ZipPath).Distinct())
+        foreach (string? group in list.Select(r => r.ZipPath).Distinct())
         {
             ZipArchiveRegistry.Release(group);
         }
@@ -247,13 +247,13 @@ public static class ZipIngestion
 
     private static async Task<IDictionary<string, object>> ParseCsvAsync(ZipFileRecord rec, int maxLines, CancellationToken ct)
     {
-        using var s = rec.OpenStream();
-        using var reader = new StreamReader(s, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: false);
+        using Stream s = rec.OpenStream();
+        using StreamReader reader = new StreamReader(s, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: false);
         string? headerLine = await reader.ReadLineAsync();
         if (headerLine == null)
             return new Dictionary<string, object> { ["type"] = "csv", ["empty"] = true };
-        var header = SplitCsv(headerLine);
-        var rows = new List<string[]>();
+        string[] header = SplitCsv(headerLine);
+        List<string[]> rows = new List<string[]>();
         string? line;
         while (rows.Count < maxLines && (line = await reader.ReadLineAsync()) != null)
         {
@@ -273,7 +273,7 @@ public static class ZipIngestion
         // Robust-ish CSV splitter handling quotes and escaped quotes.
         if (string.IsNullOrEmpty(line)) return Array.Empty<string>();
         List<string> fields = [];
-        var sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         bool inQuotes = false;
         for (int i = 0; i < line.Length; i++)
         {
@@ -306,20 +306,20 @@ public static class ZipIngestion
 
     private static async Task<IDictionary<string, object>> ParseXmlAsync(ZipFileRecord rec, bool includeText, CancellationToken ct)
     {
-        using var s = rec.OpenStream();
-        var doc = await Task.Run(() => XDocument.Load(s), ct);
-        var allElements = doc.Descendants().ToList();
+        using Stream s = rec.OpenStream();
+        XDocument doc = await Task.Run(() => XDocument.Load(s), ct);
+        List<XElement> allElements = doc.Descendants().ToList();
         int elementCount = allElements.Count;
         int maxDepth = 0;
-        var stack = new Stack<(XElement el, int depth)>();
+        Stack<(XElement el, int depth)> stack = new Stack<(XElement el, int depth)>();
         if (doc.Root != null) stack.Push((doc.Root, 1));
         while (stack.Count > 0)
         {
-            var (el, depth) = stack.Pop();
+            (XElement el, int depth) = stack.Pop();
             if (depth > maxDepth) maxDepth = depth;
-            foreach (var child in el.Elements()) stack.Push((child, depth + 1));
+            foreach (XElement child in el.Elements()) stack.Push((child, depth + 1));
         }
-        var attributeCount = allElements.Sum(e => e.Attributes().Count());
+        int attributeCount = allElements.Sum(e => e.Attributes().Count());
         var topChildren = doc.Root?.Elements().GroupBy(e => e.Name.LocalName)
             .Select(g => new { Name = g.Key, Count = g.Count() })
             .OrderByDescending(g => g.Count)
@@ -340,8 +340,8 @@ public static class ZipIngestion
 
     private static async Task<IDictionary<string, object>> ReadTextAsync(ZipFileRecord rec, int maxBytes, CancellationToken ct)
     {
-        using var s = rec.OpenStream();
-        using var reader = new StreamReader(s, Encoding.UTF8, true);
+        using Stream s = rec.OpenStream();
+        using StreamReader reader = new StreamReader(s, Encoding.UTF8, true);
         char[] buffer = new char[maxBytes];
         int read = await reader.ReadAsync(buffer, 0, buffer.Length);
         string text = new(buffer, 0, read);
@@ -355,10 +355,10 @@ public static class ZipIngestion
 
     private static async Task<IDictionary<string, object>> ReadBinarySummaryAsync(ZipFileRecord rec, int maxBytes, CancellationToken ct)
     {
-        using var s = rec.OpenStream();
+        using Stream s = rec.OpenStream();
         byte[] buf = new byte[Math.Min(maxBytes, rec.Length)];
         int read = await s.ReadAsync(buf, 0, buf.Length, ct);
-        var hash = ComputeSha256(buf.AsSpan(0, read));
+        string hash = ComputeSha256(buf.AsSpan(0, read));
         return new Dictionary<string, object>
         {
             ["type"] = "binary",
@@ -370,8 +370,8 @@ public static class ZipIngestion
 
     private static string ComputeSha256(ReadOnlySpan<byte> data)
     {
-        using var sha = System.Security.Cryptography.SHA256.Create();
-        var hash = sha.ComputeHash(data.ToArray());
+        using System.Security.Cryptography.SHA256 sha = System.Security.Cryptography.SHA256.Create();
+        byte[] hash = sha.ComputeHash(data.ToArray());
         return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     }
 
@@ -413,10 +413,10 @@ public static class ZipIngestionStreaming
     {
         // Ensure asynchronous nature even if iteration is fast
         await Task.Yield();
-        using var fs = File.OpenRead(zipPath);
-        using var archive = new ZipArchive(fs, ZipArchiveMode.Read, leaveOpen: false);
+        using FileStream fs = File.OpenRead(zipPath);
+        using ZipArchive archive = new ZipArchive(fs, ZipArchiveMode.Read, leaveOpen: false);
         long total = 0;
-        foreach (var entry in archive.Entries)
+        foreach (ZipArchiveEntry entry in archive.Entries)
         {
             ct.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(entry.Name)) continue;
@@ -427,7 +427,7 @@ public static class ZipIngestionStreaming
             string? dir = full.Contains('/') ? Path.GetDirectoryName(full)?.Replace('\\', '/') : null;
             string file = entry.Name;
             string ext = Path.GetExtension(file).ToLowerInvariant();
-            var kind = ext switch
+            ZipContentKind kind = ext switch
             {
                 ".csv" => ZipContentKind.Csv,
                 ".xml" => ZipContentKind.Xml,
@@ -441,7 +441,7 @@ public static class ZipIngestionStreaming
             {
                 try
                 {
-                    using var ps = entry.Open();
+                    using Stream ps = entry.Open();
                     int toRead = (int)Math.Min(2048, entry.Length);
                     byte[] buf = new byte[toRead];
                     int read = ps.Read(buf, 0, toRead);
@@ -449,7 +449,7 @@ public static class ZipIngestionStreaming
                 }
                 catch { }
             }
-            var captured = entry;
+            ZipArchiveEntry captured = entry;
             Func<Stream> opener = () => captured.Open();
             yield return new ZipFileRecord(full, dir, file, kind, entry.Length, compressed, ratio, opener, null, zipPath, maxCompressionRatio);
         }
@@ -480,14 +480,14 @@ internal static class ZipIngestionStreamingHelpers
 public static class DeferredZipTextCache
 {
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> Map = new();
-    
+
     /// <summary>
     /// Stores text content associated with an identifier.
     /// </summary>
     /// <param name="id">The unique identifier for the cached text.</param>
     /// <param name="text">The text content to store.</param>
     public static void Store(string id, string text) => Map[id] = text;
-    
+
     /// <summary>
     /// Attempts to retrieve and remove text content associated with an identifier.
     /// </summary>
@@ -499,7 +499,7 @@ public static class DeferredZipTextCache
         if (Map.TryRemove(id, out text!)) return true;
         text = string.Empty; return false;
     }
-    
+
     /// <summary>
     /// Attempts to retrieve text content associated with an identifier without removing it.
     /// </summary>
@@ -540,7 +540,7 @@ internal static class ZipArchiveRegistry
     }
     public static void Release(string path)
     {
-        if (Map.TryGetValue(path, out var holder))
+        if (Map.TryGetValue(path, out ZipArchiveHolder? holder))
         {
             if (holder.ReleaseRef() <= 0)
             {

@@ -80,10 +80,10 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
             return Result<OrchestratorDecision, string>.Failure("Prompt cannot be empty");
 
         // Classify the use case
-        var useCase = ClassifyUseCase(prompt);
+        UseCase useCase = ClassifyUseCase(prompt);
 
         // Find best matching model
-        var modelResult = await SelectBestModelAsync(useCase, context, ct);
+        Result<OrchestratorDecision, string> modelResult = await SelectBestModelAsync(useCase, context, ct);
 
         return modelResult.Match(
             model => Result<OrchestratorDecision, string>.Success(model),
@@ -95,12 +95,12 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
     /// </summary>
     public UseCase ClassifyUseCase(string prompt)
     {
-        var lowerPrompt = prompt.ToLowerInvariant();
+        string lowerPrompt = prompt.ToLowerInvariant();
 
         // Code generation patterns
         if (Regex.IsMatch(lowerPrompt, @"\b(code|implement|function|class|method|debug|fix|refactor)\b"))
         {
-            var complexity = EstimateComplexity(prompt);
+            int complexity = EstimateComplexity(prompt);
             return new UseCase(
                 UseCaseType.CodeGeneration,
                 complexity,
@@ -112,7 +112,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         // Reasoning patterns
         if (Regex.IsMatch(lowerPrompt, @"\b(analyze|reason|explain|why|how|cause|logic|deduce)\b"))
         {
-            var complexity = EstimateComplexity(prompt);
+            int complexity = EstimateComplexity(prompt);
             return new UseCase(
                 UseCaseType.Reasoning,
                 complexity,
@@ -196,10 +196,10 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         var best = scoredModels.First();
 
         // Get model instance or create fallback
-        if (!_models.TryGetValue(best.Capability.ModelName, out var model))
+        if (!_models.TryGetValue(best.Capability.ModelName, out IChatCompletionModel? model))
         {
             // If model not registered, try fallback
-            if (_models.TryGetValue(_fallbackModel, out var fallback))
+            if (_models.TryGetValue(_fallbackModel, out IChatCompletionModel? fallback))
             {
                 model = fallback;
             }
@@ -211,9 +211,9 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         }
 
         // Select appropriate tools for the use case
-        var recommendedTools = SelectToolsForUseCase(useCase);
+        ToolRegistry recommendedTools = SelectToolsForUseCase(useCase);
 
-        var decision = new OrchestratorDecision(
+        OrchestratorDecision decision = new OrchestratorDecision(
             SelectedModel: model,
             ModelName: best.Capability.ModelName,
             Reason: GenerateSelectionReason(best.Capability, useCase, best.Score),
@@ -232,7 +232,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         double score = 0.0;
 
         // Type matching
-        var typeScore = useCase.Type switch
+        double typeScore = useCase.Type switch
         {
             UseCaseType.CodeGeneration => capability.Type == ModelType.Code ? 1.0 : 0.3,
             UseCaseType.Reasoning => capability.Type == ModelType.Reasoning ? 1.0 : 0.4,
@@ -244,16 +244,16 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         score += typeScore * 0.4;
 
         // Capability matching
-        var capabilityScore = useCase.RequiredCapabilities
+        double capabilityScore = useCase.RequiredCapabilities
             .Count(req => capability.Strengths.Any(s =>
                 s.Contains(req, StringComparison.OrdinalIgnoreCase)))
             / (double)Math.Max(1, useCase.RequiredCapabilities.Length);
         score += capabilityScore * 0.3;
 
         // Performance metrics
-        if (_metrics.TryGetValue(capability.ModelName, out var metrics))
+        if (_metrics.TryGetValue(capability.ModelName, out PerformanceMetrics? metrics))
         {
-            var performanceScore = metrics.SuccessRate *
+            double performanceScore = metrics.SuccessRate *
                 (1.0 - Math.Min(metrics.AverageLatencyMs / 10000.0, 0.9));
             score += performanceScore * useCase.PerformanceWeight * 0.3;
         }
@@ -267,7 +267,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
     private ToolRegistry SelectToolsForUseCase(UseCase useCase)
     {
         // Start with base tools
-        var tools = _baseTools;
+        ToolRegistry tools = _baseTools;
 
         // Add specialized tools based on use case
         return useCase.Type switch
@@ -289,14 +289,14 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
         UseCase useCase,
         double score)
     {
-        var reasons = new List<string>
+        List<string> reasons = new List<string>
         {
             $"Use case: {useCase.Type}",
             $"Model type: {capability.Type}",
             $"Confidence: {score:P0}"
         };
 
-        if (_metrics.TryGetValue(capability.ModelName, out var metrics))
+        if (_metrics.TryGetValue(capability.ModelName, out PerformanceMetrics? metrics))
         {
             reasons.Add($"Success rate: {metrics.SuccessRate:P0}");
             reasons.Add($"Avg latency: {metrics.AverageLatencyMs:F0}ms");
@@ -310,9 +310,9 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
     /// </summary>
     private int EstimateComplexity(string prompt)
     {
-        var length = prompt.Length;
-        var sentences = prompt.Split('.', '!', '?').Length;
-        var technicalTerms = Regex.Matches(
+        int length = prompt.Length;
+        int sentences = prompt.Split('.', '!', '?').Length;
+        int technicalTerms = Regex.Matches(
             prompt,
             @"\b(algorithm|architecture|implement|optimize|performance|system)\b",
             RegexOptions.IgnoreCase).Count;
@@ -338,9 +338,9 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator
             // Update existing
             (_, existing) =>
             {
-                var newCount = existing.ExecutionCount + 1;
-                var newAvgLatency = ((existing.AverageLatencyMs * existing.ExecutionCount) + latencyMs) / newCount;
-                var newSuccessRate = ((existing.SuccessRate * existing.ExecutionCount) + (success ? 1.0 : 0.0)) / newCount;
+                int newCount = existing.ExecutionCount + 1;
+                double newAvgLatency = ((existing.AverageLatencyMs * existing.ExecutionCount) + latencyMs) / newCount;
+                double newSuccessRate = ((existing.SuccessRate * existing.ExecutionCount) + (success ? 1.0 : 0.0)) / newCount;
 
                 return new PerformanceMetrics(
                     resourceName,

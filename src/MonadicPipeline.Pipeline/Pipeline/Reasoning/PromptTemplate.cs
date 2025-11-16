@@ -38,8 +38,8 @@ public sealed class PromptTemplate(string template)
         try
         {
             // Find all placeholders in the template
-            var placeholders = ExtractPlaceholders(_template);
-            var missing = placeholders.Where(p => !vars.ContainsKey(p)).ToList();
+            List<string> placeholders = ExtractPlaceholders(_template);
+            List<string> missing = placeholders.Where(p => !vars.ContainsKey(p)).ToList();
 
             if (missing.Any())
                 return Result<string>.Failure($"Missing required variables: {string.Join(", ", missing)}");
@@ -63,7 +63,7 @@ public sealed class PromptTemplate(string template)
     /// <returns>List of placeholder names</returns>
     private static List<string> ExtractPlaceholders(string template)
     {
-        var placeholders = new List<string>();
+        List<string> placeholders = new List<string>();
         int start = 0;
 
         while (true)

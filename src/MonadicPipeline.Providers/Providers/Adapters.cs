@@ -31,12 +31,12 @@ public sealed class OllamaChatAdapter : IChatCompletionModel
     {
         try
         {
-            var stream = _model.GenerateAsync(prompt, cancellationToken: ct);
-            var builder = new StringBuilder();
+            IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(prompt, cancellationToken: ct);
+            StringBuilder builder = new StringBuilder();
 
-            await foreach (var chunk in stream.WithCancellation(ct).ConfigureAwait(false))
+            await foreach (LangChain.Providers.ChatResponse? chunk in stream.WithCancellation(ct).ConfigureAwait(false))
             {
-                var text = ExtractResponseText(chunk);
+                string text = ExtractResponseText(chunk);
                 if (!string.IsNullOrEmpty(text))
                 {
                     builder.Append(text);
@@ -69,21 +69,21 @@ public sealed class OllamaChatAdapter : IChatCompletionModel
                 return string.Join(Environment.NewLine, strings);
         }
 
-        var type = response.GetType();
+        Type type = response.GetType();
 
-        var lastMessageProperty = type.GetProperty("LastMessageContent");
+        System.Reflection.PropertyInfo? lastMessageProperty = type.GetProperty("LastMessageContent");
         if (lastMessageProperty?.GetValue(response) is string last)
         {
             return last;
         }
 
-        var contentProperty = type.GetProperty("Content");
+        System.Reflection.PropertyInfo? contentProperty = type.GetProperty("Content");
         if (contentProperty?.GetValue(response) is string content)
         {
             return content;
         }
 
-        var messageProperty = type.GetProperty("Message");
+        System.Reflection.PropertyInfo? messageProperty = type.GetProperty("Message");
         if (messageProperty?.GetValue(response) is { } message)
         {
             if (message is string mString)
@@ -96,7 +96,7 @@ public sealed class OllamaChatAdapter : IChatCompletionModel
                 return string.Join(Environment.NewLine, enumerable);
             }
 
-            var nestedContent = message.GetType().GetProperty("Content")?.GetValue(message) as string;
+            string? nestedContent = message.GetType().GetProperty("Content")?.GetValue(message) as string;
             if (!string.IsNullOrWhiteSpace(nestedContent))
             {
                 return nestedContent!;
@@ -136,17 +136,17 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
     {
         try
         {
-            using var payload = JsonContent.Create(new
+            using JsonContent payload = JsonContent.Create(new
             {
                 model = _model,
                 temperature = _settings.Temperature,
                 max_output_tokens = _settings.MaxTokens,
                 input = prompt
             });
-            using var response = await _client.PostAsync("/v1/responses", payload, ct).ConfigureAwait(false);
+            using HttpResponseMessage response = await _client.PostAsync("/v1/responses", payload, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
-            if (json is not null && json.TryGetValue("output_text", out var text) && text is string s)
+            Dictionary<string, object?>? json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
+            if (json is not null && json.TryGetValue("output_text", out object? text) && text is string s)
             {
                 return s;
             }
@@ -189,7 +189,7 @@ public sealed class OllamaCloudChatModel : IChatCompletionModel
         try
         {
             // Use Ollama's native /api/generate endpoint and JSON format
-            using var payload = JsonContent.Create(new
+            using JsonContent payload = JsonContent.Create(new
             {
                 model = _model,
                 prompt = prompt,
@@ -201,11 +201,11 @@ public sealed class OllamaCloudChatModel : IChatCompletionModel
                 }
             });
 
-            using var response = await _client.PostAsync("/api/generate", payload, ct).ConfigureAwait(false);
+            using HttpResponseMessage response = await _client.PostAsync("/api/generate", payload, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
-            if (json is not null && json.TryGetValue("response", out var responseText) && responseText is string s)
+            Dictionary<string, object?>? json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
+            if (json is not null && json.TryGetValue("response", out object? responseText) && responseText is string s)
             {
                 return s;
             }
@@ -250,13 +250,13 @@ public sealed class MultiModelRouter : IChatCompletionModel
     private IChatCompletionModel SelectModel(string prompt)
     {
         if (string.IsNullOrWhiteSpace(prompt)) return _models[_fallbackKey];
-        if (prompt.Contains("code", StringComparison.OrdinalIgnoreCase) && _models.TryGetValue("coder", out var coder))
+        if (prompt.Contains("code", StringComparison.OrdinalIgnoreCase) && _models.TryGetValue("coder", out IChatCompletionModel? coder))
             return coder;
-        if (prompt.Length > 600 && _models.TryGetValue("summarize", out var summarize))
+        if (prompt.Length > 600 && _models.TryGetValue("summarize", out IChatCompletionModel? summarize))
             return summarize;
-        if (prompt.Contains("reason", StringComparison.OrdinalIgnoreCase) && _models.TryGetValue("reason", out var reason))
+        if (prompt.Contains("reason", StringComparison.OrdinalIgnoreCase) && _models.TryGetValue("reason", out IChatCompletionModel? reason))
             return reason;
-        return _models.TryGetValue(_fallbackKey, out var fallback) ? fallback : _models.Values.First();
+        return _models.TryGetValue(_fallbackKey, out IChatCompletionModel? fallback) ? fallback : _models.Values.First();
     }
 }
 
@@ -273,7 +273,7 @@ public sealed class DeterministicEmbeddingModel : IEmbeddingModel
         if (input is null) input = string.Empty;
         Span<byte> buffer = stackalloc byte[Math.Max(32, input.Length)];
         int len = System.Text.Encoding.UTF8.GetBytes(input, buffer);
-        var hash = System.Security.Cryptography.SHA256.HashData(buffer[..len]);
+        byte[] hash = System.Security.Cryptography.SHA256.HashData(buffer[..len]);
         float[] vector = new float[hash.Length];
         for (int i = 0; i < hash.Length; i++)
         {
@@ -302,8 +302,8 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
     {
         try
         {
-            var response = await _model.CreateEmbeddingsAsync(input, cancellationToken: ct).ConfigureAwait(false);
-            if (TryExtractEmbedding(response, out var vector))
+            LangChain.Providers.EmbeddingResponse response = await _model.CreateEmbeddingsAsync(input, cancellationToken: ct).ConfigureAwait(false);
+            if (TryExtractEmbedding(response, out float[]? vector))
             {
                 return vector;
             }
@@ -336,19 +336,19 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
                 return true;
         }
 
-        var type = response.GetType();
+        Type type = response.GetType();
 
-        var vectorProperty = type.GetProperty("Vector");
+        System.Reflection.PropertyInfo? vectorProperty = type.GetProperty("Vector");
         if (vectorProperty?.GetValue(response) is IEnumerable<float> vectorEnum)
         {
             embedding = vectorEnum.ToArray();
             return embedding.Length > 0;
         }
 
-        var embeddingsProperty = type.GetProperty("Embeddings");
+        System.Reflection.PropertyInfo? embeddingsProperty = type.GetProperty("Embeddings");
         if (embeddingsProperty?.GetValue(response) is System.Collections.IEnumerable embeddingsEnum)
         {
-            foreach (var entry in embeddingsEnum)
+            foreach (object? entry in embeddingsEnum)
             {
                 if (entry is float[] entryArray)
                 {
@@ -366,15 +366,15 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
                 }
                 else if (entry is { })
                 {
-                    var entryType = entry.GetType();
-                    var vectorInner = entryType.GetProperty("Vector")?.GetValue(entry) as IEnumerable<float>;
+                    Type entryType = entry.GetType();
+                    IEnumerable<float>? vectorInner = entryType.GetProperty("Vector")?.GetValue(entry) as IEnumerable<float>;
                     if (vectorInner is not null)
                     {
                         embedding = vectorInner.ToArray();
                         return embedding.Length > 0;
                     }
 
-                    var inner = entryType.GetProperty("Embedding")?.GetValue(entry) as IEnumerable<float>;
+                    IEnumerable<float>? inner = entryType.GetProperty("Embedding")?.GetValue(entry) as IEnumerable<float>;
                     if (inner is not null)
                     {
                         embedding = inner.ToArray();
@@ -417,24 +417,24 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
         try
         {
             // Use Ollama's native /api/embeddings endpoint and JSON format
-            using var payload = JsonContent.Create(new
+            using JsonContent payload = JsonContent.Create(new
             {
                 model = _model,
                 prompt = input
             });
 
-            using var response = await _client.PostAsync("/api/embeddings", payload, ct).ConfigureAwait(false);
+            using HttpResponseMessage response = await _client.PostAsync("/api/embeddings", payload, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
-            if (json is not null && json.TryGetValue("embedding", out var embeddingValue))
+            Dictionary<string, object?>? json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
+            if (json is not null && json.TryGetValue("embedding", out object? embeddingValue))
             {
                 if (embeddingValue is System.Text.Json.JsonElement jsonElement && jsonElement.ValueKind == System.Text.Json.JsonValueKind.Array)
                 {
-                    var floats = new List<float>();
-                    foreach (var element in jsonElement.EnumerateArray())
+                    List<float> floats = new List<float>();
+                    foreach (System.Text.Json.JsonElement element in jsonElement.EnumerateArray())
                     {
-                        if (element.TryGetSingle(out var value))
+                        if (element.TryGetSingle(out float value))
                         {
                             floats.Add(value);
                         }

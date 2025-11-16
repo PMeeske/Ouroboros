@@ -27,11 +27,11 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
     /// <param name="mettaExecutablePath">Path to the MeTTa executable (defaults to 'metta' in PATH).</param>
     public SubprocessMeTTaEngine(string? mettaExecutablePath = null)
     {
-        var execPath = mettaExecutablePath ?? "metta";
+        string execPath = mettaExecutablePath ?? "metta";
 
         try
         {
-            var startInfo = new ProcessStartInfo
+            ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = execPath,
                 Arguments = "--repl",
@@ -77,10 +77,10 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
             await this.stdin.FlushAsync();
 
             // Read response with timeout
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(10));
 
-            var response = await this.stdout.ReadLineAsync();
+            string? response = await this.stdout.ReadLineAsync();
 
             if (string.IsNullOrEmpty(response))
             {
@@ -115,7 +115,7 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
         try
         {
             // Add fact using MeTTa assertion syntax
-            var command = $"!(add-atom &self {fact})";
+            string command = $"!(add-atom &self {fact})";
             await this.stdin.WriteLineAsync(command.AsMemory(), ct);
             await this.stdin.FlushAsync();
 
@@ -146,10 +146,10 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
             await this.stdin.WriteLineAsync(rule.AsMemory(), ct);
             await this.stdin.FlushAsync();
 
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(10));
 
-            var response = await this.stdout.ReadLineAsync();
+            string? response = await this.stdout.ReadLineAsync();
 
             return !string.IsNullOrEmpty(response)
                 ? Result<string, string>.Success(response)
@@ -173,8 +173,8 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
     public async Task<Result<bool, string>> VerifyPlanAsync(string plan, CancellationToken ct = default)
     {
         // Use MeTTa query to verify plan
-        var query = $"!(match &self (verify-plan {plan}) $result)";
-        var result = await this.ExecuteQueryAsync(query, ct);
+        string query = $"!(match &self (verify-plan {plan}) $result)";
+        Result<string, string> result = await this.ExecuteQueryAsync(query, ct);
 
         return result.Match(
             success => success.Contains("True") || success.Contains("true")
@@ -195,7 +195,7 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
         try
         {
             // Clear the space
-            var command = "!(clear-space &self)";
+            string command = "!(clear-space &self)";
             await this.stdin.WriteLineAsync(command.AsMemory(), ct);
             await this.stdin.FlushAsync();
 

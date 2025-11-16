@@ -41,7 +41,7 @@ public class ConversationMemory
     /// </summary>
     public string GetFormattedHistory(string humanPrefix = "Human", string aiPrefix = "AI")
     {
-        var turns = _turns.ToArray();
+        ConversationTurn[] turns = _turns.ToArray();
         if (turns.Length == 0) return string.Empty;
 
         return string.Join("\n", turns.Select(turn =>
@@ -89,7 +89,7 @@ public record MemoryContext<T>(
     /// </summary>
     public MemoryContext<T> SetProperty(string key, object value)
     {
-        var newProperties = new Dictionary<string, object>(Properties)
+        Dictionary<string, object> newProperties = new Dictionary<string, object>(Properties)
         {
             [key] = value
         };
@@ -100,7 +100,7 @@ public record MemoryContext<T>(
     /// Get a property value
     /// </summary>
     public TValue? GetProperty<TValue>(string key)
-        => Properties.TryGetValue(key, out var value) && value is TValue typed
+        => Properties.TryGetValue(key, out object? value) && value is TValue typed
             ? typed
             : default;
 }
@@ -120,7 +120,7 @@ public static class MemoryArrows
     {
         return context =>
         {
-            var history = context.Memory.GetFormattedHistory(humanPrefix, aiPrefix);
+            string history = context.Memory.GetFormattedHistory(humanPrefix, aiPrefix);
             return Task.FromResult(context.SetProperty(outputKey, history));
         };
     }
@@ -134,8 +134,8 @@ public static class MemoryArrows
     {
         return context =>
         {
-            var input = context.GetProperty<string>(inputKey) ?? string.Empty;
-            var response = context.GetProperty<string>(responseKey) ?? string.Empty;
+            string input = context.GetProperty<string>(inputKey) ?? string.Empty;
+            string response = context.GetProperty<string>(responseKey) ?? string.Empty;
 
             if (!string.IsNullOrWhiteSpace(input) && !string.IsNullOrWhiteSpace(response))
             {
@@ -153,12 +153,12 @@ public static class MemoryArrows
     {
         return context =>
         {
-            var processedTemplate = template;
+            string processedTemplate = template;
 
             // Replace template variables with values from properties
-            foreach (var prop in context.Properties)
+            foreach (KeyValuePair<string, object> prop in context.Properties)
             {
-                var placeholder = $"{{{prop.Key}}}";
+                string placeholder = $"{{{prop.Key}}}";
                 if (processedTemplate.Contains(placeholder))
                 {
                     processedTemplate = processedTemplate.Replace(placeholder, prop.Value?.ToString() ?? string.Empty);
@@ -176,12 +176,12 @@ public static class MemoryArrows
     {
         return context =>
         {
-            var processedTemplate = template;
+            string processedTemplate = template;
 
             // Replace template variables with values from properties
-            foreach (var prop in context.Properties)
+            foreach (KeyValuePair<string, object> prop in context.Properties)
             {
-                var placeholder = $"{{{prop.Key}}}";
+                string placeholder = $"{{{prop.Key}}}";
                 if (processedTemplate.Contains(placeholder))
                 {
                     processedTemplate = processedTemplate.Replace(placeholder, prop.Value?.ToString() ?? string.Empty);
@@ -207,10 +207,10 @@ public static class MemoryArrows
     {
         return context =>
         {
-            var prompt = context.Data;
-            var response = $"{mockPrefix} Processing prompt with {prompt.Length} characters - {DateTime.Now:HH:mm:ss}";
+            string prompt = context.Data;
+            string response = $"{mockPrefix} Processing prompt with {prompt.Length} characters - {DateTime.Now:HH:mm:ss}";
 
-            var result = context
+            MemoryContext<string> result = context
                 .WithData(response)
                 .SetProperty("text", response);
 
@@ -225,10 +225,10 @@ public static class MemoryArrows
     {
         return context =>
         {
-            var prompt = context.Data?.ToString() ?? string.Empty;
-            var response = $"{mockPrefix} Processing prompt with {prompt.Length} characters - {DateTime.Now:HH:mm:ss}";
+            string prompt = context.Data?.ToString() ?? string.Empty;
+            string response = $"{mockPrefix} Processing prompt with {prompt.Length} characters - {DateTime.Now:HH:mm:ss}";
 
-            var result = context
+            MemoryContext<object> result = context
                 .WithData<object>(response)
                 .SetProperty("text", response);
 
@@ -243,7 +243,7 @@ public static class MemoryArrows
     {
         return context =>
         {
-            var value = context.GetProperty<TOut>(key) ?? default(TOut)!;
+            TOut value = context.GetProperty<TOut>(key) ?? default(TOut)!;
             return Task.FromResult(context.WithData(value));
         };
     }

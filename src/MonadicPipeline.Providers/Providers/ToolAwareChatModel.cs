@@ -47,7 +47,7 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
             string output;
             try
             {
-                var toolResult = await tool.InvokeAsync(args, ct);
+                Result<string, string> toolResult = await tool.InvokeAsync(args, ct);
                 output = toolResult.Match(
                     success => success,
                     error => $"error: {error}");
@@ -74,7 +74,7 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
     {
         try
         {
-            var (text, tools) = await this.GenerateWithToolsAsync(prompt, ct);
+            (string text, List<ToolExecution> tools) = await this.GenerateWithToolsAsync(prompt, ct);
             return Result<(string, List<ToolExecution>), string>.Success((text, tools));
         }
         catch (Exception ex)

@@ -110,7 +110,7 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
             }
 
             // Combine results (reduce phase)
-            var combinedResult = await this.CombineChunkResultsAsync(
+            Result<string> combinedResult = await this.CombineChunkResultsAsync(
                 chunkResults.Select(r => r.Output).ToList());
 
             if (combinedResult.IsFailure)
@@ -218,16 +218,16 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
 
                 try
                 {
-                    var result = await this.processChunkFunc(chunk);
+                    Result<string> result = await this.processChunkFunc(chunk);
                     stopwatch.Stop();
 
-                    var metadata = new ChunkMetadata(
+                    ChunkMetadata metadata = new ChunkMetadata(
                         Index: index,
                         TotalChunks: chunks.Count,
                         TokenCount: EstimateTokenCount(chunk),
                         Strategy: strategy);
 
-                    var chunkResult = new ChunkResult<string>(
+                    ChunkResult<string> chunkResult = new ChunkResult<string>(
                         Output: result.IsSuccess ? result.Value : string.Empty,
                         Metadata: metadata,
                         ProcessingTime: stopwatch.Elapsed,
@@ -239,13 +239,13 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
                 {
                     stopwatch.Stop();
 
-                    var metadata = new ChunkMetadata(
+                    ChunkMetadata metadata = new ChunkMetadata(
                         Index: index,
                         TotalChunks: chunks.Count,
                         TokenCount: EstimateTokenCount(chunk),
                         Strategy: strategy);
 
-                    var failedResult = new ChunkResult<string>(
+                    ChunkResult<string> failedResult = new ChunkResult<string>(
                         Output: string.Empty,
                         Metadata: metadata,
                         ProcessingTime: stopwatch.Elapsed,
@@ -268,7 +268,7 @@ public sealed class RecursiveChunkProcessor : IRecursiveChunkProcessor
         try
         {
             // Use the provided combine function
-            var result = await this.combineResultsFunc(chunkOutputs);
+            Result<string> result = await this.combineResultsFunc(chunkOutputs);
             return result;
         }
         catch (Exception ex)

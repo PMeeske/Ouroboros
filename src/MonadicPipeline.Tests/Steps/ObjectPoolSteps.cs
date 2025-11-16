@@ -61,7 +61,7 @@ public class ObjectPoolSteps
     [Given("I track CommonPools StringBuilderPool size")]
     public void GivenITrackCommonPoolsStringBuilderPoolSize()
     {
-        _initialPoolSize = CommonPools.StringBuilderPool.Count;
+        _initialPoolSize = CommonPools.StringBuilder.Count;
     }
 
     [Given("two separate object pools")]
@@ -163,37 +163,37 @@ public class ObjectPoolSteps
     [When("I rent from CommonPools StringBuilderPool")]
     public void WhenIRentFromCommonPoolsStringBuilderPool()
     {
-        _rentedObject = CommonPools.StringBuilderPool.Rent();
+        _rentedObject = CommonPools.StringBuilder.Rent();
     }
 
     [When("I rent from CommonPools StringListPool")]
     public void WhenIRentFromCommonPoolsStringListPool()
     {
-        var list = CommonPools.StringListPool.Rent();
+        var list = CommonPools.StringList.Rent();
         list.Should().BeEmpty();
-        CommonPools.StringListPool.Return(list);
+        CommonPools.StringList.Return(list);
     }
 
     [When("I rent from CommonPools StringDictionaryPool")]
     public void WhenIRentFromCommonPoolsStringDictionaryPool()
     {
-        var dict = CommonPools.StringDictionaryPool.Rent();
+        var dict = CommonPools.StringDictionary.Rent();
         dict.Should().BeEmpty();
-        CommonPools.StringDictionaryPool.Return(dict);
+        CommonPools.StringDictionary.Return(dict);
     }
 
     [When("I rent from CommonPools MemoryStreamPool")]
     public void WhenIRentFromCommonPoolsMemoryStreamPool()
     {
-        var stream = CommonPools.MemoryStreamPool.Rent();
+        var stream = CommonPools.MemoryStream.Rent();
         stream.Position.Should().Be(0);
-        CommonPools.MemoryStreamPool.Return(stream);
+        CommonPools.MemoryStream.Return(stream);
     }
 
     [When("I use GetPooledString to build {string}")]
     public void WhenIUseGetPooledStringToBuild(string expected)
     {
-        var result = PooledHelpers.GetPooledString(sb => sb.Append(expected));
+        var result = PooledHelpers.WithStringBuilder(sb => sb.Append(expected));
         result.Should().Be(expected);
     }
 
@@ -254,7 +254,7 @@ public class ObjectPoolSteps
     [Then("only {int} objects should be from the pool")]
     public void ThenOnlyObjectsShouldBeFromThePool(int expectedFromPool)
     {
-        _newObjectCount.Should().BeGreaterOrEqualTo(_rentedObjects.Count - expectedFromPool);
+        _newObjectCount.Should().BeGreaterThanOrEqualTo(_rentedObjects.Count - expectedFromPool);
     }
 
     [Then("it should be a new object")]
@@ -275,8 +275,8 @@ public class ObjectPoolSteps
     public void ThenTheStringBuilderShouldHaveCapacityAtLeast(int minCapacity)
     {
         _rentedObject.Should().NotBeNull();
-        _rentedObject!.Capacity.Should().BeGreaterOrEqualTo(minCapacity);
-        CommonPools.StringBuilderPool.Return(_rentedObject);
+        _rentedObject!.Capacity.Should().BeGreaterThanOrEqualTo(minCapacity);
+        CommonPools.StringBuilder.Return(_rentedObject);
     }
 
     [Then("the List should be empty")]
@@ -306,8 +306,8 @@ public class ObjectPoolSteps
     [Then("the pool size should not increase")]
     public void ThenThePoolSizeShouldNotIncrease()
     {
-        var currentSize = CommonPools.StringBuilderPool.Count;
-        currentSize.Should().BeLessOrEqualTo(_initialPoolSize + 1);
+        var currentSize = CommonPools.StringBuilder.Count;
+        currentSize.Should().BeLessThanOrEqualTo(_initialPoolSize + 1);
     }
 
     [Then("all operations should complete without exceptions")]

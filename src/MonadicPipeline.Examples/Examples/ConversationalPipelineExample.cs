@@ -18,7 +18,7 @@ public static class ConversationalPipelineExample
         Console.WriteLine("=== Conversational Pipeline Example ===");
 
         // Create a memory context (simulating a conversation memory)
-        var memory = new ConversationMemory(maxTurns: 5);
+        ConversationMemory memory = new ConversationMemory(maxTurns: 5);
 
         // Add some conversation history
         memory.AddTurn("Hello, how are you?", "I'm doing well, thank you! How can I help you today?");
@@ -46,16 +46,16 @@ public static class ConversationalPipelineExample
             Console.WriteLine($"User: {input}");
 
             // Create a new context with the user input using the existing memory system
-            var inputContext = new MemoryContext<string>(input, memory)
+            MemoryContext<string> inputContext = new MemoryContext<string>(input, memory)
                 .SetProperty("input", input);
 
             // Simulate the conversational pipeline builder
-            var conversationBuilder = new ConversationBuilder<string, string>("conversation-context")
+            ConversationBuilder<string, string> conversationBuilder = new ConversationBuilder<string, string>("conversation-context")
                 .AddTransformation(
                     context =>
                 {
                     // Add conversation history to context
-                    var history = context.Memory.GetFormattedHistory();
+                    string history = context.Memory.GetFormattedHistory();
                     context.SetProperty("conversation_history", history);
                     return context;
                 }, "Added conversation history")
@@ -63,16 +63,16 @@ public static class ConversationalPipelineExample
                     async (context, _) =>
                 {
                     // Simulate AI processing (replace with actual LLM call)
-                    var userInput = context.GetProperty<string>("input") ?? "No input";
-                    var aiResponse = await SimulateAiResponse(userInput, context);
+                    string userInput = context.GetProperty<string>("input") ?? "No input";
+                    string aiResponse = await SimulateAiResponse(userInput, context);
 
                     context.SetProperty("text", aiResponse);
                     return context;
                 }, "Generated AI response");
 
             // Execute the conversational pipeline
-            var result = await conversationBuilder.RunAsync(inputContext);
-            var aiResponse = result.GetProperty<string>("text") ?? "No response generated";
+            MemoryContext<string> result = await conversationBuilder.RunAsync(inputContext);
+            string aiResponse = result.GetProperty<string>("text") ?? "No response generated";
 
             Console.WriteLine($"AI: {aiResponse}\n");
 
@@ -85,7 +85,7 @@ public static class ConversationalPipelineExample
 
         // Display final conversation history
         Console.WriteLine("=== Conversation History ===");
-        foreach (var turn in memory.GetTurns())
+        foreach (ConversationTurn turn in memory.GetTurns())
         {
             Console.WriteLine($"[{turn.Timestamp:HH:mm:ss}] Human: {turn.HumanInput}");
             Console.WriteLine($"[{turn.Timestamp:HH:mm:ss}] AI: {turn.AiResponse}");

@@ -49,14 +49,14 @@ public sealed class GitHubScopeLockTool : ITool
             GitHubScopeLockArgs args = ToolJson.Deserialize<GitHubScopeLockArgs>(input);
 
             // Step 1: Add scope-locked label to issue
-            var labelResult = await this.AddScopeLockedLabelAsync(args.IssueNumber, ct);
+            Result<bool, string> labelResult = await this.AddScopeLockedLabelAsync(args.IssueNumber, ct);
             if (!labelResult.IsSuccess)
             {
                 return Result<string, string>.Failure($"Failed to add label: {labelResult.Error}");
             }
 
             // Step 2: Add confirmation comment
-            var commentResult = await this.AddConfirmationCommentAsync(args.IssueNumber, args.Milestone, ct);
+            Result<bool, string> commentResult = await this.AddConfirmationCommentAsync(args.IssueNumber, args.Milestone, ct);
             if (!commentResult.IsSuccess)
             {
                 return Result<string, string>.Failure($"Failed to add comment: {commentResult.Error}");
@@ -65,7 +65,7 @@ public sealed class GitHubScopeLockTool : ITool
             // Step 3: Update milestone if provided
             if (!string.IsNullOrEmpty(args.Milestone))
             {
-                var milestoneResult = await this.UpdateMilestoneAsync(args.IssueNumber, args.Milestone, ct);
+                Result<bool, string> milestoneResult = await this.UpdateMilestoneAsync(args.IssueNumber, args.Milestone, ct);
                 if (!milestoneResult.IsSuccess)
                 {
                     return Result<string, string>.Failure($"Failed to update milestone: {milestoneResult.Error}");
@@ -97,7 +97,7 @@ public sealed class GitHubScopeLockTool : ITool
             catch (NotFoundException)
             {
                 // Create the label if it doesn't exist
-                var newLabel = new NewLabel("scope-locked", "D4C5F9")
+                NewLabel newLabel = new NewLabel("scope-locked", "D4C5F9")
                 {
                     Description = "Scope is locked to prevent uncontrolled scope creep",
                 };
@@ -105,7 +105,7 @@ public sealed class GitHubScopeLockTool : ITool
             }
 
             // Add the label to the issue
-            var issueUpdate = new IssueUpdate();
+            IssueUpdate issueUpdate = new IssueUpdate();
             await this.client.Issue.Labels.AddToIssue(this.owner, this.repo, issueNumber, new[] { "scope-locked" });
 
             return Result<bool, string>.Success(true);
@@ -146,8 +146,8 @@ public sealed class GitHubScopeLockTool : ITool
         try
         {
             // Find the milestone by name
-            var milestones = await this.client.Issue.Milestone.GetAllForRepository(this.owner, this.repo);
-            var milestone = milestones.FirstOrDefault(m => m.Title.Equals(milestoneName, StringComparison.OrdinalIgnoreCase));
+            IReadOnlyList<Milestone> milestones = await this.client.Issue.Milestone.GetAllForRepository(this.owner, this.repo);
+            Milestone? milestone = milestones.FirstOrDefault(m => m.Title.Equals(milestoneName, StringComparison.OrdinalIgnoreCase));
 
             if (milestone == null)
             {
@@ -155,7 +155,7 @@ public sealed class GitHubScopeLockTool : ITool
             }
 
             // Update the issue with the milestone
-            var issueUpdate = new IssueUpdate
+            IssueUpdate issueUpdate = new IssueUpdate
             {
                 Milestone = milestone.Number,
             };

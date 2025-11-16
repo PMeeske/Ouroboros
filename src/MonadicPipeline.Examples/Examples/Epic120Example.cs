@@ -22,9 +22,9 @@ public static class Epic120Example
         Console.WriteLine("=== Epic #120: Production-ready Release v1.0 ===\n");
 
         // Initialize distributed orchestrator and epic branch orchestrator
-        var safetyGuard = new SafetyGuard(PermissionLevel.Isolated);
-        var distributor = new DistributedOrchestrator(safetyGuard);
-        var epicOrchestrator = new EpicBranchOrchestrator(
+        SafetyGuard safetyGuard = new SafetyGuard(PermissionLevel.Isolated);
+        DistributedOrchestrator distributor = new DistributedOrchestrator(safetyGuard);
+        EpicBranchOrchestrator epicOrchestrator = new EpicBranchOrchestrator(
             distributor,
             new EpicBranchConfig(
                 BranchPrefix: "epic-120",
@@ -34,7 +34,7 @@ public static class Epic120Example
                 MaxConcurrentSubIssues: 5));
 
         // Epic #120 sub-issues (based on the actual GitHub issues)
-        var subIssueNumbers = new List<int>
+        List<int> subIssueNumbers = new List<int>
         {
             121, // Inventory Current State
             122, // Build Dependency Graph
@@ -70,7 +70,7 @@ public static class Epic120Example
 
         // Register the epic
         Console.WriteLine("Registering Epic #120...");
-        var epicResult = await epicOrchestrator.RegisterEpicAsync(
+        Result<Epic, string> epicResult = await epicOrchestrator.RegisterEpicAsync(
             120,
             "🚀 Production-ready Release v1.0",
             "This epic tracks every task required to ship the first production-ready release of MonadicPipeline.",
@@ -87,8 +87,8 @@ public static class Epic120Example
         // Display all sub-issue assignments
         Console.WriteLine("Sub-issue Assignments:");
         Console.WriteLine("======================");
-        var assignments = epicOrchestrator.GetSubIssueAssignments(120);
-        foreach (var assignment in assignments.OrderBy(a => a.IssueNumber))
+        IReadOnlyList<SubIssueAssignment> assignments = epicOrchestrator.GetSubIssueAssignments(120);
+        foreach (SubIssueAssignment? assignment in assignments.OrderBy(a => a.IssueNumber))
         {
             Console.WriteLine($"  Issue #{assignment.IssueNumber}:");
             Console.WriteLine($"    Agent: {assignment.AssignedAgentId}");
@@ -99,7 +99,7 @@ public static class Epic120Example
 
         // Demonstrate executing work on a specific sub-issue
         Console.WriteLine("\nExecuting work on Sub-issue #121 (Inventory Current State)...");
-        var executionResult = await epicOrchestrator.ExecuteSubIssueAsync(
+        Result<SubIssueAssignment, string> executionResult = await epicOrchestrator.ExecuteSubIssueAsync(
             120,
             121,
             async assignment =>
@@ -112,11 +112,11 @@ public static class Epic120Example
                 // Update the branch with reasoning
                 if (assignment.Branch != null)
                 {
-                    var updatedBranch = assignment.Branch.WithIngestEvent(
+                    PipelineBranch updatedBranch = assignment.Branch.WithIngestEvent(
                         "baseline-inventory",
                         new[] { "doc1", "doc2", "doc3" });
 
-                    var updatedAssignment = assignment with { Branch = updatedBranch };
+                    SubIssueAssignment updatedAssignment = assignment with { Branch = updatedBranch };
                     Console.WriteLine($"  ✅ Work completed! Branch now has {updatedBranch.Events.Count} events.");
                     return Result<SubIssueAssignment, string>.Success(updatedAssignment);
                 }
@@ -135,11 +135,11 @@ public static class Epic120Example
 
         // Display final status
         Console.WriteLine("\n=== Final Epic Status ===");
-        var finalAssignments = epicOrchestrator.GetSubIssueAssignments(120);
-        var completedCount = finalAssignments.Count(a => a.Status == SubIssueStatus.Completed);
-        var inProgressCount = finalAssignments.Count(a => a.Status == SubIssueStatus.InProgress);
-        var failedCount = finalAssignments.Count(a => a.Status == SubIssueStatus.Failed);
-        var pendingCount = finalAssignments.Count(a => a.Status == SubIssueStatus.Pending || a.Status == SubIssueStatus.BranchCreated);
+        IReadOnlyList<SubIssueAssignment> finalAssignments = epicOrchestrator.GetSubIssueAssignments(120);
+        int completedCount = finalAssignments.Count(a => a.Status == SubIssueStatus.Completed);
+        int inProgressCount = finalAssignments.Count(a => a.Status == SubIssueStatus.InProgress);
+        int failedCount = finalAssignments.Count(a => a.Status == SubIssueStatus.Failed);
+        int pendingCount = finalAssignments.Count(a => a.Status == SubIssueStatus.Pending || a.Status == SubIssueStatus.BranchCreated);
 
         Console.WriteLine($"Total Sub-issues: {finalAssignments.Count}");
         Console.WriteLine($"  ✅ Completed: {completedCount}");
@@ -149,8 +149,8 @@ public static class Epic120Example
 
         // Display agent information
         Console.WriteLine("\n=== Registered Agents ===");
-        var agents = distributor.GetAgentStatus();
-        foreach (var agent in agents.Take(5)) // Show first 5 agents
+        IReadOnlyList<AgentInfo> agents = distributor.GetAgentStatus();
+        foreach (AgentInfo? agent in agents.Take(5)) // Show first 5 agents
         {
             Console.WriteLine($"  {agent.Name} (ID: {agent.AgentId})");
             Console.WriteLine($"    Status: {agent.Status}");
@@ -173,12 +173,12 @@ public static class Epic120Example
     {
         Console.WriteLine("=== Parallel Sub-issue Execution ===\n");
 
-        var safetyGuard = new SafetyGuard(PermissionLevel.Isolated);
-        var distributor = new DistributedOrchestrator(safetyGuard);
-        var epicOrchestrator = new EpicBranchOrchestrator(distributor);
+        SafetyGuard safetyGuard = new SafetyGuard(PermissionLevel.Isolated);
+        DistributedOrchestrator distributor = new DistributedOrchestrator(safetyGuard);
+        EpicBranchOrchestrator epicOrchestrator = new EpicBranchOrchestrator(distributor);
 
         // Register epic with a subset of issues
-        var subIssues = new List<int> { 121, 122, 123, 124, 125 };
+        List<int> subIssues = new List<int> { 121, 122, 123, 124, 125 };
         await epicOrchestrator.RegisterEpicAsync(
             120,
             "Production-ready Release v1.0",
@@ -188,7 +188,7 @@ public static class Epic120Example
         Console.WriteLine("Executing 5 sub-issues in parallel...\n");
 
         // Execute multiple sub-issues concurrently
-        var tasks = subIssues.Select(async issueNumber =>
+        IEnumerable<Task<Result<SubIssueAssignment, string>>> tasks = subIssues.Select(async issueNumber =>
         {
             return await epicOrchestrator.ExecuteSubIssueAsync(
                 120,
@@ -202,10 +202,10 @@ public static class Epic120Example
                 });
         });
 
-        var results = await Task.WhenAll(tasks);
+        Result<SubIssueAssignment, string>[] results = await Task.WhenAll(tasks);
 
         Console.WriteLine("\n=== Results ===");
-        var successCount = results.Count(r => r.IsSuccess);
+        int successCount = results.Count(r => r.IsSuccess);
         Console.WriteLine($"Successful: {successCount}/{results.Length}");
         Console.WriteLine($"Failed: {results.Length - successCount}/{results.Length}");
     }

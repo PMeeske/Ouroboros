@@ -28,11 +28,11 @@ Human: {input}
 AI: ";
 
         // Create a memory instance (similar to LangChain's memory strategies)
-        var memory = new ConversationMemory(maxTurns: 5);
+        ConversationMemory memory = new ConversationMemory(maxTurns: 5);
 
         // Build the conversational chain using our Kleisli pipeline system
         // This mirrors the LangChain pattern: LoadMemory | Template | LLM | UpdateMemory
-        var conversationBuilder = string.Empty
+        ConversationChainBuilder<string> conversationBuilder = string.Empty
             .StartConversation(memory)
             .LoadMemory(outputKey: "history")
             .Template(template)
@@ -40,7 +40,7 @@ AI: ";
             .UpdateMemory(inputKey: "input", responseKey: "text");
 
         // Simulate a conversation
-        var conversationInputs = new[]
+        string[] conversationInputs = new[]
         {
             "Hello! What's your name?",
             "What did I just ask you about?",
@@ -48,18 +48,18 @@ AI: ";
             "What was my first question?",
         };
 
-        foreach (var input in conversationInputs)
+        foreach (string? input in conversationInputs)
         {
             Console.WriteLine($"Human: {input}");
 
             // Create a new context with the user input
-            var inputContext = input
+            MemoryContext<string> inputContext = input
                 .WithMemory(memory)
                 .SetProperty("input", input);
 
             // Execute the conversational pipeline
-            var result = await conversationBuilder.RunAsync();
-            var aiResponse = result.GetProperty<string>("text") ?? "No response generated";
+            MemoryContext<object> result = await conversationBuilder.RunAsync();
+            string aiResponse = result.GetProperty<string>("text") ?? "No response generated";
 
             Console.WriteLine($"AI: {aiResponse}\n");
 
@@ -69,7 +69,7 @@ AI: ";
 
         // Show the complete conversation history
         Console.WriteLine("=== Complete Conversation History ===");
-        var history = memory.GetFormattedHistory();
+        string history = memory.GetFormattedHistory();
         Console.WriteLine(history.Length > 0 ? history : "No history available");
         Console.WriteLine();
     }
@@ -90,9 +90,9 @@ AI: ";
     {
         Console.WriteLine("--- Buffer Memory Strategy ---");
 
-        var bufferMemory = new ConversationMemory(maxTurns: 10); // Keep all turns
+        ConversationMemory bufferMemory = new ConversationMemory(maxTurns: 10); // Keep all turns
 
-        var pipeline = "Initial input"
+        ConversationChainBuilder<string> pipeline = "Initial input"
             .StartConversation(bufferMemory)
             .Set("Hello, I'm learning about AI", "input")
             .LoadMemory()
@@ -100,8 +100,8 @@ AI: ";
             .Llm("Buffer AI:")
             .UpdateMemory();
 
-        var result = await pipeline.RunAsync();
-        var response = result.GetProperty<string>("text");
+        MemoryContext<object> result = await pipeline.RunAsync();
+        string? response = result.GetProperty<string>("text");
         Console.WriteLine($"Buffer Memory Response: {response}");
         Console.WriteLine($"Memory turns count: {bufferMemory.GetTurns().Count}\n");
     }
@@ -110,14 +110,14 @@ AI: ";
     {
         Console.WriteLine("--- Window Memory Strategy ---");
 
-        var windowMemory = new ConversationMemory(maxTurns: 2); // Only keep last 2 turns
+        ConversationMemory windowMemory = new ConversationMemory(maxTurns: 2); // Only keep last 2 turns
 
         // Add several turns to test windowing
         windowMemory.AddTurn("First question", "First response");
         windowMemory.AddTurn("Second question", "Second response");
         windowMemory.AddTurn("Third question", "Third response");
 
-        var pipeline = "Latest input"
+        ConversationChainBuilder<string> pipeline = "Latest input"
             .StartConversation(windowMemory)
             .Set("What do you remember?", "input")
             .LoadMemory()
@@ -125,8 +125,8 @@ AI: ";
             .Llm("Window AI:")
             .UpdateMemory();
 
-        var result = await pipeline.RunAsync();
-        var response = result.GetProperty<string>("text");
+        MemoryContext<object> result = await pipeline.RunAsync();
+        string? response = result.GetProperty<string>("text");
         Console.WriteLine($"Window Memory Response: {response}");
         Console.WriteLine($"Memory turns count: {windowMemory.GetTurns().Count}");
         Console.WriteLine($"History: {windowMemory.GetFormattedHistory()}\n");
@@ -140,31 +140,31 @@ AI: ";
     {
         Console.WriteLine("=== Kleisli Composition with Memory Integration ===\n");
 
-        var memory = new ConversationMemory();
+        ConversationMemory memory = new ConversationMemory();
 
         // Create individual memory-aware Kleisli arrows
-        var memoryLoader = MemoryArrows.LoadMemory<string>("history");
-        var templateProcessor = MemoryArrows.Template("Context: {history}\nQuery: {input}\nResponse: ");
-        var mockLlm = MemoryArrows.MockLlm("Composed AI:");
-        var memoryUpdater = MemoryArrows.UpdateMemory<string>("input", "text");
+        Step<MemoryContext<string>, MemoryContext<string>> memoryLoader = MemoryArrows.LoadMemory<string>("history");
+        Step<MemoryContext<string>, MemoryContext<string>> templateProcessor = MemoryArrows.Template("Context: {history}\nQuery: {input}\nResponse: ");
+        Step<MemoryContext<string>, MemoryContext<string>> mockLlm = MemoryArrows.MockLlm("Composed AI:");
+        Step<MemoryContext<string>, MemoryContext<string>> memoryUpdater = MemoryArrows.UpdateMemory<string>("input", "text");
 
         // Compose them using traditional Kleisli composition
-        var composedPipeline = memoryLoader
+        Step<MemoryContext<string>, MemoryContext<string>> composedPipeline = memoryLoader
             .Then(templateProcessor)
             .Then(mockLlm)
             .Then(memoryUpdater);
 
         // Test the composed pipeline
-        var testInputs = new[] { "First query", "Second query", "Third query" };
+        string[] testInputs = new[] { "First query", "Second query", "Third query" };
 
-        foreach (var input in testInputs)
+        foreach (string? input in testInputs)
         {
-            var context = input
+            MemoryContext<string> context = input
                 .WithMemory(memory)
                 .SetProperty("input", input);
 
-            var result = await composedPipeline(context);
-            var response = result.GetProperty<string>("text");
+            MemoryContext<string> result = await composedPipeline(context);
+            string? response = result.GetProperty<string>("text");
 
             Console.WriteLine($"Input: {input}");
             Console.WriteLine($"Response: {response}");
@@ -180,10 +180,10 @@ AI: ";
     {
         Console.WriteLine("=== Error Handling with Memory Pipelines ===\n");
 
-        var memory = new ConversationMemory();
+        ConversationMemory memory = new ConversationMemory();
 
         // Create a pipeline that might fail
-        var errorProneStep = new Step<MemoryContext<string>, MemoryContext<string>>(context =>
+        Step<MemoryContext<string>, MemoryContext<string>> errorProneStep = new Step<MemoryContext<string>, MemoryContext<string>>(context =>
         {
             if (context.Data.Contains("error"))
             {
@@ -193,19 +193,19 @@ AI: ";
             return Task.FromResult(context.SetProperty("text", $"Successfully processed: {context.Data}"));
         });
 
-        var safeComposition = MemoryArrows.LoadMemory<string>()
+        Step<MemoryContext<string>, MemoryContext<string>> safeComposition = MemoryArrows.LoadMemory<string>()
             .Then(errorProneStep)
             .Then(MemoryArrows.UpdateMemory<string>());
 
-        var testInputs = new[] { "normal input", "error input", "another normal input" };
+        string[] testInputs = new[] { "normal input", "error input", "another normal input" };
 
-        foreach (var input in testInputs)
+        foreach (string? input in testInputs)
         {
             try
             {
-                var context = input.WithMemory(memory).SetProperty("input", input);
-                var result = await safeComposition(context);
-                var response = result.GetProperty<string>("text");
+                MemoryContext<string> context = input.WithMemory(memory).SetProperty("input", input);
+                MemoryContext<string> result = await safeComposition(context);
+                string? response = result.GetProperty<string>("text");
                 Console.WriteLine($"Input: '{input}' -> Response: '{response}'");
             }
             catch (Exception ex)

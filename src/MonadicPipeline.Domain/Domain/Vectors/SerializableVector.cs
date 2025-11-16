@@ -10,17 +10,17 @@ public sealed class SerializableVector
     /// Unique identifier for this vector
     /// </summary>
     public string Id { get; set; } = "";
-    
+
     /// <summary>
     /// Text content associated with this vector
     /// </summary>
     public string Text { get; set; } = "";
-    
+
     /// <summary>
     /// Optional metadata key-value pairs
     /// </summary>
     public IDictionary<string, object>? Metadata { get; set; } = new Dictionary<string, object>();
-    
+
     /// <summary>
     /// The embedding vector as an array of floats
     /// </summary>

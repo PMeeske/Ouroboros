@@ -57,14 +57,14 @@ public sealed class AgentInstance
     public async Task<string> RunAsync(string prompt, CancellationToken ct = default)
     {
         string current = prompt;
-        var history = new List<string>();
+        List<string> history = new List<string>();
         for (int i = 0; i < _maxSteps; i++)
         {
             history.Add(current);
             Telemetry.RecordAgentIteration();
             string response = await _chat.GenerateTextAsync(current, ct).ConfigureAwait(false);
-            var (text, toolCalls) = await new ToolAwareChatModel(_chat, _tools).GenerateWithToolsAsync(response, ct).ConfigureAwait(false);
-            foreach (var call in toolCalls)
+            (string text, List<ToolExecution> toolCalls) = await new ToolAwareChatModel(_chat, _tools).GenerateWithToolsAsync(response, ct).ConfigureAwait(false);
+            foreach (ToolExecution call in toolCalls)
             {
                 Telemetry.RecordAgentToolCalls(1);
                 Telemetry.RecordToolName(call.ToolName);

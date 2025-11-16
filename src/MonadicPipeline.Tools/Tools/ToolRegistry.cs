@@ -160,8 +160,8 @@ public sealed class ToolRegistry
     /// <returns>A new ToolRegistry with all tools registered.</returns>
     public ToolRegistry WithTools(IEnumerable<ITool> tools)
     {
-        var newRegistry = this;
-        foreach (var tool in tools)
+        ToolRegistry newRegistry = this;
+        foreach (ITool tool in tools)
         {
             newRegistry = newRegistry.WithTool(tool);
         }

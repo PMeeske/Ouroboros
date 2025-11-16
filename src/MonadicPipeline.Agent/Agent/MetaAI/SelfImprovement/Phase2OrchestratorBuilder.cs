@@ -157,7 +157,7 @@ public sealed class Phase2OrchestratorBuilder
         _goalHierarchy ??= new GoalHierarchy(_llm, _safety, _goalConfig);
 
         // Create orchestrator
-        var orchestrator = new MetaAIPlannerOrchestrator(
+        MetaAIPlannerOrchestrator orchestrator = new MetaAIPlannerOrchestrator(
             _llm,
             _tools,
             _memory,
@@ -187,7 +187,7 @@ public sealed class Phase2OrchestratorBuilder
         IGoalHierarchy GoalHierarchy,
         ISelfEvaluator SelfEvaluator) CreateDefault(IChatCompletionModel llm)
     {
-        var tools = ToolRegistry.CreateDefault();
+        ToolRegistry tools = ToolRegistry.CreateDefault();
 
         return new Phase2OrchestratorBuilder()
             .WithLLM(llm)

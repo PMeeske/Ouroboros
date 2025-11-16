@@ -18,13 +18,13 @@ public class InMemoryEventStore : IEventStore
         long expectedVersion = -1,
         CancellationToken cancellationToken = default)
     {
-        var eventsList = events.ToList();
+        List<PipelineEvent> eventsList = events.ToList();
         if (!eventsList.Any())
         {
             return Task.FromResult(GetCurrentVersion(branchId));
         }
 
-        var stream = _streams.GetOrAdd(branchId, _ => new EventStream(branchId));
+        EventStream stream = _streams.GetOrAdd(branchId, _ => new EventStream(branchId));
 
         lock (stream.Lock)
         {
@@ -34,7 +34,7 @@ public class InMemoryEventStore : IEventStore
                 throw new ConcurrencyException(branchId, expectedVersion, stream.Version);
             }
 
-            foreach (var evt in eventsList)
+            foreach (PipelineEvent? evt in eventsList)
             {
                 stream.Version++;
                 stream.Events.Add(new VersionedEvent(evt, stream.Version));
@@ -50,14 +50,14 @@ public class InMemoryEventStore : IEventStore
         long fromVersion = 0,
         CancellationToken cancellationToken = default)
     {
-        if (!_streams.TryGetValue(branchId, out var stream))
+        if (!_streams.TryGetValue(branchId, out EventStream? stream))
         {
             return Task.FromResult<IReadOnlyList<PipelineEvent>>(Array.Empty<PipelineEvent>());
         }
 
         lock (stream.Lock)
         {
-            var events = stream.Events
+            List<PipelineEvent> events = stream.Events
                 .Where(ve => ve.Version >= fromVersion)
                 .Select(ve => ve.Event)
                 .ToList();
@@ -71,7 +71,7 @@ public class InMemoryEventStore : IEventStore
         string branchId,
         CancellationToken cancellationToken = default)
     {
-        var version = GetCurrentVersion(branchId);
+        long version = GetCurrentVersion(branchId);
         return Task.FromResult(version);
     }
 
@@ -80,7 +80,7 @@ public class InMemoryEventStore : IEventStore
         string branchId,
         CancellationToken cancellationToken = default)
     {
-        var exists = _streams.ContainsKey(branchId);
+        bool exists = _streams.ContainsKey(branchId);
         return Task.FromResult(exists);
     }
 
@@ -95,7 +95,7 @@ public class InMemoryEventStore : IEventStore
 
     private long GetCurrentVersion(string branchId)
     {
-        return _streams.TryGetValue(branchId, out var stream) ? stream.Version : -1;
+        return _streams.TryGetValue(branchId, out EventStream? stream) ? stream.Version : -1;
     }
 
     private class EventStream

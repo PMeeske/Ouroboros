@@ -45,9 +45,9 @@ public static class ChatConfig
         string? apiKey = apiKeyOverride ?? Environment.GetEnvironmentVariable(ApiKeyEnv);
         string? endpointTypeStr = endpointTypeOverride ?? Environment.GetEnvironmentVariable(EndpointTypeEnv);
 
-        var endpointType = ChatEndpointType.Auto;
+        ChatEndpointType endpointType = ChatEndpointType.Auto;
         if (!string.IsNullOrWhiteSpace(endpointTypeStr) &&
-            Enum.TryParse<ChatEndpointType>(endpointTypeStr, true, out var parsedType))
+            Enum.TryParse<ChatEndpointType>(endpointTypeStr, true, out ChatEndpointType parsedType))
         {
             endpointType = parsedType;
         }

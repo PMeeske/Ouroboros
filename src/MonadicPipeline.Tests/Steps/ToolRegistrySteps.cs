@@ -12,7 +12,7 @@ namespace LangChainPipeline.Specs.Steps;
 public class ToolRegistrySteps
 {
     private ToolRegistry? _originalRegistry;
-    private ToolRegistry _registry;
+    private ToolRegistry? _registry;
     private ToolRegistry? _registry1;
     private ToolRegistry? _registry2;
     private ToolRegistry? _newRegistry;
@@ -22,7 +22,7 @@ public class ToolRegistrySteps
     private ITool? _storedTool;
     private bool? _containsResult;
     private Exception? _thrownException;
-    private Result<string, string> _exportResult;
+    private Result<string>? _exportResult;
 
     private class TestTool : ITool
     {
@@ -358,14 +358,14 @@ public class ToolRegistrySteps
     public void ThenTheResultShouldBeSuccessful()
     {
         _exportResult.Should().NotBeNull();
-        _exportResult!.Value.IsSuccess.Should().BeTrue();
+        _exportResult.Value.IsSuccess.Should().BeTrue();
     }
 
     [Then(@"the export should contain ""(.*)""")]
     public void ThenTheExportShouldContain(string expected)
     {
         _exportResult.Should().NotBeNull();
-        _exportResult!.Value.IsSuccess.Should().BeTrue();
+        _exportResult.Value.IsSuccess.Should().BeTrue();
         _exportResult.Value.Value.Should().Contain(expected);
     }
 

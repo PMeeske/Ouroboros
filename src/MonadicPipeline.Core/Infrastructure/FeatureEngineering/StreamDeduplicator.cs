@@ -79,13 +79,13 @@ public sealed class StreamDeduplicator
         lock (this.@lock)
         {
             // Check against cached vectors
-            foreach (var node in this.lruList)
+            foreach (VectorEntry node in this.lruList)
             {
-                var similarity = CSharpHashVectorizer.CosineSimilarity(vector, node.Vector);
+                float similarity = CSharpHashVectorizer.CosineSimilarity(vector, node.Vector);
                 if (similarity >= this.similarityThreshold)
                 {
                     // Move to front (most recently used)
-                    var cacheNode = this.cache[node.Id];
+                    LinkedListNode<VectorEntry> cacheNode = this.cache[node.Id];
                     this.lruList.Remove(cacheNode);
                     this.lruList.AddFirst(cacheNode);
                     return true;
@@ -120,7 +120,7 @@ public sealed class StreamDeduplicator
         IAsyncEnumerable<float[]> vectors,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        await foreach (var vector in vectors.WithCancellation(cancellationToken).ConfigureAwait(false))
+        await foreach (float[]? vector in vectors.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
             if (!this.IsDuplicate(vector))
             {
@@ -141,8 +141,8 @@ public sealed class StreamDeduplicator
             throw new ArgumentNullException(nameof(vectors));
         }
 
-        var result = new List<float[]>();
-        foreach (var vector in vectors)
+        List<float[]> result = new List<float[]>();
+        foreach (float[] vector in vectors)
         {
             if (!this.IsDuplicate(vector))
             {
@@ -193,8 +193,8 @@ public sealed class StreamDeduplicator
 
     private void AddToCache(float[] vector)
     {
-        var entry = new VectorEntry(this.nextId++, vector);
-        var node = new LinkedListNode<VectorEntry>(entry);
+        VectorEntry entry = new VectorEntry(this.nextId++, vector);
+        LinkedListNode<VectorEntry> node = new LinkedListNode<VectorEntry>(entry);
 
         this.lruList.AddFirst(node);
         this.cache[entry.Id] = node;
@@ -202,7 +202,7 @@ public sealed class StreamDeduplicator
         // Evict least recently used if cache is full
         if (this.lruList.Count > this.maxCacheSize)
         {
-            var lastNode = this.lruList.Last;
+            LinkedListNode<VectorEntry>? lastNode = this.lruList.Last;
             if (lastNode is not null)
             {
                 this.cache.Remove(lastNode.Value.Id);
@@ -261,7 +261,7 @@ public static class StreamDeduplicatorExtensions
             throw new ArgumentNullException(nameof(vectors));
         }
 
-        var deduplicator = new StreamDeduplicator(similarityThreshold, maxCacheSize);
+        StreamDeduplicator deduplicator = new StreamDeduplicator(similarityThreshold, maxCacheSize);
         return deduplicator.FilterBatch(vectors);
     }
 }

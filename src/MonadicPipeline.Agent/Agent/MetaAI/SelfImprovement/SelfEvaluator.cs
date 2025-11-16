@@ -73,39 +73,39 @@ public sealed class SelfEvaluator : ISelfEvaluator
         try
         {
             // Get all capabilities
-            var capabilities = await _capabilities.GetCapabilitiesAsync(ct);
-            var skills = _skills.GetAllSkills();
-            var metrics = _orchestrator.GetMetrics();
+            List<AgentCapability> capabilities = await _capabilities.GetCapabilitiesAsync(ct);
+            IReadOnlyList<Skill> skills = _skills.GetAllSkills();
+            IReadOnlyDictionary<string, PerformanceMetrics> metrics = _orchestrator.GetMetrics();
 
             // Calculate capability scores
-            var capabilityScores = capabilities.ToDictionary(
+            Dictionary<string, double> capabilityScores = capabilities.ToDictionary(
                 c => c.Name,
                 c => c.SuccessRate);
 
             // Calculate overall performance
-            var overallPerformance = capabilities.Any()
+            double overallPerformance = capabilities.Any()
                 ? capabilities.Average(c => c.SuccessRate)
                 : 0.0;
 
             // Calculate confidence calibration
-            var calibration = await GetConfidenceCalibrationAsync(ct);
+            double calibration = await GetConfidenceCalibrationAsync(ct);
 
             // Calculate skill acquisition rate
-            var skillAcquisitionRate = CalculateSkillAcquisitionRate(skills);
+            double skillAcquisitionRate = CalculateSkillAcquisitionRate(skills);
 
             // Identify strengths and weaknesses
-            var strengths = capabilities
+            List<string> strengths = capabilities
                 .Where(c => c.SuccessRate >= 0.8 && c.UsageCount >= 5)
                 .Select(c => $"{c.Name} (Success: {c.SuccessRate:P0})")
                 .ToList();
 
-            var weaknesses = capabilities
+            List<string> weaknesses = capabilities
                 .Where(c => c.SuccessRate < 0.6 && c.UsageCount >= 5)
                 .Select(c => $"{c.Name} (Success: {c.SuccessRate:P0})")
                 .ToList();
 
             // Generate summary using LLM
-            var summary = await GenerateAssessmentSummaryAsync(
+            string summary = await GenerateAssessmentSummaryAsync(
                 overallPerformance,
                 calibration,
                 skillAcquisitionRate,
@@ -113,7 +113,7 @@ public sealed class SelfEvaluator : ISelfEvaluator
                 weaknesses,
                 ct);
 
-            var assessment = new SelfAssessment(
+            SelfAssessment assessment = new SelfAssessment(
                 overallPerformance,
                 calibration,
                 skillAcquisitionRate,
@@ -137,26 +137,26 @@ public sealed class SelfEvaluator : ISelfEvaluator
     public async Task<List<Insight>> GenerateInsightsAsync(
         CancellationToken ct = default)
     {
-        var insights = new List<Insight>();
+        List<Insight> insights = new List<Insight>();
 
         try
         {
             // Analyze recent experiences
-            var query = new MemoryQuery(
+            MemoryQuery query = new MemoryQuery(
                 Goal: "all",
                 Context: new Dictionary<string, object>(),
                 MaxResults: _config.InsightGenerationBatchSize,
                 MinSimilarity: 0.0);
 
-            var experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            List<Experience> experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
 
             // Pattern detection: success/failure patterns
-            var successfulExperiences = experiences.Where(e => e.Verification.Verified).ToList();
-            var failedExperiences = experiences.Where(e => !e.Verification.Verified).ToList();
+            List<Experience> successfulExperiences = experiences.Where(e => e.Verification.Verified).ToList();
+            List<Experience> failedExperiences = experiences.Where(e => !e.Verification.Verified).ToList();
 
             if (successfulExperiences.Any())
             {
-                var successPattern = await AnalyzePatternAsync(
+                string successPattern = await AnalyzePatternAsync(
                     successfulExperiences,
                     "success",
                     ct);
@@ -174,7 +174,7 @@ public sealed class SelfEvaluator : ISelfEvaluator
 
             if (failedExperiences.Any())
             {
-                var failurePattern = await AnalyzePatternAsync(
+                string failurePattern = await AnalyzePatternAsync(
                     failedExperiences,
                     "failure",
                     ct);
@@ -191,8 +191,8 @@ public sealed class SelfEvaluator : ISelfEvaluator
             }
 
             // Capability insights
-            var capabilities = await _capabilities.GetCapabilitiesAsync(ct);
-            var improvingCaps = capabilities
+            List<AgentCapability> capabilities = await _capabilities.GetCapabilitiesAsync(ct);
+            List<AgentCapability> improvingCaps = capabilities
                 .Where(c => c.UsageCount >= 10 && c.SuccessRate >= 0.7)
                 .OrderByDescending(c => c.SuccessRate)
                 .Take(3)
@@ -209,7 +209,7 @@ public sealed class SelfEvaluator : ISelfEvaluator
             }
 
             // Calibration insights
-            var calibration = await GetConfidenceCalibrationAsync(ct);
+            double calibration = await GetConfidenceCalibrationAsync(ct);
             if (calibration < 0.7)
             {
                 insights.Add(new Insight(
@@ -236,15 +236,15 @@ public sealed class SelfEvaluator : ISelfEvaluator
     {
         try
         {
-            var assessment = await EvaluatePerformanceAsync(ct);
+            Result<SelfAssessment, string> assessment = await EvaluatePerformanceAsync(ct);
             if (!assessment.IsSuccess)
                 return Result<ImprovementPlan, string>.Failure(assessment.Error);
 
-            var selfAssessment = assessment.Value;
-            var insights = await GenerateInsightsAsync(ct);
+            SelfAssessment selfAssessment = assessment.Value;
+            List<Insight> insights = await GenerateInsightsAsync(ct);
 
             // Use LLM to generate improvement plan
-            var prompt = $@"Based on this self-assessment, create an improvement plan:
+            string prompt = $@"Based on this self-assessment, create an improvement plan:
 
 OVERALL PERFORMANCE: {selfAssessment.OverallPerformance:P0}
 CONFIDENCE CALIBRATION: {selfAssessment.ConfidenceCalibration:P0}
@@ -274,8 +274,8 @@ EXPECTED IMPROVEMENTS:
 - [metric]: [improvement %]
 DURATION: [days/weeks]";
 
-            var response = await _llm.GenerateTextAsync(prompt, ct);
-            var plan = ParseImprovementPlan(response);
+            string response = await _llm.GenerateTextAsync(prompt, ct);
+            ImprovementPlan plan = ParseImprovementPlan(response);
 
             return Result<ImprovementPlan, string>.Success(plan);
         }
@@ -292,7 +292,7 @@ DURATION: [days/weeks]";
     {
         await Task.CompletedTask;
 
-        var records = _calibrationRecords
+        List<CalibrationRecord> records = _calibrationRecords
             .Where(r => r.RecordedAt > DateTime.UtcNow.AddDays(-30))
             .Take(_config.CalibrationSampleSize)
             .ToList();
@@ -301,15 +301,15 @@ DURATION: [days/weeks]";
             return 0.5; // Not enough data
 
         // Calculate calibration using Brier score
-        var brierScore = records.Average(r =>
+        double brierScore = records.Average(r =>
         {
-            var predicted = r.PredictedConfidence;
-            var actual = r.ActualSuccess ? 1.0 : 0.0;
+            double predicted = r.PredictedConfidence;
+            double actual = r.ActualSuccess ? 1.0 : 0.0;
             return Math.Pow(predicted - actual, 2);
         });
 
         // Convert Brier score to calibration (0 = worst, 1 = perfect)
-        var calibration = 1.0 - brierScore;
+        double calibration = 1.0 - brierScore;
         return Math.Max(0.0, Math.Min(1.0, calibration));
     }
 
@@ -337,34 +337,34 @@ DURATION: [days/weeks]";
     {
         await Task.CompletedTask;
 
-        var trends = new List<(DateTime, double)>();
-        var startTime = DateTime.UtcNow - timeWindow;
+        List<(DateTime, double)> trends = new List<(DateTime, double)>();
+        DateTime startTime = DateTime.UtcNow - timeWindow;
 
         switch (metric.ToLowerInvariant())
         {
             case "success_rate":
-                var records = _calibrationRecords
+                List<CalibrationRecord> records = _calibrationRecords
                     .Where(r => r.RecordedAt >= startTime)
                     .OrderBy(r => r.RecordedAt)
                     .ToList();
 
                 // Group by day
-                var grouped = records.GroupBy(r => r.RecordedAt.Date);
-                foreach (var group in grouped)
+                IEnumerable<IGrouping<DateTime, CalibrationRecord>> grouped = records.GroupBy(r => r.RecordedAt.Date);
+                foreach (IGrouping<DateTime, CalibrationRecord> group in grouped)
                 {
-                    var successRate = group.Count(r => r.ActualSuccess) / (double)group.Count();
+                    double successRate = group.Count(r => r.ActualSuccess) / (double)group.Count();
                     trends.Add((group.Key, successRate));
                 }
                 break;
 
             case "skill_count":
-                var skills = _skills.GetAllSkills();
+                IReadOnlyList<Skill> skills = _skills.GetAllSkills();
                 // Approximate: assume linear growth
-                var currentCount = skills.Count;
-                var daysAgo = (int)timeWindow.TotalDays;
+                int currentCount = skills.Count;
+                int daysAgo = (int)timeWindow.TotalDays;
                 for (int i = daysAgo; i >= 0; i--)
                 {
-                    var estimatedCount = currentCount * (daysAgo - i) / (double)daysAgo;
+                    double estimatedCount = currentCount * (daysAgo - i) / (double)daysAgo;
                     trends.Add((DateTime.UtcNow.AddDays(-i), estimatedCount));
                 }
                 break;
@@ -384,7 +384,7 @@ DURATION: [days/weeks]";
         if (!skills.Any())
             return 0.0;
 
-        var recentSkills = skills
+        List<Skill> recentSkills = skills
             .Where(s => s.CreatedAt > DateTime.UtcNow.AddDays(-30))
             .ToList();
 
@@ -399,7 +399,7 @@ DURATION: [days/weeks]";
         List<string> weaknesses,
         CancellationToken ct)
     {
-        var prompt = $@"Generate a concise self-assessment summary:
+        string prompt = $@"Generate a concise self-assessment summary:
 
 PERFORMANCE: {overallPerformance:P0}
 CALIBRATION: {calibration:P0}
@@ -428,7 +428,7 @@ Provide a 2-3 sentence summary of current state and trajectory.";
         if (!experiences.Any())
             return "";
 
-        var prompt = $@"Analyze these {patternType} experiences and identify common patterns:
+        string prompt = $@"Analyze these {patternType} experiences and identify common patterns:
 
 {string.Join("\n", experiences.Take(5).Select(e => $"- Goal: {e.Goal}, Quality: {e.Verification.QualityScore:P0}"))}
 
@@ -446,15 +446,15 @@ What patterns do you observe? Provide one concise insight.";
 
     private ImprovementPlan ParseImprovementPlan(string response)
     {
-        var lines = response.Split('\n');
-        var goal = "Improve overall performance";
-        var actions = new List<string>();
-        var expectedImprovements = new Dictionary<string, double>();
-        var duration = TimeSpan.FromDays(7);
+        string[] lines = response.Split('\n');
+        string goal = "Improve overall performance";
+        List<string> actions = new List<string>();
+        Dictionary<string, double> expectedImprovements = new Dictionary<string, double>();
+        TimeSpan duration = TimeSpan.FromDays(7);
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
-            var trimmed = line.Trim();
+            string trimmed = line.Trim();
 
             if (trimmed.StartsWith("GOAL:"))
             {
@@ -462,23 +462,23 @@ What patterns do you observe? Provide one concise insight.";
             }
             else if (trimmed.StartsWith("ACTION"))
             {
-                var action = trimmed.Split(':').Skip(1).FirstOrDefault()?.Trim();
+                string? action = trimmed.Split(':').Skip(1).FirstOrDefault()?.Trim();
                 if (!string.IsNullOrWhiteSpace(action))
                     actions.Add(action);
             }
             else if (trimmed.StartsWith("DURATION:"))
             {
-                var durationStr = trimmed.Substring("DURATION:".Length).Trim().ToLowerInvariant();
+                string durationStr = trimmed.Substring("DURATION:".Length).Trim().ToLowerInvariant();
                 if (durationStr.Contains("day"))
                 {
-                    var match = System.Text.RegularExpressions.Regex.Match(durationStr, @"(\d+)");
-                    if (match.Success && int.TryParse(match.Groups[1].Value, out var days))
+                    System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(durationStr, @"(\d+)");
+                    if (match.Success && int.TryParse(match.Groups[1].Value, out int days))
                         duration = TimeSpan.FromDays(days);
                 }
                 else if (durationStr.Contains("week"))
                 {
-                    var match = System.Text.RegularExpressions.Regex.Match(durationStr, @"(\d+)");
-                    if (match.Success && int.TryParse(match.Groups[1].Value, out var weeks))
+                    System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(durationStr, @"(\d+)");
+                    if (match.Success && int.TryParse(match.Groups[1].Value, out int weeks))
                         duration = TimeSpan.FromDays(weeks * 7);
                 }
             }

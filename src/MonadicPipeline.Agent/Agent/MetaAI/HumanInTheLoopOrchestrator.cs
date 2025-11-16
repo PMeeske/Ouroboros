@@ -124,7 +124,7 @@ public sealed class ConsoleFeedbackProvider : IHumanFeedbackProvider
         }
 
         Console.Write("Your response: ");
-        var response = await Task.Run(() => Console.ReadLine() ?? "", ct);
+        string response = await Task.Run(() => Console.ReadLine() ?? "", ct);
 
         return new HumanFeedbackResponse(
             request.RequestId,
@@ -144,8 +144,8 @@ public sealed class ConsoleFeedbackProvider : IHumanFeedbackProvider
         Console.WriteLine($"Rationale: {request.Rationale}");
         Console.Write("Approve? (y/n): ");
 
-        var response = await Task.Run(() => Console.ReadLine() ?? "n", ct);
-        var approved = response.ToLowerInvariant() == "y";
+        string response = await Task.Run(() => Console.ReadLine() ?? "n", ct);
+        bool approved = response.ToLowerInvariant() == "y";
 
         return new ApprovalResponse(
             request.RequestId,
@@ -192,9 +192,9 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
             DefaultTimeout: TimeSpan.FromMinutes(5),
             CriticalActionPatterns: new List<string> { "delete", "remove", "drop", "terminate" });
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        var stepResults = new List<StepResult>();
-        var approvalHistory = new List<string>();
+        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+        List<StepResult> stepResults = new List<StepResult>();
+        List<string> approvalHistory = new List<string>();
 
         try
         {
@@ -203,12 +203,12 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                 if (ct.IsCancellationRequested)
                     break;
 
-                var step = plan.Steps[i];
+                PlanStep step = plan.Steps[i];
 
                 // Check if step requires approval
                 if (config.RequireApprovalForCriticalSteps && IsCriticalStep(step, config))
                 {
-                    var approval = await RequestStepApprovalAsync(step, i, ct);
+                    ApprovalResponse approval = await RequestStepApprovalAsync(step, i, ct);
 
                     if (!approval.Approved)
                     {
@@ -234,7 +234,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                 }
 
                 // Execute step
-                var executionResult = await _orchestrator.ExecuteAsync(
+                Result<ExecutionResult, string> executionResult = await _orchestrator.ExecuteAsync(
                     new Plan(plan.Goal, new List<PlanStep> { step }, plan.ConfidenceScores, DateTime.UtcNow),
                     ct);
 
@@ -256,10 +256,10 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
 
             sw.Stop();
 
-            var overallSuccess = stepResults.All(r => r.Success);
-            var finalOutput = string.Join("\n", stepResults.Select(r => r.Output));
+            bool overallSuccess = stepResults.All(r => r.Success);
+            string finalOutput = string.Join("\n", stepResults.Select(r => r.Output));
 
-            var execution = new ExecutionResult(
+            ExecutionResult execution = new ExecutionResult(
                 plan,
                 stepResults,
                 overallSuccess,
@@ -289,7 +289,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
         try
         {
             // Present plan to human
-            var feedbackRequest = new HumanFeedbackRequest(
+            HumanFeedbackRequest feedbackRequest = new HumanFeedbackRequest(
                 Guid.NewGuid().ToString(),
                 $"Plan for: {plan.Goal}",
                 "Review the plan. Provide feedback or type 'approve' to proceed.",
@@ -304,9 +304,9 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                 DateTime.UtcNow,
                 TimeSpan.FromMinutes(5));
 
-            var feedback = await _feedbackProvider.RequestFeedbackAsync(feedbackRequest, ct);
+            HumanFeedbackResponse feedback = await _feedbackProvider.RequestFeedbackAsync(feedbackRequest, ct);
 
-            var response = feedback.Response.ToLowerInvariant();
+            string response = feedback.Response.ToLowerInvariant();
 
             if (response.Contains("approve"))
             {
@@ -315,13 +315,13 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
             else if (response.Contains("replan"))
             {
                 // Request replanning
-                var replanResult = await _orchestrator.PlanAsync(plan.Goal, null, ct);
+                Result<Plan, string> replanResult = await _orchestrator.PlanAsync(plan.Goal, null, ct);
                 return replanResult;
             }
             else if (response.Contains("add"))
             {
                 // Request details for new step
-                var stepRequest = new HumanFeedbackRequest(
+                HumanFeedbackRequest stepRequest = new HumanFeedbackRequest(
                     Guid.NewGuid().ToString(),
                     "Add step",
                     "Describe the step to add (format: action|parameters|expected)",
@@ -329,8 +329,8 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                     DateTime.UtcNow,
                     TimeSpan.FromMinutes(5));
 
-                var stepFeedback = await _feedbackProvider.RequestFeedbackAsync(stepRequest, ct);
-                var newStep = ParseStepFromFeedback(stepFeedback.Response);
+                HumanFeedbackResponse stepFeedback = await _feedbackProvider.RequestFeedbackAsync(stepRequest, ct);
+                PlanStep newStep = ParseStepFromFeedback(stepFeedback.Response);
 
                 plan.Steps.Add(newStep);
                 return Result<Plan, string>.Success(plan);
@@ -352,7 +352,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
 
     private bool IsCriticalStep(PlanStep step, HumanInTheLoopConfig config)
     {
-        var actionLower = step.Action.ToLowerInvariant();
+        string actionLower = step.Action.ToLowerInvariant();
 
         return config.CriticalActionPatterns.Any(pattern =>
             actionLower.Contains(pattern.ToLowerInvariant()));
@@ -363,7 +363,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
         int stepIndex,
         CancellationToken ct)
     {
-        var request = new ApprovalRequest(
+        ApprovalRequest request = new ApprovalRequest(
             Guid.NewGuid().ToString(),
             step.Action,
             step.Parameters,
@@ -375,9 +375,9 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
 
     private PlanStep ApplyModifications(PlanStep step, Dictionary<string, object> modifications)
     {
-        var newParams = new Dictionary<string, object>(step.Parameters);
+        Dictionary<string, object> newParams = new Dictionary<string, object>(step.Parameters);
 
-        foreach (var (key, value) in modifications)
+        foreach ((string key, object value) in modifications)
         {
             newParams[key] = value;
         }
@@ -388,7 +388,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
     private PlanStep ParseStepFromFeedback(string feedback)
     {
         // Simple parsing - in production use more sophisticated approach
-        var parts = feedback.Split('|');
+        string[] parts = feedback.Split('|');
 
         return new PlanStep(
             parts.Length > 0 ? parts[0].Trim() : "custom_step",

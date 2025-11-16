@@ -104,7 +104,7 @@ public class MetricsCollector
     /// <param name="labels">Optional labels for the metric.</param>
     public void IncrementCounter(string name, double value = 1.0, Dictionary<string, string>? labels = null)
     {
-        var key = this.BuildKey(name, labels);
+        string key = this.BuildKey(name, labels);
         this.counters.AddOrUpdate(key, value, (_, current) => current + value);
     }
 
@@ -116,7 +116,7 @@ public class MetricsCollector
     /// <param name="labels">Optional labels for the metric.</param>
     public void SetGauge(string name, double value, Dictionary<string, string>? labels = null)
     {
-        var key = this.BuildKey(name, labels);
+        string key = this.BuildKey(name, labels);
         this.gauges[key] = value;
     }
 
@@ -128,8 +128,8 @@ public class MetricsCollector
     /// <param name="labels">Optional labels for the metric.</param>
     public void ObserveHistogram(string name, double value, Dictionary<string, string>? labels = null)
     {
-        var key = this.BuildKey(name, labels);
-        var bag = this.histograms.GetOrAdd(key, _ => new ConcurrentBag<double>());
+        string key = this.BuildKey(name, labels);
+        ConcurrentBag<double> bag = this.histograms.GetOrAdd(key, _ => new ConcurrentBag<double>());
         bag.Add(value);
     }
 
@@ -141,7 +141,7 @@ public class MetricsCollector
     /// <param name="labels">Optional labels for the metric.</param>
     public void ObserveSummary(string name, double value, Dictionary<string, string>? labels = null)
     {
-        var key = this.BuildKey(name, labels);
+        string key = this.BuildKey(name, labels);
         this.summaries.AddOrUpdate(
             key,
             (value, 1L),
@@ -165,12 +165,12 @@ public class MetricsCollector
     /// <returns></returns>
     public List<Metric> GetMetrics()
     {
-        var metrics = new List<Metric>();
+        List<Metric> metrics = new List<Metric>();
 
         // Add counters
-        foreach (var kvp in this.counters)
+        foreach (KeyValuePair<string, double> kvp in this.counters)
         {
-            var (name, labels) = this.ParseKey(kvp.Key);
+            (string name, Dictionary<string, string> labels) = this.ParseKey(kvp.Key);
             metrics.Add(new Metric
             {
                 Name = name,
@@ -181,9 +181,9 @@ public class MetricsCollector
         }
 
         // Add gauges
-        foreach (var kvp in this.gauges)
+        foreach (KeyValuePair<string, double> kvp in this.gauges)
         {
-            var (name, labels) = this.ParseKey(kvp.Key);
+            (string name, Dictionary<string, string> labels) = this.ParseKey(kvp.Key);
             metrics.Add(new Metric
             {
                 Name = name,
@@ -194,10 +194,10 @@ public class MetricsCollector
         }
 
         // Add histograms (as summary statistics)
-        foreach (var kvp in this.histograms)
+        foreach (KeyValuePair<string, ConcurrentBag<double>> kvp in this.histograms)
         {
-            var (name, labels) = this.ParseKey(kvp.Key);
-            var values = kvp.Value.ToArray();
+            (string name, Dictionary<string, string> labels) = this.ParseKey(kvp.Key);
+            double[] values = kvp.Value.ToArray();
             if (values.Length > 0)
             {
                 metrics.Add(new Metric
@@ -225,10 +225,10 @@ public class MetricsCollector
         }
 
         // Add summaries
-        foreach (var kvp in this.summaries)
+        foreach (KeyValuePair<string, (double Sum, long Count)> kvp in this.summaries)
         {
-            var (name, labels) = this.ParseKey(kvp.Key);
-            var (sum, count) = kvp.Value;
+            (string name, Dictionary<string, string> labels) = this.ParseKey(kvp.Key);
+            (double sum, long count) = kvp.Value;
             metrics.Add(new Metric
             {
                 Name = $"{name}_sum",
@@ -264,21 +264,21 @@ public class MetricsCollector
     /// <returns></returns>
     public string ExportPrometheusFormat()
     {
-        var metrics = this.GetMetrics();
-        var output = new System.Text.StringBuilder();
+        List<Metric> metrics = this.GetMetrics();
+        System.Text.StringBuilder output = new System.Text.StringBuilder();
 
-        foreach (var group in metrics.GroupBy(m => m.Name.Split('_')[0]))
+        foreach (IGrouping<string, Metric> group in metrics.GroupBy(m => m.Name.Split('_')[0]))
         {
-            var metricName = group.Key;
-            var metricType = group.First().Type;
+            string metricName = group.Key;
+            MetricType metricType = group.First().Type;
 
             // Write HELP comment
             output.AppendLine($"# HELP {metricName} {metricName} metric");
             output.AppendLine($"# TYPE {metricName} {metricType.ToString().ToLowerInvariant()}");
 
-            foreach (var metric in group)
+            foreach (Metric? metric in group)
             {
-                var labels = metric.Labels.Any()
+                string labels = metric.Labels.Any()
                     ? "{" + string.Join(",", metric.Labels.Select(kvp => $"{kvp.Key}=\"{kvp.Value}\"")) + "}"
                     : string.Empty;
                 output.AppendLine($"{metric.Name}{labels} {metric.Value}");
@@ -308,23 +308,23 @@ public class MetricsCollector
             return name;
         }
 
-        var sortedLabels = string.Join(",", labels.OrderBy(kvp => kvp.Key)
+        string sortedLabels = string.Join(",", labels.OrderBy(kvp => kvp.Key)
             .Select(kvp => $"{kvp.Key}={kvp.Value}"));
         return $"{name}|{sortedLabels}";
     }
 
     private (string Name, Dictionary<string, string> Labels) ParseKey(string key)
     {
-        var parts = key.Split('|');
+        string[] parts = key.Split('|');
         if (parts.Length == 1)
         {
             return (parts[0], new Dictionary<string, string>());
         }
 
-        var labels = new Dictionary<string, string>();
-        foreach (var labelPair in parts[1].Split(','))
+        Dictionary<string, string> labels = new Dictionary<string, string>();
+        foreach (string labelPair in parts[1].Split(','))
         {
-            var kv = labelPair.Split('=');
+            string[] kv = labelPair.Split('=');
             if (kv.Length == 2)
             {
                 labels[kv[0]] = kv[1];
@@ -367,7 +367,7 @@ public static class MetricsExtensions
     /// </summary>
     public static void RecordToolExecution(this MetricsCollector collector, string toolName, double durationMs, bool success)
     {
-        var labels = new Dictionary<string, string>
+        Dictionary<string, string> labels = new Dictionary<string, string>
         {
             ["tool_name"] = toolName,
             ["status"] = success ? "success" : "failure",
@@ -382,7 +382,7 @@ public static class MetricsExtensions
     /// </summary>
     public static void RecordPipelineExecution(this MetricsCollector collector, string pipelineName, double durationMs, bool success)
     {
-        var labels = new Dictionary<string, string>
+        Dictionary<string, string> labels = new Dictionary<string, string>
         {
             ["pipeline"] = pipelineName,
             ["status"] = success ? "success" : "failure",
@@ -397,7 +397,7 @@ public static class MetricsExtensions
     /// </summary>
     public static void RecordLlmRequest(this MetricsCollector collector, string model, int tokenCount, double durationMs)
     {
-        var labels = new Dictionary<string, string>
+        Dictionary<string, string> labels = new Dictionary<string, string>
         {
             ["model"] = model,
         };
@@ -412,7 +412,7 @@ public static class MetricsExtensions
     /// </summary>
     public static void RecordVectorOperation(this MetricsCollector collector, string operation, int vectorCount, double durationMs)
     {
-        var labels = new Dictionary<string, string>
+        Dictionary<string, string> labels = new Dictionary<string, string>
         {
             ["operation"] = operation,
         };

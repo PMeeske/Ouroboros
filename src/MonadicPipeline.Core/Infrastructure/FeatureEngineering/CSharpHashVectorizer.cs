@@ -76,7 +76,7 @@ public sealed class CSharpHashVectorizer
             throw new FileNotFoundException($"Source file not found: {path}", path);
         }
 
-        var code = File.ReadAllText(path);
+        string code = File.ReadAllText(path);
         return this.TransformCode(code);
     }
 
@@ -107,7 +107,7 @@ public sealed class CSharpHashVectorizer
             code = string.Empty;
         }
 
-        var tokens = this.ExtractTokens(code);
+        List<string> tokens = this.ExtractTokens(code);
         return this.BuildVector(tokens);
     }
 
@@ -133,14 +133,14 @@ public sealed class CSharpHashVectorizer
             throw new ArgumentNullException(nameof(paths));
         }
 
-        var tasks = paths.Select(async path =>
+        IEnumerable<Task<float[]>> tasks = paths.Select(async path =>
         {
             if (!File.Exists(path))
             {
                 throw new FileNotFoundException($"Source file not found: {path}", path);
             }
 
-            var code = await File.ReadAllTextAsync(path).ConfigureAwait(false);
+            string code = await File.ReadAllTextAsync(path).ConfigureAwait(false);
             return this.TransformCode(code);
         });
 
@@ -171,18 +171,18 @@ public sealed class CSharpHashVectorizer
             norm2 += v2[i] * v2[i];
         }
 
-        var magnitude = MathF.Sqrt(norm1) * MathF.Sqrt(norm2);
+        float magnitude = MathF.Sqrt(norm1) * MathF.Sqrt(norm2);
         return magnitude > 0f ? dot / magnitude : 0f;
     }
 
     private List<string> ExtractTokens(string code)
     {
-        var tokens = new List<string>();
-        var matches = TokenPattern.Matches(code);
+        List<string> tokens = new List<string>();
+        MatchCollection matches = TokenPattern.Matches(code);
 
         foreach (Match match in matches)
         {
-            var token = match.Value;
+            string token = match.Value;
 
             // Normalize keywords
             if (CSharpKeywords.Contains(token.ToLowerInvariant()))
@@ -204,7 +204,7 @@ public sealed class CSharpHashVectorizer
 
     private float[] BuildVector(List<string> tokens)
     {
-        var vector = new float[this.dimension];
+        float[] vector = new float[this.dimension];
 
         if (tokens.Count == 0)
         {
@@ -212,28 +212,28 @@ public sealed class CSharpHashVectorizer
         }
 
         // Count token occurrences for term frequency
-        var tokenCounts = new Dictionary<string, int>();
-        foreach (var token in tokens)
+        Dictionary<string, int> tokenCounts = new Dictionary<string, int>();
+        foreach (string token in tokens)
         {
-            tokenCounts.TryGetValue(token, out var count);
+            tokenCounts.TryGetValue(token, out int count);
             tokenCounts[token] = count + 1;
         }
 
         // Hash each unique token to vector indices and accumulate frequencies
-        foreach (var (token, count) in tokenCounts)
+        foreach ((string token, int count) in tokenCounts)
         {
-            var hash = ComputeHash(token);
-            var index = (int)(hash % (uint)this.dimension);
+            uint hash = ComputeHash(token);
+            int index = (int)(hash % (uint)this.dimension);
 
             // Use signed hashing for better distribution
-            var sign = (hash & 0x80000000) == 0 ? 1f : -1f;
+            float sign = (hash & 0x80000000) == 0 ? 1f : -1f;
 
             // Accumulate with TF weighting
             vector[index] += sign * count;
         }
 
         // L2 normalization
-        var norm = 0f;
+        float norm = 0f;
         for (int i = 0; i < this.dimension; i++)
         {
             norm += vector[i] * vector[i];
@@ -254,7 +254,7 @@ public sealed class CSharpHashVectorizer
     private static uint ComputeHash(string token)
     {
         Span<byte> bytes = stackalloc byte[Encoding.UTF8.GetMaxByteCount(token.Length)];
-        var len = Encoding.UTF8.GetBytes(token, bytes);
+        int len = Encoding.UTF8.GetBytes(token, bytes);
         return XxHash32.Hash(bytes[..len]);
     }
 

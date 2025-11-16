@@ -70,7 +70,7 @@ public sealed class GoalHierarchy : IGoalHierarchy
         _goals[goal.Id] = goal;
 
         // Add subgoals recursively
-        foreach (var subgoal in goal.Subgoals)
+        foreach (Goal subgoal in goal.Subgoals)
         {
             AddGoal(subgoal);
         }
@@ -81,7 +81,7 @@ public sealed class GoalHierarchy : IGoalHierarchy
     /// </summary>
     public Goal? GetGoal(Guid id)
     {
-        _goals.TryGetValue(id, out var goal);
+        _goals.TryGetValue(id, out Goal? goal);
         return goal;
     }
 
@@ -113,7 +113,7 @@ public sealed class GoalHierarchy : IGoalHierarchy
         try
         {
             // Use LLM to decompose the goal
-            var prompt = $@"Decompose this goal into {_config.MaxSubgoalsPerGoal} or fewer specific, actionable subgoals:
+            string prompt = $@"Decompose this goal into {_config.MaxSubgoalsPerGoal} or fewer specific, actionable subgoals:
 
 GOAL: {goal.Description}
 TYPE: {goal.Type}
@@ -132,16 +132,16 @@ PRIORITY: [0-1]
 
 SUBGOAL 2: ...";
 
-            var response = await _llm.GenerateTextAsync(prompt, ct);
-            var subgoals = ParseSubgoals(response, goal);
+            string response = await _llm.GenerateTextAsync(prompt, ct);
+            List<Goal> subgoals = ParseSubgoals(response, goal);
 
             // Recursively decompose subgoals if needed
-            var decomposedSubgoals = new List<Goal>();
-            foreach (var subgoal in subgoals)
+            List<Goal> decomposedSubgoals = new List<Goal>();
+            foreach (Goal subgoal in subgoals)
             {
                 if (IsComplexGoal(subgoal) && maxDepth > 1)
                 {
-                    var decomposed = await DecomposeGoalAsync(subgoal, maxDepth - 1, ct);
+                    Result<Goal, string> decomposed = await DecomposeGoalAsync(subgoal, maxDepth - 1, ct);
                     decomposedSubgoals.Add(decomposed.IsSuccess ? decomposed.Value : subgoal);
                 }
                 else
@@ -150,7 +150,7 @@ SUBGOAL 2: ...";
                 }
             }
 
-            var updatedGoal = goal with { Subgoals = decomposedSubgoals };
+            Goal updatedGoal = goal with { Subgoals = decomposedSubgoals };
             _goals[updatedGoal.Id] = updatedGoal;
 
             return Result<Goal, string>.Success(updatedGoal);
@@ -166,16 +166,16 @@ SUBGOAL 2: ...";
     /// </summary>
     public async Task<List<GoalConflict>> DetectConflictsAsync(CancellationToken ct = default)
     {
-        var conflicts = new List<GoalConflict>();
-        var activeGoals = GetActiveGoals();
+        List<GoalConflict> conflicts = new List<GoalConflict>();
+        List<Goal> activeGoals = GetActiveGoals();
 
         // Check pairwise conflicts
         for (int i = 0; i < activeGoals.Count; i++)
         {
             for (int j = i + 1; j < activeGoals.Count; j++)
             {
-                var goal1 = activeGoals[i];
-                var goal2 = activeGoals[j];
+                Goal goal1 = activeGoals[i];
+                Goal goal2 = activeGoals[j];
 
                 // Check for direct conflicts
                 if (HasDirectConflict(goal1, goal2))
@@ -200,7 +200,7 @@ SUBGOAL 2: ...";
                 }
 
                 // Use LLM for semantic conflict detection
-                var semanticConflict = await DetectSemanticConflictAsync(goal1, goal2, ct);
+                GoalConflict? semanticConflict = await DetectSemanticConflictAsync(goal1, goal2, ct);
                 if (semanticConflict != null)
                 {
                     conflicts.Add(semanticConflict);
@@ -222,9 +222,9 @@ SUBGOAL 2: ...";
             return Result<bool, string>.Failure("Goal cannot be null");
 
         // Check safety constraints
-        foreach (var constraint in _config.SafetyConstraints)
+        foreach (string constraint in _config.SafetyConstraints)
         {
-            var violates = await CheckConstraintViolationAsync(goal, constraint, ct);
+            bool violates = await CheckConstraintViolationAsync(goal, constraint, ct);
             if (violates)
             {
                 return Result<bool, string>.Failure(
@@ -233,7 +233,7 @@ SUBGOAL 2: ...";
         }
 
         // Check value alignment using LLM
-        var prompt = $@"Evaluate if this goal aligns with core values:
+        string prompt = $@"Evaluate if this goal aligns with core values:
 
 GOAL: {goal.Description}
 
@@ -246,8 +246,8 @@ SAFETY CONSTRAINTS:
 Does this goal align with the values and respect the constraints?
 Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
 
-        var response = await _llm.GenerateTextAsync(prompt, ct);
-        var aligned = response.Contains("ALIGNED", StringComparison.OrdinalIgnoreCase) &&
+        string response = await _llm.GenerateTextAsync(prompt, ct);
+        bool aligned = response.Contains("ALIGNED", StringComparison.OrdinalIgnoreCase) &&
                      !response.Contains("MISALIGNED", StringComparison.OrdinalIgnoreCase);
 
         if (!aligned)
@@ -271,9 +271,9 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
     /// </summary>
     public void CompleteGoal(Guid id, string reason)
     {
-        if (_goals.TryGetValue(id, out var goal))
+        if (_goals.TryGetValue(id, out Goal? goal))
         {
-            var completed = goal with
+            Goal completed = goal with
             {
                 IsComplete = true,
                 CompletionReason = reason
@@ -299,11 +299,11 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
     /// </summary>
     public async Task<List<Goal>> PrioritizeGoalsAsync(CancellationToken ct = default)
     {
-        var activeGoals = GetActiveGoals();
+        List<Goal> activeGoals = GetActiveGoals();
 
         // Use topological sort to respect dependencies
-        var prioritized = new List<Goal>();
-        var visited = new HashSet<Guid>();
+        List<Goal> prioritized = new List<Goal>();
+        HashSet<Guid> visited = new HashSet<Guid>();
 
         // Helper function for dependency resolution
         void Visit(Goal goal)
@@ -314,7 +314,7 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
             visited.Add(goal.Id);
 
             // Visit dependencies first (subgoals)
-            foreach (var subgoal in goal.Subgoals.Where(s => !s.IsComplete))
+            foreach (Goal? subgoal in goal.Subgoals.Where(s => !s.IsComplete))
             {
                 Visit(subgoal);
             }
@@ -323,19 +323,19 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
         }
 
         // Start with safety goals
-        foreach (var safetyGoal in activeGoals.Where(g => g.Type == GoalType.Safety))
+        foreach (Goal? safetyGoal in activeGoals.Where(g => g.Type == GoalType.Safety))
         {
             Visit(safetyGoal);
         }
 
         // Then primary goals
-        foreach (var primaryGoal in activeGoals.Where(g => g.Type == GoalType.Primary))
+        foreach (Goal? primaryGoal in activeGoals.Where(g => g.Type == GoalType.Primary))
         {
             Visit(primaryGoal);
         }
 
         // Then secondary and instrumental
-        foreach (var otherGoal in activeGoals.Where(g =>
+        foreach (Goal? otherGoal in activeGoals.Where(g =>
             g.Type != GoalType.Safety && g.Type != GoalType.Primary))
         {
             Visit(otherGoal);
@@ -349,22 +349,22 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
 
     private List<Goal> ParseSubgoals(string response, Goal parentGoal)
     {
-        var subgoals = new List<Goal>();
-        var lines = response.Split('\n');
+        List<Goal> subgoals = new List<Goal>();
+        string[] lines = response.Split('\n');
 
         string? description = null;
         GoalType type = GoalType.Instrumental;
         double priority = 0.5;
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
-            var trimmed = line.Trim();
+            string trimmed = line.Trim();
 
             if (trimmed.StartsWith("SUBGOAL"))
             {
                 if (description != null)
                 {
-                    var subgoal = new Goal(
+                    Goal subgoal = new Goal(
                         Guid.NewGuid(),
                         description,
                         type,
@@ -384,15 +384,15 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
             }
             else if (trimmed.StartsWith("TYPE:"))
             {
-                var typeStr = trimmed.Substring("TYPE:".Length).Trim();
-                type = Enum.TryParse<GoalType>(typeStr, true, out var parsed)
+                string typeStr = trimmed.Substring("TYPE:".Length).Trim();
+                type = Enum.TryParse<GoalType>(typeStr, true, out GoalType parsed)
                     ? parsed
                     : GoalType.Instrumental;
             }
             else if (trimmed.StartsWith("PRIORITY:"))
             {
-                var priorityStr = trimmed.Substring("PRIORITY:".Length).Trim();
-                if (double.TryParse(priorityStr, out var p))
+                string priorityStr = trimmed.Substring("PRIORITY:".Length).Trim();
+                if (double.TryParse(priorityStr, out double p))
                 {
                     priority = Math.Clamp(p, 0.0, 1.0);
                 }
@@ -401,7 +401,7 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
 
         if (description != null)
         {
-            var subgoal = new Goal(
+            Goal subgoal = new Goal(
                 Guid.NewGuid(),
                 description,
                 type,
@@ -427,9 +427,9 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
     private bool HasDirectConflict(Goal goal1, Goal goal2)
     {
         // Check constraint conflicts
-        foreach (var constraint1 in goal1.Constraints)
+        foreach (KeyValuePair<string, object> constraint1 in goal1.Constraints)
         {
-            if (goal2.Constraints.TryGetValue(constraint1.Key, out var value2))
+            if (goal2.Constraints.TryGetValue(constraint1.Key, out object? value2))
             {
                 if (!constraint1.Value.Equals(value2))
                     return true;
@@ -451,7 +451,7 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
         Goal goal2,
         CancellationToken ct)
     {
-        var prompt = $@"Analyze if these two goals conflict:
+        string prompt = $@"Analyze if these two goals conflict:
 
 GOAL 1: {goal1.Description} (Type: {goal1.Type}, Priority: {goal1.Priority})
 GOAL 2: {goal2.Description} (Type: {goal2.Type}, Priority: {goal2.Priority})
@@ -460,7 +460,7 @@ Do they conflict? Answer 'YES' or 'NO' and explain why.";
 
         try
         {
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct);
 
             if (response.Contains("YES", StringComparison.OrdinalIgnoreCase))
             {
@@ -485,7 +485,7 @@ Do they conflict? Answer 'YES' or 'NO' and explain why.";
         string constraint,
         CancellationToken ct)
     {
-        var prompt = $@"Does this goal violate the safety constraint?
+        string prompt = $@"Does this goal violate the safety constraint?
 
 GOAL: {goal.Description}
 CONSTRAINT: {constraint}
@@ -494,7 +494,7 @@ Answer with 'VIOLATES' or 'SAFE'.";
 
         try
         {
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct);
             return response.Contains("VIOLATES", StringComparison.OrdinalIgnoreCase);
         }
         catch

@@ -30,18 +30,18 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
     /// </summary>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
-        var sw = Stopwatch.StartNew();
+        Stopwatch sw = Stopwatch.StartNew();
 
         try
         {
             // Get orchestrator decision
-            var decision = await _orchestrator.SelectModelAsync(prompt, ct: ct);
+            Result<OrchestratorDecision, string> decision = await _orchestrator.SelectModelAsync(prompt, ct: ct);
 
             return await decision.Match(
                 async selected =>
                 {
                     // Execute with selected model
-                    var result = await selected.SelectedModel.GenerateTextAsync(prompt, ct);
+                    string result = await selected.SelectedModel.GenerateTextAsync(prompt, ct);
 
                     // Track metrics
                     if (_trackMetrics)
@@ -74,23 +74,23 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
     public async Task<(string Text, List<ToolExecution> Tools, OrchestratorDecision? Decision)>
         GenerateWithOrchestratedToolsAsync(string prompt, CancellationToken ct = default)
     {
-        var sw = Stopwatch.StartNew();
+        Stopwatch sw = Stopwatch.StartNew();
 
         try
         {
             // Get orchestrator decision
-            var decisionResult = await _orchestrator.SelectModelAsync(prompt, ct: ct);
+            Result<OrchestratorDecision, string> decisionResult = await _orchestrator.SelectModelAsync(prompt, ct: ct);
 
             return await decisionResult.Match(
                 async decision =>
                 {
                     // Create tool-aware model with recommended tools
-                    var toolAwareModel = new ToolAwareChatModel(
+                    ToolAwareChatModel toolAwareModel = new ToolAwareChatModel(
                         decision.SelectedModel,
                         decision.RecommendedTools);
 
                     // Execute with tools
-                    var (text, tools) = await toolAwareModel.GenerateWithToolsAsync(prompt, ct);
+                    (string text, List<ToolExecution> tools) = await toolAwareModel.GenerateWithToolsAsync(prompt, ct);
 
                     // Track metrics
                     if (_trackMetrics)
@@ -102,7 +102,7 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
                             success: !string.IsNullOrEmpty(text));
 
                         // Track tool usage
-                        foreach (var tool in tools)
+                        foreach (ToolExecution tool in tools)
                         {
                             _orchestrator.RecordMetric(
                                 $"tool_{tool.ToolName}",
@@ -154,7 +154,7 @@ public sealed class OrchestratorBuilder
         double avgCost = 1.0,
         double avgLatencyMs = 1000.0)
     {
-        var capability = new ModelCapability(
+        ModelCapability capability = new ModelCapability(
             name,
             strengths,
             maxTokens,
@@ -181,7 +181,7 @@ public sealed class OrchestratorBuilder
     public OrchestratedChatModel Build()
     {
         // Register all models
-        foreach (var (capability, model) in _models)
+        foreach ((ModelCapability capability, IChatCompletionModel model) in _models)
         {
             _orchestrator.RegisterModel(capability, model);
         }

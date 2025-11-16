@@ -23,8 +23,8 @@ public static class StreamingCliSteps
             // Ensure streaming context exists
             s.Streaming ??= new StreamingContext();
 
-            var options = ParseKeyValueArgs(args);
-            string source = options.TryGetValue("source", out var src) ? src : "generated";
+            Dictionary<string, string> options = ParseKeyValueArgs(args);
+            string source = options.TryGetValue("source", out string? src) ? src : "generated";
 
             IObservable<object> stream = source.ToLowerInvariant() switch
             {
@@ -36,7 +36,7 @@ public static class StreamingCliSteps
 
             s.ActiveStream = stream;
             s.Branch = s.Branch.WithIngestEvent($"stream:created:{source}", Array.Empty<string>());
-            
+
             if (s.Trace)
             {
                 Console.WriteLine($"[trace] Stream created: {source}");
@@ -60,20 +60,20 @@ public static class StreamingCliSteps
                 return Task.FromResult(s);
             }
 
-            var options = ParseKeyValueArgs(args);
-            string sizeStr = options.TryGetValue("size", out var sz) ? sz : "5";
-            string? slideStr = options.TryGetValue("slide", out var sl) ? sl : null;
+            Dictionary<string, string> options = ParseKeyValueArgs(args);
+            string sizeStr = options.TryGetValue("size", out string? sz) ? sz : "5";
+            string? slideStr = options.TryGetValue("slide", out string? sl) ? sl : null;
 
             // Check if time-based (contains 's' suffix)
             if (sizeStr.EndsWith("s", StringComparison.OrdinalIgnoreCase))
             {
-                var sizeSeconds = int.Parse(sizeStr.TrimEnd('s', 'S'));
-                var size = TimeSpan.FromSeconds(sizeSeconds);
+                int sizeSeconds = int.Parse(sizeStr.TrimEnd('s', 'S'));
+                TimeSpan size = TimeSpan.FromSeconds(sizeSeconds);
 
                 if (slideStr != null && slideStr.EndsWith("s", StringComparison.OrdinalIgnoreCase))
                 {
-                    var slideSeconds = int.Parse(slideStr.TrimEnd('s', 'S'));
-                    var slide = TimeSpan.FromSeconds(slideSeconds);
+                    int slideSeconds = int.Parse(slideStr.TrimEnd('s', 'S'));
+                    TimeSpan slide = TimeSpan.FromSeconds(slideSeconds);
                     s.ActiveStream = s.ActiveStream.Window(size, slide).Select(w => (object)w);
                 }
                 else
@@ -97,7 +97,7 @@ public static class StreamingCliSteps
             }
 
             s.Branch = s.Branch.WithIngestEvent($"stream:window:size={sizeStr}", Array.Empty<string>());
-            
+
             if (s.Trace)
             {
                 Console.WriteLine($"[trace] Window applied: size={sizeStr}, slide={slideStr ?? "none"}");
@@ -121,10 +121,10 @@ public static class StreamingCliSteps
                 return Task.FromResult(s);
             }
 
-            var raw = ParseString(args);
-            var operations = raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            string raw = ParseString(args);
+            string[] operations = raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-            foreach (var op in operations)
+            foreach (string op in operations)
             {
                 s.ActiveStream = op.ToLowerInvariant() switch
                 {
@@ -139,7 +139,7 @@ public static class StreamingCliSteps
             }
 
             s.Branch = s.Branch.WithIngestEvent($"stream:aggregate:{string.Join(",", operations)}", Array.Empty<string>());
-            
+
             if (s.Trace)
             {
                 Console.WriteLine($"[trace] Aggregations applied: {string.Join(", ", operations)}");
@@ -165,7 +165,7 @@ public static class StreamingCliSteps
             // For now, identity map (can be extended with expression evaluation)
             s.ActiveStream = s.ActiveStream.Select(x => x);
             s.Branch = s.Branch.WithIngestEvent("stream:map:identity", Array.Empty<string>());
-            
+
             if (s.Trace)
             {
                 Console.WriteLine("[trace] Map applied: identity");
@@ -191,7 +191,7 @@ public static class StreamingCliSteps
             // For now, accept all (can be extended with expression evaluation)
             s.ActiveStream = s.ActiveStream.Where(_ => true);
             s.Branch = s.Branch.WithIngestEvent("stream:filter:accept-all", Array.Empty<string>());
-            
+
             if (s.Trace)
             {
                 Console.WriteLine("[trace] Filter applied: accept-all");
@@ -215,10 +215,10 @@ public static class StreamingCliSteps
                 return Task.FromResult(s);
             }
 
-            var options = ParseKeyValueArgs(args);
-            string sink = options.TryGetValue("sink", out var snk) ? snk : 
+            Dictionary<string, string> options = ParseKeyValueArgs(args);
+            string sink = options.TryGetValue("sink", out string? snk) ? snk :
                          (options.ContainsKey("console") ? "console" :
-                          options.ContainsKey("file") ? "file" : 
+                          options.ContainsKey("file") ? "file" :
                           args?.ToLowerInvariant() ?? "console");
 
             IDisposable subscription;
@@ -233,8 +233,8 @@ public static class StreamingCliSteps
                     break;
 
                 case "file":
-                    string path = options.TryGetValue("path", out var p) ? p : "stream_output.txt";
-                    var writer = new StreamWriter(path, append: true);
+                    string path = options.TryGetValue("path", out string? p) ? p : "stream_output.txt";
+                    StreamWriter writer = new StreamWriter(path, append: true);
                     subscription = s.ActiveStream.Subscribe(
                         onNext: item => writer.WriteLine(FormatStreamItem(item)),
                         onError: ex => { writer.WriteLine($"ERROR: {ex.Message}"); writer.Flush(); },
@@ -253,7 +253,7 @@ public static class StreamingCliSteps
             // Register for cleanup
             s.Streaming?.Register(subscription);
             s.Branch = s.Branch.WithIngestEvent($"stream:sink:{sink}", Array.Empty<string>());
-            
+
             if (s.Trace)
             {
                 Console.WriteLine($"[trace] Sink applied: {sink}");
@@ -272,9 +272,9 @@ public static class StreamingCliSteps
         {
             s.Streaming ??= new StreamingContext();
 
-            var options = ParseKeyValueArgs(args);
-            int intervalSeconds = options.TryGetValue("interval", out var intv) && int.TryParse(intv.TrimEnd('s', 'S'), out var iv) ? iv : 5;
-            int k = options.TryGetValue("k", out var kStr) && int.TryParse(kStr, out var kv) ? kv : 5;
+            Dictionary<string, string> options = ParseKeyValueArgs(args);
+            int intervalSeconds = options.TryGetValue("interval", out string? intv) && int.TryParse(intv.TrimEnd('s', 'S'), out int iv) ? iv : 5;
+            int k = options.TryGetValue("k", out string? kStr) && int.TryParse(kStr, out int kv) ? kv : 5;
 
             // Create a stream that periodically queries for new prompts
             var stream = Observable.Interval(TimeSpan.FromSeconds(intervalSeconds))
@@ -284,8 +284,8 @@ public static class StreamingCliSteps
                     {
                         try
                         {
-                            var hits = await tvs.GetSimilarDocuments(s.Embed, s.Query, k);
-                            var context = string.Join("\n---\n", hits.Select(h => h.PageContent));
+                            IReadOnlyCollection<LangChain.DocumentLoaders.Document> hits = await tvs.GetSimilarDocuments(s.Embed, s.Query, k);
+                            string context = string.Join("\n---\n", hits.Select(h => h.PageContent));
                             return new { Query = s.Query, Context = context, Timestamp = DateTime.UtcNow };
                         }
                         catch
@@ -299,7 +299,7 @@ public static class StreamingCliSteps
 
             s.ActiveStream = stream.Select(r => (object)r);
             s.Branch = s.Branch.WithIngestEvent($"stream:rag:interval={intervalSeconds}s", Array.Empty<string>());
-            
+
             if (s.Trace)
             {
                 Console.WriteLine($"[trace] Streaming RAG created: interval={intervalSeconds}s, k={k}");
@@ -323,15 +323,15 @@ public static class StreamingCliSteps
                 return Task.FromResult(s);
             }
 
-            var options = ParseKeyValueArgs(args);
-            int refreshSeconds = options.TryGetValue("refresh", out var ref0) && int.TryParse(ref0.TrimEnd('s', 'S'), out var rs) ? rs : 1;
-            int itemsToShow = options.TryGetValue("items", out var itm) && int.TryParse(itm, out var it) ? it : 5;
+            Dictionary<string, string> options = ParseKeyValueArgs(args);
+            int refreshSeconds = options.TryGetValue("refresh", out string? ref0) && int.TryParse(ref0.TrimEnd('s', 'S'), out int rs) ? rs : 1;
+            int itemsToShow = options.TryGetValue("items", out string? itm) && int.TryParse(itm, out int it) ? it : 5;
 
             long count = 0;
             DateTime startTime = DateTime.UtcNow;
-            var recentItems = new Queue<object>();
+            Queue<object> recentItems = new Queue<object>();
 
-            var subscription = s.ActiveStream.Subscribe(
+            IDisposable subscription = s.ActiveStream.Subscribe(
                 onNext: item =>
                 {
                     count++;
@@ -341,8 +341,8 @@ public static class StreamingCliSteps
                         recentItems.Dequeue();
                     }
 
-                    var elapsed = DateTime.UtcNow - startTime;
-                    var rate = elapsed.TotalSeconds > 0 ? count / elapsed.TotalSeconds : 0;
+                    TimeSpan elapsed = DateTime.UtcNow - startTime;
+                    double rate = elapsed.TotalSeconds > 0 ? count / elapsed.TotalSeconds : 0;
 
                     Console.Clear();
                     Console.WriteLine("╔════════════════════════════════════════════════╗");
@@ -353,17 +353,17 @@ public static class StreamingCliSteps
                     Console.WriteLine($"║ Elapsed:        {elapsed.TotalSeconds,10:F1}s              ║");
                     Console.WriteLine("╠════════════════════════════════════════════════╣");
                     Console.WriteLine("║ Recent Items:                                  ║");
-                    
-                    foreach (var recent in recentItems)
+
+                    foreach (object recent in recentItems)
                     {
-                        var display = FormatStreamItem(recent);
+                        string display = FormatStreamItem(recent);
                         if (display.Length > 44)
                         {
                             display = display.Substring(0, 41) + "...";
                         }
                         Console.WriteLine($"║   {display,-44} ║");
                     }
-                    
+
                     Console.WriteLine("╚════════════════════════════════════════════════╝");
                 },
                 onError: ex => Console.WriteLine($"[dashboard:error] {ex.Message}"),
@@ -371,7 +371,7 @@ public static class StreamingCliSteps
 
             s.Streaming?.Register(subscription);
             s.Branch = s.Branch.WithIngestEvent($"stream:dashboard:refresh={refreshSeconds}s", Array.Empty<string>());
-            
+
             if (s.Trace)
             {
                 Console.WriteLine($"[trace] Dashboard created: refresh={refreshSeconds}s");
@@ -384,8 +384,8 @@ public static class StreamingCliSteps
 
     private static IObservable<object> CreateGeneratedStream(Dictionary<string, string> options, CliPipelineState state)
     {
-        int count = options.TryGetValue("count", out var cntStr) && int.TryParse(cntStr, out var cnt) ? cnt : 100;
-        int intervalMs = options.TryGetValue("interval", out var intvStr) && int.TryParse(intvStr, out var intv) ? intv : 100;
+        int count = options.TryGetValue("count", out string? cntStr) && int.TryParse(cntStr, out int cnt) ? cnt : 100;
+        int intervalMs = options.TryGetValue("interval", out string? intvStr) && int.TryParse(intvStr, out int intv) ? intv : 100;
 
         return Observable.Interval(TimeSpan.FromMilliseconds(intervalMs))
             .Take(count)
@@ -394,8 +394,8 @@ public static class StreamingCliSteps
 
     private static IObservable<object> CreateFileStream(Dictionary<string, string> options, CliPipelineState state)
     {
-        string path = options.TryGetValue("path", out var p) ? p : "data.txt";
-        
+        string path = options.TryGetValue("path", out string? p) ? p : "data.txt";
+
         if (!File.Exists(path))
         {
             return Observable.Empty<object>();
@@ -405,7 +405,7 @@ public static class StreamingCliSteps
         {
             try
             {
-                using var reader = new StreamReader(path);
+                using StreamReader reader = new StreamReader(path);
                 string? line;
                 while ((line = await reader.ReadLineAsync()) != null && !cancellationToken.IsCancellationRequested)
                 {
@@ -422,8 +422,8 @@ public static class StreamingCliSteps
 
     private static IObservable<object> CreateChannelStream(Dictionary<string, string> options, CliPipelineState state)
     {
-        var channel = Channel.CreateUnbounded<object>();
-        
+        Channel<object> channel = Channel.CreateUnbounded<object>();
+
         // Example: produce some test data
         Task.Run(async () =>
         {
@@ -533,14 +533,14 @@ public static class StreamingCliSteps
     private static double ExtractNumericValue(object item)
     {
         if (item == null) return 0;
-        
-        var type = item.GetType();
-        
+
+        Type type = item.GetType();
+
         // Try to get Value property (common in anonymous types)
-        var valueProp = type.GetProperty("Value");
+        System.Reflection.PropertyInfo? valueProp = type.GetProperty("Value");
         if (valueProp != null)
         {
-            var value = valueProp.GetValue(item);
+            object? value = valueProp.GetValue(item);
             if (value is IConvertible convertible)
             {
                 return Convert.ToDouble(convertible);
@@ -548,10 +548,10 @@ public static class StreamingCliSteps
         }
 
         // Try Index property
-        var indexProp = type.GetProperty("Index");
+        System.Reflection.PropertyInfo? indexProp = type.GetProperty("Index");
         if (indexProp != null)
         {
-            var value = indexProp.GetValue(item);
+            object? value = indexProp.GetValue(item);
             if (value is IConvertible convertible)
             {
                 return Convert.ToDouble(convertible);
@@ -578,15 +578,15 @@ public static class StreamingCliSteps
     {
         if (item == null) return "null";
 
-        var type = item.GetType();
+        Type type = item.GetType();
 
         // Handle anonymous types
         if (type.Name.Contains("AnonymousType"))
         {
-            var properties = type.GetProperties();
-            var parts = properties.Select(p =>
+            System.Reflection.PropertyInfo[] properties = type.GetProperties();
+            IEnumerable<string> parts = properties.Select(p =>
             {
-                var value = p.GetValue(item);
+                object? value = p.GetValue(item);
                 return $"{p.Name}={value}";
             });
             return $"{{ {string.Join(", ", parts)} }}";
@@ -598,7 +598,7 @@ public static class StreamingCliSteps
     private static string ParseString(string? arg)
     {
         arg ??= string.Empty;
-        var m = System.Text.RegularExpressions.Regex.Match(arg, @"^'(?<s>.*)'$");
+        System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(arg, @"^'(?<s>.*)'$");
         if (m.Success) return m.Groups["s"].Value;
         m = System.Text.RegularExpressions.Regex.Match(arg, @"^""(?<s>.*)""$");
         if (m.Success) return m.Groups["s"].Value;
@@ -607,14 +607,14 @@ public static class StreamingCliSteps
 
     private static Dictionary<string, string> ParseKeyValueArgs(string? args)
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var raw = ParseString(args);
+        Dictionary<string, string> map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        string raw = ParseString(args);
         if (string.IsNullOrWhiteSpace(raw))
         {
             return map;
         }
 
-        foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             int idx = part.IndexOf('=');
             if (idx > 0)
@@ -644,7 +644,7 @@ internal static class ChannelExtensions
         {
             try
             {
-                await foreach (var item in reader.ReadAllAsync(cancellationToken))
+                await foreach (T? item in reader.ReadAllAsync(cancellationToken))
                 {
                     observer.OnNext(item);
                 }

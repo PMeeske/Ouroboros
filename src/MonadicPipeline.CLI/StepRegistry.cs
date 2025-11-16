@@ -12,15 +12,15 @@ public static class StepRegistry
 
     private static Dictionary<string, MethodInfo> BuildMap()
     {
-        var dict = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
-        var asm = typeof(StepRegistry).Assembly;
-        foreach (var type in asm.GetTypes())
+        Dictionary<string, MethodInfo> dict = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
+        Assembly asm = typeof(StepRegistry).Assembly;
+        foreach (Type type in asm.GetTypes())
         {
-            foreach (var mi in type.GetMethods(BindingFlags.Public | BindingFlags.Static))
+            foreach (MethodInfo mi in type.GetMethods(BindingFlags.Public | BindingFlags.Static))
             {
-                var attr = mi.GetCustomAttribute<PipelineTokenAttribute>();
+                PipelineTokenAttribute? attr = mi.GetCustomAttribute<PipelineTokenAttribute>();
                 if (attr is null) continue;
-                foreach (var name in attr.Names)
+                foreach (string name in attr.Names)
                 {
                     dict[name] = mi;
                 }
@@ -35,15 +35,15 @@ public static class StepRegistry
     public static bool TryResolve(string tokenName, string? args, out Step<CliPipelineState, CliPipelineState>? step)
     {
         step = null;
-        if (!Map.Value.TryGetValue(tokenName, out var mi))
+        if (!Map.Value.TryGetValue(tokenName, out MethodInfo? mi))
             return false;
 
-        var parameters = mi.GetParameters();
+        ParameterInfo[] parameters = mi.GetParameters();
         object?[] callArgs = parameters.Length == 0
             ? Array.Empty<object?>()
             : [args];
 
-        var result = mi.Invoke(null, callArgs);
+        object? result = mi.Invoke(null, callArgs);
         if (result is Step<CliPipelineState, CliPipelineState> s)
         {
             step = s;
@@ -62,7 +62,7 @@ public static class StepRegistry
     /// </summary>
     public static bool TryResolveInfo(string tokenName, out MethodInfo? method)
     {
-        if (Map.Value.TryGetValue(tokenName, out var mi))
+        if (Map.Value.TryGetValue(tokenName, out MethodInfo? mi))
         {
             method = mi;
             return true;

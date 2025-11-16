@@ -21,11 +21,11 @@ public static class ConvenienceLayerExamples
     {
         Console.WriteLine("=== Example 1: Quick Question Answering ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
 
         // Create simple orchestrator
-        var orchestratorResult = MetaAIConvenience.CreateSimple(chatModel);
+        Result<IMetaAIPlannerOrchestrator, string> orchestratorResult = MetaAIConvenience.CreateSimple(chatModel);
 
         if (!orchestratorResult.IsSuccess)
         {
@@ -33,21 +33,21 @@ public static class ConvenienceLayerExamples
             return;
         }
 
-        var orchestrator = orchestratorResult.Value;
+        IMetaAIPlannerOrchestrator orchestrator = orchestratorResult.Value;
 
         // Ask questions
-        var questions = new[]
+        string[] questions = new[]
         {
             "What is functional programming?",
             "Explain monads in simple terms",
             "What are the benefits of type safety?",
         };
 
-        foreach (var question in questions)
+        foreach (string? question in questions)
         {
             Console.WriteLine($"Q: {question}");
 
-            var answer = await orchestrator.AskQuestion(question);
+            Result<string, string> answer = await orchestrator.AskQuestion(question);
 
             answer.Match(
                 result => Console.WriteLine($"A: {result.Substring(0, Math.Min(150, result.Length))}...\n"),
@@ -63,12 +63,12 @@ public static class ConvenienceLayerExamples
     {
         Console.WriteLine("=== Example 2: Code Generation Assistant ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
 
         // Create code assistant
-        var orchestratorResult = MetaAIConvenience.CreateCodeAssistant(chatModel, tools);
+        Result<IMetaAIPlannerOrchestrator, string> orchestratorResult = MetaAIConvenience.CreateCodeAssistant(chatModel, tools);
 
         if (!orchestratorResult.IsSuccess)
         {
@@ -76,10 +76,10 @@ public static class ConvenienceLayerExamples
             return;
         }
 
-        var orchestrator = orchestratorResult.Value;
+        IMetaAIPlannerOrchestrator orchestrator = orchestratorResult.Value;
 
         // Generate code
-        var codeResult = await orchestrator.GenerateCode(
+        Result<string, string> codeResult = await orchestrator.GenerateCode(
             description: "Create a generic repository pattern interface",
             language: "C#");
 
@@ -100,13 +100,13 @@ public static class ConvenienceLayerExamples
     {
         Console.WriteLine("=== Example 3: Research and Analysis ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
+        OllamaEmbeddingAdapter embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
 
         // Create research assistant
-        var orchestratorResult = MetaAIConvenience.CreateResearchAssistant(chatModel, tools, embedModel);
+        Result<IMetaAIPlannerOrchestrator, string> orchestratorResult = MetaAIConvenience.CreateResearchAssistant(chatModel, tools, embedModel);
 
         if (!orchestratorResult.IsSuccess)
         {
@@ -114,10 +114,10 @@ public static class ConvenienceLayerExamples
             return;
         }
 
-        var orchestrator = orchestratorResult.Value;
+        IMetaAIPlannerOrchestrator orchestrator = orchestratorResult.Value;
 
         // Sample text to analyze
-        var text = @"
+        string text = @"
             Functional programming emphasizes immutability, pure functions, and composability.
             Monads provide a way to structure programs generically. They allow you to build
             computations using sequenced steps while abstracting away the control flow.
@@ -125,7 +125,7 @@ public static class ConvenienceLayerExamples
         ";
 
         // Analyze with quality verification
-        var analysisResult = await orchestrator.AnalyzeText(
+        Result<(string analysis, double quality), string> analysisResult = await orchestrator.AnalyzeText(
             text: text,
             analysisGoal: "Extract key concepts and explain their relationships");
 
@@ -146,13 +146,13 @@ public static class ConvenienceLayerExamples
     {
         Console.WriteLine("=== Example 4: Complete Workflow with Learning ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
+        OllamaEmbeddingAdapter embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
 
         // Create advanced orchestrator
-        var orchestratorResult = MetaAIConvenience.CreateAdvanced(chatModel, tools, embedModel);
+        Result<IMetaAIPlannerOrchestrator, string> orchestratorResult = MetaAIConvenience.CreateAdvanced(chatModel, tools, embedModel);
 
         if (!orchestratorResult.IsSuccess)
         {
@@ -160,10 +160,10 @@ public static class ConvenienceLayerExamples
             return;
         }
 
-        var orchestrator = orchestratorResult.Value;
+        IMetaAIPlannerOrchestrator orchestrator = orchestratorResult.Value;
 
         // Execute complete workflow
-        var workflowResult = await orchestrator.CompleteWorkflow(
+        Result<VerificationResult, string> workflowResult = await orchestrator.CompleteWorkflow(
             goal: "Design a caching strategy for a distributed system",
             context: new Dictionary<string, object>
             {
@@ -196,12 +196,12 @@ public static class ConvenienceLayerExamples
     {
         Console.WriteLine("=== Example 5: Batch Processing ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
 
         // Create standard orchestrator
-        var orchestratorResult = MetaAIConvenience.CreateStandard(
+        Result<IMetaAIPlannerOrchestrator, string> orchestratorResult = MetaAIConvenience.CreateStandard(
             chatModel,
             tools,
             new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text")));
@@ -212,17 +212,17 @@ public static class ConvenienceLayerExamples
             return;
         }
 
-        var orchestrator = orchestratorResult.Value;
+        IMetaAIPlannerOrchestrator orchestrator = orchestratorResult.Value;
 
         // Process multiple related tasks
-        var tasks = new[]
+        string[] tasks = new[]
         {
             "Explain dependency injection",
             "Explain inversion of control",
             "Compare dependency injection vs service locator pattern",
         };
 
-        var context = new Dictionary<string, object>
+        Dictionary<string, object> context = new Dictionary<string, object>
         {
             ["format"] = "concise",
             ["audience"] = "intermediate developers",
@@ -230,7 +230,7 @@ public static class ConvenienceLayerExamples
 
         Console.WriteLine("Processing batch tasks...\n");
 
-        var results = await orchestrator.ProcessBatch(tasks, context);
+        List<Result<string, string>> results = await orchestrator.ProcessBatch(tasks, context);
 
         for (int i = 0; i < tasks.Length; i++)
         {
@@ -250,11 +250,11 @@ public static class ConvenienceLayerExamples
     {
         Console.WriteLine("=== Example 6: Interactive Chat Session ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
 
         // Create chat assistant
-        var orchestratorResult = MetaAIConvenience.CreateChatAssistant(chatModel);
+        Result<IMetaAIPlannerOrchestrator, string> orchestratorResult = MetaAIConvenience.CreateChatAssistant(chatModel);
 
         if (!orchestratorResult.IsSuccess)
         {
@@ -262,23 +262,23 @@ public static class ConvenienceLayerExamples
             return;
         }
 
-        var orchestrator = orchestratorResult.Value;
+        IMetaAIPlannerOrchestrator orchestrator = orchestratorResult.Value;
 
         Console.WriteLine("Chat Assistant ready! (Type 'exit' to quit)\n");
 
         // Simulate a few interactions (in real usage, use Console.ReadLine())
-        var interactions = new[]
+        string[] interactions = new[]
         {
             "Hello, how are you?",
             "What can you help me with?",
             "Explain what a pipeline is",
         };
 
-        foreach (var userInput in interactions)
+        foreach (string? userInput in interactions)
         {
             Console.WriteLine($"You: {userInput}");
 
-            var response = await orchestrator.AskQuestion(userInput);
+            Result<string, string> response = await orchestrator.AskQuestion(userInput);
 
             response.Match(
                 answer => Console.WriteLine($"Assistant: {answer.Substring(0, Math.Min(120, answer.Length))}...\n"),
@@ -294,18 +294,18 @@ public static class ConvenienceLayerExamples
     {
         Console.WriteLine("=== Example 7: Comparing Presets ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
+        OllamaEmbeddingAdapter embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
 
-        var question = "What is event sourcing?";
+        string question = "What is event sourcing?";
 
         // Test Simple preset
-        var simpleResult = MetaAIConvenience.CreateSimple(chatModel);
+        Result<IMetaAIPlannerOrchestrator, string> simpleResult = MetaAIConvenience.CreateSimple(chatModel);
         if (simpleResult.IsSuccess)
         {
-            var answer = await simpleResult.Value.AskQuestion(question);
+            Result<string, string> answer = await simpleResult.Value.AskQuestion(question);
             Console.WriteLine("Simple Preset:");
             answer.Match(
                 a => Console.WriteLine($"  {a.Substring(0, Math.Min(80, a.Length))}...\n"),
@@ -313,10 +313,10 @@ public static class ConvenienceLayerExamples
         }
 
         // Test Standard preset
-        var standardResult = MetaAIConvenience.CreateStandard(chatModel, tools, embedModel);
+        Result<IMetaAIPlannerOrchestrator, string> standardResult = MetaAIConvenience.CreateStandard(chatModel, tools, embedModel);
         if (standardResult.IsSuccess)
         {
-            var answer = await standardResult.Value.AskQuestion(question);
+            Result<string, string> answer = await standardResult.Value.AskQuestion(question);
             Console.WriteLine("Standard Preset:");
             answer.Match(
                 a => Console.WriteLine($"  {a.Substring(0, Math.Min(80, a.Length))}...\n"),
@@ -324,10 +324,10 @@ public static class ConvenienceLayerExamples
         }
 
         // Test Advanced preset
-        var advancedResult = MetaAIConvenience.CreateAdvanced(chatModel, tools, embedModel);
+        Result<IMetaAIPlannerOrchestrator, string> advancedResult = MetaAIConvenience.CreateAdvanced(chatModel, tools, embedModel);
         if (advancedResult.IsSuccess)
         {
-            var answer = await advancedResult.Value.AskQuestion(question);
+            Result<string, string> answer = await advancedResult.Value.AskQuestion(question);
             Console.WriteLine("Advanced Preset:");
             answer.Match(
                 a => Console.WriteLine($"  {a.Substring(0, Math.Min(80, a.Length))}...\n"),

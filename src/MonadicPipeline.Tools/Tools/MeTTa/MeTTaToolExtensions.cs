@@ -17,7 +17,7 @@ public static class MeTTaToolExtensions
     /// <returns>A new ToolRegistry with MeTTa tools registered.</returns>
     public static ToolRegistry WithMeTTaTools(this ToolRegistry registry, IMeTTaEngine? engine = null)
     {
-        var mettaEngine = engine ?? new SubprocessMeTTaEngine();
+        IMeTTaEngine mettaEngine = engine ?? new SubprocessMeTTaEngine();
 
         return registry
             .WithTool(new MeTTaQueryTool(mettaEngine))
@@ -34,7 +34,7 @@ public static class MeTTaToolExtensions
     /// <returns>A new ToolRegistry with MeTTa tools registered.</returns>
     public static ToolRegistry WithMeTTaSubprocessTools(this ToolRegistry registry, string mettaExecutablePath)
     {
-        var engine = new SubprocessMeTTaEngine(mettaExecutablePath);
+        SubprocessMeTTaEngine engine = new SubprocessMeTTaEngine(mettaExecutablePath);
         return registry.WithMeTTaTools(engine);
     }
 
@@ -47,7 +47,7 @@ public static class MeTTaToolExtensions
     /// <returns>A new ToolRegistry with MeTTa tools registered.</returns>
     public static ToolRegistry WithMeTTaHttpTools(this ToolRegistry registry, string serviceUrl, string? apiKey = null)
     {
-        var engine = new HttpMeTTaEngine(serviceUrl, apiKey);
+        HttpMeTTaEngine engine = new HttpMeTTaEngine(serviceUrl, apiKey);
         return registry.WithMeTTaTools(engine);
     }
 

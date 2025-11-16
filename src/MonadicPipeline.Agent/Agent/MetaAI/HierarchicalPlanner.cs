@@ -75,15 +75,15 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
         try
         {
             // Create top-level plan
-            var topLevelResult = await _orchestrator.PlanAsync(goal, context, ct);
+            Result<Plan, string> topLevelResult = await _orchestrator.PlanAsync(goal, context, ct);
 
             if (!topLevelResult.IsSuccess)
             {
                 return Result<HierarchicalPlan, string>.Failure(topLevelResult.Error);
             }
 
-            var topLevelPlan = topLevelResult.Value;
-            var subPlans = new Dictionary<string, Plan>();
+            Plan topLevelPlan = topLevelResult.Value;
+            Dictionary<string, Plan> subPlans = new Dictionary<string, Plan>();
 
             // Decompose complex steps if needed
             if (topLevelPlan.Steps.Count >= config.MinStepsForDecomposition)
@@ -97,7 +97,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
                     ct);
             }
 
-            var hierarchicalPlan = new HierarchicalPlan(
+            HierarchicalPlan hierarchicalPlan = new HierarchicalPlan(
                 goal,
                 topLevelPlan,
                 subPlans,
@@ -122,9 +122,9 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
         try
         {
             // Execute top-level plan, replacing complex steps with sub-plan execution
-            var expandedPlan = await ExpandPlanAsync(plan, ct);
+            Plan expandedPlan = await ExpandPlanAsync(plan, ct);
 
-            var executionResult = await _orchestrator.ExecuteAsync(expandedPlan, ct);
+            Result<ExecutionResult, string> executionResult = await _orchestrator.ExecuteAsync(expandedPlan, ct);
 
             return executionResult;
         }
@@ -145,18 +145,18 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
         if (currentDepth >= config.MaxDepth)
             return;
 
-        foreach (var step in steps)
+        foreach (PlanStep step in steps)
         {
             // Check if step is complex enough to decompose
             if (IsComplexStep(step, config))
             {
-                var subGoal = $"Execute: {step.Action} with {System.Text.Json.JsonSerializer.Serialize(step.Parameters)}";
+                string subGoal = $"Execute: {step.Action} with {System.Text.Json.JsonSerializer.Serialize(step.Parameters)}";
 
-                var subPlanResult = await _orchestrator.PlanAsync(subGoal, context, ct);
+                Result<Plan, string> subPlanResult = await _orchestrator.PlanAsync(subGoal, context, ct);
 
                 if (subPlanResult.IsSuccess)
                 {
-                    var subPlan = subPlanResult.Value;
+                    Plan subPlan = subPlanResult.Value;
                     subPlans[step.Action] = subPlan;
 
                     // Recursively decompose sub-plan steps
@@ -184,11 +184,11 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
 
     private Task<Plan> ExpandPlanAsync(HierarchicalPlan hierarchicalPlan, CancellationToken ct)
     {
-        var expandedSteps = new List<PlanStep>();
+        List<PlanStep> expandedSteps = new List<PlanStep>();
 
-        foreach (var step in hierarchicalPlan.TopLevelPlan.Steps)
+        foreach (PlanStep step in hierarchicalPlan.TopLevelPlan.Steps)
         {
-            if (hierarchicalPlan.SubPlans.TryGetValue(step.Action, out var subPlan))
+            if (hierarchicalPlan.SubPlans.TryGetValue(step.Action, out Plan? subPlan))
             {
                 // Replace step with sub-plan steps
                 expandedSteps.AddRange(subPlan.Steps);
@@ -200,7 +200,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
             }
         }
 
-        var result = new Plan(
+        Plan result = new Plan(
             hierarchicalPlan.Goal,
             expandedSteps,
             hierarchicalPlan.TopLevelPlan.ConfidenceScores,

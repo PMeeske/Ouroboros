@@ -110,27 +110,27 @@ public sealed class CostAwareRouter : ICostAwareRouter
         try
         {
             // Get uncertainty-based routing
-            var routingResult = await _uncertaintyRouter.RouteAsync(task, context, ct);
+            Result<RoutingDecision, string> routingResult = await _uncertaintyRouter.RouteAsync(task, context, ct);
 
             if (!routingResult.IsSuccess)
             {
                 return Result<CostBenefitAnalysis, string>.Failure(routingResult.Error);
             }
 
-            var decision = routingResult.Value;
+            RoutingDecision decision = routingResult.Value;
 
             // Get cost info for the route
-            var costInfo = GetCostInfoForRoute(decision.Route);
+            CostInfo costInfo = GetCostInfoForRoute(decision.Route);
 
             // Estimate cost and quality
-            var estimatedCost = CalculateEstimatedCost(task, costInfo);
-            var estimatedQuality = decision.Confidence * costInfo.EstimatedQuality;
+            double estimatedCost = CalculateEstimatedCost(task, costInfo);
+            double estimatedQuality = decision.Confidence * costInfo.EstimatedQuality;
 
             // Check constraints
             if (estimatedCost > config.MaxCostPerPlan)
             {
                 // Try to find cheaper alternative
-                var cheaperRoute = FindCheaperRoute(config.MaxCostPerPlan, config.MinAcceptableQuality);
+                CostInfo? cheaperRoute = FindCheaperRoute(config.MaxCostPerPlan, config.MinAcceptableQuality);
                 if (cheaperRoute != null)
                 {
                     costInfo = cheaperRoute;
@@ -151,9 +151,9 @@ public sealed class CostAwareRouter : ICostAwareRouter
             }
 
             // Calculate value score based on strategy
-            var valueScore = CalculateValueScore(estimatedCost, estimatedQuality, config.Strategy);
+            double valueScore = CalculateValueScore(estimatedCost, estimatedQuality, config.Strategy);
 
-            var analysis = new CostBenefitAnalysis(
+            CostBenefitAnalysis analysis = new CostBenefitAnalysis(
                 costInfo.ResourceId,
                 estimatedCost,
                 estimatedQuality,
@@ -175,12 +175,12 @@ public sealed class CostAwareRouter : ICostAwareRouter
     {
         double totalCost = 0;
 
-        foreach (var step in plan.Steps)
+        foreach (PlanStep step in plan.Steps)
         {
-            var costInfo = GetCostInfoForRoute(step.Action);
+            CostInfo costInfo = GetCostInfoForRoute(step.Action);
 
             // Estimate tokens (simplified)
-            var estimatedTokens = EstimateTokenCount(step);
+            int estimatedTokens = EstimateTokenCount(step);
 
             totalCost += costInfo.CostPerRequest;
             totalCost += costInfo.CostPerToken * estimatedTokens;
@@ -199,7 +199,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
     {
         try
         {
-            var currentCost = await EstimatePlanCostAsync(plan, ct);
+            double currentCost = await EstimatePlanCostAsync(plan, ct);
 
             if (currentCost <= config.MaxCostPerPlan)
             {
@@ -208,13 +208,13 @@ public sealed class CostAwareRouter : ICostAwareRouter
             }
 
             // Try to optimize steps
-            var optimizedSteps = new List<PlanStep>();
+            List<PlanStep> optimizedSteps = new List<PlanStep>();
 
-            foreach (var step in plan.Steps)
+            foreach (PlanStep step in plan.Steps)
             {
                 // Check if we can use a cheaper alternative
-                var currentCostInfo = GetCostInfoForRoute(step.Action);
-                var cheaperInfo = FindCheaperRoute(
+                CostInfo currentCostInfo = GetCostInfoForRoute(step.Action);
+                CostInfo? cheaperInfo = FindCheaperRoute(
                     currentCostInfo.CostPerRequest * 0.8, // 20% cheaper
                     config.MinAcceptableQuality);
 
@@ -233,13 +233,13 @@ public sealed class CostAwareRouter : ICostAwareRouter
                 }
             }
 
-            var optimizedPlan = new Plan(
+            Plan optimizedPlan = new Plan(
                 plan.Goal,
                 optimizedSteps,
                 plan.ConfidenceScores,
                 DateTime.UtcNow);
 
-            var newCost = await EstimatePlanCostAsync(optimizedPlan, ct);
+            double newCost = await EstimatePlanCostAsync(optimizedPlan, ct);
 
             if (newCost > config.MaxCostPerPlan)
             {
@@ -276,7 +276,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
 
     private CostInfo GetCostInfoForRoute(string route)
     {
-        return _costRegistry.TryGetValue(route, out var info)
+        return _costRegistry.TryGetValue(route, out CostInfo? info)
             ? info
             : _costRegistry["default"];
     }
@@ -292,16 +292,16 @@ public sealed class CostAwareRouter : ICostAwareRouter
     private double CalculateEstimatedCost(string task, CostInfo costInfo)
     {
         // Estimate based on task length
-        var estimatedTokens = task.Length / 4; // Rough approximation
+        int estimatedTokens = task.Length / 4; // Rough approximation
         return costInfo.CostPerRequest + (costInfo.CostPerToken * estimatedTokens);
     }
 
     private int EstimateTokenCount(PlanStep step)
     {
         // Simple token estimation
-        var actionLength = step.Action.Length;
-        var paramsLength = System.Text.Json.JsonSerializer.Serialize(step.Parameters).Length;
-        var outcomeLength = step.ExpectedOutcome.Length;
+        int actionLength = step.Action.Length;
+        int paramsLength = System.Text.Json.JsonSerializer.Serialize(step.Parameters).Length;
+        int outcomeLength = step.ExpectedOutcome.Length;
 
         return (actionLength + paramsLength + outcomeLength) / 4;
     }

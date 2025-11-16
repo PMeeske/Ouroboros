@@ -39,7 +39,7 @@ public static class ContextualStep
         string? log = null)
         => async (input, context) =>
         {
-            var result = await step(input);
+            TOut? result = await step(input);
             List<string> logs = log != null ? [log] : new List<string>();
             return (result, logs);
         };
@@ -52,8 +52,8 @@ public static class ContextualStep
         Step<TContext, Step<TIn, TOut>> contextStep)
         => async (input, context) =>
         {
-            var innerStep = await contextStep(context);
-            var result = await innerStep(input);
+            Step<TIn, TOut> innerStep = await contextStep(context);
+            TOut? result = await innerStep(input);
             return (result, []);
         };
 
@@ -161,7 +161,7 @@ public static class ContextualStepExtensions
         TContext context)
         => async input =>
         {
-            var (result, _) = await step(input, context);
+            (TOut result, List<string> _) = await step(input, context);
             return result;
         };
 
@@ -196,7 +196,7 @@ public static class ContextualStepExtensions
             try
             {
                 (TOut result, List<string> logs) = await step(input, context);
-                var option = predicate(result) ? Option<TOut>.Some(result) : Option<TOut>.None();
+                Option<TOut> option = predicate(result) ? Option<TOut>.Some(result) : Option<TOut>.None();
                 return (option, logs);
             }
             catch (Exception ex)

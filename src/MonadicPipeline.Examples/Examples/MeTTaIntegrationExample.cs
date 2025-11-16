@@ -28,22 +28,22 @@ public static class MeTTaIntegrationExample
 
         // Create a subprocess-based MeTTa engine (default)
         // Note: Requires 'metta' executable in PATH
-        using var engine = new SubprocessMeTTaEngine();
+        using SubprocessMeTTaEngine engine = new SubprocessMeTTaEngine();
 
         Console.WriteLine("Step 1: Adding facts to the knowledge base");
         Console.WriteLine("─────────────────────────────────────────────────────");
 
         // Add some facts
-        var facts = new[]
+        string[] facts = new[]
         {
             "(human Socrates)",
             "(human Plato)",
             "(mortal $x) :- (human $x)",
         };
 
-        foreach (var fact in facts)
+        foreach (string? fact in facts)
         {
-            var result = await engine.AddFactAsync(fact);
+            Result<Unit, string> result = await engine.AddFactAsync(fact);
             result.Match(
                 _ => Console.WriteLine($"✓ Added: {fact}"),
                 error => Console.WriteLine($"✗ Failed to add fact: {error}"));
@@ -52,8 +52,8 @@ public static class MeTTaIntegrationExample
         Console.WriteLine("\nStep 2: Querying the knowledge base");
         Console.WriteLine("─────────────────────────────────────────────────────");
 
-        var query = "!(match &self (mortal Socrates) $result)";
-        var queryResult = await engine.ExecuteQueryAsync(query);
+        string query = "!(match &self (mortal Socrates) $result)";
+        Result<string, string> queryResult = await engine.ExecuteQueryAsync(query);
 
         queryResult.Match(
             success => Console.WriteLine($"✓ Query result: {success}"),
@@ -62,8 +62,8 @@ public static class MeTTaIntegrationExample
         Console.WriteLine("\nStep 3: Applying inference rules");
         Console.WriteLine("─────────────────────────────────────────────────────");
 
-        var rule = "!(match &self (human $x) (mortal $x))";
-        var ruleResult = await engine.ApplyRuleAsync(rule);
+        string rule = "!(match &self (human $x) (mortal $x))";
+        Result<string, string> ruleResult = await engine.ApplyRuleAsync(rule);
 
         ruleResult.Match(
             success => Console.WriteLine($"✓ Rule result: {success}"),
@@ -83,16 +83,16 @@ public static class MeTTaIntegrationExample
         Console.WriteLine("╚══════════════════════════════════════════════════════╝\n");
 
         // Create tools registry with MeTTa tools
-        var engine = new SubprocessMeTTaEngine();
-        var tools = ToolRegistry.CreateDefault()
+        SubprocessMeTTaEngine engine = new SubprocessMeTTaEngine();
+        ToolRegistry tools = ToolRegistry.CreateDefault()
             .WithMeTTaTools(engine);
 
         Console.WriteLine($"Tool Registry: {tools.Count} tools registered");
         Console.WriteLine("\nMeTTa Tools:");
         Console.WriteLine("─────────────────────────────────────────────────────");
 
-        var mettaTools = tools.All.Where(t => t.Name.StartsWith("metta_")).ToList();
-        foreach (var tool in mettaTools)
+        List<ITool> mettaTools = tools.All.Where(t => t.Name.StartsWith("metta_")).ToList();
+        foreach (ITool? tool in mettaTools)
         {
             Console.WriteLine($"  • {tool.Name}");
             Console.WriteLine($"    {tool.Description}");
@@ -102,11 +102,11 @@ public static class MeTTaIntegrationExample
         Console.WriteLine("─────────────────────────────────────────────────────");
 
         // Use the query tool
-        var queryTool = tools.GetTool("metta_query");
+        Option<ITool> queryTool = tools.GetTool("metta_query");
         if (queryTool.HasValue)
         {
-            var tool = queryTool.GetValueOrDefault(null!);
-            var result = await tool.InvokeAsync("(+ 2 3)");
+            ITool tool = queryTool.GetValueOrDefault(null!);
+            Result<string, string> result = await tool.InvokeAsync("(+ 2 3)");
             result.Match(
                 success => Console.WriteLine($"✓ metta_query result: {success}"),
                 error => Console.WriteLine($"Note: {error}"));
@@ -117,11 +117,11 @@ public static class MeTTaIntegrationExample
         }
 
         // Use the fact tool
-        var factTool = tools.GetTool("metta_add_fact");
+        Option<ITool> factTool = tools.GetTool("metta_add_fact");
         if (factTool.HasValue)
         {
-            var tool = factTool.GetValueOrDefault(null!);
-            var result = await tool.InvokeAsync("(likes Alice coding)");
+            ITool tool = factTool.GetValueOrDefault(null!);
+            Result<string, string> result = await tool.InvokeAsync("(likes Alice coding)");
             result.Match(
                 success => Console.WriteLine($"✓ metta_add_fact: {success}"),
                 error => Console.WriteLine($"Note: {error}"));
@@ -146,17 +146,17 @@ public static class MeTTaIntegrationExample
         Console.WriteLine("╚══════════════════════════════════════════════════════╝\n");
 
         // Configure HTTP client for Python Hyperon service
-        var serviceUrl = "http://localhost:8000"; // Default Python service URL
-        var apiKey = Environment.GetEnvironmentVariable("METTA_API_KEY");
+        string serviceUrl = "http://localhost:8000"; // Default Python service URL
+        string? apiKey = Environment.GetEnvironmentVariable("METTA_API_KEY");
 
         Console.WriteLine($"Connecting to MeTTa service at: {serviceUrl}");
         Console.WriteLine($"API Key configured: {!string.IsNullOrEmpty(apiKey)}");
         Console.WriteLine();
 
-        using var engine = new HttpMeTTaEngine(serviceUrl, apiKey);
+        using HttpMeTTaEngine engine = new HttpMeTTaEngine(serviceUrl, apiKey);
 
         // Try a simple query
-        var result = await engine.ExecuteQueryAsync("(+ 1 1)");
+        Result<string, string> result = await engine.ExecuteQueryAsync("(+ 1 1)");
 
         result.Match(
             success => Console.WriteLine($"✓ HTTP query succeeded: {success}"),
@@ -179,19 +179,19 @@ public static class MeTTaIntegrationExample
         try
         {
             // Setup LLM and tools
-            var provider = new OllamaProvider();
-            var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-            var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+            OllamaProvider provider = new OllamaProvider();
+            OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+            OllamaEmbeddingAdapter embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
 
             // Create tools with MeTTa integration
-            var engine = new SubprocessMeTTaEngine();
-            var tools = ToolRegistry.CreateDefault()
+            SubprocessMeTTaEngine engine = new SubprocessMeTTaEngine();
+            ToolRegistry tools = ToolRegistry.CreateDefault()
                 .WithMeTTaTools(engine);
 
             Console.WriteLine($"✓ Tool registry initialized with {tools.Count} tools");
 
             // Build Meta-AI orchestrator with MeTTa tools
-            var orchestrator = MetaAIBuilder.CreateDefault()
+            MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
                 .WithLLM(chatModel)
                 .WithTools(tools)
                 .WithEmbedding(embedModel)
@@ -203,7 +203,7 @@ public static class MeTTaIntegrationExample
             Console.WriteLine("Scenario: Symbolic plan verification");
             Console.WriteLine("─────────────────────────────────────────────────────");
 
-            var goal = "Analyze whether a plan to teach functional programming is valid";
+            string goal = "Analyze whether a plan to teach functional programming is valid";
             Console.WriteLine($"Goal: {goal}\n");
 
             // Add domain knowledge to MeTTa
@@ -214,7 +214,7 @@ public static class MeTTaIntegrationExample
             Console.WriteLine("✓ Domain knowledge added to MeTTa");
 
             // The orchestrator can now use MeTTa tools for symbolic reasoning
-            var planResult = await orchestrator.PlanAsync(goal);
+            Result<Plan, string> planResult = await orchestrator.PlanAsync(goal);
 
             planResult.Match(
                 plan =>
@@ -254,22 +254,22 @@ public static class MeTTaIntegrationExample
         try
         {
             // Setup components
-            var provider = new OllamaProvider();
-            var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+            OllamaProvider provider = new OllamaProvider();
+            OllamaEmbeddingAdapter embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
 
-            var memory = new MemoryStore(embedModel);
-            var engine = new SubprocessMeTTaEngine();
+            MemoryStore memory = new MemoryStore(embedModel);
+            SubprocessMeTTaEngine engine = new SubprocessMeTTaEngine();
 
             Console.WriteLine("✓ Memory store and MeTTa engine initialized");
 
             // Create the bridge
-            var bridge = memory.CreateMeTTaBridge(engine);
+            MeTTaMemoryBridge bridge = memory.CreateMeTTaBridge(engine);
 
             Console.WriteLine("✓ Memory bridge created\n");
 
             // Sync memory to MeTTa
             Console.WriteLine("Syncing orchestrator memory to MeTTa...");
-            var syncResult = await bridge.SyncAllExperiencesAsync();
+            Result<int, string> syncResult = await bridge.SyncAllExperiencesAsync();
 
             syncResult.Match(
                 count => Console.WriteLine($"✓ Synchronized {count} facts from memory to MeTTa"),
@@ -277,7 +277,7 @@ public static class MeTTaIntegrationExample
 
             // Query experiences using MeTTa
             Console.WriteLine("\nQuerying experiences with symbolic reasoning:");
-            var queryResult = await bridge.QueryExperiencesAsync("!(match &self (memory-stats $total $quality) $result)");
+            Result<string, string> queryResult = await bridge.QueryExperiencesAsync("!(match &self (memory-stats $total $quality) $result)");
 
             queryResult.Match(
                 result => Console.WriteLine($"✓ Query result: {result}"),

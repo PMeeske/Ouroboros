@@ -23,7 +23,7 @@ public static class LangChainStyleExample
 
         // Create a simple prompt template for the conversation to help the AI
         // This is exactly the same template from the LangChain example
-        var template = @"
+        string template = @"
 The following is a friendly conversation between a human and an AI.
 
 {history}
@@ -32,7 +32,7 @@ AI: ";
 
         // To have a conversation that remembers previous messages we need to use memory.
         // Here we pick one of a number of different strategies for implementing memory.
-        var memory = PickMemoryStrategy();
+        ConversationMemory memory = PickMemoryStrategy();
 
         // Build the chain that will be used for each turn in our conversation.
         // This is the Kleisli pipeline equivalent of:
@@ -40,7 +40,7 @@ AI: ";
         // | Template(template)
         // | LLM(model)
         // | UpdateMemory(memory, requestKey: "input", responseKey: "text");
-        var conversationalChain = string.Empty
+        ConversationChainBuilder<string> conversationalChain = string.Empty
             .StartConversation(memory)
             .LoadMemory(outputKey: "history")
             .Template(template)
@@ -52,7 +52,7 @@ AI: ";
         Console.WriteLine("(Enter 'exit' or hit Ctrl-C to end the conversation)");
 
         // Run an endless loop of conversation (limited for demo purposes)
-        var conversationInputs = new[]
+        string[] conversationInputs = new[]
         {
             "Hello! My name is Alice. What's your name?",
             "What did I tell you my name was?",
@@ -61,7 +61,7 @@ AI: ";
             "exit",
         };
 
-        foreach (var input in conversationInputs)
+        foreach (string? input in conversationInputs)
         {
             Console.WriteLine();
             Console.Write("Human: ");
@@ -76,12 +76,12 @@ AI: ";
 
             // Build a new chain by prepending the user's input to the original chain
             // This is the Kleisli equivalent of: Set(input, "input") | chain
-            var inputContext = input
+            MemoryContext<string> inputContext = input
                 .WithMemory(memory)
                 .SetProperty("input", input);
 
             // Get a response from the AI by running the conversational chain
-            var response = await conversationalChain.RunAsync<string>("text");
+            string? response = await conversationalChain.RunAsync<string>("text");
 
             Console.Write("AI: ");
             Console.WriteLine(response ?? "I couldn't generate a response.");
@@ -94,7 +94,7 @@ AI: ";
         Console.WriteLine("\n=== Final Memory State ===");
         Console.WriteLine($"Total conversation turns: {memory.GetTurns().Count}");
         Console.WriteLine("\nComplete conversation history:");
-        var fullHistory = memory.GetFormattedHistory();
+        string fullHistory = memory.GetFormattedHistory();
         Console.WriteLine(fullHistory.Length > 0 ? fullHistory : "No history available");
         Console.WriteLine();
     }
@@ -107,7 +107,7 @@ AI: ";
     {
         // For demo purposes, we'll show different strategies
         // In the real LangChain example, this would prompt the user for choice
-        var strategies = new[]
+        string[] strategies = new[]
         {
             "ConversationBufferMemory",
             "ConversationWindowBufferMemory",
@@ -122,7 +122,7 @@ AI: ";
         }
 
         // For this demo, we'll simulate selecting ConversationWindowBufferMemory
-        var selectedStrategy = "ConversationWindowBufferMemory";
+        string selectedStrategy = "ConversationWindowBufferMemory";
         Console.WriteLine($"\nAuto-selected: '{selectedStrategy}' (keeps last 3 turns)\n");
 
         return selectedStrategy switch
@@ -186,8 +186,8 @@ AI: ";
         Console.WriteLine("=== LANGCHAIN EQUIVALENCE DEMONSTRATION ===");
         Console.WriteLine("Showing how LangChain syntax maps to Kleisli pipes:\n");
 
-        var memory = new ConversationMemory(maxTurns: 5);
-        var template = "Context: {history}\nHuman: {input}\nAI: ";
+        ConversationMemory memory = new ConversationMemory(maxTurns: 5);
+        string template = "Context: {history}\nHuman: {input}\nAI: ";
 
         Console.WriteLine("LangChain syntax:");
         Console.WriteLine("var chain =");
@@ -207,12 +207,12 @@ AI: ";
         Console.WriteLine();
 
         // Demonstrate the actual execution
-        var testInput = "How does memory work in this system?";
+        string testInput = "How does memory work in this system?";
 
         Console.WriteLine($"Test input: \"{testInput}\"");
         Console.WriteLine("Executing Kleisli pipeline...\n");
 
-        var chain = testInput
+        ConversationChainBuilder<string> chain = testInput
             .StartConversation(memory)
             .Set(testInput, "input")
             .LoadMemory(outputKey: "history")
@@ -220,7 +220,7 @@ AI: ";
             .Llm("Kleisli AI:")
             .UpdateMemory(inputKey: "input", responseKey: "text");
 
-        var result = await chain.RunAsync<string>("text");
+        string? result = await chain.RunAsync<string>("text");
 
         Console.WriteLine($"AI Response: {result}");
         Console.WriteLine($"Memory now contains: {memory.GetTurns().Count} turns");

@@ -27,9 +27,9 @@ public static class Issue138ScopeLockExample
         Console.WriteLine("Goal: Prevent uncontrolled scope creep by locking issue scope\n");
 
         // Step 1: Initialize the Epic Branch Orchestrator
-        var safetyGuard = new SafetyGuard(PermissionLevel.Isolated);
-        var distributor = new DistributedOrchestrator(safetyGuard);
-        var epicOrchestrator = new EpicBranchOrchestrator(
+        SafetyGuard safetyGuard = new SafetyGuard(PermissionLevel.Isolated);
+        DistributedOrchestrator distributor = new DistributedOrchestrator(safetyGuard);
+        EpicBranchOrchestrator epicOrchestrator = new EpicBranchOrchestrator(
             distributor,
             new EpicBranchConfig(
                 BranchPrefix: "epic-120",
@@ -40,7 +40,7 @@ public static class Issue138ScopeLockExample
 
         // Step 2: Register Epic #120 with Issue #138
         Console.WriteLine("Registering Epic #120 with Issue #138...");
-        var epicResult = await epicOrchestrator.RegisterEpicAsync(
+        Result<Epic, string> epicResult = await epicOrchestrator.RegisterEpicAsync(
             120,
             "🚀 Production-ready Release v1.0",
             "This epic tracks every task required to ship the first production-ready release",
@@ -56,12 +56,12 @@ public static class Issue138ScopeLockExample
 
         // Step 3: Create the GitHubScopeLockTool
         Console.WriteLine("Initializing GitHubScopeLockTool...");
-        var scopeLockTool = new GitHubScopeLockTool(githubToken, owner, repo);
+        GitHubScopeLockTool scopeLockTool = new GitHubScopeLockTool(githubToken, owner, repo);
         Console.WriteLine($"✅ Tool initialized for repository: {owner}/{repo}\n");
 
         // Step 4: Execute the scope lock workflow for Issue #138
         Console.WriteLine("Executing scope lock workflow for Issue #138...");
-        var executionResult = await epicOrchestrator.ExecuteSubIssueAsync(
+        Result<SubIssueAssignment, string> executionResult = await epicOrchestrator.ExecuteSubIssueAsync(
             120,
             138,
             async assignment =>
@@ -78,13 +78,13 @@ public static class Issue138ScopeLockExample
 
                 // Apply scope lock to issue #2 (example issue for scope locking)
                 Console.WriteLine("  🔒 Applying scope lock to issue #2...");
-                var lockArgs = System.Text.Json.JsonSerializer.Serialize(new
+                string lockArgs = System.Text.Json.JsonSerializer.Serialize(new
                 {
                     IssueNumber = 2,
                     Milestone = "v1.0",
                 });
 
-                var lockResult = await scopeLockTool.InvokeAsync(lockArgs);
+                Result<string, string> lockResult = await scopeLockTool.InvokeAsync(lockArgs);
 
                 if (lockResult.IsSuccess)
                 {
@@ -100,7 +100,7 @@ public static class Issue138ScopeLockExample
                 // Update the branch with the scope lock event
                 if (assignment.Branch != null)
                 {
-                    var updatedBranch = assignment.Branch.WithIngestEvent(
+                    PipelineBranch updatedBranch = assignment.Branch.WithIngestEvent(
                         "scope-lock-applied",
                         new[] { $"issue-2-locked", "milestone-v1.0", "label-scope-locked-added" });
 
@@ -112,7 +112,7 @@ public static class Issue138ScopeLockExample
                         "Apply scope lock and finalize v1.0 requirements",
                         null);
 
-                    var updatedAssignment = assignment with { Branch = updatedBranch };
+                    SubIssueAssignment updatedAssignment = assignment with { Branch = updatedBranch };
                     Console.WriteLine($"  ✅ Branch updated with scope lock event\n");
                     return Result<SubIssueAssignment, string>.Success(updatedAssignment);
                 }
@@ -148,17 +148,17 @@ public static class Issue138ScopeLockExample
         Console.WriteLine("=== Direct Scope Lock Example ===\n");
 
         // Create the tool
-        var scopeLockTool = new GitHubScopeLockTool(githubToken, owner, repo);
+        GitHubScopeLockTool scopeLockTool = new GitHubScopeLockTool(githubToken, owner, repo);
 
         // Lock scope for issue #2
         Console.WriteLine("Locking scope for issue #2...");
-        var lockArgs = System.Text.Json.JsonSerializer.Serialize(new
+        string lockArgs = System.Text.Json.JsonSerializer.Serialize(new
         {
             IssueNumber = 2,
             Milestone = "v1.0",
         });
 
-        var result = await scopeLockTool.InvokeAsync(lockArgs);
+        Result<string, string> result = await scopeLockTool.InvokeAsync(lockArgs);
 
         if (result.IsSuccess)
         {

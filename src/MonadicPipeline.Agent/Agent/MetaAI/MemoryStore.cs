@@ -37,10 +37,10 @@ public sealed class MemoryStore : IMemoryStore
         // If vector store available, store for similarity search
         if (_embedding != null && _vectorStore != null)
         {
-            var text = $"Goal: {experience.Goal}\nPlan: {string.Join(", ", experience.Plan.Steps.Select(s => s.Action))}\nQuality: {experience.Verification.QualityScore}";
-            var embedding = await _embedding.CreateEmbeddingsAsync(text, ct);
+            string text = $"Goal: {experience.Goal}\nPlan: {string.Join(", ", experience.Plan.Steps.Select(s => s.Action))}\nQuality: {experience.Verification.QualityScore}";
+            float[] embedding = await _embedding.CreateEmbeddingsAsync(text, ct);
 
-            var vector = new Vector
+            Vector vector = new Vector
             {
                 Id = experience.Id.ToString(),
                 Text = text,
@@ -70,18 +70,18 @@ public sealed class MemoryStore : IMemoryStore
         // If vector store available, use semantic search
         if (_embedding != null && _vectorStore != null)
         {
-            var queryEmbedding = await _embedding.CreateEmbeddingsAsync(query.Goal, ct);
-            var similarDocs = await _vectorStore.GetSimilarDocuments(
+            float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query.Goal, ct);
+            IReadOnlyCollection<LangChain.DocumentLoaders.Document> similarDocs = await _vectorStore.GetSimilarDocuments(
                 _embedding,
                 query.Goal,
                 amount: query.MaxResults);
 
-            var experiences = new List<Experience>();
-            foreach (var doc in similarDocs)
+            List<Experience> experiences = new List<Experience>();
+            foreach (LangChain.DocumentLoaders.Document doc in similarDocs)
             {
-                if (doc.Metadata?.TryGetValue("id", out var idObj) == true &&
-                    Guid.TryParse(idObj?.ToString(), out var id) &&
-                    _experiences.TryGetValue(id, out var exp))
+                if (doc.Metadata?.TryGetValue("id", out object? idObj) == true &&
+                    Guid.TryParse(idObj?.ToString(), out Guid id) &&
+                    _experiences.TryGetValue(id, out Experience? exp))
                 {
                     experiences.Add(exp);
                 }
@@ -91,8 +91,8 @@ public sealed class MemoryStore : IMemoryStore
         }
 
         // Fallback to keyword-based search
-        var goalLower = query.Goal.ToLowerInvariant();
-        var matches = _experiences.Values
+        string goalLower = query.Goal.ToLowerInvariant();
+        List<Experience> matches = _experiences.Values
             .Where(exp => exp.Goal.ToLowerInvariant().Contains(goalLower))
             .OrderByDescending(exp => exp.Verification.QualityScore)
             .Take(query.MaxResults)
@@ -106,20 +106,20 @@ public sealed class MemoryStore : IMemoryStore
     /// </summary>
     public async Task<MemoryStatistics> GetStatisticsAsync()
     {
-        var experiences = _experiences.Values.ToList();
+        List<Experience> experiences = _experiences.Values.ToList();
 
-        var totalCount = experiences.Count;
-        var successCount = experiences.Count(e => e.Execution.Success);
-        var failCount = totalCount - successCount;
-        var avgQuality = experiences.Any()
+        int totalCount = experiences.Count;
+        int successCount = experiences.Count(e => e.Execution.Success);
+        int failCount = totalCount - successCount;
+        double avgQuality = experiences.Any()
             ? experiences.Average(e => e.Verification.QualityScore)
             : 0.0;
 
-        var goalCounts = experiences
+        Dictionary<string, int> goalCounts = experiences
             .GroupBy(e => e.Goal)
             .ToDictionary(g => g.Key, g => g.Count());
 
-        var stats = new MemoryStatistics(
+        MemoryStatistics stats = new MemoryStatistics(
             totalCount,
             successCount,
             failCount,
@@ -147,7 +147,7 @@ public sealed class MemoryStore : IMemoryStore
     /// </summary>
     public async Task<Experience?> GetExperienceAsync(Guid id, CancellationToken ct = default)
     {
-        _experiences.TryGetValue(id, out var experience);
+        _experiences.TryGetValue(id, out Experience? experience);
         return await Task.FromResult(experience);
     }
 }

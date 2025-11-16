@@ -67,10 +67,10 @@ public static class Telemetry
     /// <param name="inputs">The input strings to be embedded.</param>
     public static void RecordEmbeddingInput(IEnumerable<string> inputs)
     {
-        var list = inputs as ICollection<string> ?? inputs.ToList();
+        ICollection<string> list = inputs as ICollection<string> ?? inputs.ToList();
         Interlocked.Increment(ref embeddings);
         long t = 0;
-        foreach (var s in list)
+        foreach (string s in list)
         {
             t += s.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
         }
@@ -107,9 +107,9 @@ public static class Telemetry
             return;
         }
 
-        var dims = string.Join(';', Dims.OrderBy(kv => kv.Key).Select(kv => $"d{kv.Key}={kv.Value}"));
+        string dims = string.Join(';', Dims.OrderBy(kv => kv.Key).Select(kv => $"d{kv.Key}={kv.Value}"));
         double avgToolMicros = toolLatencySamples == 0 ? 0 : (double)toolLatencyMicros / toolLatencySamples;
-        var toolTop = string.Join(',', ToolNameCounts.OrderByDescending(kv => kv.Value).Take(5).Select(kv => $"{kv.Key}={kv.Value}"));
+        string toolTop = string.Join(',', ToolNameCounts.OrderByDescending(kv => kv.Value).Take(5).Select(kv => $"{kv.Key}={kv.Value}"));
         Console.WriteLine($"[telemetry] embReq={embeddings} embFail={embFailures} vectors={vectors} approxTokens={approxTokens} agentIters={agentIterations} agentTools={agentToolCalls} agentRetries={agentRetries} streamChunks={streamChunks} avgToolUs={avgToolMicros:F1} tools[{toolTop}] {dims}");
     }
 }

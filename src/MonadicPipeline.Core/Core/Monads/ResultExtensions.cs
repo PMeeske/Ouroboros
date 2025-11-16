@@ -191,8 +191,8 @@ public static class ResultExtensions
         this Result<T, TError> result,
         params Func<T, Result<T, TError>>[] transformations)
     {
-        var current = result;
-        foreach (var transform in transformations)
+        Result<T, TError> current = result;
+        foreach (Func<T, Result<T, TError>> transform in transformations)
         {
             if (current.IsFailure)
             {

@@ -26,15 +26,15 @@ public static class Phase3EmergentIntelligenceExample
         Console.WriteLine("3. Curiosity-Driven Exploration - autonomous learning\n");
 
         // Setup
-        var provider = new OllamaProvider();
-        var llm = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
-        var memory = new PersistentMemoryStore();
-        var skills = new SkillRegistry();
-        var safety = new SafetyGuard();
-        var router = new UncertaintyRouter(null!, 0.7);
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter llm = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
+        PersistentMemoryStore memory = new PersistentMemoryStore();
+        SkillRegistry skills = new SkillRegistry();
+        SafetyGuard safety = new SafetyGuard();
+        UncertaintyRouter router = new UncertaintyRouter(null!, 0.7);
 
-        var orchestrator = new MetaAIPlannerOrchestrator(
+        MetaAIPlannerOrchestrator orchestrator = new MetaAIPlannerOrchestrator(
             llm,
             tools,
             memory,
@@ -43,9 +43,9 @@ public static class Phase3EmergentIntelligenceExample
             safety);
 
         // Initialize Phase 3 components
-        var transferLearner = new TransferLearner(llm, skills, memory);
-        var hypothesisEngine = new HypothesisEngine(llm, orchestrator, memory);
-        var curiosityEngine = new CuriosityEngine(llm, memory, skills, safety);
+        TransferLearner transferLearner = new TransferLearner(llm, skills, memory);
+        HypothesisEngine hypothesisEngine = new HypothesisEngine(llm, orchestrator, memory);
+        CuriosityEngine curiosityEngine = new CuriosityEngine(llm, memory, skills, safety);
 
         Console.WriteLine("✓ Phase 3 components initialized\n");
 
@@ -53,7 +53,7 @@ public static class Phase3EmergentIntelligenceExample
         Console.WriteLine("=== Part 1: Transfer Learning ===\n");
 
         // Register a skill learned in one domain
-        var codingSkill = new Skill(
+        Skill codingSkill = new Skill(
             "debug_code",
             "Systematically debug code by identifying and fixing errors",
             new List<string> { "code_analysis", "error_detection" },
@@ -74,8 +74,8 @@ public static class Phase3EmergentIntelligenceExample
         Console.WriteLine($"Domain: Software debugging\n");
 
         // Estimate transferability to a different domain
-        var targetDomain = "troubleshooting mechanical systems";
-        var transferability = await transferLearner.EstimateTransferabilityAsync(codingSkill, targetDomain);
+        string targetDomain = "troubleshooting mechanical systems";
+        double transferability = await transferLearner.EstimateTransferabilityAsync(codingSkill, targetDomain);
 
         Console.WriteLine($"Transferability Analysis:");
         Console.WriteLine($"  Source Domain: Software debugging");
@@ -83,14 +83,14 @@ public static class Phase3EmergentIntelligenceExample
         Console.WriteLine($"  Transferability Score: {transferability:P0}\n");
 
         // Find analogies between domains
-        var analogies = await transferLearner.FindAnalogiesAsync(
+        List<(string source, string target, double confidence)> analogies = await transferLearner.FindAnalogiesAsync(
             "software debugging",
             targetDomain);
 
         if (analogies.Any())
         {
             Console.WriteLine("Analogical Mappings:");
-            foreach (var (source, target, confidence) in analogies.Take(4))
+            foreach ((string source, string target, double confidence) in analogies.Take(4))
             {
                 Console.WriteLine($"  • {source} → {target} (confidence: {confidence:F2})");
             }
@@ -99,13 +99,13 @@ public static class Phase3EmergentIntelligenceExample
         }
 
         // Perform transfer
-        var transferResult = await transferLearner.AdaptSkillToDomainAsync(
+        Result<TransferResult, string> transferResult = await transferLearner.AdaptSkillToDomainAsync(
             codingSkill,
             targetDomain);
 
         if (transferResult.IsSuccess)
         {
-            var result = transferResult.Value;
+            TransferResult result = transferResult.Value;
             Console.WriteLine("✓ Transfer Successful!\n");
             Console.WriteLine($"Adapted Skill: {result.AdaptedSkill.Name}");
             Console.WriteLine($"Description: {result.AdaptedSkill.Description}");
@@ -113,7 +113,7 @@ public static class Phase3EmergentIntelligenceExample
             Console.WriteLine($"Adjusted Success Rate: {result.AdaptedSkill.SuccessRate:P0}\n");
 
             Console.WriteLine("Adaptations Made:");
-            foreach (var adaptation in result.Adaptations.Take(5))
+            foreach (string? adaptation in result.Adaptations.Take(5))
             {
                 Console.WriteLine($"  • {adaptation}");
             }
@@ -125,16 +125,16 @@ public static class Phase3EmergentIntelligenceExample
         Console.WriteLine("\n=== Part 2: Hypothesis Generation & Testing ===\n");
 
         // Observe a pattern
-        var observation = "Tasks involving systematic step-by-step procedures have consistently higher success rates across all domains";
+        string observation = "Tasks involving systematic step-by-step procedures have consistently higher success rates across all domains";
 
         Console.WriteLine($"Observation: {observation}\n");
 
         // Generate hypothesis
-        var hypothesisResult = await hypothesisEngine.GenerateHypothesisAsync(observation);
+        Result<Hypothesis, string> hypothesisResult = await hypothesisEngine.GenerateHypothesisAsync(observation);
 
         if (hypothesisResult.IsSuccess)
         {
-            var hypothesis = hypothesisResult.Value;
+            Hypothesis hypothesis = hypothesisResult.Value;
 
             Console.WriteLine("Generated Hypothesis:");
             Console.WriteLine($"  Statement: {hypothesis.Statement}");
@@ -144,7 +144,7 @@ public static class Phase3EmergentIntelligenceExample
             if (hypothesis.SupportingEvidence.Any())
             {
                 Console.WriteLine("Supporting Evidence:");
-                foreach (var evidence in hypothesis.SupportingEvidence.Take(3))
+                foreach (string? evidence in hypothesis.SupportingEvidence.Take(3))
                 {
                     Console.WriteLine($"  • {evidence}");
                 }
@@ -153,11 +153,11 @@ public static class Phase3EmergentIntelligenceExample
             }
 
             // Design experiment to test the hypothesis
-            var experimentResult = await hypothesisEngine.DesignExperimentAsync(hypothesis);
+            Result<Experiment, string> experimentResult = await hypothesisEngine.DesignExperimentAsync(hypothesis);
 
             if (experimentResult.IsSuccess)
             {
-                var experiment = experimentResult.Value;
+                Experiment experiment = experimentResult.Value;
 
                 Console.WriteLine("Designed Experiment:");
                 Console.WriteLine($"  Description: {experiment.Description}");
@@ -174,7 +174,7 @@ public static class Phase3EmergentIntelligenceExample
                 if (experiment.ExpectedOutcomes.Any())
                 {
                     Console.WriteLine("Expected Outcomes:");
-                    foreach (var outcome in experiment.ExpectedOutcomes)
+                    foreach (KeyValuePair<string, object> outcome in experiment.ExpectedOutcomes)
                     {
                         Console.WriteLine($"  • {outcome.Key}: {outcome.Value}");
                     }
@@ -200,9 +200,9 @@ public static class Phase3EmergentIntelligenceExample
             Console.WriteLine("Updated hypothesis with new evidence");
 
             // Check confidence trend
-            var trend = hypothesisEngine.GetConfidenceTrend(hypothesis.Id);
+            List<(DateTime time, double confidence)> trend = hypothesisEngine.GetConfidenceTrend(hypothesis.Id);
             Console.WriteLine($"\nConfidence Trend ({trend.Count} data points):");
-            foreach (var (time, conf) in trend)
+            foreach ((DateTime time, double conf) in trend)
             {
                 Console.WriteLine($"  {time:HH:mm:ss} - {conf:P0}");
             }
@@ -211,7 +211,7 @@ public static class Phase3EmergentIntelligenceExample
         }
 
         // Use abductive reasoning
-        var observations = new List<string>
+        List<string> observations = new List<string>
         {
             "Transfer learning works better with abstract skills",
             "High-level strategies transfer more easily than low-level tactics",
@@ -219,18 +219,18 @@ public static class Phase3EmergentIntelligenceExample
         };
 
         Console.WriteLine("Abductive Reasoning from Multiple Observations:");
-        foreach (var obs in observations)
+        foreach (string obs in observations)
         {
             Console.WriteLine($"  • {obs}");
         }
 
         Console.WriteLine();
 
-        var abductiveResult = await hypothesisEngine.AbductiveReasoningAsync(observations);
+        Result<Hypothesis, string> abductiveResult = await hypothesisEngine.AbductiveReasoningAsync(observations);
 
         if (abductiveResult.IsSuccess)
         {
-            var bestExplanation = abductiveResult.Value;
+            Hypothesis bestExplanation = abductiveResult.Value;
             Console.WriteLine("Best Explanation (Abductive Reasoning):");
             Console.WriteLine($"  {bestExplanation.Statement}");
             Console.WriteLine($"  Confidence: {bestExplanation.Confidence:P0}\n");
@@ -240,7 +240,7 @@ public static class Phase3EmergentIntelligenceExample
         Console.WriteLine("\n=== Part 3: Curiosity-Driven Exploration ===\n");
 
         // Check if agent should explore
-        var shouldExplore = await curiosityEngine.ShouldExploreAsync();
+        bool shouldExplore = await curiosityEngine.ShouldExploreAsync();
         Console.WriteLine($"Exploration Decision: {(shouldExplore ? "EXPLORE" : "EXPLOIT")}");
 
         if (shouldExplore)
@@ -248,11 +248,11 @@ public static class Phase3EmergentIntelligenceExample
             Console.WriteLine("Agent has decided to explore based on intrinsic motivation\n");
 
             // Identify exploration opportunities
-            var opportunities = await curiosityEngine.IdentifyExplorationOpportunitiesAsync(5);
+            List<ExplorationOpportunity> opportunities = await curiosityEngine.IdentifyExplorationOpportunitiesAsync(5);
 
             Console.WriteLine($"Exploration Opportunities Identified: {opportunities.Count}\n");
 
-            foreach (var opp in opportunities.Take(3))
+            foreach (ExplorationOpportunity? opp in opportunities.Take(3))
             {
                 Console.WriteLine($"Opportunity: {opp.Description}");
                 Console.WriteLine($"  Novelty Score: {opp.NoveltyScore:P0}");
@@ -262,17 +262,17 @@ public static class Phase3EmergentIntelligenceExample
             }
 
             // Generate exploratory plan
-            var exploratoryPlanResult = await curiosityEngine.GenerateExploratoryPlanAsync();
+            Result<Plan, string> exploratoryPlanResult = await curiosityEngine.GenerateExploratoryPlanAsync();
 
             if (exploratoryPlanResult.IsSuccess)
             {
-                var expPlan = exploratoryPlanResult.Value;
+                Plan expPlan = exploratoryPlanResult.Value;
 
                 Console.WriteLine("Generated Exploratory Plan:");
                 Console.WriteLine($"  Goal: {expPlan.Goal}");
                 Console.WriteLine($"  Type: Curiosity-driven exploration");
 
-                if (expPlan.ConfidenceScores.TryGetValue("novelty", out var noveltyScore))
+                if (expPlan.ConfidenceScores.TryGetValue("novelty", out double noveltyScore))
                 {
                     Console.WriteLine($"  Novelty: {noveltyScore:P0}");
                 }
@@ -280,10 +280,10 @@ public static class Phase3EmergentIntelligenceExample
                 Console.WriteLine($"\n  Steps ({expPlan.Steps.Count}):");
                 for (int i = 0; i < expPlan.Steps.Count; i++)
                 {
-                    var step = expPlan.Steps[i];
+                    PlanStep step = expPlan.Steps[i];
                     Console.WriteLine($"  {i + 1}. {step.Action}");
 
-                    if (step.Parameters.TryGetValue("expected_learning", out var learning))
+                    if (step.Parameters.TryGetValue("expected_learning", out object? learning))
                     {
                         Console.WriteLine($"     Expected Learning: {learning}");
                     }
@@ -292,7 +292,7 @@ public static class Phase3EmergentIntelligenceExample
                 Console.WriteLine();
 
                 // Compute novelty of the plan
-                var planNovelty = await curiosityEngine.ComputeNoveltyAsync(expPlan);
+                double planNovelty = await curiosityEngine.ComputeNoveltyAsync(expPlan);
                 Console.WriteLine($"Plan Novelty Score: {planNovelty:P0}");
                 Console.WriteLine("(Higher novelty indicates more unique exploration)\n");
             }
@@ -303,21 +303,21 @@ public static class Phase3EmergentIntelligenceExample
         }
 
         // Estimate information gain for specific areas
-        var areas = new[] { "neural networks", "optimization algorithms", "data visualization" };
+        string[] areas = new[] { "neural networks", "optimization algorithms", "data visualization" };
 
         Console.WriteLine("Information Gain Estimates:");
-        foreach (var area in areas)
+        foreach (string? area in areas)
         {
-            var infoGain = await curiosityEngine.EstimateInformationGainAsync(area);
+            double infoGain = await curiosityEngine.EstimateInformationGainAsync(area);
             Console.WriteLine($"  • {area}: {infoGain:P0}");
         }
 
         Console.WriteLine();
 
         // Show exploration statistics
-        var stats = curiosityEngine.GetExplorationStats();
+        Dictionary<string, double> stats = curiosityEngine.GetExplorationStats();
         Console.WriteLine("Exploration Statistics:");
-        foreach (var (metric, value) in stats)
+        foreach ((string metric, double value) in stats)
         {
             Console.WriteLine($"  • {metric.Replace("_", " ")}: {value:F2}");
         }

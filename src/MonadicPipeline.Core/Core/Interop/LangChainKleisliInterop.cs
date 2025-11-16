@@ -89,12 +89,12 @@ public readonly struct PipeNode<TIn, TOut>
     /// </summary>
     public PipeNode<TIn, TNext> Pipe<TNext>(PipeNode<TOut, TNext> next)
     {
-        var currentNode = Node; // Capture to avoid struct 'this' issues
+        ICompatNode<TIn, TOut> currentNode = Node; // Capture to avoid struct 'this' issues
         return new PipeNode<TIn, TNext>(new LambdaNode<TIn, TNext>(
             $"{currentNode.Name} | {next.Node.Name}",
             async (input, ct) =>
             {
-                var mid = await currentNode.InvokeAsync(input, ct).ConfigureAwait(false);
+                TOut? mid = await currentNode.InvokeAsync(input, ct).ConfigureAwait(false);
                 return await next.Node.InvokeAsync(mid, ct).ConfigureAwait(false);
             }));
     }
@@ -110,7 +110,7 @@ public readonly struct PipeNode<TIn, TOut>
     /// </summary>
     public Step<TIn, TOut> ToStep()
     {
-        var currentNode = Node; // Capture to avoid struct 'this' issues
+        ICompatNode<TIn, TOut> currentNode = Node; // Capture to avoid struct 'this' issues
         return async input => await currentNode.InvokeAsync(input).ConfigureAwait(false);
     }
 
@@ -119,12 +119,12 @@ public readonly struct PipeNode<TIn, TOut>
     /// </summary>
     public KleisliResult<TIn, TOut, Exception> ToKleisliResult()
     {
-        var currentNode = Node; // Capture to avoid struct 'this' issues
+        ICompatNode<TIn, TOut> currentNode = Node; // Capture to avoid struct 'this' issues
         return async input =>
         {
             try
             {
-                var result = await currentNode.InvokeAsync(input).ConfigureAwait(false);
+                TOut? result = await currentNode.InvokeAsync(input).ConfigureAwait(false);
                 return Result<TOut, Exception>.Success(result);
             }
             catch (Exception ex)
@@ -315,7 +315,7 @@ public static class EnhancedSteps
     public static readonly KleisliResult<string, int, string> SafeParse = async s =>
     {
         await Task.Yield();
-        return int.TryParse(s, out var result)
+        return int.TryParse(s, out int result)
             ? Result<int, string>.Success(result)
             : Result<int, string>.Failure($"Cannot parse '{s}' as integer");
     };
@@ -342,21 +342,21 @@ public static class EnhancedDemo
     {
         Console.WriteLine("=== Enhanced Kleisli Composition ===");
 
-        var pipeline = EnhancedSteps.Upper
+        Step<string, string> pipeline = EnhancedSteps.Upper
             .Then(EnhancedSteps.Length)
             .Then(EnhancedSteps.Show);
 
-        var result = await pipeline("hello enhanced kleisli");
+        string result = await pipeline("hello enhanced kleisli");
         Console.WriteLine($"Result: {result}"); // length=22
 
         // With error handling
-        var safePipeline = EnhancedSteps.SafeParse
+        KleisliResult<string, string, string> safePipeline = EnhancedSteps.SafeParse
             .Then(EnhancedSteps.OnlyPositive.ToResult("Number must be positive"))
             .Map(n => $"Valid positive number: {n}");
 
-        var safeResult1 = await safePipeline("42");
-        var safeResult2 = await safePipeline("-5");
-        var safeResult3 = await safePipeline("not-a-number");
+        Result<string, string> safeResult1 = await safePipeline("42");
+        Result<string, string> safeResult2 = await safePipeline("-5");
+        Result<string, string> safeResult3 = await safePipeline("not-a-number");
 
         Console.WriteLine($"Safe parse '42': {safeResult1}");
         Console.WriteLine($"Safe parse '-5': {safeResult2}");
@@ -370,17 +370,17 @@ public static class EnhancedDemo
     {
         Console.WriteLine("=== Enhanced Compatibility Pipe ===");
 
-        var n1 = EnhancedSteps.Upper.ToCompatNode("Upper");
-        var n2 = EnhancedSteps.Length.ToCompatNode("Length");
-        var n3 = EnhancedSteps.Show.ToCompatNode("Show");
+        PipeNode<string, string> n1 = EnhancedSteps.Upper.ToCompatNode("Upper");
+        PipeNode<string, int> n2 = EnhancedSteps.Length.ToCompatNode("Length");
+        PipeNode<int, string> n3 = EnhancedSteps.Show.ToCompatNode("Show");
 
         // Method-based composition since operator overloading had issues
-        var pipeline = n1.Pipe(n2).Pipe(n3);
-        var result = await ("enhanced compat pipe" | pipeline);
+        PipeNode<string, string> pipeline = n1.Pipe(n2).Pipe(n3);
+        string result = await ("enhanced compat pipe" | pipeline);
         Console.WriteLine($"Compat pipe result: {result}");
 
         // Using fluent pipeline builder
-        var fluentResult = await CompatInterop
+        string fluentResult = await CompatInterop
             .StartPipeline<string>("FluentDemo")
             .AddStep(EnhancedSteps.Upper, "Uppercase")
             .Then(EnhancedSteps.Length, "GetLength")
@@ -390,8 +390,8 @@ public static class EnhancedDemo
         Console.WriteLine($"Fluent pipeline result: {fluentResult}");
 
         // With monadic error handling
-        var monadicPipeline = EnhancedSteps.SafeParse.ToCompatNode("SafeParse");
-        var monadicResult = await ("456" | monadicPipeline);
+        PipeNode<string, Result<int, string>> monadicPipeline = EnhancedSteps.SafeParse.ToCompatNode("SafeParse");
+        Result<int, string> monadicResult = await ("456" | monadicPipeline);
 
         monadicResult.Match(
             success => Console.WriteLine($"Monadic compat success: {success}"),

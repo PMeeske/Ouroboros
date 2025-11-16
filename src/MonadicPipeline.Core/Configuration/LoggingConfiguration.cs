@@ -19,7 +19,7 @@ public static class LoggingConfiguration
     /// <returns></returns>
     public static ILogger CreateLogger(IConfiguration configuration, PipelineConfiguration? pipelineConfig = null)
     {
-        var loggerConfig = new LoggerConfiguration()
+        LoggerConfiguration loggerConfig = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)
             .Enrich.FromLogContext()
             .Enrich.WithMachineName()
@@ -29,7 +29,7 @@ public static class LoggingConfiguration
         // Apply pipeline-specific log level if configured
         if (pipelineConfig?.Observability != null)
         {
-            var minLevel = ParseLogLevel(pipelineConfig.Observability.MinimumLogLevel);
+            LogEventLevel minLevel = ParseLogLevel(pipelineConfig.Observability.MinimumLogLevel);
             loggerConfig.MinimumLevel.Is(minLevel);
         }
 
@@ -53,7 +53,7 @@ public static class LoggingConfiguration
     /// <returns></returns>
     public static ILogger CreateDefaultLogger(string environmentName = "Production")
     {
-        var logLevel = environmentName == "Development" ? LogEventLevel.Debug : LogEventLevel.Information;
+        LogEventLevel logLevel = environmentName == "Development" ? LogEventLevel.Debug : LogEventLevel.Information;
 
         return new LoggerConfiguration()
             .MinimumLevel.Is(logLevel)

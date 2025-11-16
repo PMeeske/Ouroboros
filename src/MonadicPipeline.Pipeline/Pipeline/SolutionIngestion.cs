@@ -35,11 +35,11 @@ public static class SolutionIngestion
         List<string> exts = [.. DefaultCodeExtensions];
         if (!string.IsNullOrWhiteSpace(raw))
         {
-            foreach (var part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
-                if (part.StartsWith("maxFiles=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(9), out var mf))
+                if (part.StartsWith("maxFiles=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(9), out int mf))
                     maxFiles = mf;
-                else if (part.StartsWith("maxFileBytes=", StringComparison.OrdinalIgnoreCase) && long.TryParse(part.AsSpan(13), out var mfb))
+                else if (part.StartsWith("maxFileBytes=", StringComparison.OrdinalIgnoreCase) && long.TryParse(part.AsSpan(13), out long mfb))
                     maxFileBytes = mfb;
                 else if (part.Equals("metaOnly", StringComparison.OrdinalIgnoreCase))
                     metaOnly = true;
@@ -68,12 +68,12 @@ public static class SolutionIngestion
         SolutionIngestionOptions options,
         CancellationToken ct = default)
     {
-        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 2000, chunkOverlap: 200);
-        var vectors = new List<Vector>();
-        var root = Directory.Exists(rootPath) ? rootPath : Environment.CurrentDirectory;
+        RecursiveCharacterTextSplitter splitter = new RecursiveCharacterTextSplitter(chunkSize: 2000, chunkOverlap: 200);
+        List<Vector> vectors = new List<Vector>();
+        string root = Directory.Exists(rootPath) ? rootPath : Environment.CurrentDirectory;
 
         string? solutionFile = Directory.GetFiles(root, "*.sln", SearchOption.TopDirectoryOnly).FirstOrDefault();
-        var projectFiles = Directory.GetFiles(root, "*.csproj", SearchOption.AllDirectories)
+        List<string> projectFiles = Directory.GetFiles(root, "*.csproj", SearchOption.AllDirectories)
             .Where(p => !IsIgnoredPath(p))
             .ToList();
 
@@ -81,8 +81,8 @@ public static class SolutionIngestion
         {
             try
             {
-                var lines = File.ReadAllLines(solutionFile);
-                var projectLines = lines.Where(l => l.TrimStart().StartsWith("Project(", StringComparison.OrdinalIgnoreCase)).Take(500).ToList();
+                string[] lines = File.ReadAllLines(solutionFile);
+                List<string> projectLines = lines.Where(l => l.TrimStart().StartsWith("Project(", StringComparison.OrdinalIgnoreCase)).Take(500).ToList();
                 string meta = $"SOLUTION SUMMARY\nPath: {Path.GetFileName(solutionFile)}\nProject Count: {projectLines.Count}\nProjects:\n" + string.Join('\n', projectLines);
                 await EmbedSyntheticAsync(embed, vectors, meta, solutionFile + "#meta:solution", ct);
             }
@@ -91,17 +91,17 @@ public static class SolutionIngestion
 
         if (options.IncludeProjectMeta)
         {
-            foreach (var csproj in projectFiles.Take(1000))
+            foreach (string? csproj in projectFiles.Take(1000))
             {
                 try
                 {
-                    var doc = XDocument.Load(csproj);
-                    var sdk = doc.Root?.Attribute("Sdk")?.Value ?? "";
-                    var pkgRefs = doc.Descendants().Where(e => e.Name.LocalName == "PackageReference")
+                    XDocument doc = XDocument.Load(csproj);
+                    string sdk = doc.Root?.Attribute("Sdk")?.Value ?? "";
+                    List<string> pkgRefs = doc.Descendants().Where(e => e.Name.LocalName == "PackageReference")
                         .Select(e => $"{e.Attribute("Include")?.Value}:{e.Attribute("Version")?.Value}")
                         .Take(100)
                         .ToList();
-                    var tfms = doc.Descendants().Where(e => e.Name.LocalName == "TargetFramework" || e.Name.LocalName == "TargetFrameworks")
+                    List<string> tfms = doc.Descendants().Where(e => e.Name.LocalName == "TargetFramework" || e.Name.LocalName == "TargetFrameworks")
                         .Select(e => e.Value)
                         .ToList();
                     string meta = $"PROJECT SUMMARY\nName: {Path.GetFileName(csproj)}\nSDK: {sdk}\nTargetFramework(s): {string.Join(",", tfms)}\nPackages:\n" + string.Join('\n', pkgRefs);
@@ -119,30 +119,30 @@ public static class SolutionIngestion
         }
 
         // Enumerate code files
-        var allowedExt = new HashSet<string>(options.Extensions, StringComparer.OrdinalIgnoreCase);
-        var codeFiles = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
+        HashSet<string> allowedExt = new HashSet<string>(options.Extensions, StringComparer.OrdinalIgnoreCase);
+        List<string> codeFiles = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
             .Where(f => allowedExt.Contains(Path.GetExtension(f)))
             .Where(f => !IsIgnoredPath(f))
             .Take(options.MaxFiles)
             .ToList();
 
-        foreach (var file in codeFiles)
+        foreach (string? file in codeFiles)
         {
             try
             {
                 ct.ThrowIfCancellationRequested();
-                var fi = new FileInfo(file);
+                FileInfo fi = new FileInfo(file);
                 if (fi.Length > options.MaxFileBytes) continue;
                 string text = File.ReadAllText(file);
                 if (string.IsNullOrWhiteSpace(text)) continue;
-                var chunks = splitter.SplitText(text);
+                IReadOnlyList<string> chunks = splitter.SplitText(text);
                 int ci = 0;
-                foreach (var chunk in chunks)
+                foreach (string chunk in chunks)
                 {
                     try
                     {
-                        var embResp = await embed.CreateEmbeddingsAsync(chunk);
-                        var meta = new Dictionary<string, object?>
+                        float[] embResp = await embed.CreateEmbeddingsAsync(chunk);
+                        Dictionary<string, object?> meta = new Dictionary<string, object?>
                         {
                             ["path"] = file,
                             ["chunkIndex"] = ci,
@@ -175,8 +175,8 @@ public static class SolutionIngestion
     {
         try
         {
-            var emb = await embed.CreateEmbeddingsAsync(content);
-            var meta = new Dictionary<string, object?> { ["type"] = "meta" };
+            float[] emb = await embed.CreateEmbeddingsAsync(content);
+            Dictionary<string, object?> meta = new Dictionary<string, object?> { ["type"] = "meta" };
             vectors.Add(new Vector
             {
                 Id = id,
@@ -188,9 +188,9 @@ public static class SolutionIngestion
         catch
         {
             // Fallback deterministic embedding so downstream logic & tests still have a vector even without a live model.
-            var meta = new Dictionary<string, object?> { ["type"] = "meta", ["fallback"] = true };
-            var seed = content.Length;
-            var arr = new float[16];
+            Dictionary<string, object?> meta = new Dictionary<string, object?> { ["type"] = "meta", ["fallback"] = true };
+            int seed = content.Length;
+            float[] arr = new float[16];
             for (int i = 0; i < arr.Length; i++) arr[i] = (float)((seed * (i + 31)) % 100) / 100f;
             vectors.Add(new Vector
             {
@@ -205,8 +205,8 @@ public static class SolutionIngestion
     private static bool IsIgnoredPath(string path)
     {
         // basic ignore heuristics (bin/obj, hidden, .git, node_modules)
-        var segments = path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        foreach (var s in segments)
+        string[] segments = path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        foreach (string s in segments)
         {
             if (s.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
                 s.Equals("obj", StringComparison.OrdinalIgnoreCase) ||

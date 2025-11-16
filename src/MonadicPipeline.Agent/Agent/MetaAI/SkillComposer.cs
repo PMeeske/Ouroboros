@@ -87,10 +87,10 @@ public sealed class SkillComposer : ISkillComposer
         try
         {
             // Retrieve all component skills
-            var componentSkills = new List<Skill>();
-            foreach (var skillName in componentSkillNames)
+            List<Skill> componentSkills = new List<Skill>();
+            foreach (string skillName in componentSkillNames)
             {
-                var skill = _skills.GetSkill(skillName);
+                Skill? skill = _skills.GetSkill(skillName);
                 if (skill == null)
                     return Result<Skill, string>.Failure($"Component skill '{skillName}' not found");
 
@@ -105,19 +105,19 @@ public sealed class SkillComposer : ISkillComposer
             }
 
             // Compose steps from all component skills
-            var composedSteps = new List<PlanStep>();
-            foreach (var skill in componentSkills)
+            List<PlanStep> composedSteps = new List<PlanStep>();
+            foreach (Skill skill in componentSkills)
             {
                 composedSteps.AddRange(skill.Steps);
             }
 
             // Calculate composite success rate
-            var avgSuccessRate = componentSkills.Average(s => s.SuccessRate);
+            double avgSuccessRate = componentSkills.Average(s => s.SuccessRate);
 
             // Create composite skill with special prerequisite marker and component list
-            var prerequisites = new List<string>(componentSkillNames) { "__composite__" };
+            List<string> prerequisites = new List<string>(componentSkillNames) { "__composite__" };
 
-            var compositeSkill = new Skill(
+            Skill compositeSkill = new Skill(
                 compositeName,
                 description,
                 prerequisites,
@@ -145,43 +145,43 @@ public sealed class SkillComposer : ISkillComposer
         int maxSuggestions = 5,
         CancellationToken ct = default)
     {
-        var suggestions = new List<(List<string> skills, double score)>();
+        List<(List<string> skills, double score)> suggestions = new List<(List<string> skills, double score)>();
 
         try
         {
             // Get all experiences
-            var query = new MemoryQuery(
+            MemoryQuery query = new MemoryQuery(
                 Goal: "",
                 Context: null,
                 MaxResults: 100,
                 MinSimilarity: 0.0);
 
-            var experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            List<Experience> experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
 
             // Analyze which skills are used together
-            var skillCombinations = new Dictionary<string, int>();
+            Dictionary<string, int> skillCombinations = new Dictionary<string, int>();
 
-            foreach (var exp in experiences.Where(e => e.Verification.Verified))
+            foreach (Experience? exp in experiences.Where(e => e.Verification.Verified))
             {
-                var usedSkills = ExtractUsedSkills(exp);
+                List<string> usedSkills = ExtractUsedSkills(exp);
 
                 if (usedSkills.Count >= 2)
                 {
-                    var combo = string.Join("|", usedSkills.OrderBy(s => s));
+                    string combo = string.Join("|", usedSkills.OrderBy(s => s));
                     skillCombinations[combo] = skillCombinations.GetValueOrDefault(combo, 0) + 1;
                 }
             }
 
             // Sort by frequency and create suggestions
-            var topCombos = skillCombinations
+            List<KeyValuePair<string, int>> topCombos = skillCombinations
                 .OrderByDescending(kv => kv.Value)
                 .Take(maxSuggestions)
                 .ToList();
 
-            foreach (var (combo, count) in topCombos)
+            foreach ((string combo, int count) in topCombos)
             {
-                var skills = combo.Split('|').ToList();
-                var score = (double)count / experiences.Count;
+                List<string> skills = combo.Split('|').ToList();
+                double score = (double)count / experiences.Count;
                 suggestions.Add((skills, score));
             }
         }
@@ -201,7 +201,7 @@ public sealed class SkillComposer : ISkillComposer
         if (string.IsNullOrWhiteSpace(compositeName))
             return Result<List<Skill>, string>.Failure("Composite name cannot be empty");
 
-        var skill = _skills.GetSkill(compositeName);
+        Skill? skill = _skills.GetSkill(compositeName);
         if (skill == null)
             return Result<List<Skill>, string>.Failure($"Skill '{compositeName}' not found");
 
@@ -210,12 +210,12 @@ public sealed class SkillComposer : ISkillComposer
             return Result<List<Skill>, string>.Failure($"Skill '{compositeName}' is not a composite skill");
 
         // Component names are in prerequisites (excluding the marker)
-        var componentNames = skill.Prerequisites.Where(p => p != "__composite__").ToList();
-        var components = new List<Skill>();
+        List<string> componentNames = skill.Prerequisites.Where(p => p != "__composite__").ToList();
+        List<Skill> components = new List<Skill>();
 
-        foreach (var componentName in componentNames)
+        foreach (string? componentName in componentNames)
         {
-            var component = _skills.GetSkill(componentName);
+            Skill? component = _skills.GetSkill(componentName);
             if (component != null)
             {
                 components.Add(component);
@@ -227,15 +227,15 @@ public sealed class SkillComposer : ISkillComposer
 
     private List<string> ExtractUsedSkills(Experience experience)
     {
-        var usedSkills = new List<string>();
+        List<string> usedSkills = new List<string>();
 
         // Check which registered skills were used in the plan
-        var allSkills = _skills.GetAllSkills();
+        IReadOnlyList<Skill> allSkills = _skills.GetAllSkills();
 
-        foreach (var skill in allSkills)
+        foreach (Skill skill in allSkills)
         {
-            var skillActions = skill.Steps.Select(s => s.Action).ToHashSet();
-            var planActions = experience.Plan.Steps.Select(s => s.Action).ToHashSet();
+            HashSet<string> skillActions = skill.Steps.Select(s => s.Action).ToHashSet();
+            HashSet<string> planActions = experience.Plan.Steps.Select(s => s.Action).ToHashSet();
 
             // If skill actions are subset of plan actions, the skill was likely used
             if (skillActions.IsSubsetOf(planActions))

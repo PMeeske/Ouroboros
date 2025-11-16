@@ -69,23 +69,23 @@ public sealed class NextNodeTool : ITool
         try
         {
             // Parse input
-            var request = ParseInput(input);
+            Result<NextNodeRequest, string> request = ParseInput(input);
             if (request.IsFailure)
                 return Result<string, string>.Failure(request.Error);
 
-            var req = request.Value;
+            NextNodeRequest req = request.Value;
 
             // Add any constraint rules
             if (req.Constraints != null)
             {
-                foreach (var constraint in req.Constraints)
+                foreach (string constraint in req.Constraints)
                 {
                     await _representation.AddConstraintAsync(constraint, ct);
                 }
             }
 
             // Query for next nodes
-            var nextNodes = await _representation.QueryNextNodesAsync(
+            Result<List<NextNodeCandidate>, string> nextNodes = await _representation.QueryNextNodesAsync(
                 req.CurrentStepId,
                 req.Context ?? new Dictionary<string, object>(),
                 ct
@@ -95,11 +95,11 @@ public sealed class NextNodeTool : ITool
                 return Result<string, string>.Failure(nextNodes.Error);
 
             // Query for recommended tools
-            var toolsResult = await _representation.QueryToolsForGoalAsync(req.PlanGoal, ct);
-            var recommendedTools = toolsResult.GetValueOrDefault(new List<string>());
+            Result<List<string>, string> toolsResult = await _representation.QueryToolsForGoalAsync(req.PlanGoal, ct);
+            List<string> recommendedTools = toolsResult.GetValueOrDefault(new List<string>());
 
             // Build response
-            var response = new NextNodeResponse
+            NextNodeResponse response = new NextNodeResponse
             {
                 NextSteps = nextNodes.Value,
                 RecommendedTools = recommendedTools,
@@ -122,24 +122,24 @@ public sealed class NextNodeTool : ITool
     {
         try
         {
-            using var doc = JsonDocument.Parse(input);
-            var root = doc.RootElement;
+            using JsonDocument doc = JsonDocument.Parse(input);
+            JsonElement root = doc.RootElement;
 
-            if (!root.TryGetProperty("current_step_id", out var stepIdElement))
+            if (!root.TryGetProperty("current_step_id", out JsonElement stepIdElement))
                 return Result<NextNodeRequest, string>.Failure("Missing required field: current_step_id");
 
-            if (!root.TryGetProperty("plan_goal", out var goalElement))
+            if (!root.TryGetProperty("plan_goal", out JsonElement goalElement))
                 return Result<NextNodeRequest, string>.Failure("Missing required field: plan_goal");
 
-            var stepId = stepIdElement.GetString() ?? string.Empty;
-            var goal = goalElement.GetString() ?? string.Empty;
+            string stepId = stepIdElement.GetString() ?? string.Empty;
+            string goal = goalElement.GetString() ?? string.Empty;
 
             // Parse optional context
             Dictionary<string, object>? context = null;
-            if (root.TryGetProperty("context", out var contextElement))
+            if (root.TryGetProperty("context", out JsonElement contextElement))
             {
                 context = new Dictionary<string, object>();
-                foreach (var prop in contextElement.EnumerateObject())
+                foreach (JsonProperty prop in contextElement.EnumerateObject())
                 {
                     context[prop.Name] = prop.Value.ToString();
                 }
@@ -147,12 +147,12 @@ public sealed class NextNodeTool : ITool
 
             // Parse optional constraints
             List<string>? constraints = null;
-            if (root.TryGetProperty("constraints", out var constraintsElement))
+            if (root.TryGetProperty("constraints", out JsonElement constraintsElement))
             {
                 constraints = new List<string>();
-                foreach (var item in constraintsElement.EnumerateArray())
+                foreach (JsonElement item in constraintsElement.EnumerateArray())
                 {
-                    var value = item.GetString();
+                    string? value = item.GetString();
                     if (value != null)
                         constraints.Add(value);
                 }

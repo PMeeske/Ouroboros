@@ -46,20 +46,20 @@ public sealed class HypothesisEngine : IHypothesisEngine
         try
         {
             // Gather relevant past experiences
-            var query = new MemoryQuery(
+            MemoryQuery query = new MemoryQuery(
                 observation,
                 context,
                 MaxResults: 10,
                 MinSimilarity: 0.6);
 
-            var experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            List<Experience> experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
 
             // Build hypothesis generation prompt
-            var prompt = BuildHypothesisPrompt(observation, experiences, context);
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            string prompt = BuildHypothesisPrompt(observation, experiences, context);
+            string response = await _llm.GenerateTextAsync(prompt, ct);
 
             // Parse hypothesis from response
-            var hypothesis = ParseHypothesis(response, observation, context);
+            Hypothesis hypothesis = ParseHypothesis(response, observation, context);
 
             // Store hypothesis
             _hypotheses[hypothesis.Id] = hypothesis;
@@ -88,7 +88,7 @@ public sealed class HypothesisEngine : IHypothesisEngine
 
         try
         {
-            var prompt = $@"Design an experiment to test this hypothesis:
+            string prompt = $@"Design an experiment to test this hypothesis:
 
 Hypothesis: {hypothesis.Statement}
 Domain: {hypothesis.Domain}
@@ -111,13 +111,13 @@ STEP 2: ...
 
 CRITERIA: [how to measure success]";
 
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct);
 
             // Parse experiment design
-            var steps = ParseExperimentSteps(response);
-            var expectedOutcomes = ParseExpectedOutcomes(response);
+            List<PlanStep> steps = ParseExperimentSteps(response);
+            Dictionary<string, object> expectedOutcomes = ParseExpectedOutcomes(response);
 
-            var experiment = new Experiment(
+            Experiment experiment = new Experiment(
                 Guid.NewGuid(),
                 hypothesis,
                 $"Test for: {hypothesis.Statement}",
@@ -150,14 +150,14 @@ CRITERIA: [how to measure success]";
         try
         {
             // Create plan from experiment steps
-            var plan = new Plan(
+            Plan plan = new Plan(
                 $"Test: {hypothesis.Statement}",
                 experiment.Steps,
                 new Dictionary<string, double> { ["experimental"] = 0.8 },
                 DateTime.UtcNow);
 
             // Execute experiment
-            var execResult = await _orchestrator.ExecuteAsync(plan, ct);
+            Result<ExecutionResult, string> execResult = await _orchestrator.ExecuteAsync(plan, ct);
 
             if (!execResult.IsSuccess)
             {
@@ -165,16 +165,16 @@ CRITERIA: [how to measure success]";
                     $"Experiment execution failed: {execResult.Error}");
             }
 
-            var execution = execResult.Value;
+            ExecutionResult execution = execResult.Value;
 
             // Analyze results against expected outcomes
-            var supported = AnalyzeExperimentResults(execution, experiment.ExpectedOutcomes);
-            var confidenceAdjustment = CalculateConfidenceAdjustment(execution, supported);
+            bool supported = AnalyzeExperimentResults(execution, experiment.ExpectedOutcomes);
+            double confidenceAdjustment = CalculateConfidenceAdjustment(execution, supported);
 
-            var explanation = GenerateExplanation(hypothesis, execution, supported);
+            string explanation = GenerateExplanation(hypothesis, execution, supported);
 
             // Update hypothesis
-            var updatedHypothesis = hypothesis with
+            Hypothesis updatedHypothesis = hypothesis with
             {
                 Confidence = Math.Clamp(hypothesis.Confidence + confidenceAdjustment, 0.0, 1.0),
                 Tested = true,
@@ -184,12 +184,12 @@ CRITERIA: [how to measure success]";
             _hypotheses[hypothesis.Id] = updatedHypothesis;
 
             // Track confidence trend
-            if (_confidenceTrends.TryGetValue(hypothesis.Id, out var trend))
+            if (_confidenceTrends.TryGetValue(hypothesis.Id, out List<(DateTime time, double confidence)>? trend))
             {
                 trend.Add((DateTime.UtcNow, updatedHypothesis.Confidence));
             }
 
-            var result = new HypothesisTestResult(
+            HypothesisTestResult result = new HypothesisTestResult(
                 updatedHypothesis,
                 experiment,
                 execution,
@@ -218,7 +218,7 @@ CRITERIA: [how to measure success]";
 
         try
         {
-            var prompt = $@"Use abductive reasoning to find the best explanation for these observations:
+            string prompt = $@"Use abductive reasoning to find the best explanation for these observations:
 
 Observations:
 {string.Join("\n", observations.Select((o, i) => $"{i + 1}. {o}"))}
@@ -236,10 +236,10 @@ DOMAIN: [domain]
 EVIDENCE: [supporting points]
 ALTERNATIVES: [other possibilities]";
 
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct);
 
             // Parse the best explanation
-            var hypothesis = ParseHypothesis(response, string.Join("; ", observations), null);
+            Hypothesis hypothesis = ParseHypothesis(response, string.Join("; ", observations), null);
 
             // Store hypothesis
             _hypotheses[hypothesis.Id] = hypothesis;
@@ -275,10 +275,10 @@ ALTERNATIVES: [other possibilities]";
     /// </summary>
     public void UpdateHypothesis(Guid hypothesisId, string evidence, bool supports)
     {
-        if (!_hypotheses.TryGetValue(hypothesisId, out var hypothesis))
+        if (!_hypotheses.TryGetValue(hypothesisId, out Hypothesis? hypothesis))
             return;
 
-        var updatedHypothesis = supports
+        Hypothesis updatedHypothesis = supports
             ? hypothesis with
             {
                 SupportingEvidence = new List<string>(hypothesis.SupportingEvidence) { evidence },
@@ -293,7 +293,7 @@ ALTERNATIVES: [other possibilities]";
         _hypotheses[hypothesisId] = updatedHypothesis;
 
         // Track confidence change
-        if (_confidenceTrends.TryGetValue(hypothesisId, out var trend))
+        if (_confidenceTrends.TryGetValue(hypothesisId, out List<(DateTime time, double confidence)>? trend))
         {
             trend.Add((DateTime.UtcNow, updatedHypothesis.Confidence));
         }
@@ -304,7 +304,7 @@ ALTERNATIVES: [other possibilities]";
     /// </summary>
     public List<(DateTime time, double confidence)> GetConfidenceTrend(Guid hypothesisId)
     {
-        return _confidenceTrends.TryGetValue(hypothesisId, out var trend)
+        return _confidenceTrends.TryGetValue(hypothesisId, out List<(DateTime time, double confidence)>? trend)
             ? new List<(DateTime, double)>(trend)
             : new List<(DateTime, double)>();
     }
@@ -316,11 +316,11 @@ ALTERNATIVES: [other possibilities]";
         List<Experience> experiences,
         Dictionary<string, object>? context)
     {
-        var contextText = context != null && context.Any()
+        string contextText = context != null && context.Any()
             ? $"\nContext: {System.Text.Json.JsonSerializer.Serialize(context)}"
             : "";
 
-        var experienceText = experiences.Any()
+        string experienceText = experiences.Any()
             ? $"\nRelevant Past Experiences:\n{string.Join("\n", experiences.Take(3).Select(e => $"- {e.Goal}: {(e.Verification.Verified ? "Success" : "Failed")}"))}"
             : "";
 
@@ -343,16 +343,16 @@ EVIDENCE: [supporting points]";
 
     private Hypothesis ParseHypothesis(string response, string observation, Dictionary<string, object>? context)
     {
-        var lines = response.Split('\n');
+        string[] lines = response.Split('\n');
 
         string statement = observation;
         double confidence = 0.5;
         string domain = "general";
-        var supportingEvidence = new List<string>();
+        List<string> supportingEvidence = new List<string>();
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
-            var trimmed = line.Trim();
+            string trimmed = line.Trim();
 
             if (trimmed.StartsWith("HYPOTHESIS:", StringComparison.OrdinalIgnoreCase))
             {
@@ -360,8 +360,8 @@ EVIDENCE: [supporting points]";
             }
             else if (trimmed.StartsWith("CONFIDENCE:", StringComparison.OrdinalIgnoreCase))
             {
-                var confStr = trimmed.Substring("CONFIDENCE:".Length).Trim();
-                if (double.TryParse(confStr, out var conf))
+                string confStr = trimmed.Substring("CONFIDENCE:".Length).Trim();
+                if (double.TryParse(confStr, out double conf))
                 {
                     confidence = Math.Clamp(conf, 0.0, 1.0);
                 }
@@ -372,7 +372,7 @@ EVIDENCE: [supporting points]";
             }
             else if (trimmed.StartsWith("EVIDENCE:", StringComparison.OrdinalIgnoreCase))
             {
-                var evidence = trimmed.Substring("EVIDENCE:".Length).Trim();
+                string evidence = trimmed.Substring("EVIDENCE:".Length).Trim();
                 supportingEvidence.Add(evidence);
             }
         }
@@ -391,14 +391,14 @@ EVIDENCE: [supporting points]";
 
     private List<PlanStep> ParseExperimentSteps(string response)
     {
-        var steps = new List<PlanStep>();
-        var lines = response.Split('\n');
+        List<PlanStep> steps = new List<PlanStep>();
+        string[] lines = response.Split('\n');
 
         string? currentAction = null;
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
-            var trimmed = line.Trim();
+            string trimmed = line.Trim();
 
             if (trimmed.StartsWith("STEP"))
             {
@@ -429,10 +429,10 @@ EVIDENCE: [supporting points]";
 
     private Dictionary<string, object> ParseExpectedOutcomes(string response)
     {
-        var outcomes = new Dictionary<string, object>();
-        var lines = response.Split('\n');
+        Dictionary<string, object> outcomes = new Dictionary<string, object>();
+        string[] lines = response.Split('\n');
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
             if (line.Contains("EXPECTED_IF_TRUE:", StringComparison.OrdinalIgnoreCase))
             {
@@ -462,7 +462,7 @@ EVIDENCE: [supporting points]";
             return false;
 
         // Simple heuristic: if most steps succeeded, hypothesis is likely supported
-        var successRate = execution.StepResults.Count(r => r.Success) / (double)execution.StepResults.Count;
+        double successRate = execution.StepResults.Count(r => r.Success) / (double)execution.StepResults.Count;
 
         return successRate >= 0.7;
     }
@@ -473,7 +473,7 @@ EVIDENCE: [supporting points]";
         if (execution.StepResults.Count == 0)
             return supported ? 0.05 : -0.05;
 
-        var successRate = execution.StepResults.Count(r => r.Success) / (double)execution.StepResults.Count;
+        double successRate = execution.StepResults.Count(r => r.Success) / (double)execution.StepResults.Count;
 
         if (supported)
         {

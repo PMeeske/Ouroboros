@@ -62,12 +62,12 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
             return false;
 
         // Check against known capabilities
-        var relevantCapabilities = await FindRelevantCapabilitiesAsync(task, ct);
+        List<AgentCapability> relevantCapabilities = await FindRelevantCapabilitiesAsync(task, ct);
 
         if (relevantCapabilities.Any())
         {
             // If we have capabilities with good success rates, we can handle it
-            var reliableCapabilities = relevantCapabilities
+            IEnumerable<AgentCapability> reliableCapabilities = relevantCapabilities
                 .Where(c => c.SuccessRate >= _config.MinSuccessRateThreshold
                          || c.UsageCount < _config.MinUsageCountForReliability);
 
@@ -76,8 +76,8 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         }
 
         // Check if we have the required tools
-        var requiredTools = await AnalyzeRequiredToolsAsync(task, ct);
-        var availableTools = _tools.All.Select(t => t.Name).ToHashSet();
+        List<string> requiredTools = await AnalyzeRequiredToolsAsync(task, ct);
+        HashSet<string> availableTools = _tools.All.Select(t => t.Name).ToHashSet();
 
         return requiredTools.All(t => availableTools.Contains(t));
     }
@@ -87,7 +87,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
     /// </summary>
     public AgentCapability? GetCapability(string name)
     {
-        _capabilities.TryGetValue(name, out var capability);
+        _capabilities.TryGetValue(name, out AgentCapability? capability);
         return capability;
     }
 
@@ -101,14 +101,14 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
     {
         await Task.CompletedTask;
 
-        if (!_capabilities.TryGetValue(name, out var existing))
+        if (!_capabilities.TryGetValue(name, out AgentCapability? existing))
             return;
 
-        var newUsageCount = existing.UsageCount + 1;
-        var newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (result.Success ? 1.0 : 0.0)) / newUsageCount;
-        var newAvgLatency = ((existing.AverageLatency * existing.UsageCount) + result.Duration.TotalMilliseconds) / newUsageCount;
+        int newUsageCount = existing.UsageCount + 1;
+        double newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (result.Success ? 1.0 : 0.0)) / newUsageCount;
+        double newAvgLatency = ((existing.AverageLatency * existing.UsageCount) + result.Duration.TotalMilliseconds) / newUsageCount;
 
-        var updated = existing with
+        AgentCapability updated = existing with
         {
             SuccessRate = newSuccessRate,
             AverageLatency = newAvgLatency,
@@ -137,28 +137,28 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         string task,
         CancellationToken ct = default)
     {
-        var gaps = new List<string>();
+        List<string> gaps = new List<string>();
 
         // Analyze what the task requires
-        var requiredTools = await AnalyzeRequiredToolsAsync(task, ct);
-        var availableTools = _tools.All.Select(t => t.Name).ToHashSet();
+        List<string> requiredTools = await AnalyzeRequiredToolsAsync(task, ct);
+        HashSet<string> availableTools = _tools.All.Select(t => t.Name).ToHashSet();
 
         // Identify missing tools
-        var missingTools = requiredTools.Where(t => !availableTools.Contains(t)).ToList();
+        List<string> missingTools = requiredTools.Where(t => !availableTools.Contains(t)).ToList();
         if (missingTools.Any())
         {
             gaps.Add($"Missing tools: {string.Join(", ", missingTools)}");
         }
 
         // Check if task complexity exceeds current capabilities
-        var relevantCapabilities = await FindRelevantCapabilitiesAsync(task, ct);
+        List<AgentCapability> relevantCapabilities = await FindRelevantCapabilitiesAsync(task, ct);
         if (!relevantCapabilities.Any())
         {
             gaps.Add("No experience with similar tasks");
         }
         else
         {
-            var lowPerformingCapabilities = relevantCapabilities
+            IEnumerable<AgentCapability> lowPerformingCapabilities = relevantCapabilities
                 .Where(c => c.SuccessRate < _config.MinSuccessRateThreshold
                          && c.UsageCount >= _config.MinUsageCountForReliability);
 
@@ -178,15 +178,15 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         string task,
         CancellationToken ct = default)
     {
-        var suggestions = new List<string>();
+        List<string> suggestions = new List<string>();
 
         // Identify what's missing
-        var gaps = await IdentifyCapabilityGapsAsync(task, ct);
+        List<string> gaps = await IdentifyCapabilityGapsAsync(task, ct);
 
         if (gaps.Any())
         {
             // Use LLM to generate alternative approaches
-            var prompt = $@"Given this task: {task}
+            string prompt = $@"Given this task: {task}
 
 The agent has identified these capability gaps:
 {string.Join("\n", gaps.Select(g => $"- {g}"))}
@@ -197,10 +197,10 @@ Available capabilities:
 Suggest 3-5 alternative approaches to accomplish this task or similar outcomes with available capabilities.
 Format each suggestion on a new line starting with '- '";
 
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct);
 
             // Parse suggestions
-            var lines = response.Split('\n')
+            List<string> lines = response.Split('\n')
                 .Select(l => l.Trim())
                 .Where(l => l.StartsWith("- "))
                 .Select(l => l.Substring(2).Trim())
@@ -219,10 +219,10 @@ Format each suggestion on a new line starting with '- '";
         CancellationToken ct)
     {
         // Simple keyword matching - in production, use embedding similarity
-        var taskLower = task.ToLowerInvariant();
-        var keywords = taskLower.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string taskLower = task.ToLowerInvariant();
+        string[] keywords = taskLower.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-        var relevant = _capabilities.Values
+        List<AgentCapability> relevant = _capabilities.Values
             .Where(c => keywords.Any(k =>
                 c.Name.Contains(k, StringComparison.OrdinalIgnoreCase) ||
                 c.Description.Contains(k, StringComparison.OrdinalIgnoreCase)))
@@ -237,9 +237,9 @@ Format each suggestion on a new line starting with '- '";
         CancellationToken ct)
     {
         // Use LLM to analyze what tools are needed
-        var availableTools = string.Join("\n", _tools.All.Select(t => $"- {t.Name}: {t.Description}"));
+        string availableTools = string.Join("\n", _tools.All.Select(t => $"- {t.Name}: {t.Description}"));
 
-        var prompt = $@"Analyze this task and identify which tools would be needed:
+        string prompt = $@"Analyze this task and identify which tools would be needed:
 
 Task: {task}
 
@@ -250,8 +250,8 @@ List only the tool names that are required, one per line.";
 
         try
         {
-            var response = await _llm.GenerateTextAsync(prompt, ct);
-            var toolNames = response.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            string response = await _llm.GenerateTextAsync(prompt, ct);
+            List<string> toolNames = response.Split('\n', StringSplitOptions.RemoveEmptyEntries)
                 .Select(l => l.Trim())
                 .Where(l => !string.IsNullOrWhiteSpace(l) && !l.StartsWith("#"))
                 .ToList();

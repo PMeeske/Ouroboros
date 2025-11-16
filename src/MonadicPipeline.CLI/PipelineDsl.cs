@@ -13,8 +13,8 @@ public static class PipelineDsl
             return Array.Empty<string>();
         }
 
-        var tokens = new List<string>();
-        var current = new StringBuilder();
+        List<string> tokens = new List<string>();
+        StringBuilder current = new StringBuilder();
         bool inSingleQuote = false;
         bool inDoubleQuote = false;
         int parenDepth = 0;
@@ -49,7 +49,7 @@ public static class PipelineDsl
                 }
                 else if (c == '|' && parenDepth == 0)
                 {
-                    var token = current.ToString().Trim();
+                    string token = current.ToString().Trim();
                     if (!string.IsNullOrEmpty(token))
                     {
                         tokens.Add(token);
@@ -62,7 +62,7 @@ public static class PipelineDsl
             current.Append(c);
         }
 
-        var last = current.ToString().Trim();
+        string last = current.ToString().Trim();
         if (!string.IsNullOrEmpty(last))
         {
             tokens.Add(last);
@@ -73,14 +73,14 @@ public static class PipelineDsl
 
     public static Step<CliPipelineState, CliPipelineState> Build(string dsl)
     {
-        var parts = Tokenize(dsl);
+        string[] parts = Tokenize(dsl);
 
         // Resolve all tokens to steps first
-        var steps = new List<Step<CliPipelineState, CliPipelineState>>(parts.Length);
-        foreach (var token in parts)
+        List<Step<CliPipelineState, CliPipelineState>> steps = new List<Step<CliPipelineState, CliPipelineState>>(parts.Length);
+        foreach (string token in parts)
         {
-            var (name, args) = ParseToken(token);
-            if (!StepRegistry.TryResolve(name, args, out var found) || found is null)
+            (string name, string args) = ParseToken(token);
+            if (!StepRegistry.TryResolve(name, args, out Step<CliPipelineState, CliPipelineState>? found) || found is null)
             {
                 // Unknown token: no-op but recorded
                 found = s =>
@@ -93,17 +93,17 @@ public static class PipelineDsl
         }
 
         // identity definition for aggregation with | operator
-        var baseDef = new StepDefinition<CliPipelineState, CliPipelineState>(state => state);
-        var aggregate = steps.Aggregate(baseDef, (acc, next) => acc | next);
+        StepDefinition<CliPipelineState, CliPipelineState> baseDef = new StepDefinition<CliPipelineState, CliPipelineState>(state => state);
+        StepDefinition<CliPipelineState, CliPipelineState> aggregate = steps.Aggregate(baseDef, (acc, next) => acc | next);
         return aggregate.Build();
     }
 
     private static (string name, string? args) ParseToken(string token)
     {
         // Generic patterns: Name(), Name(arg), Step<...>(arg)
-        var name = token;
+        string name = token;
         string? args = null;
-        var m = Regex.Match(token, @"^(?<name>[A-Za-z0-9_<>:, ]+)\s*\((?<args>.*)\)\s*$");
+        Match m = Regex.Match(token, @"^(?<name>[A-Za-z0-9_<>:, ]+)\s*\((?<args>.*)\)\s*$");
         if (m.Success)
         {
             name = m.Groups["name"].Value.Trim();
@@ -123,16 +123,16 @@ public static class PipelineDsl
 
     public static string Explain(string dsl)
     {
-        var parts = Tokenize(dsl);
-        var lines = new List<string>(parts.Length + 2)
+        string[] parts = Tokenize(dsl);
+        List<string> lines = new List<string>(parts.Length + 2)
         {
             "Pipeline tokens:"
         };
 
-        foreach (var token in parts)
+        foreach (string token in parts)
         {
-            var (name, args) = ParseToken(token);
-            if (StepRegistry.TryResolveInfo(name, out var mi) && mi is not null)
+            (string name, string args) = ParseToken(token);
+            if (StepRegistry.TryResolveInfo(name, out System.Reflection.MethodInfo? mi) && mi is not null)
             {
                 lines.Add($"- {name}{(args is null ? string.Empty : $"({args})")} -> {mi.DeclaringType?.Name}.{mi.Name}()");
             }
@@ -144,9 +144,9 @@ public static class PipelineDsl
 
         lines.Add("");
         lines.Add("Available token groups:");
-        foreach (var (method, names) in StepRegistry.GetTokenGroups())
+        foreach ((System.Reflection.MethodInfo method, IReadOnlyList<string> names) in StepRegistry.GetTokenGroups())
         {
-            var aliasList = string.Join(", ", names);
+            string aliasList = string.Join(", ", names);
             lines.Add($"- {method.DeclaringType?.Name}.{method.Name}(): {aliasList}");
         }
 

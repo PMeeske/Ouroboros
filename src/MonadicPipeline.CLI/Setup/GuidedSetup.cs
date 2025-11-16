@@ -99,7 +99,7 @@ public static class GuidedSetup
             // Check if Ollama is running
             try
             {
-                var process = new Process
+                Process process = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
@@ -116,7 +116,7 @@ public static class GuidedSetup
 
                 if (process.ExitCode == 0)
                 {
-                    var output = await process.StandardOutput.ReadToEndAsync();
+                    string output = await process.StandardOutput.ReadToEndAsync();
                     Console.WriteLine("\n📦 Currently installed models:");
                     Console.WriteLine(output);
 
@@ -284,13 +284,13 @@ public static class GuidedSetup
     public static bool PromptYesNo(string prompt)
     {
         Console.Write($"{prompt} (y/n): ");
-        var response = Console.ReadLine()?.Trim().ToLowerInvariant();
+        string? response = Console.ReadLine()?.Trim().ToLowerInvariant();
         return response == "y" || response == "yes";
     }
 
     private static bool IsCommandAvailable(string command)
     {
-        var process = new Process
+        Process process = new Process
         {
             StartInfo = new ProcessStartInfo
             {

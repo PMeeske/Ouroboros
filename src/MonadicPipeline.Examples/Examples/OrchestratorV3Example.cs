@@ -27,11 +27,11 @@ public static class OrchestratorV3Example
         try
         {
             // Initialize MeTTa engine
-            var mettaEngine = new SubprocessMeTTaEngine();
+            SubprocessMeTTaEngine mettaEngine = new SubprocessMeTTaEngine();
             Console.WriteLine("✓ MeTTa engine initialized");
 
             // Create tool registry with MeTTa tools (including NextNode)
-            var tools = ToolRegistry.CreateDefault()
+            ToolRegistry tools = ToolRegistry.CreateDefault()
                 .WithMeTTaTools(mettaEngine);
 
             Console.WriteLine($"✓ Tool registry created with {tools.Count} tools");
@@ -39,15 +39,15 @@ public static class OrchestratorV3Example
             Console.WriteLine($"  - Including NextNode tool for symbolic next-step enumeration\n");
 
             // Create MeTTa representation layer
-            var representation = new MeTTaRepresentation(mettaEngine);
+            MeTTaRepresentation representation = new MeTTaRepresentation(mettaEngine);
             Console.WriteLine("✓ MeTTa representation layer initialized\n");
 
             // Define a goal
-            var goal = "Create a comprehensive research summary on functional programming";
+            string goal = "Create a comprehensive research summary on functional programming";
             Console.WriteLine($"Goal: {goal}\n");
 
             // Create a simple plan
-            var plan = new Plan(
+            Plan plan = new Plan(
                 Goal: goal,
                 Steps: new List<PlanStep>
                 {
@@ -88,7 +88,7 @@ public static class OrchestratorV3Example
             Console.WriteLine($"Plan created with {plan.Steps.Count} steps:");
             for (int i = 0; i < plan.Steps.Count; i++)
             {
-                var step = plan.Steps[i];
+                PlanStep step = plan.Steps[i];
                 Console.WriteLine($"  {i + 1}. {step.Action} (confidence: {step.ConfidenceScore:F2})");
                 Console.WriteLine($"     Expected: {step.ExpectedOutcome}");
             }
@@ -97,7 +97,7 @@ public static class OrchestratorV3Example
 
             // Translate plan to MeTTa representation
             Console.WriteLine("Translating plan to MeTTa atoms...");
-            var planResult = await representation.TranslatePlanAsync(plan);
+            Result<Unit, string> planResult = await representation.TranslatePlanAsync(plan);
 
             planResult.Match(
                 _ => Console.WriteLine("✓ Plan translated to MeTTa symbolic representation"),
@@ -106,7 +106,7 @@ public static class OrchestratorV3Example
 
             // Translate tools to MeTTa
             Console.WriteLine("Translating tools to MeTTa atoms...");
-            var toolsResult = await representation.TranslateToolsAsync(tools);
+            Result<Unit, string> toolsResult = await representation.TranslateToolsAsync(tools);
 
             toolsResult.Match(
                 _ => Console.WriteLine("✓ Tools translated to MeTTa symbolic representation"),
@@ -116,7 +116,7 @@ public static class OrchestratorV3Example
             // Add domain-specific constraints
             Console.WriteLine("Adding domain constraints to MeTTa knowledge base...");
 
-            var constraints = new[]
+            string[] constraints = new[]
             {
                 "(requires analyze_content search_documents)",
                 "(requires synthesize_summary analyze_content)",
@@ -125,9 +125,9 @@ public static class OrchestratorV3Example
                 "(capability synthesize_summary content-creation)",
             };
 
-            foreach (var constraint in constraints)
+            foreach (string? constraint in constraints)
             {
-                var result = await representation.AddConstraintAsync(constraint);
+                Result<Unit, string> result = await representation.AddConstraintAsync(constraint);
                 result.Match(
                     _ => Console.WriteLine($"  ✓ Added: {constraint}"),
                     error => Console.WriteLine($"  ⚠ Failed: {error}"));
@@ -138,10 +138,10 @@ public static class OrchestratorV3Example
             // Use NextNode tool to query valid next steps
             Console.WriteLine("Using NextNode tool to enumerate valid next steps...");
 
-            var nextNodeTool = tools.GetTool("next_node");
+            Option<ITool> nextNodeTool = tools.GetTool("next_node");
             if (nextNodeTool.HasValue)
             {
-                var nextNodeInput = @"{
+                string nextNodeInput = @"{
                     ""current_step_id"": ""step_0"",
                     ""plan_goal"": """ + goal + @""",
                     ""context"": {
@@ -151,7 +151,7 @@ public static class OrchestratorV3Example
                     }
                 }";
 
-                var nextNodeResult = await nextNodeTool.Value!.InvokeAsync(nextNodeInput);
+                Result<string, string> nextNodeResult = await nextNodeTool.Value!.InvokeAsync(nextNodeInput);
 
                 nextNodeResult.Match(
                     output =>
@@ -170,13 +170,13 @@ public static class OrchestratorV3Example
 
             // Query MeTTa for tool recommendations
             Console.WriteLine("Querying MeTTa for tool recommendations...");
-            var toolRecommendations = await representation.QueryToolsForGoalAsync(goal);
+            Result<List<string>, string> toolRecommendations = await representation.QueryToolsForGoalAsync(goal);
 
             toolRecommendations.Match(
                 recommendedTools =>
                 {
                     Console.WriteLine($"✓ Found {recommendedTools.Count} recommended tools:");
-                    foreach (var tool in recommendedTools)
+                    foreach (string tool in recommendedTools)
                     {
                         Console.WriteLine($"  - {tool}");
                     }
@@ -186,8 +186,8 @@ public static class OrchestratorV3Example
 
             // Demonstrate symbolic verification
             Console.WriteLine("Using MeTTa for symbolic plan verification...");
-            var planMetta = $"(plan {string.Join(" ", plan.Steps.Select((s, i) => $"(step {i} {s.Action})"))})";
-            var verificationResult = await mettaEngine.VerifyPlanAsync(planMetta);
+            string planMetta = $"(plan {string.Join(" ", plan.Steps.Select((s, i) => $"(step {i} {s.Action})"))})";
+            Result<bool, string> verificationResult = await mettaEngine.VerifyPlanAsync(planMetta);
 
             verificationResult.Match(
                 verified => Console.WriteLine($"✓ Symbolic verification: {(verified ? "PASSED" : "FAILED")}"),
@@ -226,21 +226,21 @@ public static class OrchestratorV3Example
         Console.WriteLine("╚═══════════════════════════════════════════════════════╝\n");
 
         // Use mock engine
-        var mettaEngine = new MockMeTTaEngine();
+        MockMeTTaEngine mettaEngine = new MockMeTTaEngine();
         Console.WriteLine("✓ Mock MeTTa engine initialized (for demonstration)\n");
 
         // Create tool registry with MeTTa tools
-        var tools = ToolRegistry.CreateDefault()
+        ToolRegistry tools = ToolRegistry.CreateDefault()
             .WithMeTTaTools(mettaEngine);
 
         Console.WriteLine($"✓ Tool registry created with {tools.Count} tools");
 
-        var mettaTools = tools.All.Where(t =>
+        List<ITool> mettaTools = tools.All.Where(t =>
             t.Name.StartsWith("metta_") || t.Name == "next_node")
         .ToList();
 
         Console.WriteLine($"  MeTTa symbolic reasoning tools ({mettaTools.Count}):");
-        foreach (var tool in mettaTools)
+        foreach (ITool? tool in mettaTools)
         {
             Console.WriteLine($"    - {tool.Name}: {tool.Description}");
         }
@@ -248,10 +248,10 @@ public static class OrchestratorV3Example
         Console.WriteLine();
 
         // Create MeTTa representation layer
-        var representation = new MeTTaRepresentation(mettaEngine);
+        MeTTaRepresentation representation = new MeTTaRepresentation(mettaEngine);
 
         // Simple plan
-        var plan = new Plan(
+        Plan plan = new Plan(
             Goal: "Test MeTTa integration",
             Steps: new List<PlanStep>
             {
@@ -262,27 +262,27 @@ public static class OrchestratorV3Example
             CreatedAt: DateTime.UtcNow);
 
         Console.WriteLine("Translating plan to MeTTa...");
-        var planResult = await representation.TranslatePlanAsync(plan);
+        Result<Unit, string> planResult = await representation.TranslatePlanAsync(plan);
         planResult.Match(
             _ => Console.WriteLine("✓ Plan translated successfully"),
             error => Console.WriteLine($"✗ Error: {error}"));
 
         Console.WriteLine("\nTranslating tools to MeTTa...");
-        var toolsResult = await representation.TranslateToolsAsync(tools);
+        Result<Unit, string> toolsResult = await representation.TranslateToolsAsync(tools);
         toolsResult.Match(
             _ => Console.WriteLine("✓ Tools translated successfully"),
             error => Console.WriteLine($"✗ Error: {error}"));
 
         Console.WriteLine("\nTesting NextNode tool...");
-        var nextNodeTool = tools.GetTool("next_node");
+        Option<ITool> nextNodeTool = tools.GetTool("next_node");
         if (nextNodeTool.HasValue)
         {
-            var input = @"{
+            string input = @"{
                 ""current_step_id"": ""step_0"",
                 ""plan_goal"": ""Test MeTTa integration""
             }";
 
-            var result = await nextNodeTool.Value!.InvokeAsync(input);
+            Result<string, string> result = await nextNodeTool.Value!.InvokeAsync(input);
             result.Match(
                 output => Console.WriteLine($"✓ NextNode tool result:\n{output}"),
                 error => Console.WriteLine($"✗ Error: {error}"));
@@ -301,13 +301,13 @@ public static class OrchestratorV3Example
         Console.WriteLine("║  Orchestrator v3.0 - Advanced Constraint Reasoning   ║");
         Console.WriteLine("╚═══════════════════════════════════════════════════════╝\n");
 
-        var mettaEngine = new MockMeTTaEngine();
-        var tools = ToolRegistry.CreateDefault().WithMeTTaTools(mettaEngine);
-        var representation = new MeTTaRepresentation(mettaEngine);
+        MockMeTTaEngine mettaEngine = new MockMeTTaEngine();
+        ToolRegistry tools = ToolRegistry.CreateDefault().WithMeTTaTools(mettaEngine);
+        MeTTaRepresentation representation = new MeTTaRepresentation(mettaEngine);
 
         Console.WriteLine("Adding advanced constraints...\n");
 
-        var advancedConstraints = new[]
+        string[] advancedConstraints = new[]
         {
             // Dependency constraints
             "(depends step_analyze step_fetch)",
@@ -327,9 +327,9 @@ public static class OrchestratorV3Example
             "(requires-validation step_summarize)",
         };
 
-        foreach (var constraint in advancedConstraints)
+        foreach (string? constraint in advancedConstraints)
         {
-            var result = await representation.AddConstraintAsync(constraint);
+            Result<Unit, string> result = await representation.AddConstraintAsync(constraint);
             result.Match(
                 _ => Console.WriteLine($"  ✓ {constraint}"),
                 error => Console.WriteLine($"  ✗ {constraint}: {error}"));
@@ -348,7 +348,7 @@ internal sealed class MockMeTTaEngine : IMeTTaEngine
 
     public Task<Result<string, string>> ExecuteQueryAsync(string query, CancellationToken ct = default)
     {
-        var result = query.Contains("match")
+        string result = query.Contains("match")
             ? "[Mock query result]"
             : "3";
         return Task.FromResult(Result<string, string>.Success(result));

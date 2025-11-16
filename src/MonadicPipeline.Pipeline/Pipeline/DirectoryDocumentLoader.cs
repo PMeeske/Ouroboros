@@ -51,21 +51,21 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
         if (!Directory.Exists(path))
             throw new DirectoryNotFoundException($"Directory '{path}' not found");
 
-        var docs = new List<Document>();
-        var debug = Environment.GetEnvironmentVariable("MONADIC_DEBUG") == "1";
-        var start = DateTime.UtcNow;
-        var dirEnumOption = _recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var stats = _optionsStats ?? new DirectoryIngestionStats();
-        foreach (var pattern in _fileGlobs)
+        List<Document> docs = new List<Document>();
+        bool debug = Environment.GetEnvironmentVariable("MONADIC_DEBUG") == "1";
+        DateTime start = DateTime.UtcNow;
+        SearchOption dirEnumOption = _recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        DirectoryIngestionStats stats = _optionsStats ?? new DirectoryIngestionStats();
+        foreach (string pattern in _fileGlobs)
         {
-            foreach (var file in Directory.EnumerateFiles(path, pattern, dirEnumOption))
+            foreach (string file in Directory.EnumerateFiles(path, pattern, dirEnumOption))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 // Directory exclusion
                 if (_excludeDirs is not null)
                 {
-                    var rel = Path.GetRelativePath(path, Path.GetDirectoryName(file)!);
-                    var parts = rel.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    string rel = Path.GetRelativePath(path, Path.GetDirectoryName(file)!);
+                    string[] parts = rel.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
                     if (parts.Any(p => _excludeDirs.Contains(p.ToLowerInvariant()))) continue;
                 }
                 // Size filter
@@ -73,7 +73,7 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
                 {
                     try
                     {
-                        var info = new FileInfo(file);
+                        FileInfo info = new FileInfo(file);
                         if (info.Length > _maxFileBytes) continue;
                     }
                     catch { /* ignore */ }
@@ -81,7 +81,7 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
                 // Extension filter
                 if (_allowedExtensions is not null)
                 {
-                    var ext = Path.GetExtension(file).ToLowerInvariant();
+                    string ext = Path.GetExtension(file).ToLowerInvariant();
                     if (!_allowedExtensions.Contains(ext)) continue;
                 }
                 bool skipByCache = false;
@@ -91,13 +91,13 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
                 }
                 try
                 {
-                    var fileSource = DataSource.FromPath(file);
-                    var loaded = await new TInner().LoadAsync(fileSource, settings, cancellationToken);
-                    foreach (var d in loaded)
+                    DataSource fileSource = DataSource.FromPath(file);
+                    IReadOnlyCollection<Document> loaded = await new TInner().LoadAsync(fileSource, settings, cancellationToken);
+                    foreach (Document d in loaded)
                     {
                         // Build a fresh document if we need to augment metadata
-                        var metaBase = d.Metadata ?? new Dictionary<string, object>();
-                        var meta = new Dictionary<string, object>(metaBase)
+                        IDictionary<string, object> metaBase = d.Metadata ?? new Dictionary<string, object>();
+                        Dictionary<string, object> meta = new Dictionary<string, object>(metaBase)
                         {
                             ["directoryRoot"] = path,
                             ["relativePath"] = Path.GetRelativePath(path, file)
@@ -178,11 +178,11 @@ internal sealed class DirectoryIngestionCache
         {
             if (File.Exists(_path))
             {
-                var json = File.ReadAllText(_path);
-                var loaded = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                string json = File.ReadAllText(_path);
+                Dictionary<string, string>? loaded = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
                 if (loaded is not null)
                 {
-                    foreach (var kv in loaded) _hashes[kv.Key] = kv.Value;
+                    foreach (KeyValuePair<string, string> kv in loaded) _hashes[kv.Key] = kv.Value;
                 }
             }
         }
@@ -193,8 +193,8 @@ internal sealed class DirectoryIngestionCache
     {
         try
         {
-            var h = ComputeHash(file);
-            if (_hashes.TryGetValue(file, out var existing) && existing == h) return true;
+            string h = ComputeHash(file);
+            if (_hashes.TryGetValue(file, out string? existing) && existing == h) return true;
             return false;
         }
         catch { return false; }
@@ -204,7 +204,7 @@ internal sealed class DirectoryIngestionCache
     {
         try
         {
-            var h = ComputeHash(file);
+            string h = ComputeHash(file);
             _hashes[file] = h;
             _dirty = true;
         }
@@ -216,7 +216,7 @@ internal sealed class DirectoryIngestionCache
         if (!_dirty) return;
         try
         {
-            var json = System.Text.Json.JsonSerializer.Serialize(_hashes);
+            string json = System.Text.Json.JsonSerializer.Serialize(_hashes);
             File.WriteAllText(_path, json);
             _dirty = false;
         }
@@ -225,9 +225,9 @@ internal sealed class DirectoryIngestionCache
 
     private static string ComputeHash(string file)
     {
-        using var sha = System.Security.Cryptography.SHA256.Create();
-        using var fs = File.OpenRead(file);
-        var hash = sha.ComputeHash(fs);
+        using System.Security.Cryptography.SHA256 sha = System.Security.Cryptography.SHA256.Create();
+        using FileStream fs = File.OpenRead(file);
+        byte[] hash = sha.ComputeHash(fs);
         return Convert.ToHexString(hash);
     }
 }

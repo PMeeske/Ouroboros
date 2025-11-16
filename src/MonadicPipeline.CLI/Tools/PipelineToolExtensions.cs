@@ -22,21 +22,21 @@ public static class PipelineToolExtensions
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(pipelineState);
 
-        var newRegistry = registry;
+        ToolRegistry newRegistry = registry;
 
         // Get all token groups from the StepRegistry
-        foreach (var (method, names) in StepRegistry.GetTokenGroups())
+        foreach ((MethodInfo method, IReadOnlyList<string> names) in StepRegistry.GetTokenGroups())
         {
             // Use the first name as the primary identifier
-            var primaryName = names.FirstOrDefault();
+            string? primaryName = names.FirstOrDefault();
             if (string.IsNullOrWhiteSpace(primaryName))
                 continue;
 
             // Create a description from method info
-            var description = BuildStepDescription(method, names);
+            string description = BuildStepDescription(method, names);
 
             // Create and register the pipeline step tool
-            var tool = PipelineStepTool.FromStepName(primaryName, description);
+            PipelineStepTool? tool = PipelineStepTool.FromStepName(primaryName, description);
             if (tool != null)
             {
                 tool.SetPipelineState(pipelineState);
@@ -60,18 +60,18 @@ public static class PipelineToolExtensions
         ArgumentNullException.ThrowIfNull(pipelineState);
         ArgumentNullException.ThrowIfNull(stepNames);
 
-        var newRegistry = registry;
+        ToolRegistry newRegistry = registry;
 
-        foreach (var stepName in stepNames)
+        foreach (string stepName in stepNames)
         {
             // Try to resolve step info
-            if (StepRegistry.TryResolveInfo(stepName, out var method) && method != null)
+            if (StepRegistry.TryResolveInfo(stepName, out MethodInfo? method) && method != null)
             {
-                var attr = method.GetCustomAttribute<PipelineTokenAttribute>();
-                var names = attr?.Names ?? new[] { stepName };
-                var description = BuildStepDescription(method, names);
+                PipelineTokenAttribute? attr = method.GetCustomAttribute<PipelineTokenAttribute>();
+                IReadOnlyList<string> names = attr?.Names ?? new[] { stepName };
+                string description = BuildStepDescription(method, names);
 
-                var tool = PipelineStepTool.FromStepName(stepName, description);
+                PipelineStepTool? tool = PipelineStepTool.FromStepName(stepName, description);
                 if (tool != null)
                 {
                     tool.SetPipelineState(pipelineState);
@@ -88,11 +88,11 @@ public static class PipelineToolExtensions
     /// </summary>
     private static string BuildStepDescription(System.Reflection.MethodInfo method, IReadOnlyList<string> names)
     {
-        var methodName = method.Name;
-        var aliases = names.Count > 1 ? $" (aliases: {string.Join(", ", names.Skip(1))})" : "";
+        string methodName = method.Name;
+        string aliases = names.Count > 1 ? $" (aliases: {string.Join(", ", names.Skip(1))})" : "";
 
         // Try to extract summary from XML documentation if available
-        var summary = method.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description;
+        string? summary = method.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description;
 
         if (!string.IsNullOrWhiteSpace(summary))
         {

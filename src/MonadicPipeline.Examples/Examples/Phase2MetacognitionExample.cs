@@ -28,19 +28,19 @@ public static class Phase2MetacognitionExample
         Console.WriteLine("3. Evaluates its own performance and suggests improvements\n");
 
         // Setup
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
-        var memory = new PersistentMemoryStore();
-        var skills = new SkillRegistry();
-        var safety = new SafetyGuard();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
+        PersistentMemoryStore memory = new PersistentMemoryStore();
+        SkillRegistry skills = new SkillRegistry();
+        SafetyGuard safety = new SafetyGuard();
 
         // Initialize Phase 2 components
-        var capabilityRegistry = new CapabilityRegistry(chatModel, tools);
-        var goalHierarchy = new GoalHierarchy(chatModel, safety);
-        var router = new UncertaintyRouter(null!, 0.7);
+        CapabilityRegistry capabilityRegistry = new CapabilityRegistry(chatModel, tools);
+        GoalHierarchy goalHierarchy = new GoalHierarchy(chatModel, safety);
+        UncertaintyRouter router = new UncertaintyRouter(null!, 0.7);
 
-        var orchestrator = new MetaAIPlannerOrchestrator(
+        MetaAIPlannerOrchestrator orchestrator = new MetaAIPlannerOrchestrator(
             chatModel,
             tools,
             memory,
@@ -48,7 +48,7 @@ public static class Phase2MetacognitionExample
             router,
             safety);
 
-        var evaluator = new SelfEvaluator(
+        SelfEvaluator evaluator = new SelfEvaluator(
             chatModel,
             capabilityRegistry,
             skills,
@@ -64,9 +64,9 @@ public static class Phase2MetacognitionExample
         RegisterInitialCapabilities(capabilityRegistry);
 
         // Display what the agent knows it can do
-        var capabilities = await capabilityRegistry.GetCapabilitiesAsync();
+        List<AgentCapability> capabilities = await capabilityRegistry.GetCapabilitiesAsync();
         Console.WriteLine($"Agent self-model: {capabilities.Count} capabilities registered\n");
-        foreach (var cap in capabilities.Take(5))
+        foreach (AgentCapability? cap in capabilities.Take(5))
         {
             Console.WriteLine($"✓ {cap.Name}");
             Console.WriteLine($"  Description: {cap.Description}");
@@ -82,7 +82,7 @@ public static class Phase2MetacognitionExample
         // === Phase 2: Goal Hierarchy & Decomposition ===
         Console.WriteLine("\n=== Phase 2: Goal Hierarchy & Decomposition ===\n");
 
-        var complexGoal = new Goal(
+        Goal complexGoal = new Goal(
             "Build an intelligent research assistant",
             GoalType.Primary,
             1.0);
@@ -90,7 +90,7 @@ public static class Phase2MetacognitionExample
         Console.WriteLine($"Complex Goal: {complexGoal.Description}\n");
 
         // Check value alignment
-        var alignmentResult = await goalHierarchy.CheckValueAlignmentAsync(complexGoal);
+        Result<bool, string> alignmentResult = await goalHierarchy.CheckValueAlignmentAsync(complexGoal);
         if (alignmentResult.IsSuccess)
         {
             Console.WriteLine("✓ Goal is value-aligned with safety constraints\n");
@@ -103,15 +103,15 @@ public static class Phase2MetacognitionExample
 
         // Decompose goal hierarchically
         Console.WriteLine("Decomposing goal into subgoals...\n");
-        var decomposedResult = await goalHierarchy.DecomposeGoalAsync(complexGoal, maxDepth: 2);
+        Result<Goal, string> decomposedResult = await goalHierarchy.DecomposeGoalAsync(complexGoal, maxDepth: 2);
 
         if (decomposedResult.IsSuccess)
         {
-            var decomposed = decomposedResult.Value;
+            Goal decomposed = decomposedResult.Value;
             Console.WriteLine($"✓ Decomposed into {decomposed.Subgoals.Count} subgoals:\n");
 
             int subgoalNum = 1;
-            foreach (var subgoal in decomposed.Subgoals)
+            foreach (Goal subgoal in decomposed.Subgoals)
             {
                 Console.WriteLine($"{subgoalNum}. {subgoal.Description}");
                 Console.WriteLine($"   Type: {subgoal.Type}, Priority: {subgoal.Priority:F2}");
@@ -119,7 +119,7 @@ public static class Phase2MetacognitionExample
                 if (subgoal.Subgoals.Any())
                 {
                     Console.WriteLine($"   Sub-subgoals:");
-                    foreach (var subsubgoal in subgoal.Subgoals.Take(3))
+                    foreach (Goal? subsubgoal in subgoal.Subgoals.Take(3))
                     {
                         Console.WriteLine($"   • {subsubgoal.Description}");
                     }
@@ -137,9 +137,9 @@ public static class Phase2MetacognitionExample
         await TestGoalConflicts(goalHierarchy);
 
         // Prioritize goals
-        var prioritized = await goalHierarchy.PrioritizeGoalsAsync();
+        List<Goal> prioritized = await goalHierarchy.PrioritizeGoalsAsync();
         Console.WriteLine($"\nGoal Execution Order (prioritized):");
-        foreach (var goal in prioritized.Take(5))
+        foreach (Goal? goal in prioritized.Take(5))
         {
             Console.WriteLine($"  {prioritized.IndexOf(goal) + 1}. [{goal.Type}] {goal.Description.Substring(0, Math.Min(60, goal.Description.Length))}...");
         }
@@ -152,11 +152,11 @@ public static class Phase2MetacognitionExample
 
         // Perform self-assessment
         Console.WriteLine("Performing self-assessment...\n");
-        var assessmentResult = await evaluator.EvaluatePerformanceAsync();
+        Result<SelfAssessment, string> assessmentResult = await evaluator.EvaluatePerformanceAsync();
 
         if (assessmentResult.IsSuccess)
         {
-            var assessment = assessmentResult.Value;
+            SelfAssessment assessment = assessmentResult.Value;
 
             Console.WriteLine("=== SELF-ASSESSMENT REPORT ===\n");
             Console.WriteLine($"Overall Performance: {assessment.OverallPerformance:P0}");
@@ -164,7 +164,7 @@ public static class Phase2MetacognitionExample
             Console.WriteLine($"Skill Acquisition Rate: {assessment.SkillAcquisitionRate:F2} skills/day\n");
 
             Console.WriteLine($"Strengths ({assessment.Strengths.Count}):");
-            foreach (var strength in assessment.Strengths.Take(5))
+            foreach (string? strength in assessment.Strengths.Take(5))
             {
                 Console.WriteLine($"  ✓ {strength}");
             }
@@ -172,7 +172,7 @@ public static class Phase2MetacognitionExample
             Console.WriteLine();
 
             Console.WriteLine($"Weaknesses ({assessment.Weaknesses.Count}):");
-            foreach (var weakness in assessment.Weaknesses.Take(5))
+            foreach (string? weakness in assessment.Weaknesses.Take(5))
             {
                 Console.WriteLine($"  ⚠ {weakness}");
             }
@@ -184,10 +184,10 @@ public static class Phase2MetacognitionExample
 
         // Generate insights
         Console.WriteLine("Generating insights from recent experiences...\n");
-        var insights = await evaluator.GenerateInsightsAsync();
+        List<Insight> insights = await evaluator.GenerateInsightsAsync();
 
         Console.WriteLine($"=== INSIGHTS ({insights.Count}) ===\n");
-        foreach (var insight in insights.Take(5))
+        foreach (Insight? insight in insights.Take(5))
         {
             Console.WriteLine($"[{insight.Category}] (Confidence: {insight.Confidence:P0})");
             Console.WriteLine($"  {insight.Description}");
@@ -201,11 +201,11 @@ public static class Phase2MetacognitionExample
 
         // Create improvement plan
         Console.WriteLine("Creating self-improvement plan...\n");
-        var improvementResult = await evaluator.SuggestImprovementsAsync();
+        Result<ImprovementPlan, string> improvementResult = await evaluator.SuggestImprovementsAsync();
 
         if (improvementResult.IsSuccess)
         {
-            var plan = improvementResult.Value;
+            ImprovementPlan plan = improvementResult.Value;
 
             Console.WriteLine("=== IMPROVEMENT PLAN ===\n");
             Console.WriteLine($"Goal: {plan.Goal}");
@@ -223,7 +223,7 @@ public static class Phase2MetacognitionExample
             if (plan.ExpectedImprovements.Any())
             {
                 Console.WriteLine("Expected Improvements:");
-                foreach (var improvement in plan.ExpectedImprovements)
+                foreach (KeyValuePair<string, double> improvement in plan.ExpectedImprovements)
                 {
                     Console.WriteLine($"  • {improvement.Key}: +{improvement.Value:P0}");
                 }
@@ -232,11 +232,11 @@ public static class Phase2MetacognitionExample
 
         // Show performance trends
         Console.WriteLine("\n=== PERFORMANCE TRENDS ===\n");
-        var successTrend = await evaluator.GetPerformanceTrendAsync("success_rate", TimeSpan.FromDays(30));
+        List<(DateTime Time, double Value)> successTrend = await evaluator.GetPerformanceTrendAsync("success_rate", TimeSpan.FromDays(30));
         if (successTrend.Any())
         {
             Console.WriteLine("Success Rate (last 30 days):");
-            foreach (var point in successTrend.TakeLast(7))
+            foreach ((DateTime Time, double Value) point in successTrend.TakeLast(7))
             {
                 Console.WriteLine($"  {point.Time:yyyy-MM-dd}: {point.Value:P0}");
             }
@@ -253,7 +253,7 @@ public static class Phase2MetacognitionExample
 
     private static void RegisterInitialCapabilities(CapabilityRegistry registry)
     {
-        var capabilities = new List<AgentCapability>
+        List<AgentCapability> capabilities = new List<AgentCapability>
         {
             new AgentCapability(
                 "text_generation",
@@ -316,7 +316,7 @@ public static class Phase2MetacognitionExample
                 new Dictionary<string, object>()),
         };
 
-        foreach (var cap in capabilities)
+        foreach (AgentCapability cap in capabilities)
         {
             registry.RegisterCapability(cap);
         }
@@ -326,7 +326,7 @@ public static class Phase2MetacognitionExample
     {
         Console.WriteLine("Testing capability assessment:\n");
 
-        var testTasks = new[]
+        string[] testTasks = new[]
         {
             "Write a poem about artificial intelligence",
             "Analyze sales data and identify trends",
@@ -334,19 +334,19 @@ public static class Phase2MetacognitionExample
             "Calculate the derivative of x^2 + 3x + 5",
         };
 
-        foreach (var task in testTasks)
+        foreach (string? task in testTasks)
         {
-            var canHandle = await registry.CanHandleAsync(task);
+            bool canHandle = await registry.CanHandleAsync(task);
             Console.WriteLine($"Task: {task}");
             Console.WriteLine($"  Can Handle: {(canHandle ? "✓ YES" : "✗ NO")}");
 
             if (!canHandle)
             {
-                var alternatives = await registry.SuggestAlternativesAsync(task);
+                List<string> alternatives = await registry.SuggestAlternativesAsync(task);
                 if (alternatives.Any())
                 {
                     Console.WriteLine($"  Alternatives:");
-                    foreach (var alt in alternatives.Take(2))
+                    foreach (string? alt in alternatives.Take(2))
                     {
                         Console.WriteLine($"    • {alt}");
                     }
@@ -362,12 +362,12 @@ public static class Phase2MetacognitionExample
         Console.WriteLine("\nTesting goal conflict detection:\n");
 
         // Add potentially conflicting goals
-        var speedGoal = new Goal(
+        Goal speedGoal = new Goal(
             "Minimize response latency to under 100ms",
             GoalType.Secondary,
             0.8);
 
-        var qualityGoal = new Goal(
+        Goal qualityGoal = new Goal(
             "Maximize response accuracy and detail",
             GoalType.Secondary,
             0.85);
@@ -375,18 +375,18 @@ public static class Phase2MetacognitionExample
         hierarchy.AddGoal(speedGoal);
         hierarchy.AddGoal(qualityGoal);
 
-        var conflicts = await hierarchy.DetectConflictsAsync();
+        List<GoalConflict> conflicts = await hierarchy.DetectConflictsAsync();
 
         if (conflicts.Any())
         {
             Console.WriteLine($"Detected {conflicts.Count} goal conflicts:\n");
-            foreach (var conflict in conflicts)
+            foreach (GoalConflict conflict in conflicts)
             {
                 Console.WriteLine($"Conflict: {conflict.ConflictType}");
                 Console.WriteLine($"  Between: {conflict.Goal1.Description}");
                 Console.WriteLine($"  And: {conflict.Goal2.Description}");
                 Console.WriteLine($"  Suggested Resolutions:");
-                foreach (var resolution in conflict.SuggestedResolutions.Take(2))
+                foreach (string? resolution in conflict.SuggestedResolutions.Take(2))
                 {
                     Console.WriteLine($"    • {resolution}");
                 }
@@ -403,20 +403,20 @@ public static class Phase2MetacognitionExample
     private static async Task SimulateExecutionHistory(IMemoryStore memory, ISelfEvaluator evaluator)
     {
         // Simulate some successful and failed executions
-        var random = new Random(42); // Fixed seed for reproducibility
+        Random random = new Random(42); // Fixed seed for reproducibility
 
         for (int i = 0; i < 20; i++)
         {
-            var success = random.NextDouble() > 0.3; // 70% success rate
-            var quality = success ? 0.7 + (random.NextDouble() * 0.3) : random.NextDouble() * 0.5;
+            bool success = random.NextDouble() > 0.3; // 70% success rate
+            double quality = success ? 0.7 + (random.NextDouble() * 0.3) : random.NextDouble() * 0.5;
 
-            var plan = new Plan(
+            Plan plan = new Plan(
                 $"Simulated task {i + 1}",
                 new List<PlanStep>(),
                 new Dictionary<string, double>(),
                 DateTime.UtcNow.AddDays(-random.Next(1, 30)));
 
-            var exec = new ExecutionResult(
+            ExecutionResult exec = new ExecutionResult(
                 plan,
                 new List<StepResult>(),
                 success,
@@ -424,7 +424,7 @@ public static class Phase2MetacognitionExample
                 new Dictionary<string, object>(),
                 TimeSpan.FromMilliseconds(random.Next(50, 500)));
 
-            var verify = new VerificationResult(
+            VerificationResult verify = new VerificationResult(
                 exec,
                 success,
                 quality,
@@ -432,7 +432,7 @@ public static class Phase2MetacognitionExample
                 new List<string>(),
                 null);
 
-            var experience = new Experience(
+            Experience experience = new Experience(
                 Guid.NewGuid(),
                 plan.Goal,
                 plan,
@@ -444,7 +444,7 @@ public static class Phase2MetacognitionExample
             await memory.StoreExperienceAsync(experience);
 
             // Record for calibration
-            var predictedConfidence = random.NextDouble();
+            double predictedConfidence = random.NextDouble();
             evaluator.RecordPrediction(predictedConfidence, success);
         }
 

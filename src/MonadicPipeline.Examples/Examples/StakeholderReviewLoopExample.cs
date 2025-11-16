@@ -21,11 +21,11 @@ public static class StakeholderReviewLoopExample
         Console.WriteLine("=== Basic Stakeholder Review Workflow ===\n");
 
         // Create a mock review system provider
-        var reviewProvider = new MockReviewSystemProvider();
-        var reviewLoop = new StakeholderReviewLoop(reviewProvider);
+        MockReviewSystemProvider reviewProvider = new MockReviewSystemProvider();
+        StakeholderReviewLoop reviewLoop = new StakeholderReviewLoop(reviewProvider);
 
         // Define draft specification
-        var draftSpec = @"
+        string draftSpec = @"
 # Feature Specification: Advanced Search
 
 ## Overview
@@ -49,7 +49,7 @@ Implement advanced search functionality with filters and facets.
 ";
 
         // Define required reviewers
-        var requiredReviewers = new List<string>
+        List<string> requiredReviewers = new List<string>
         {
             "tech-lead@company.com",
             "product-manager@company.com",
@@ -61,7 +61,7 @@ Implement advanced search functionality with filters and facets.
         Console.WriteLine($"  Spec length: {draftSpec.Length} characters\n");
 
         // Configure review loop
-        var config = new StakeholderReviewConfig(
+        StakeholderReviewConfig config = new StakeholderReviewConfig(
             MinimumRequiredApprovals: 2,
             RequireAllReviewersApprove: true,
             AutoResolveNonBlockingComments: false,
@@ -78,7 +78,7 @@ Implement advanced search functionality with filters and facets.
         {
             Console.WriteLine("🚀 Starting review loop...");
 
-            var reviewTask = reviewLoop.ExecuteReviewLoopAsync(
+            Task<Result<StakeholderReviewResult, string>> reviewTask = reviewLoop.ExecuteReviewLoopAsync(
                 "Advanced Search Feature Specification",
                 "Spec for v2.0 advanced search implementation",
                 draftSpec,
@@ -96,7 +96,7 @@ Implement advanced search functionality with filters and facets.
             await Task.Delay(1000);
             Console.WriteLine("✅ Architect approved with minor comments");
 
-            var result = await reviewTask;
+            Result<StakeholderReviewResult, string> result = await reviewTask;
 
             result.Match(
                 reviewResult =>
@@ -128,14 +128,14 @@ Implement advanced search functionality with filters and facets.
     {
         Console.WriteLine("=== Comment Resolution Workflow ===\n");
 
-        var reviewProvider = new MockReviewSystemProvider();
-        var reviewLoop = new StakeholderReviewLoop(reviewProvider);
+        MockReviewSystemProvider reviewProvider = new MockReviewSystemProvider();
+        StakeholderReviewLoop reviewLoop = new StakeholderReviewLoop(reviewProvider);
 
-        var draftSpec = "# Feature Spec\n\nSimple spec for testing comment resolution.";
-        var requiredReviewers = new List<string> { "reviewer1@company.com", "reviewer2@company.com" };
+        string draftSpec = "# Feature Spec\n\nSimple spec for testing comment resolution.";
+        List<string> requiredReviewers = new List<string> { "reviewer1@company.com", "reviewer2@company.com" };
 
         // Open PR
-        var prResult = await reviewProvider.OpenPullRequestAsync(
+        Result<PullRequest, string> prResult = await reviewProvider.OpenPullRequestAsync(
             "Test Feature",
             "Testing comment resolution",
             draftSpec,
@@ -147,7 +147,7 @@ Implement advanced search functionality with filters and facets.
             return;
         }
 
-        var pr = prResult.Value;
+        PullRequest pr = prResult.Value;
         Console.WriteLine($"📝 Opened PR: {pr.Title} (ID: {pr.Id})");
 
         // Simulate reviews with comments
@@ -161,7 +161,7 @@ Implement advanced search functionality with filters and facets.
         Console.WriteLine("💬 Received reviews with comments");
 
         // Get all comments
-        var commentsResult = await reviewProvider.GetCommentsAsync(pr.Id);
+        Result<List<ReviewComment>, string> commentsResult = await reviewProvider.GetCommentsAsync(pr.Id);
 
         if (!commentsResult.IsSuccess)
         {
@@ -169,10 +169,10 @@ Implement advanced search functionality with filters and facets.
             return;
         }
 
-        var comments = commentsResult.Value;
+        List<ReviewComment> comments = commentsResult.Value;
         Console.WriteLine($"📋 Total comments: {comments.Count}");
 
-        foreach (var comment in comments)
+        foreach (ReviewComment comment in comments)
         {
             Console.WriteLine($"  - {comment.ReviewerId}: {comment.Content}");
         }
@@ -181,7 +181,7 @@ Implement advanced search functionality with filters and facets.
 
         // Resolve comments
         Console.WriteLine("🔧 Resolving comments...");
-        var resolveResult = await reviewLoop.ResolveCommentsAsync(pr.Id, comments);
+        Result<int, string> resolveResult = await reviewLoop.ResolveCommentsAsync(pr.Id, comments);
 
         resolveResult.Match(
             async resolved =>
@@ -189,10 +189,10 @@ Implement advanced search functionality with filters and facets.
                 Console.WriteLine($"✅ Resolved {resolved} comment(s)");
 
                 // Verify resolution
-                var updatedCommentsResult = await reviewProvider.GetCommentsAsync(pr.Id);
+                Result<List<ReviewComment>, string> updatedCommentsResult = await reviewProvider.GetCommentsAsync(pr.Id);
                 if (updatedCommentsResult.IsSuccess)
                 {
-                    var resolvedComments = updatedCommentsResult.Value
+                    int resolvedComments = updatedCommentsResult.Value
                         .Count(c => c.Status == ReviewCommentStatus.Resolved);
                     Console.WriteLine($"✅ Confirmed: {resolvedComments} comment(s) marked as resolved\n");
                 }
@@ -211,11 +211,11 @@ Implement advanced search functionality with filters and facets.
     {
         Console.WriteLine("=== Review Progress Monitoring ===\n");
 
-        var reviewProvider = new MockReviewSystemProvider();
-        var reviewLoop = new StakeholderReviewLoop(reviewProvider);
+        MockReviewSystemProvider reviewProvider = new MockReviewSystemProvider();
+        StakeholderReviewLoop reviewLoop = new StakeholderReviewLoop(reviewProvider);
 
-        var draftSpec = "# Feature Spec\n\nMonitoring review progress example.";
-        var requiredReviewers = new List<string>
+        string draftSpec = "# Feature Spec\n\nMonitoring review progress example.";
+        List<string> requiredReviewers = new List<string>
         {
             "reviewer1@company.com",
             "reviewer2@company.com",
@@ -223,7 +223,7 @@ Implement advanced search functionality with filters and facets.
         };
 
         // Open PR
-        var prResult = await reviewProvider.OpenPullRequestAsync(
+        Result<PullRequest, string> prResult = await reviewProvider.OpenPullRequestAsync(
             "Monitoring Example",
             "Testing review monitoring",
             draftSpec,
@@ -235,12 +235,12 @@ Implement advanced search functionality with filters and facets.
             return;
         }
 
-        var pr = prResult.Value;
+        PullRequest pr = prResult.Value;
         Console.WriteLine($"📝 Opened PR: {pr.Title}");
         Console.WriteLine($"👥 Waiting for {requiredReviewers.Count} reviewers...\n");
 
         // Start monitoring
-        var monitorTask = reviewLoop.MonitorReviewProgressAsync(
+        Task<Result<ReviewState, string>> monitorTask = reviewLoop.MonitorReviewProgressAsync(
             pr.Id,
             new StakeholderReviewConfig(
                 RequireAllReviewersApprove: true,
@@ -248,7 +248,7 @@ Implement advanced search functionality with filters and facets.
                 PollingInterval: TimeSpan.FromSeconds(2)));
 
         // Simulate reviews coming in over time
-        var approvalTasks = new List<Task>
+        List<Task> approvalTasks = new List<Task>
         {
             Task.Run(async () =>
             {
@@ -273,7 +273,7 @@ Implement advanced search functionality with filters and facets.
         // Wait for all reviews
         await Task.WhenAll(approvalTasks);
 
-        var result = await monitorTask;
+        Result<ReviewState, string> result = await monitorTask;
 
         result.Match(
             state =>
@@ -301,8 +301,8 @@ Implement advanced search functionality with filters and facets.
         Console.WriteLine("📌 Issue #137 (Part of Epic #120)");
         Console.WriteLine("Goal: Collect approvals for v1.0 specifications\n");
 
-        var reviewProvider = new MockReviewSystemProvider();
-        var reviewLoop = new StakeholderReviewLoop(reviewProvider);
+        MockReviewSystemProvider reviewProvider = new MockReviewSystemProvider();
+        StakeholderReviewLoop reviewLoop = new StakeholderReviewLoop(reviewProvider);
 
         // Simulate v1.0 feature specification
         _ = @"
@@ -338,7 +338,7 @@ This document defines the finalized scope for v1.0 production release.
 - Issue #134: Must-Have Feature List ✅
 ";
 
-        var stakeholders = new List<string>
+        List<string> stakeholders = new List<string>
         {
             "technical-lead@monadicpipeline.com",
             "product-owner@monadicpipeline.com",
@@ -352,7 +352,7 @@ This document defines the finalized scope for v1.0 production release.
         Console.WriteLine();
 
         // Execute review loop with production settings
-        var config = new StakeholderReviewConfig(
+        StakeholderReviewConfig config = new StakeholderReviewConfig(
             MinimumRequiredApprovals: 3,
             RequireAllReviewersApprove: true,
             AutoResolveNonBlockingComments: false,

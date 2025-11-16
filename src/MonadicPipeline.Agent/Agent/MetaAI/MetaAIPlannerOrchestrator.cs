@@ -56,23 +56,23 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
         try
         {
             // Check if we have relevant past experiences
-            var query = new MemoryQuery(goal, context, MaxResults: 5, MinSimilarity: 0.7);
-            var pastExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            MemoryQuery query = new MemoryQuery(goal, context, MaxResults: 5, MinSimilarity: 0.7);
+            List<Experience> pastExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
 
             // Find matching skills
-            var matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context);
+            List<Skill> matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context);
 
             // Generate plan using LLM with past experience and skills
-            var planPrompt = BuildPlanPrompt(goal, context, pastExperiences, matchingSkills);
-            var planText = await _llm.GenerateTextAsync(planPrompt, ct);
+            string planPrompt = BuildPlanPrompt(goal, context, pastExperiences, matchingSkills);
+            string planText = await _llm.GenerateTextAsync(planPrompt, ct);
 
             // Parse plan from LLM response
-            var plan = ParsePlan(planText, goal);
+            Plan plan = ParsePlan(planText, goal);
 
             // Validate plan safety
-            foreach (var step in plan.Steps)
+            foreach (PlanStep step in plan.Steps)
             {
-                var safetyCheck = _safety.CheckSafety(
+                SafetyCheckResult safetyCheck = _safety.CheckSafety(
                     step.Action,
                     step.Parameters,
                     PermissionLevel.UserDataWithConfirmation);
@@ -105,11 +105,11 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
         if (plan == null)
             return Result<ExecutionResult, string>.Failure("Plan cannot be null");
 
-        var stopwatch = Stopwatch.StartNew();
+        Stopwatch stopwatch = Stopwatch.StartNew();
 
         // Check if parallel execution is beneficial
-        var parallelExecutor = new ParallelExecutor(_safety, ExecuteStepAsync);
-        var estimatedSpeedup = parallelExecutor.EstimateSpeedup(plan);
+        ParallelExecutor parallelExecutor = new ParallelExecutor(_safety, ExecuteStepAsync);
+        double estimatedSpeedup = parallelExecutor.EstimateSpeedup(plan);
 
         List<StepResult> stepResults;
         bool overallSuccess;
@@ -129,16 +129,16 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
                 overallSuccess = true;
                 finalOutput = "";
 
-                foreach (var step in plan.Steps)
+                foreach (PlanStep step in plan.Steps)
                 {
                     if (ct.IsCancellationRequested)
                         break;
 
                     // Apply safety sandbox
-                    var sandboxedStep = _safety.SandboxStep(step);
+                    PlanStep sandboxedStep = _safety.SandboxStep(step);
 
                     // Execute step
-                    var stepResult = await ExecuteStepAsync(sandboxedStep, ct);
+                    StepResult stepResult = await ExecuteStepAsync(sandboxedStep, ct);
                     stepResults.Add(stepResult);
 
                     if (!stepResult.Success)
@@ -155,7 +155,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
 
             stopwatch.Stop();
 
-            var execution = new ExecutionResult(
+            ExecutionResult execution = new ExecutionResult(
                 plan,
                 stepResults,
                 overallSuccess,
@@ -193,11 +193,11 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
         try
         {
             // Build verification prompt
-            var verifyPrompt = BuildVerificationPrompt(execution);
-            var verificationText = await _llm.GenerateTextAsync(verifyPrompt, ct);
+            string verifyPrompt = BuildVerificationPrompt(execution);
+            string verificationText = await _llm.GenerateTextAsync(verifyPrompt, ct);
 
             // Parse verification result
-            var verification = ParseVerification(execution, verificationText);
+            VerificationResult verification = ParseVerification(execution, verificationText);
 
             RecordMetric("verifier", 1.0, verification.Verified);
             return Result<VerificationResult, string>.Success(verification);
@@ -218,7 +218,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             return;
 
         // Store experience in memory
-        var experience = new Experience(
+        Experience experience = new Experience(
             Guid.NewGuid(),
             verification.Execution.Plan.Goal,
             verification.Execution.Plan,
@@ -240,10 +240,10 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             {
                 try
                 {
-                    var shouldExtract = await _skillExtractor.ShouldExtractSkillAsync(verification);
+                    bool shouldExtract = await _skillExtractor.ShouldExtractSkillAsync(verification);
                     if (shouldExtract)
                     {
-                        var skillResult = await _skillExtractor.ExtractSkillAsync(
+                        Result<Skill, string> skillResult = await _skillExtractor.ExtractSkillAsync(
                             verification.Execution,
                             verification);
 
@@ -281,16 +281,16 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
 
     private async Task<StepResult> ExecuteStepAsync(PlanStep step, CancellationToken ct)
     {
-        var stopwatch = Stopwatch.StartNew();
+        Stopwatch stopwatch = Stopwatch.StartNew();
 
         try
         {
             // Check if this is a tool invocation
-            var tool = _tools.Get(step.Action);
+            ITool? tool = _tools.Get(step.Action);
             if (tool != null)
             {
-                var args = System.Text.Json.JsonSerializer.Serialize(step.Parameters);
-                var toolResult = await tool.InvokeAsync(args);
+                string args = System.Text.Json.JsonSerializer.Serialize(step.Parameters);
+                Result<string, string> toolResult = await tool.InvokeAsync(args);
 
                 stopwatch.Stop();
 
@@ -320,8 +320,8 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             }
 
             // If not a tool, try to execute as LLM task
-            var prompt = $"Execute the following task: {step.Action}\nParameters: {System.Text.Json.JsonSerializer.Serialize(step.Parameters)}";
-            var output = await _llm.GenerateTextAsync(prompt, ct);
+            string prompt = $"Execute the following task: {step.Action}\nParameters: {System.Text.Json.JsonSerializer.Serialize(step.Parameters)}";
+            string output = await _llm.GenerateTextAsync(prompt, ct);
 
             stopwatch.Stop();
 
@@ -358,7 +358,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
         List<Experience> pastExperiences,
         List<Skill> matchingSkills)
     {
-        var prompt = $@"You are an AI planner. Create a detailed plan to accomplish this goal:
+        string prompt = $@"You are an AI planner. Create a detailed plan to accomplish this goal:
 
 GOAL: {goal}
 
@@ -372,7 +372,7 @@ GOAL: {goal}
         if (matchingSkills.Any())
         {
             prompt += "AVAILABLE SKILLS:\n";
-            foreach (var skill in matchingSkills.Take(3))
+            foreach (Skill? skill in matchingSkills.Take(3))
             {
                 prompt += $"- {skill.Name}: {skill.Description} (Success rate: {skill.SuccessRate:P0})\n";
             }
@@ -382,7 +382,7 @@ GOAL: {goal}
         if (pastExperiences.Any())
         {
             prompt += "PAST EXPERIENCE:\n";
-            foreach (var exp in pastExperiences.Take(3))
+            foreach (Experience? exp in pastExperiences.Take(3))
             {
                 prompt += $"- Goal: {exp.Goal}, Quality: {exp.Verification.QualityScore:P0}, Verified: {exp.Verification.Verified}\n";
             }
@@ -412,19 +412,19 @@ STEP 2: ...
 
     private Plan ParsePlan(string planText, string goal)
     {
-        var steps = new List<PlanStep>();
-        var confidenceScores = new Dictionary<string, double>();
+        List<PlanStep> steps = new List<PlanStep>();
+        Dictionary<string, double> confidenceScores = new Dictionary<string, double>();
 
         // Simple parsing - in production, use more robust parser
-        var lines = planText.Split('\n');
+        string[] lines = planText.Split('\n');
         string? currentAction = null;
         Dictionary<string, object>? currentParams = null;
         string? currentExpected = null;
         double currentConfidence = 0.8;
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
-            var trimmed = line.Trim();
+            string trimmed = line.Trim();
 
             if (trimmed.StartsWith("STEP"))
             {
@@ -440,7 +440,7 @@ STEP 2: ...
             }
             else if (trimmed.StartsWith("PARAMETERS:"))
             {
-                var paramsJson = trimmed.Substring("PARAMETERS:".Length).Trim();
+                string paramsJson = trimmed.Substring("PARAMETERS:".Length).Trim();
                 try
                 {
                     currentParams = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(paramsJson) ?? new();
@@ -456,8 +456,8 @@ STEP 2: ...
             }
             else if (trimmed.StartsWith("CONFIDENCE:"))
             {
-                var confStr = trimmed.Substring("CONFIDENCE:".Length).Trim();
-                if (double.TryParse(confStr, out var conf))
+                string confStr = trimmed.Substring("CONFIDENCE:".Length).Trim();
+                if (double.TryParse(confStr, out double conf))
                 {
                     currentConfidence = conf;
                 }
@@ -516,20 +516,20 @@ Provide:
 
     private VerificationResult ParseVerification(ExecutionResult execution, string verificationText)
     {
-        var verified = verificationText.Contains("VERIFIED: yes", StringComparison.OrdinalIgnoreCase);
+        bool verified = verificationText.Contains("VERIFIED: yes", StringComparison.OrdinalIgnoreCase);
 
         // Extract quality score
-        var qualityScore = 0.7;
-        var qualityMatch = System.Text.RegularExpressions.Regex.Match(
+        double qualityScore = 0.7;
+        System.Text.RegularExpressions.Match qualityMatch = System.Text.RegularExpressions.Regex.Match(
             verificationText,
             @"QUALITY_SCORE:\s*([0-9.]+)");
-        if (qualityMatch.Success && double.TryParse(qualityMatch.Groups[1].Value, out var score))
+        if (qualityMatch.Success && double.TryParse(qualityMatch.Groups[1].Value, out double score))
         {
             qualityScore = score;
         }
 
-        var issues = new List<string>();
-        var improvements = new List<string>();
+        List<string> issues = new List<string>();
+        List<string> improvements = new List<string>();
         string? revisedPlan = null;
 
         // Simple parsing - in production use more robust approach
@@ -555,9 +555,9 @@ Provide:
                 CustomMetrics: new Dictionary<string, double>()),
             (_, existing) =>
             {
-                var newCount = existing.ExecutionCount + 1;
-                var newAvgLatency = ((existing.AverageLatencyMs * existing.ExecutionCount) + latencyMs) / newCount;
-                var newSuccessRate = ((existing.SuccessRate * existing.ExecutionCount) + (success ? 1.0 : 0.0)) / newCount;
+                int newCount = existing.ExecutionCount + 1;
+                double newAvgLatency = ((existing.AverageLatencyMs * existing.ExecutionCount) + latencyMs) / newCount;
+                double newSuccessRate = ((existing.SuccessRate * existing.ExecutionCount) + (success ? 1.0 : 0.0)) / newCount;
 
                 return new PerformanceMetrics(
                     component,

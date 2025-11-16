@@ -22,7 +22,7 @@ public static class BranchOps
             (PipelineBranch a, PipelineBranch b, string query) = input;
             TrackedVectorStore mergedStore = new TrackedVectorStore();
 
-            var combinedEvents = a.Events.Concat(b.Events);
+            IEnumerable<PipelineEvent> combinedEvents = a.Events.Concat(b.Events);
             PipelineBranch merged = PipelineBranch.WithEvents($"{a.Name}+{b.Name}", mergedStore, DataSource.FromPath(Environment.CurrentDirectory), combinedEvents);
 
             List<Vector> vectorsA = a.Store.GetAll().ToList();
@@ -39,7 +39,7 @@ public static class BranchOps
                 }
 
                 // Build temporary store for tie-breaking
-                var temp = new TrackedVectorStore();
+                TrackedVectorStore temp = new TrackedVectorStore();
                 await temp.AddAsync(group.Select(v => new Vector
                 {
                     Id = v.Id,
@@ -49,8 +49,8 @@ public static class BranchOps
                 }));
 
                 IReadOnlyCollection<Document> top = await temp.GetSimilarDocuments(embed, query, amount: topK);
-                var best = top.FirstOrDefault();
-                if (best is not null && best.Metadata.TryGetValue("id", out var idObj) && idObj is string idStr)
+                Document? best = top.FirstOrDefault();
+                if (best is not null && best.Metadata.TryGetValue("id", out object? idObj) && idObj is string idStr)
                 {
                     resolved.Add(group.First(g => g.Id == idStr));
                 }

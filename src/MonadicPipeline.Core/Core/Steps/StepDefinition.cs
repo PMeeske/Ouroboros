@@ -43,10 +43,10 @@ public readonly struct StepDefinition<TIn, TOut>
             throw new ArgumentNullException(nameof(next));
         }
 
-        var current = this.compiled;
+        Step<TIn, TOut> current = this.compiled;
         return new StepDefinition<TIn, TNext>(async input =>
         {
-            var mid = await current(input).ConfigureAwait(false);
+            TOut? mid = await current(input).ConfigureAwait(false);
             return await next(mid).ConfigureAwait(false);
         });
     }

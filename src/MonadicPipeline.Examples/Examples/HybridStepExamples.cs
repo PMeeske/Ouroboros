@@ -16,13 +16,13 @@ public static class HybridStepExamples
     {
         /// <summary>Converts a string to uppercase</summary>
         public static readonly SyncStep<string, string> ToUpper = new((string s) => s.ToUpperInvariant());
-        
+
         /// <summary>Gets the length of a string</summary>
         public static readonly SyncStep<string, int> GetLength = new((string s) => s.Length);
-        
+
         /// <summary>Converts an integer to a string</summary>
         public static readonly SyncStep<int, string> ToStringStep = new((int i) => i.ToString());
-        
+
         /// <summary>Parses a string to an integer</summary>
         public static readonly SyncStep<string, int> ParseInt = new((string s) => int.Parse(s));
 
@@ -66,22 +66,22 @@ public static class HybridStepExamples
         Console.WriteLine("=== Sync Step Composition ===");
 
         // Pure sync composition
-        var syncPipeline = SyncSteps.ToUpper
+        SyncStep<string, string> syncPipeline = SyncSteps.ToUpper
             .Pipe(SyncSteps.GetLength)
             .Pipe(SyncSteps.FormatNumber);
 
-        var result = syncPipeline.Invoke("hello world");
+        string result = syncPipeline.Invoke("hello world");
         Console.WriteLine($"Sync result: {result}");
 
         // Map operation
-        var mappedPipeline = SyncSteps.GetLength.Map(n => n * 2);
-        var mappedResult = mappedPipeline.Invoke("test");
+        SyncStep<string, int> mappedPipeline = SyncSteps.GetLength.Map(n => n * 2);
+        int mappedResult = mappedPipeline.Invoke("test");
         Console.WriteLine($"Mapped result: {mappedResult}");
 
         // Error handling with TrySync
-        var safeParse = SyncSteps.ParseInt.TrySync();
-        var parseResult1 = safeParse.Invoke("42");
-        var parseResult2 = safeParse.Invoke("not-a-number");
+        SyncStep<string, Result<int, Exception>> safeParse = SyncSteps.ParseInt.TrySync();
+        Result<int, Exception> parseResult1 = safeParse.Invoke("42");
+        Result<int, Exception> parseResult2 = safeParse.Invoke("not-a-number");
 
         Console.WriteLine($"Safe parse '42': {parseResult1}");
         Console.WriteLine($"Safe parse 'not-a-number': {parseResult2}");
@@ -96,22 +96,22 @@ public static class HybridStepExamples
         Console.WriteLine("\n=== Hybrid Sync/Async Composition ===");
 
         // Sync step followed by async step
-        var hybridPipeline1 = SyncSteps.ToUpper.Then(AsyncSteps.NetworkCall);
-        var result1 = await hybridPipeline1("hello hybrid");
+        Step<string, string> hybridPipeline1 = SyncSteps.ToUpper.Then(AsyncSteps.NetworkCall);
+        string result1 = await hybridPipeline1("hello hybrid");
         Console.WriteLine($"Sync->Async: {result1}");
 
         // Async step followed by sync step
-        var hybridPipeline2 = AsyncSteps.AsyncToUpper.Then(SyncSteps.GetLength);
-        var result2 = await hybridPipeline2("async to sync");
+        Step<string, int> hybridPipeline2 = AsyncSteps.AsyncToUpper.Then(SyncSteps.GetLength);
+        int result2 = await hybridPipeline2("async to sync");
         Console.WriteLine($"Async->Sync: {result2}");
 
         // Complex hybrid composition
-        var complexPipeline = SyncSteps.ToUpper
+        Step<string, string> complexPipeline = SyncSteps.ToUpper
             .Then(AsyncSteps.NetworkCall)
             .Then(SyncSteps.GetLength)
             .Then(AsyncSteps.AsyncFormat);
 
-        var complexResult = await complexPipeline("complex pipeline");
+        string complexResult = await complexPipeline("complex pipeline");
         Console.WriteLine($"Complex hybrid: {complexResult}");
     }
 
@@ -124,8 +124,8 @@ public static class HybridStepExamples
         Console.WriteLine("\n=== Sync/Async Conversions ===");
 
         // Sync to async conversion
-        var syncAsAsync = SyncSteps.ToUpper.ToAsync();
-        var asyncResult = await syncAsAsync("converted to async");
+        Step<string, string> syncAsAsync = SyncSteps.ToUpper.ToAsync();
+        string asyncResult = await syncAsAsync("converted to async");
         Console.WriteLine($"Sync->Async conversion: {asyncResult}");
 
         // Implicit conversion in composition
@@ -133,7 +133,7 @@ public static class HybridStepExamples
             .Then(AsyncSteps.NetworkCall)
             .Then(SyncSteps.GetLength);  // Composed with sync step
 
-        var implicitResult = await implicitPipeline("implicit conversions");
+        int implicitResult = await implicitPipeline("implicit conversions");
         Console.WriteLine($"Implicit conversion: {implicitResult}");
     }
 
@@ -145,23 +145,23 @@ public static class HybridStepExamples
         Console.WriteLine("\n=== Monadic Sync Operations ===");
 
         // Option-based sync operations
-        var optionPipeline = SyncSteps.ParseInt.TryOption(n => n > 0);
+        SyncStep<string, Option<int>> optionPipeline = SyncSteps.ParseInt.TryOption(n => n > 0);
 
-        var optionResult1 = optionPipeline.Invoke("42");
-        var optionResult2 = optionPipeline.Invoke("-5");
-        var optionResult3 = optionPipeline.Invoke("not-a-number");
+        Option<int> optionResult1 = optionPipeline.Invoke("42");
+        Option<int> optionResult2 = optionPipeline.Invoke("-5");
+        Option<int> optionResult3 = optionPipeline.Invoke("not-a-number");
 
         Console.WriteLine($"Option parse '42': {optionResult1}");
         Console.WriteLine($"Option parse '-5': {optionResult2}");
         Console.WriteLine($"Option parse 'not-a-number': {optionResult3}");
 
         // Result-based error handling
-        var safeParseAndFormat = SyncSteps.ParseInt
+        SyncStep<string, Result<string, Exception>> safeParseAndFormat = SyncSteps.ParseInt
             .TrySync()
             .Map(result => result.Map(n => $"Parsed: {n}"));
 
-        var safeResult1 = safeParseAndFormat.Invoke("123");
-        var safeResult2 = safeParseAndFormat.Invoke("invalid");
+        Result<string, Exception> safeResult1 = safeParseAndFormat.Invoke("123");
+        Result<string, Exception> safeResult2 = safeParseAndFormat.Invoke("invalid");
 
         Console.WriteLine($"Safe result '123': {safeResult1}");
         Console.WriteLine($"Safe result 'invalid': {safeResult2}");
@@ -179,15 +179,15 @@ public static class HybridStepExamples
         var context = new { Prefix = "Context", Multiplier = 3 };
 
         // Sync step that uses context
-        var contextualSync = ContextualStep.LiftPure<string, string, object>(
+        ContextualStep<string, string, object> contextualSync = ContextualStep.LiftPure<string, string, object>(
             s => $"{context.Prefix}: {s}",
             "Applied context prefix");
 
         // Mixed contextual pipeline
-        var contextualPipeline = contextualSync
+        ContextualStep<string, string, object> contextualPipeline = contextualSync
             .Then(ContextualStep.FromPure<string, string, object>(AsyncSteps.NetworkCall, "Network call"));
 
-        var (contextualResult, logs) = await contextualPipeline("contextual input", context);
+        (string contextualResult, List<string> logs) = await contextualPipeline("contextual input", context);
 
         Console.WriteLine($"Contextual result: {contextualResult}");
         Console.WriteLine($"Logs: [{string.Join(", ", logs)}]");

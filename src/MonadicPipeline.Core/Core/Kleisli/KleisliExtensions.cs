@@ -106,7 +106,7 @@ public static class KleisliExtensions
         Action<TB> action)
         => async input =>
         {
-            var result = await arrow(input).ConfigureAwait(false);
+            TB? result = await arrow(input).ConfigureAwait(false);
             action(result);
             return result;
         };
@@ -120,7 +120,7 @@ public static class KleisliExtensions
         Action<TB> action)
         => async input =>
         {
-            var result = await arrow(input).ConfigureAwait(false);
+            TB? result = await arrow(input).ConfigureAwait(false);
             action(result);
             return result;
         };
@@ -135,7 +135,7 @@ public static class KleisliExtensions
         {
             try
             {
-                var result = await arrow(input).ConfigureAwait(false);
+                TB? result = await arrow(input).ConfigureAwait(false);
                 return Result<TB, Exception>.Success(result);
             }
             catch (Exception ex)
@@ -154,7 +154,7 @@ public static class KleisliExtensions
         {
             try
             {
-                var result = await arrow(input).ConfigureAwait(false);
+                TB? result = await arrow(input).ConfigureAwait(false);
                 return Result<TB, Exception>.Success(result);
             }
             catch (Exception ex)
@@ -173,7 +173,7 @@ public static class KleisliExtensions
         KleisliResult<TB, TC, TError> second)
         => async input =>
         {
-            var firstResult = await first(input);
+            Result<TB, TError> firstResult = await first(input);
             return firstResult.IsSuccess
                 ? await second(firstResult.Value)
                 : Result<TC, TError>.Failure(firstResult.Error);
@@ -188,7 +188,7 @@ public static class KleisliExtensions
         Func<TB, TC> func)
         => async input =>
         {
-            var result = await arrow(input);
+            Result<TB, TError> result = await arrow(input);
             return result.IsSuccess
                 ? Result<TC, TError>.Success(func(result.Value))
                 : Result<TC, TError>.Failure(result.Error);
@@ -203,7 +203,7 @@ public static class KleisliExtensions
         Action<TB> action)
         => async input =>
         {
-            var result = await arrow(input);
+            Result<TB, TError> result = await arrow(input);
             if (result.IsSuccess)
             {
                 action(result.Value);
@@ -222,7 +222,7 @@ public static class KleisliExtensions
         KleisliOption<TB, TC> second)
         => async input =>
         {
-            var firstResult = await first(input);
+            Option<TB> firstResult = await first(input);
             return firstResult.HasValue && firstResult.Value is not null
                 ? await second(firstResult.Value)
                 : Option<TC>.None();
@@ -237,7 +237,7 @@ public static class KleisliExtensions
         Func<TB, TC> func)
         => async input =>
         {
-            var result = await arrow(input);
+            Option<TB> result = await arrow(input);
             return result.HasValue && result.Value is not null
                 ? Option<TC>.Some(func(result.Value))
                 : Option<TC>.None();
@@ -253,7 +253,7 @@ public static class KleisliExtensions
         TError error)
         => async input =>
         {
-            var result = await arrow(input);
+            Option<TB> result = await arrow(input);
             return result.HasValue && result.Value is not null
                 ? Result<TB, TError>.Success(result.Value)
                 : Result<TB, TError>.Failure(error);

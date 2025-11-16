@@ -41,7 +41,7 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
         CancellationToken cancellationToken = default)
     {
         // Get all vectors with embeddings
-        var vectorsWithEmbeddings = _all.Where(v => v.Embedding != null).ToList();
+        List<Vector> vectorsWithEmbeddings = _all.Where(v => v.Embedding != null).ToList();
         if (!vectorsWithEmbeddings.Any())
         {
             return Task.FromResult<IReadOnlyCollection<Document>>(new List<Document>().AsReadOnly());
@@ -58,7 +58,7 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
             .Take(amount)
             .ToList();
 
-        var documents = similarities
+        List<Document> documents = similarities
             .Select(s => new Document(s.Vector.Text, s.Vector.Metadata ?? new Dictionary<string, object>()))
             .ToList();
 
@@ -73,7 +73,7 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task ClearAsync(CancellationToken cancellationToken = default)
     {
-        var ids = _all.Select(v => v.Id).ToList();
+        List<string> ids = _all.Select(v => v.Id).ToList();
         if (ids.Any())
         {
             await base.DeleteAsync(ids, cancellationToken).ConfigureAwait(false);
@@ -95,9 +95,9 @@ public sealed class TrackedVectorStore : InMemoryVectorCollection, IVectorStore
         if (a.Length != b.Length)
             return 0f;
 
-        var dotProduct = 0f;
-        var magnitudeA = 0f;
-        var magnitudeB = 0f;
+        float dotProduct = 0f;
+        float magnitudeA = 0f;
+        float magnitudeB = 0f;
 
         for (int i = 0; i < a.Length; i++)
         {

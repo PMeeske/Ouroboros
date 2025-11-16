@@ -19,7 +19,7 @@ public static class ReasoningArrows
     /// </summary>
     private static ReasoningState? GetMostRecentReasoningState(PipelineBranch branch)
     {
-        var reasoningStates = branch.Events
+        List<ReasoningState> reasoningStates = branch.Events
             .OfType<ReasoningStep>()
             .Select(e => e.State)
             .Where(s => s is Draft or FinalSpec)
@@ -70,7 +70,7 @@ public static class ReasoningArrows
                 });
 
                 (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
-                var result = branch.WithReasoning(new Draft(text), prompt, toolCalls);
+                PipelineBranch result = branch.WithReasoning(new Draft(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
             catch (Exception ex)
@@ -131,7 +131,7 @@ public static class ReasoningArrows
                 });
 
                 (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
-                var result = branch.WithReasoning(new Critique(text), prompt, toolCalls);
+                PipelineBranch result = branch.WithReasoning(new Critique(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
             catch (Exception ex)
@@ -199,7 +199,7 @@ public static class ReasoningArrows
                 });
 
                 (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
-                var result = branch.WithReasoning(new FinalSpec(text), prompt, toolCalls);
+                PipelineBranch result = branch.WithReasoning(new FinalSpec(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
             catch (Exception ex)

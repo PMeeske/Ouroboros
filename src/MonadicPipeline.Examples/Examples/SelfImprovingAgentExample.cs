@@ -23,23 +23,23 @@ public static class SelfImprovingAgentExample
         Console.WriteLine("This example demonstrates how the agent automatically learns and reuses skills.\n");
 
         // Setup
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var tools = ToolRegistry.CreateDefault();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        ToolRegistry tools = ToolRegistry.CreateDefault();
 
         // Create enhanced memory store with consolidation
-        var memoryConfig = new PersistentMemoryConfig(
+        PersistentMemoryConfig memoryConfig = new PersistentMemoryConfig(
             ShortTermCapacity: 50,
             LongTermCapacity: 500,
             ConsolidationThreshold: 0.8,
             EnableForgetting: true);
 
-        var memory = new PersistentMemoryStore(config: memoryConfig);
-        var skillRegistry = new SkillRegistry();
-        var skillExtractor = new SkillExtractor(chatModel, skillRegistry);
+        PersistentMemoryStore memory = new PersistentMemoryStore(config: memoryConfig);
+        SkillRegistry skillRegistry = new SkillRegistry();
+        SkillExtractor skillExtractor = new SkillExtractor(chatModel, skillRegistry);
 
         // Build Meta-AI orchestrator with skill extraction
-        var orchestrator = MetaAIBuilder.CreateDefault()
+        MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
             .WithLLM(chatModel)
             .WithTools(tools)
             .WithMemoryStore(memory)
@@ -78,19 +78,19 @@ public static class SelfImprovingAgentExample
     {
         Console.WriteLine("=== Custom Skill Extraction Configuration ===\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var skillRegistry = new SkillRegistry();
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        SkillRegistry skillRegistry = new SkillRegistry();
 
         // Custom extraction configuration
-        var extractionConfig = new SkillExtractionConfig(
+        SkillExtractionConfig extractionConfig = new SkillExtractionConfig(
             MinQualityThreshold: 0.75,      // Lower threshold for more skills
             MinStepsForExtraction: 2,        // Require at least 2 steps
             MaxStepsPerSkill: 8,             // Allow more complex skills
             EnableAutoParameterization: true,
             EnableSkillVersioning: true);
 
-        var skillExtractor = new SkillExtractor(chatModel, skillRegistry);
+        SkillExtractor skillExtractor = new SkillExtractor(chatModel, skillRegistry);
 
         Console.WriteLine("Configuration:");
         Console.WriteLine($"  Min Quality: {extractionConfig.MinQualityThreshold:P0}");
@@ -99,7 +99,7 @@ public static class SelfImprovingAgentExample
         Console.WriteLine($"  Auto Parameterization: {extractionConfig.EnableAutoParameterization}");
 
         // Create mock execution for demonstration
-        var plan = new Plan(
+        Plan plan = new Plan(
             "Multi-step analysis task",
             new List<PlanStep>
             {
@@ -110,7 +110,7 @@ public static class SelfImprovingAgentExample
             new Dictionary<string, double> { ["overall"] = 0.85 },
             DateTime.UtcNow);
 
-        var execution = new ExecutionResult(
+        ExecutionResult execution = new ExecutionResult(
             plan,
             plan.Steps.Select(s => new StepResult(s, true, "success", null, TimeSpan.FromMilliseconds(100), new())).ToList(),
             true,
@@ -118,7 +118,7 @@ public static class SelfImprovingAgentExample
             new(),
             TimeSpan.FromMilliseconds(300));
 
-        var verification = new VerificationResult(
+        VerificationResult verification = new VerificationResult(
             execution,
             Verified: true,
             QualityScore: 0.85,
@@ -127,7 +127,7 @@ public static class SelfImprovingAgentExample
             RevisedPlan: null);
 
         // Extract skill with custom config
-        var result = await skillExtractor.ExtractSkillAsync(execution, verification, extractionConfig);
+        Result<Skill, string> result = await skillExtractor.ExtractSkillAsync(execution, verification, extractionConfig);
 
         result.Match(
             skill =>
@@ -149,7 +149,7 @@ public static class SelfImprovingAgentExample
     {
         Console.WriteLine("=== Memory Management Demo ===\n");
 
-        var config = new PersistentMemoryConfig(
+        PersistentMemoryConfig config = new PersistentMemoryConfig(
             ShortTermCapacity: 10,
             LongTermCapacity: 50,
             ConsolidationThreshold: 0.7,
@@ -157,7 +157,7 @@ public static class SelfImprovingAgentExample
             EnableForgetting: true,
             ForgettingThreshold: 0.4);
 
-        var memory = new PersistentMemoryStore(config: config);
+        PersistentMemoryStore memory = new PersistentMemoryStore(config: config);
 
         Console.WriteLine("Memory Configuration:");
         Console.WriteLine($"  Short-term capacity: {config.ShortTermCapacity}");
@@ -169,8 +169,8 @@ public static class SelfImprovingAgentExample
         Console.WriteLine("Storing experiences with varying quality...");
         for (int i = 0; i < 20; i++)
         {
-            var quality = i % 3 == 0 ? 0.3 : (i % 3 == 1 ? 0.75 : 0.95);
-            var experience = CreateExperience($"Task {i}", quality);
+            double quality = i % 3 == 0 ? 0.3 : (i % 3 == 1 ? 0.75 : 0.95);
+            Experience experience = CreateExperience($"Task {i}", quality);
             await memory.StoreExperienceAsync(experience);
 
             if (i % 5 == 0)
@@ -185,15 +185,15 @@ public static class SelfImprovingAgentExample
         Console.WriteLine("Waiting for memory consolidation...");
         await Task.Delay(6000);
 
-        var stats = await memory.GetStatisticsAsync();
+        MemoryStatistics stats = await memory.GetStatisticsAsync();
         Console.WriteLine($"\n✓ Memory Statistics:");
         Console.WriteLine($"  Total experiences: {stats.TotalExperiences}");
         Console.WriteLine($"  Successful: {stats.SuccessfulExecutions}");
         Console.WriteLine($"  Failed: {stats.FailedExecutions}");
         Console.WriteLine($"  Average quality: {stats.AverageQualityScore:P0}");
 
-        var episodic = memory.GetExperiencesByType(MemoryType.Episodic);
-        var semantic = memory.GetExperiencesByType(MemoryType.Semantic);
+        List<Experience> episodic = memory.GetExperiencesByType(MemoryType.Episodic);
+        List<Experience> semantic = memory.GetExperiencesByType(MemoryType.Semantic);
 
         Console.WriteLine($"\n✓ Memory Organization:");
         Console.WriteLine($"  Episodic (short-term): {episodic.Count}");
@@ -218,36 +218,36 @@ public static class SelfImprovingAgentExample
         try
         {
             // Plan
-            var planResult = await orchestrator.PlanAsync(goal);
+            Result<Plan, string> planResult = await orchestrator.PlanAsync(goal);
             if (!planResult.IsSuccess)
             {
                 Console.WriteLine($"✗ Planning failed: {planResult.Error}");
                 return;
             }
 
-            var plan = planResult.Value;
+            Plan plan = planResult.Value;
             Console.WriteLine($"✓ Plan created with {plan.Steps.Count} steps");
 
             // Execute
-            var execResult = await orchestrator.ExecuteAsync(plan);
+            Result<ExecutionResult, string> execResult = await orchestrator.ExecuteAsync(plan);
             if (!execResult.IsSuccess)
             {
                 Console.WriteLine($"✗ Execution failed: {execResult.Error}");
                 return;
             }
 
-            var execution = execResult.Value;
+            ExecutionResult execution = execResult.Value;
             Console.WriteLine($"✓ Execution completed: {execution.FinalOutput}");
 
             // Verify
-            var verifyResult = await orchestrator.VerifyAsync(execution);
+            Result<VerificationResult, string> verifyResult = await orchestrator.VerifyAsync(execution);
             if (!verifyResult.IsSuccess)
             {
                 Console.WriteLine($"✗ Verification failed: {verifyResult.Error}");
                 return;
             }
 
-            var verification = verifyResult.Value;
+            VerificationResult verification = verifyResult.Value;
             Console.WriteLine($"✓ Verification: {(verification.Verified ? "PASSED" : "FAILED")} (Quality: {verification.QualityScore:P0})");
 
             // Learn
@@ -265,7 +265,7 @@ public static class SelfImprovingAgentExample
     /// </summary>
     private static void DisplayLearnedSkills(ISkillRegistry skillRegistry)
     {
-        var skills = skillRegistry.GetAllSkills();
+        IReadOnlyList<Skill> skills = skillRegistry.GetAllSkills();
 
         if (skills.Count == 0)
         {
@@ -275,7 +275,7 @@ public static class SelfImprovingAgentExample
 
         Console.WriteLine($"Total skills learned: {skills.Count}\n");
 
-        foreach (var skill in skills.Take(10))
+        foreach (Skill? skill in skills.Take(10))
         {
             Console.WriteLine($"Skill: {skill.Name}");
             Console.WriteLine($"  Description: {skill.Description}");
@@ -292,7 +292,7 @@ public static class SelfImprovingAgentExample
     /// </summary>
     private static async Task DisplayMemoryStats(IMemoryStore memory)
     {
-        var stats = await memory.GetStatisticsAsync();
+        MemoryStatistics stats = await memory.GetStatisticsAsync();
 
         Console.WriteLine($"Total Experiences: {stats.TotalExperiences}");
         Console.WriteLine($"Successful: {stats.SuccessfulExecutions}");
@@ -302,7 +302,7 @@ public static class SelfImprovingAgentExample
         if (stats.GoalCounts.Any())
         {
             Console.WriteLine("\nTop Goals by Frequency:");
-            foreach (var (goal, count) in stats.GoalCounts.OrderByDescending(kv => kv.Value).Take(5))
+            foreach ((string goal, int count) in stats.GoalCounts.OrderByDescending(kv => kv.Value).Take(5))
             {
                 Console.WriteLine($"  {goal}: {count} times");
             }
@@ -314,13 +314,13 @@ public static class SelfImprovingAgentExample
     /// </summary>
     private static Experience CreateExperience(string goal, double quality)
     {
-        var plan = new Plan(
+        Plan plan = new Plan(
             goal,
             new List<PlanStep> { new PlanStep("action", new(), "outcome", 0.8) },
             new Dictionary<string, double>(),
             DateTime.UtcNow);
 
-        var execution = new ExecutionResult(
+        ExecutionResult execution = new ExecutionResult(
             plan,
             new List<StepResult> { new StepResult(plan.Steps[0], true, "result", null, TimeSpan.FromMilliseconds(10), new()) },
             true,
@@ -328,7 +328,7 @@ public static class SelfImprovingAgentExample
             new(),
             TimeSpan.FromMilliseconds(10));
 
-        var verification = new VerificationResult(
+        VerificationResult verification = new VerificationResult(
             execution,
             quality > 0.5,
             quality,

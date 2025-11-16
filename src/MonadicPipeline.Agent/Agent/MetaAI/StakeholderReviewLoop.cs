@@ -198,7 +198,7 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
         List<string> requiredReviewers,
         CancellationToken ct = default)
     {
-        var pr = new PullRequest(
+        PullRequest pr = new PullRequest(
             Guid.NewGuid().ToString(),
             title,
             description,
@@ -255,19 +255,19 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
         if (!_comments.ContainsKey(prId))
             return Task.FromResult(Result<bool, string>.Failure("PR not found"));
 
-        var comment = _comments[prId].FirstOrDefault(c => c.CommentId == commentId);
+        ReviewComment? comment = _comments[prId].FirstOrDefault(c => c.CommentId == commentId);
         if (comment == null)
             return Task.FromResult(Result<bool, string>.Failure("Comment not found"));
 
         // Remove old comment and add resolved version
-        var updatedComment = comment with
+        ReviewComment updatedComment = comment with
         {
             Status = ReviewCommentStatus.Resolved,
             ResolvedAt = DateTime.UtcNow
         };
 
-        var comments = _comments[prId];
-        var index = comments.IndexOf(comment);
+        List<ReviewComment> comments = _comments[prId];
+        int index = comments.IndexOf(comment);
         if (index >= 0)
         {
             comments[index] = updatedComment;
@@ -294,13 +294,13 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
         if (!_reviews.ContainsKey(prId)) return;
 
         // Remove any existing review from this reviewer (they can update their review)
-        var existingReview = _reviews[prId].FirstOrDefault(r => r.ReviewerId == reviewerId);
+        ReviewDecision? existingReview = _reviews[prId].FirstOrDefault(r => r.ReviewerId == reviewerId);
         if (existingReview != null)
         {
             _reviews[prId].Remove(existingReview);
         }
 
-        var review = new ReviewDecision(
+        ReviewDecision review = new ReviewDecision(
             reviewerId,
             approved,
             feedback,
@@ -314,7 +314,7 @@ public sealed class MockReviewSystemProvider : IReviewSystemProvider
     {
         if (!_comments.ContainsKey(prId)) return;
 
-        var comment = new ReviewComment(
+        ReviewComment comment = new ReviewComment(
             Guid.NewGuid().ToString(),
             reviewerId,
             content,
@@ -353,22 +353,22 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
             ReviewTimeout: TimeSpan.FromHours(24),
             PollingInterval: TimeSpan.FromMinutes(5));
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
+        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
             // Step 1: Open PR
-            var prResult = await _reviewSystem.OpenPullRequestAsync(
+            Result<PullRequest, string> prResult = await _reviewSystem.OpenPullRequestAsync(
                 title, description, draftSpec, requiredReviewers, ct);
 
             if (!prResult.IsSuccess)
                 return Result<StakeholderReviewResult, string>.Failure(
                     $"Failed to open PR: {prResult.Error}");
 
-            var pr = prResult.Value;
+            PullRequest pr = prResult.Value;
 
             // Step 2: Request reviewers
-            var requestResult = await _reviewSystem.RequestReviewersAsync(
+            Result<bool, string> requestResult = await _reviewSystem.RequestReviewersAsync(
                 pr.Id, requiredReviewers, ct);
 
             if (!requestResult.IsSuccess)
@@ -376,36 +376,36 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
                     $"Failed to request reviewers: {requestResult.Error}");
 
             // Step 3: Monitor review progress
-            var monitorResult = await MonitorReviewProgressAsync(pr.Id, config, ct);
+            Result<ReviewState, string> monitorResult = await MonitorReviewProgressAsync(pr.Id, config, ct);
 
             if (!monitorResult.IsSuccess)
                 return Result<StakeholderReviewResult, string>.Failure(
                     $"Review monitoring failed: {monitorResult.Error}");
 
-            var finalState = monitorResult.Value;
+            ReviewState finalState = monitorResult.Value;
 
             // Step 4: Check if all required approvals are obtained
-            var allApproved = CheckAllApproved(finalState, config);
+            bool allApproved = CheckAllApproved(finalState, config);
 
             if (!allApproved)
                 return Result<StakeholderReviewResult, string>.Failure(
                     "Not all required approvals obtained");
 
             // Step 5: Resolve remaining comments
-            var openComments = finalState.AllComments
+            List<ReviewComment> openComments = finalState.AllComments
                 .Where(c => c.Status == ReviewCommentStatus.Open)
                 .ToList();
 
             if (openComments.Any())
             {
-                var resolveResult = await ResolveCommentsAsync(pr.Id, openComments, ct);
+                Result<int, string> resolveResult = await ResolveCommentsAsync(pr.Id, openComments, ct);
                 if (!resolveResult.IsSuccess && !config.AutoResolveNonBlockingComments)
                     return Result<StakeholderReviewResult, string>.Failure(
                         $"Comment resolution failed: {resolveResult.Error}");
             }
 
             // Step 6: Merge PR
-            var mergeResult = await _reviewSystem.MergePullRequestAsync(
+            Result<bool, string> mergeResult = await _reviewSystem.MergePullRequestAsync(
                 pr.Id,
                 $"Merge approved by all reviewers: {string.Join(", ", requiredReviewers)}",
                 ct);
@@ -416,7 +416,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
 
             sw.Stop();
 
-            var result = new StakeholderReviewResult(
+            StakeholderReviewResult result = new StakeholderReviewResult(
                 finalState with { Status = ReviewStatus.Merged },
                 true,
                 requiredReviewers.Count,
@@ -445,12 +445,12 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
     {
         config ??= new StakeholderReviewConfig();
 
-        var startTime = DateTime.UtcNow;
-        var timeout = config.ReviewTimeout == default
+        DateTime startTime = DateTime.UtcNow;
+        TimeSpan timeout = config.ReviewTimeout == default
             ? TimeSpan.FromHours(24)
             : config.ReviewTimeout;
 
-        var pollingInterval = config.PollingInterval == default
+        TimeSpan pollingInterval = config.PollingInterval == default
             ? TimeSpan.FromMinutes(5)
             : config.PollingInterval;
 
@@ -463,24 +463,24 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
                     return Result<ReviewState, string>.Failure("Review timeout exceeded");
 
                 // Get current review decisions
-                var reviewsResult = await _reviewSystem.GetReviewDecisionsAsync(prId, ct);
+                Result<List<ReviewDecision>, string> reviewsResult = await _reviewSystem.GetReviewDecisionsAsync(prId, ct);
                 if (!reviewsResult.IsSuccess)
                     return Result<ReviewState, string>.Failure(
                         $"Failed to get reviews: {reviewsResult.Error}");
 
-                var reviews = reviewsResult.Value;
+                List<ReviewDecision> reviews = reviewsResult.Value;
 
                 // Get all comments
-                var commentsResult = await _reviewSystem.GetCommentsAsync(prId, ct);
+                Result<List<ReviewComment>, string> commentsResult = await _reviewSystem.GetCommentsAsync(prId, ct);
                 if (!commentsResult.IsSuccess)
                     return Result<ReviewState, string>.Failure(
                         $"Failed to get comments: {commentsResult.Error}");
 
-                var comments = commentsResult.Value;
+                List<ReviewComment> comments = commentsResult.Value;
 
                 // Build current state
-                var status = DetermineReviewStatus(reviews, comments, config);
-                var reviewState = new ReviewState(
+                ReviewStatus status = DetermineReviewStatus(reviews, comments, config);
+                ReviewState reviewState = new ReviewState(
                     new PullRequest(prId, "", "", "", new List<string>(), DateTime.UtcNow),
                     reviews,
                     comments,
@@ -517,14 +517,14 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
             int resolvedCount = 0;
 
             // Create a copy to avoid modification during enumeration
-            var openComments = comments.Where(c => c.Status == ReviewCommentStatus.Open).ToList();
+            List<ReviewComment> openComments = comments.Where(c => c.Status == ReviewCommentStatus.Open).ToList();
 
-            foreach (var comment in openComments)
+            foreach (ReviewComment? comment in openComments)
             {
                 // Generate resolution based on comment content
-                var resolution = GenerateResolution(comment.Content);
+                string resolution = GenerateResolution(comment.Content);
 
-                var resolveResult = await _reviewSystem.ResolveCommentAsync(
+                Result<bool, string> resolveResult = await _reviewSystem.ResolveCommentAsync(
                     prId, comment.CommentId, resolution, ct);
 
                 if (resolveResult.IsSuccess)
@@ -542,7 +542,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
 
     private bool CheckAllApproved(ReviewState state, StakeholderReviewConfig config)
     {
-        var approvedCount = state.Reviews.Count(r => r.Approved);
+        int approvedCount = state.Reviews.Count(r => r.Approved);
 
         if (config.RequireAllReviewersApprove)
         {
@@ -564,9 +564,9 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
         if (!reviews.Any())
             return ReviewStatus.AwaitingReview;
 
-        var hasOpenComments = comments.Any(c => c.Status == ReviewCommentStatus.Open);
-        var allApproved = reviews.All(r => r.Approved);
-        var hasRejections = reviews.Any(r => !r.Approved);
+        bool hasOpenComments = comments.Any(c => c.Status == ReviewCommentStatus.Open);
+        bool allApproved = reviews.All(r => r.Approved);
+        bool hasRejections = reviews.Any(r => !r.Approved);
 
         if (hasRejections || hasOpenComments)
             return ReviewStatus.ChangesRequested;

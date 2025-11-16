@@ -23,10 +23,10 @@ public static class OrchestratorToolExtensions
             tool.Description,
             async (input, ct) =>
             {
-                var sw = System.Diagnostics.Stopwatch.StartNew();
+                System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {
-                    var result = await tool.InvokeAsync(input, ct);
+                    Result<string, string> result = await tool.InvokeAsync(input, ct);
                     sw.Stop();
                     metricsCallback(tool.Name, sw.Elapsed.TotalMilliseconds, result.IsSuccess);
                     return result;
@@ -58,7 +58,7 @@ public static class OrchestratorToolExtensions
             {
                 try
                 {
-                    var selected = selector(input);
+                    ITool? selected = selector(input);
                     if (selected is null)
                     {
                         return Result<string, string>.Failure(
@@ -92,10 +92,10 @@ public static class OrchestratorToolExtensions
             {
                 try
                 {
-                    var tasks = tools.Select(t => t.InvokeAsync(input, ct)).ToArray();
-                    var results = await Task.WhenAll(tasks);
+                    Task<Result<string, string>>[] tasks = tools.Select(t => t.InvokeAsync(input, ct)).ToArray();
+                    Result<string, string>[] results = await Task.WhenAll(tasks);
 
-                    var successes = results
+                    string[] successes = results
                         .Where(r => r.IsSuccess)
                         .Select(r => r.Match(s => s, _ => string.Empty))
                         .ToArray();
@@ -106,7 +106,7 @@ public static class OrchestratorToolExtensions
                             "All parallel tool executions failed");
                     }
 
-                    var combined = combiner(successes);
+                    string combined = combiner(successes);
                     return Result<string, string>.Success(combined);
                 }
                 catch (Exception ex)
@@ -166,17 +166,17 @@ public static class OrchestratorToolExtensions
         this ITool tool,
         TimeSpan cacheDuration)
     {
-        var cache = new System.Collections.Concurrent.ConcurrentDictionary<string, (DateTime, string)>();
+        System.Collections.Concurrent.ConcurrentDictionary<string, (DateTime, string)> cache = new System.Collections.Concurrent.ConcurrentDictionary<string, (DateTime, string)>();
 
         return new DelegateTool(
             tool.Name,
             tool.Description,
             async (input, ct) =>
             {
-                var now = DateTime.UtcNow;
+                DateTime now = DateTime.UtcNow;
 
                 // Check cache
-                if (cache.TryGetValue(input, out var cached))
+                if (cache.TryGetValue(input, out (DateTime, string) cached))
                 {
                     if (now - cached.Item1 < cacheDuration)
                     {
@@ -188,7 +188,7 @@ public static class OrchestratorToolExtensions
                 }
 
                 // Execute tool
-                var result = await tool.InvokeAsync(input, ct);
+                Result<string, string> result = await tool.InvokeAsync(input, ct);
 
                 // Cache successful results
                 if (result.IsSuccess)
@@ -216,7 +216,7 @@ public static class OrchestratorToolExtensions
             tool.Description,
             async (input, ct) =>
             {
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 cts.CancelAfter(timeout);
 
                 try
@@ -245,7 +245,7 @@ public static class OrchestratorToolExtensions
             primary.Description,
             async (input, ct) =>
             {
-                var result = await primary.InvokeAsync(input, ct);
+                Result<string, string> result = await primary.InvokeAsync(input, ct);
 
                 if (result.IsSuccess)
                 {
@@ -290,7 +290,7 @@ public static class AdvancedToolBuilder
             description,
             async (input, ct) =>
             {
-                foreach (var (predicate, tool) in cases)
+                foreach ((Func<string, bool> predicate, ITool tool) in cases)
                 {
                     if (predicate(input))
                     {
@@ -318,11 +318,11 @@ public static class AdvancedToolBuilder
             description,
             async (input, ct) =>
             {
-                var results = new List<string>();
+                List<string> results = new List<string>();
 
-                foreach (var tool in tools)
+                foreach (ITool tool in tools)
                 {
-                    var result = await tool.InvokeAsync(input, ct);
+                    Result<string, string> result = await tool.InvokeAsync(input, ct);
                     result.Match(
                         success => results.Add(success),
                         failure => { /* Skip failed tools */ });
@@ -336,7 +336,7 @@ public static class AdvancedToolBuilder
 
                 try
                 {
-                    var aggregated = aggregator(results);
+                    string aggregated = aggregator(results);
                     return Result<string, string>.Success(aggregated);
                 }
                 catch (Exception ex)

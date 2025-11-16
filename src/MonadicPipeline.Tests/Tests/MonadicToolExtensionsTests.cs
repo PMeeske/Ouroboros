@@ -29,6 +29,7 @@ public class MonadicToolExtensionsTests
                 _ = ct;
                 var result = Result<string, string>.Success($"[{value}]");
                 capturedResult = result;
+                await Task.CompletedTask;
                 return result;
             });
 

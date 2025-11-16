@@ -25,15 +25,15 @@ public static class MetaAiPipelineExample
         Console.WriteLine("The LLM can invoke pipeline operations to enhance its reasoning.\n");
 
         // Setup
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        OllamaEmbeddingAdapter embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
 
-        var tools = new ToolRegistry();
-        var store = new TrackedVectorStore();
-        var branch = new PipelineBranch("meta-ai", store, DataSource.FromPath(Environment.CurrentDirectory));
+        ToolRegistry tools = new ToolRegistry();
+        TrackedVectorStore store = new TrackedVectorStore();
+        PipelineBranch branch = new PipelineBranch("meta-ai", store, DataSource.FromPath(Environment.CurrentDirectory));
 
-        var state = new CliPipelineState
+        CliPipelineState state = new CliPipelineState
         {
             Branch = branch,
             Llm = null!, // Will be set after tools
@@ -49,14 +49,14 @@ public static class MetaAiPipelineExample
         Console.WriteLine($"✓ Registered {tools.Count} tools\n");
 
         // Create LLM with tool awareness
-        var llm = new ToolAwareChatModel(chatModel, tools);
+        ToolAwareChatModel llm = new ToolAwareChatModel(chatModel, tools);
         state.Llm = llm;
         state.Tools = tools;
 
         // List some available pipeline tools
         Console.WriteLine("Available pipeline tools:");
-        var pipelineTools = tools.All.Where(t => t.Name.StartsWith("run_")).Take(10);
-        foreach (var tool in pipelineTools)
+        IEnumerable<ITool> pipelineTools = tools.All.Where(t => t.Name.StartsWith("run_")).Take(10);
+        foreach (ITool? tool in pipelineTools)
         {
             Console.WriteLine($"  - {tool.Name}: {tool.Description}");
         }
@@ -64,7 +64,7 @@ public static class MetaAiPipelineExample
         Console.WriteLine();
 
         // Create a meta-AI prompt
-        var prompt = @"You are a self-aware AI pipeline with access to your own execution tools.
+        string prompt = @"You are a self-aware AI pipeline with access to your own execution tools.
 
 Available pipeline operations you can invoke:
 - run_usedraft: Generate an initial draft response
@@ -87,7 +87,7 @@ Think step-by-step:
 
         try
         {
-            var (response, toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+            (string response, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
 
             Console.WriteLine("=== LLM Response ===");
             Console.WriteLine(response);
@@ -96,7 +96,7 @@ Think step-by-step:
             if (toolCalls.Any())
             {
                 Console.WriteLine($"✓ The LLM invoked {toolCalls.Count} pipeline tools:");
-                foreach (var call in toolCalls)
+                foreach (ToolExecution call in toolCalls)
                 {
                     Console.WriteLine($"\n  Tool: {call.ToolName}");
                     Console.WriteLine($"  Args: {call.Arguments}");
@@ -136,15 +136,15 @@ Think step-by-step:
         Console.WriteLine("This example shows how to give the LLM access to only specific pipeline tools.");
         Console.WriteLine("This provides controlled meta-AI capabilities.\n");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        OllamaProvider provider = new OllamaProvider();
+        OllamaChatAdapter chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        OllamaEmbeddingAdapter embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
 
-        var tools = new ToolRegistry();
-        var store = new TrackedVectorStore();
-        var branch = new PipelineBranch("selective-meta-ai", store, DataSource.FromPath(Environment.CurrentDirectory));
+        ToolRegistry tools = new ToolRegistry();
+        TrackedVectorStore store = new TrackedVectorStore();
+        PipelineBranch branch = new PipelineBranch("selective-meta-ai", store, DataSource.FromPath(Environment.CurrentDirectory));
 
-        var state = new CliPipelineState
+        CliPipelineState state = new CliPipelineState
         {
             Branch = branch,
             Llm = null!,
@@ -155,16 +155,16 @@ Think step-by-step:
         };
 
         // Register only specific pipeline steps as tools
-        var allowedSteps = new[] { "UseDraft", "UseCritique", "UseImprove" };
+        string[] allowedSteps = new[] { "UseDraft", "UseCritique", "UseImprove" };
         Console.WriteLine($"Registering only specific tools: {string.Join(", ", allowedSteps)}");
         tools = tools.WithPipelineSteps(state, allowedSteps);
         Console.WriteLine($"✓ Registered {tools.Count} tools (limited set)\n");
 
-        var llm = new ToolAwareChatModel(chatModel, tools);
+        ToolAwareChatModel llm = new ToolAwareChatModel(chatModel, tools);
         state.Llm = llm;
         state.Tools = tools;
 
-        var prompt = @"You have access to a limited set of pipeline refinement tools:
+        string prompt = @"You have access to a limited set of pipeline refinement tools:
 - run_usedraft: Create initial draft
 - run_usecritique: Analyze and critique
 - run_useimprove: Enhance based on critique
@@ -175,7 +175,7 @@ Explain how you would use these tools to create a high-quality response to: 'Wha
 
         try
         {
-            var (response, toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+            (string response, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
 
             Console.WriteLine("=== Response ===");
             Console.WriteLine(response);

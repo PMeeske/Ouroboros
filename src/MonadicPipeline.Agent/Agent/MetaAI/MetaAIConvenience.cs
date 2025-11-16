@@ -21,7 +21,7 @@ public static class MetaAIConvenience
     {
         try
         {
-            var orchestrator = MetaAIBuilder.CreateDefault()
+            MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
                 .WithLLM(llm)
                 .WithConfidenceThreshold(0.5)
                 .Build();
@@ -45,9 +45,9 @@ public static class MetaAIConvenience
     {
         try
         {
-            var vectorStore = new TrackedVectorStore();
+            TrackedVectorStore vectorStore = new TrackedVectorStore();
 
-            var orchestrator = MetaAIBuilder.CreateDefault()
+            MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
                 .WithLLM(llm)
                 .WithTools(tools)
                 .WithEmbedding(embedding)
@@ -76,7 +76,7 @@ public static class MetaAIConvenience
     {
         try
         {
-            var orchestrator = MetaAIBuilder.CreateDefault()
+            MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
                 .WithLLM(llm)
                 .WithTools(tools)
                 .WithEmbedding(embedding)
@@ -102,12 +102,12 @@ public static class MetaAIConvenience
         Dictionary<string, object>? context = null)
     {
         // Plan
-        var planResult = await orchestrator.PlanAsync(question, context);
+        Result<Plan, string> planResult = await orchestrator.PlanAsync(question, context);
         if (!planResult.IsSuccess)
             return Result<string, string>.Failure(planResult.Error);
 
         // Execute
-        var execResult = await orchestrator.ExecuteAsync(planResult.Value);
+        Result<ExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value);
         if (!execResult.IsSuccess)
             return Result<string, string>.Failure(execResult.Error);
 
@@ -123,25 +123,25 @@ public static class MetaAIConvenience
         string text,
         string analysisGoal = "Analyze the following text")
     {
-        var context = new Dictionary<string, object> { ["text"] = text };
+        Dictionary<string, object> context = new Dictionary<string, object> { ["text"] = text };
 
         // Plan
-        var planResult = await orchestrator.PlanAsync(analysisGoal, context);
+        Result<Plan, string> planResult = await orchestrator.PlanAsync(analysisGoal, context);
         if (!planResult.IsSuccess)
             return Result<(string, double), string>.Failure(planResult.Error);
 
         // Execute
-        var execResult = await orchestrator.ExecuteAsync(planResult.Value);
+        Result<ExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value);
         if (!execResult.IsSuccess)
             return Result<(string, double), string>.Failure(execResult.Error);
 
         // Verify
-        var verifyResult = await orchestrator.VerifyAsync(execResult.Value);
+        Result<VerificationResult, string> verifyResult = await orchestrator.VerifyAsync(execResult.Value);
         if (!verifyResult.IsSuccess)
             return Result<(string, double), string>.Failure(verifyResult.Error);
 
-        var output = execResult.Value.FinalOutput ?? "No analysis generated";
-        var quality = verifyResult.Value.QualityScore;
+        string output = execResult.Value.FinalOutput ?? "No analysis generated";
+        double quality = verifyResult.Value.QualityScore;
 
         return Result<(string, double), string>.Success((output, quality));
     }
@@ -154,8 +154,8 @@ public static class MetaAIConvenience
         string description,
         string language = "C#")
     {
-        var goal = $"Generate {language} code that: {description}";
-        var context = new Dictionary<string, object>
+        string goal = $"Generate {language} code that: {description}";
+        Dictionary<string, object> context = new Dictionary<string, object>
         {
             ["language"] = language,
             ["description"] = description
@@ -174,17 +174,17 @@ public static class MetaAIConvenience
         bool autoLearn = true)
     {
         // Plan
-        var planResult = await orchestrator.PlanAsync(goal, context);
+        Result<Plan, string> planResult = await orchestrator.PlanAsync(goal, context);
         if (!planResult.IsSuccess)
             return Result<VerificationResult, string>.Failure(planResult.Error);
 
         // Execute
-        var execResult = await orchestrator.ExecuteAsync(planResult.Value);
+        Result<ExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value);
         if (!execResult.IsSuccess)
             return Result<VerificationResult, string>.Failure(execResult.Error);
 
         // Verify
-        var verifyResult = await orchestrator.VerifyAsync(execResult.Value);
+        Result<VerificationResult, string> verifyResult = await orchestrator.VerifyAsync(execResult.Value);
         if (!verifyResult.IsSuccess)
             return Result<VerificationResult, string>.Failure(verifyResult.Error);
 
@@ -205,11 +205,11 @@ public static class MetaAIConvenience
         IEnumerable<string> tasks,
         Dictionary<string, object>? sharedContext = null)
     {
-        var results = new List<Result<string, string>>();
+        List<Result<string, string>> results = new List<Result<string, string>>();
 
-        foreach (var task in tasks)
+        foreach (string task in tasks)
         {
-            var result = await orchestrator.AskQuestion(task, sharedContext);
+            Result<string, string> result = await orchestrator.AskQuestion(task, sharedContext);
             results.Add(result);
         }
 
@@ -226,7 +226,7 @@ public static class MetaAIConvenience
     {
         try
         {
-            var orchestrator = MetaAIBuilder.CreateDefault()
+            MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
                 .WithLLM(llm)
                 .WithTools(tools)
                 .WithEmbedding(embedding)
@@ -251,7 +251,7 @@ public static class MetaAIConvenience
     {
         try
         {
-            var orchestrator = MetaAIBuilder.CreateDefault()
+            MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
                 .WithLLM(llm)
                 .WithTools(tools)
                 .WithConfidenceThreshold(0.8)
@@ -274,9 +274,9 @@ public static class MetaAIConvenience
     {
         try
         {
-            var tools = new ToolRegistry();
+            ToolRegistry tools = new ToolRegistry();
 
-            var orchestrator = MetaAIBuilder.CreateDefault()
+            MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
                 .WithLLM(llm)
                 .WithTools(tools)
                 .WithConfidenceThreshold(0.6)

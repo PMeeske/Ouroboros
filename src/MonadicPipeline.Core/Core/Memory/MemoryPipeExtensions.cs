@@ -25,7 +25,7 @@ public static class MemoryPipeExtensions
     {
         return async context =>
         {
-            var result = await step(context.Data);
+            TOut? result = await step(context.Data);
             return context.WithData(result);
         };
     }
@@ -47,7 +47,7 @@ public static class MemoryPipeExtensions
         this T initialData,
         ConversationMemory? memory = null)
     {
-        var context = initialData.WithMemory(memory);
+        MemoryContext<T> context = initialData.WithMemory(memory);
         return new ConversationChainBuilder<T>(context);
     }
 
@@ -132,10 +132,10 @@ public class ConversationChainBuilder<T>
     /// </summary>
     public async Task<MemoryContext<object>> RunAsync()
     {
-        var initialData = _initialContext.Data ?? (object)string.Empty;
-        var context = _initialContext.WithData<object>(initialData);
+        object initialData = _initialContext.Data ?? (object)string.Empty;
+        MemoryContext<object> context = _initialContext.WithData<object>(initialData);
 
-        foreach (var step in _steps)
+        foreach (Step<MemoryContext<object>, MemoryContext<object>> step in _steps)
         {
             context = await step(context);
         }
@@ -148,7 +148,7 @@ public class ConversationChainBuilder<T>
     /// </summary>
     public async Task<TResult?> RunAsync<TResult>(string propertyKey)
     {
-        var result = await RunAsync();
+        MemoryContext<object> result = await RunAsync();
         return result.GetProperty<TResult>(propertyKey);
     }
 }

@@ -126,7 +126,7 @@ public class RoleBasedAuthorizationProvider : IAuthorizationProvider
         lock (this.@lock)
         {
             // Check if tool has role requirements
-            if (!this.toolRoleRequirements.TryGetValue(toolName, out var requiredRoles))
+            if (!this.toolRoleRequirements.TryGetValue(toolName, out HashSet<string>? requiredRoles))
             {
                 // No requirements means anyone can execute
                 return Task.FromResult(AuthorizationResult.Allow());
@@ -155,9 +155,9 @@ public class RoleBasedAuthorizationProvider : IAuthorizationProvider
         lock (this.@lock)
         {
             // Check if any of the principal's roles have the permission
-            foreach (var role in principal.Roles)
+            foreach (string role in principal.Roles)
             {
-                if (this.rolePermissions.TryGetValue(role, out var permissions) &&
+                if (this.rolePermissions.TryGetValue(role, out HashSet<string>? permissions) &&
                     permissions.Contains(permission))
                 {
                     return Task.FromResult(AuthorizationResult.Allow());
@@ -181,7 +181,7 @@ public class RoleBasedAuthorizationProvider : IAuthorizationProvider
         CancellationToken ct = default)
     {
         // Build permission string (e.g., "document:read", "pipeline:execute")
-        var permission = $"{resourceType}:{action}";
+        string permission = $"{resourceType}:{action}";
         return this.CheckPermissionAsync(principal, permission, ct);
     }
 }

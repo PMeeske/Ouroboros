@@ -15,7 +15,7 @@ public interface IPipelineService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The generated answer text</returns>
     Task<string> AskAsync(AskRequest request, CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Executes a pipeline defined by DSL (Domain Specific Language)
     /// </summary>
@@ -33,21 +33,21 @@ public sealed class PipelineService : IPipelineService
     /// <inheritdoc/>
     public async Task<string> AskAsync(AskRequest request, CancellationToken cancellationToken = default)
     {
-        var modelName = request.Model ?? "llama3";
-        var embedName = "nomic-embed-text";
-        var withRag = request.UseRag;
-        var sourcePath = request.SourcePath ?? Environment.CurrentDirectory;
-        var k = 3;
-        var question = request.Question;
+        string modelName = request.Model ?? "llama3";
+        string embedName = "nomic-embed-text";
+        bool withRag = request.UseRag;
+        string sourcePath = request.SourcePath ?? Environment.CurrentDirectory;
+        int k = 3;
+        string question = request.Question;
 
-        var settings = new ChatRuntimeSettings(
+        ChatRuntimeSettings settings = new ChatRuntimeSettings(
             request.Temperature ?? 0.7f,
             request.MaxTokens ?? 2048,
             120,
             false);
 
-        var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(request.Endpoint, request.ApiKey);
-        var provider = new OllamaProvider();
+        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(request.Endpoint, request.ApiKey);
+        OllamaProvider provider = new OllamaProvider();
         IChatCompletionModel chatModel;
 
         if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
@@ -58,13 +58,13 @@ public sealed class PipelineService : IPipelineService
             }
             catch
             {
-                var local = new OllamaChatModel(provider, "llama3");
+                OllamaChatModel local = new OllamaChatModel(provider, "llama3");
                 chatModel = new OllamaChatAdapter(local);
             }
         }
         else
         {
-            var chat = new OllamaChatModel(provider, modelName);
+            OllamaChatModel chat = new OllamaChatModel(provider, modelName);
             if (modelName == "deepseek-coder:33b")
                 chat.Settings = OllamaPresets.DeepSeekCoder33B;
             chatModel = new OllamaChatAdapter(chat);
@@ -72,23 +72,23 @@ public sealed class PipelineService : IPipelineService
 
         IEmbeddingModel embed = CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);
 
-        var tools = new ToolRegistry();
-        var llm = new ToolAwareChatModel(chatModel, tools);
-        var store = new TrackedVectorStore();
+        ToolRegistry tools = new ToolRegistry();
+        ToolAwareChatModel llm = new ToolAwareChatModel(chatModel, tools);
+        TrackedVectorStore store = new TrackedVectorStore();
 
         if (withRag)
         {
-            var docs = new[]
+            string[] docs = new[]
             {
                 "API versioning best practices with backward compatibility",
                 "Circuit breaker using Polly in .NET",
                 "Event sourcing and CQRS patterns overview"
             };
-            foreach (var (text, idx) in docs.Select((d, i) => (d, i)))
+            foreach ((string text, int idx) in docs.Select((d, i) => (d, i)))
             {
                 try
                 {
-                    var resp = await embed.CreateEmbeddingsAsync(text, cancellationToken);
+                    float[] resp = await embed.CreateEmbeddingsAsync(text, cancellationToken);
                     await store.AddAsync(new[]
                     {
                         new Vector
@@ -116,16 +116,16 @@ public sealed class PipelineService : IPipelineService
 
         if (!withRag)
         {
-            var (text, _) = await llm.GenerateWithToolsAsync($"Answer the following question clearly and concisely.\nQuestion: {{q}}".Replace("{q}", question), cancellationToken);
+            (string text, List<ToolExecution> _) = await llm.GenerateWithToolsAsync($"Answer the following question clearly and concisely.\nQuestion: {{q}}".Replace("{q}", question), cancellationToken);
             return text;
         }
         else
         {
-            var qEmb = await embed.CreateEmbeddingsAsync(question, cancellationToken);
-            var hits = await store.GetSimilarDocumentsAsync(qEmb, k, cancellationToken);
-            var ctx = string.Join("\n- ", hits.Select(h => h.PageContent));
-            var prompt = $"Use the following context to answer.\nContext:\n- {ctx}\n\nQuestion: {{q}}".Replace("{q}", question);
-            var (ragText, _) = await llm.GenerateWithToolsAsync(prompt, cancellationToken);
+            float[] qEmb = await embed.CreateEmbeddingsAsync(question, cancellationToken);
+            IReadOnlyCollection<Document> hits = await store.GetSimilarDocumentsAsync(qEmb, k, cancellationToken);
+            string ctx = string.Join("\n- ", hits.Select(h => h.PageContent));
+            string prompt = $"Use the following context to answer.\nContext:\n- {ctx}\n\nQuestion: {{q}}".Replace("{q}", question);
+            (string ragText, List<ToolExecution> _) = await llm.GenerateWithToolsAsync(prompt, cancellationToken);
             return ragText;
         }
     }
@@ -133,21 +133,21 @@ public sealed class PipelineService : IPipelineService
     /// <inheritdoc/>
     public async Task<string> ExecutePipelineAsync(PipelineRequest request, CancellationToken cancellationToken = default)
     {
-        var modelName = request.Model ?? "llama3";
-        var embedName = "nomic-embed-text";
-        var dsl = request.Dsl;
-        var sourcePath = Environment.CurrentDirectory;
-        var k = 3;
-        var trace = request.Debug;
+        string modelName = request.Model ?? "llama3";
+        string embedName = "nomic-embed-text";
+        string dsl = request.Dsl;
+        string sourcePath = Environment.CurrentDirectory;
+        int k = 3;
+        bool trace = request.Debug;
 
-        var settings = new ChatRuntimeSettings(
+        ChatRuntimeSettings settings = new ChatRuntimeSettings(
             request.Temperature ?? 0.7f,
             request.MaxTokens ?? 2048,
             120,
             false);
 
-        var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(request.Endpoint, request.ApiKey);
-        var provider = new OllamaProvider();
+        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(request.Endpoint, request.ApiKey);
+        OllamaProvider provider = new OllamaProvider();
         IChatCompletionModel chatModel;
 
         if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
@@ -158,13 +158,13 @@ public sealed class PipelineService : IPipelineService
             }
             catch
             {
-                var local = new OllamaChatModel(provider, "llama3");
+                OllamaChatModel local = new OllamaChatModel(provider, "llama3");
                 chatModel = new OllamaChatAdapter(local);
             }
         }
         else
         {
-            var chat = new OllamaChatModel(provider, modelName);
+            OllamaChatModel chat = new OllamaChatModel(provider, modelName);
             if (modelName == "deepseek-coder:33b")
                 chat.Settings = OllamaPresets.DeepSeekCoder33B;
             chatModel = new OllamaChatAdapter(chat);
@@ -172,15 +172,15 @@ public sealed class PipelineService : IPipelineService
 
         IEmbeddingModel embed = CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);
 
-        var tools = new ToolRegistry();
-        var resolvedSource = string.IsNullOrWhiteSpace(sourcePath) ? Environment.CurrentDirectory : Path.GetFullPath(sourcePath);
+        ToolRegistry tools = new ToolRegistry();
+        string resolvedSource = string.IsNullOrWhiteSpace(sourcePath) ? Environment.CurrentDirectory : Path.GetFullPath(sourcePath);
         if (!Directory.Exists(resolvedSource))
         {
             Directory.CreateDirectory(resolvedSource);
         }
-        var branch = new PipelineBranch("webapi", new TrackedVectorStore(), DataSource.FromPath(resolvedSource));
+        PipelineBranch branch = new PipelineBranch("webapi", new TrackedVectorStore(), DataSource.FromPath(resolvedSource));
 
-        var state = new CliPipelineState
+        CliPipelineState state = new CliPipelineState
         {
             Branch = branch,
             Llm = null!,
@@ -191,14 +191,14 @@ public sealed class PipelineService : IPipelineService
         };
 
         tools = tools.WithPipelineSteps(state);
-        var llm = new ToolAwareChatModel(chatModel, tools);
+        ToolAwareChatModel llm = new ToolAwareChatModel(chatModel, tools);
         state.Llm = llm;
         state.Tools = tools;
 
-        var step = PipelineDsl.Build(dsl);
+        Core.Steps.Step<CliPipelineState, CliPipelineState> step = PipelineDsl.Build(dsl);
         state = await step(state);
 
-        var last = state.Branch.Events.OfType<ReasoningStep>().LastOrDefault();
+        ReasoningStep? last = state.Branch.Events.OfType<ReasoningStep>().LastOrDefault();
         if (last is not null)
         {
             return last.State.Text;

@@ -31,7 +31,7 @@ public class LangChainConversationContext
     /// </summary>
     public TValue? GetProperty<TValue>(string key)
     {
-        return _properties.TryGetValue(key, out var value) && value is TValue typedValue
+        return _properties.TryGetValue(key, out object? value) && value is TValue typedValue
             ? typedValue
             : default;
     }
@@ -68,7 +68,7 @@ public static class LangChainMemoryExtensions
     /// </summary>
     public static LangChainConversationContext WithLangChainMemory<T>(this T input, int maxTurns = 10)
     {
-        var context = new LangChainConversationContext(maxTurns);
+        LangChainConversationContext context = new LangChainConversationContext(maxTurns);
         if (input != null)
         {
             context.SetProperty("input", input);

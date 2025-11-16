@@ -27,7 +27,7 @@ public static class InMemoryIngestion
             int i = 0;
             foreach (string chunk in chunks)
             {
-                var resp = await embedding.CreateEmbeddingsAsync(chunk, ct);
+                float[] resp = await embedding.CreateEmbeddingsAsync(chunk, ct);
                 Vector vec = new Vector()
                 {
                     Id = $"{(doc.Metadata != null && doc.Metadata.TryGetValue("path", out object? p) ? p?.ToString() : "doc")}#{i}",

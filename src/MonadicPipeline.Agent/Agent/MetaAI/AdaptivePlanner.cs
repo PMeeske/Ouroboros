@@ -108,10 +108,10 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
     {
         config ??= new AdaptivePlanningConfig();
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        var currentPlan = plan;
-        var allStepResults = new List<StepResult>();
-        var adaptationHistory = new List<string>();
+        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+        Plan currentPlan = plan;
+        List<StepResult> allStepResults = new List<StepResult>();
+        List<string> adaptationHistory = new List<string>();
 
         try
         {
@@ -120,10 +120,10 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                 if (ct.IsCancellationRequested)
                     break;
 
-                var step = currentPlan.Steps[i];
+                PlanStep step = currentPlan.Steps[i];
 
                 // Create execution context
-                var context = new ExecutionContext(
+                ExecutionContext context = new ExecutionContext(
                     plan,
                     allStepResults,
                     step,
@@ -134,7 +134,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                     });
 
                 // Check if adaptation is needed before execution
-                var adaptationAction = await EvaluateAdaptationAsync(context, ct);
+                AdaptationAction? adaptationAction = await EvaluateAdaptationAsync(context, ct);
 
                 if (adaptationAction != null)
                 {
@@ -174,18 +174,18 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                 }
 
                 // Execute step with retry logic
-                var stepResult = await ExecuteStepWithRetryAsync(step, config.MaxRetries, ct);
+                StepResult stepResult = await ExecuteStepWithRetryAsync(step, config.MaxRetries, ct);
                 allStepResults.Add(stepResult);
 
                 // Check if we need to adapt after execution
-                var postContext = context with { CompletedSteps = allStepResults };
-                var postAdaptation = await EvaluateAdaptationAsync(postContext, ct);
+                ExecutionContext postContext = context with { CompletedSteps = allStepResults };
+                AdaptationAction? postAdaptation = await EvaluateAdaptationAsync(postContext, ct);
 
                 if (postAdaptation?.Strategy == AdaptationStrategy.Replan && config.EnableAutoReplan)
                 {
                     // Generate new plan for remaining steps
-                    var remainingGoal = $"Continue from step {i + 1}: {plan.Goal}";
-                    var replanResult = await _orchestrator.PlanAsync(remainingGoal, null, ct);
+                    string remainingGoal = $"Continue from step {i + 1}: {plan.Goal}";
+                    Result<Plan, string> replanResult = await _orchestrator.PlanAsync(remainingGoal, null, ct);
 
                     if (replanResult.IsSuccess)
                     {
@@ -199,10 +199,10 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
 
             sw.Stop();
 
-            var overallSuccess = allStepResults.All(r => r.Success);
-            var finalOutput = string.Join("\n", allStepResults.Select(r => r.Output));
+            bool overallSuccess = allStepResults.All(r => r.Success);
+            string finalOutput = string.Join("\n", allStepResults.Select(r => r.Output));
 
-            var execution = new ExecutionResult(
+            ExecutionResult execution = new ExecutionResult(
                 currentPlan,
                 allStepResults,
                 overallSuccess,
@@ -239,12 +239,12 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
         CancellationToken ct = default)
     {
         // Check all registered triggers
-        foreach (var trigger in _triggers)
+        foreach (AdaptationTrigger trigger in _triggers)
         {
             if (trigger.Condition(context))
             {
                 // Trigger matched - determine adaptation action
-                var action = await CreateAdaptationActionAsync(trigger, context, ct);
+                AdaptationAction? action = await CreateAdaptationActionAsync(trigger, context, ct);
                 if (action != null)
                 {
                     return action;
@@ -260,7 +260,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
         int maxRetries,
         CancellationToken ct)
     {
-        var attempts = 0;
+        int attempts = 0;
         StepResult? lastResult = null;
 
         while (attempts < maxRetries)
@@ -268,7 +268,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
             attempts++;
 
             // Execute step (simplified - in real implementation would use orchestrator)
-            var sw = System.Diagnostics.Stopwatch.StartNew();
+            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
 
             try
             {
@@ -315,14 +315,14 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
         ExecutionContext context,
         CancellationToken ct)
     {
-        var strategy = trigger.Strategy;
-        var reason = $"Trigger '{trigger.Name}' activated";
+        AdaptationStrategy strategy = trigger.Strategy;
+        string reason = $"Trigger '{trigger.Name}' activated";
 
         switch (strategy)
         {
             case AdaptationStrategy.Replan:
                 // Generate revised plan
-                var replanResult = await _orchestrator.PlanAsync(
+                Result<Plan, string> replanResult = await _orchestrator.PlanAsync(
                     context.OriginalPlan.Goal,
                     new Dictionary<string, object>
                     {
@@ -339,16 +339,16 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
 
             case AdaptationStrategy.ReplaceStep:
                 // Generate replacement step using LLM
-                var prompt = $@"The following step failed: {context.CurrentStep.Action}
+                string prompt = $@"The following step failed: {context.CurrentStep.Action}
 Parameters: {System.Text.Json.JsonSerializer.Serialize(context.CurrentStep.Parameters)}
 Expected: {context.CurrentStep.ExpectedOutcome}
 
 Suggest an alternative approach to achieve the same outcome.";
 
-                var suggestion = await _llm.GenerateTextAsync(prompt, ct);
+                string suggestion = await _llm.GenerateTextAsync(prompt, ct);
 
                 // Parse suggestion into a new step (simplified)
-                var replacementStep = new PlanStep(
+                PlanStep replacementStep = new PlanStep(
                     "alternative_approach",
                     new Dictionary<string, object> { ["suggestion"] = suggestion },
                     context.CurrentStep.ExpectedOutcome,
@@ -380,7 +380,7 @@ Suggest an alternative approach to achieve the same outcome.";
             ctx =>
             {
                 if (ctx.CompletedSteps.Count < 3) return false;
-                var failureRate = ctx.CompletedSteps.Count(s => !s.Success) / (double)ctx.CompletedSteps.Count;
+                double failureRate = ctx.CompletedSteps.Count(s => !s.Success) / (double)ctx.CompletedSteps.Count;
                 return failureRate > 0.5;
             },
             AdaptationStrategy.Replan));

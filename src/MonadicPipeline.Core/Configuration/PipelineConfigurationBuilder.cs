@@ -112,8 +112,8 @@ public class PipelineConfigurationBuilder
     /// <returns></returns>
     public PipelineConfiguration Build()
     {
-        var configuration = this.configurationBuilder.Build();
-        var pipelineConfig = new PipelineConfiguration();
+        IConfigurationRoot configuration = this.configurationBuilder.Build();
+        PipelineConfiguration pipelineConfig = new PipelineConfiguration();
 
         // Bind the configuration section to our settings object
         configuration.GetSection(PipelineConfiguration.SectionName).Bind(pipelineConfig);
@@ -136,11 +136,11 @@ public class PipelineConfigurationBuilder
     /// <returns></returns>
     public static PipelineConfigurationBuilder CreateDefault(string? basePath = null, string? environmentName = null)
     {
-        var environment = environmentName ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+        string environment = environmentName ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
                          ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
                          ?? "Production";
 
-        var builder = new PipelineConfigurationBuilder()
+        PipelineConfigurationBuilder builder = new PipelineConfigurationBuilder()
             .SetEnvironment(environment);
 
         if (basePath != null)

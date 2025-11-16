@@ -51,8 +51,8 @@ public sealed class MeTTaQueryTool : ITool
         string query;
         try
         {
-            var json = System.Text.Json.JsonDocument.Parse(input);
-            if (json.RootElement.TryGetProperty("query", out var queryProp))
+            System.Text.Json.JsonDocument json = System.Text.Json.JsonDocument.Parse(input);
+            if (json.RootElement.TryGetProperty("query", out System.Text.Json.JsonElement queryProp))
             {
                 query = queryProp.GetString() ?? input;
             }
@@ -118,8 +118,8 @@ public sealed class MeTTaRuleTool : ITool
         string rule;
         try
         {
-            var json = System.Text.Json.JsonDocument.Parse(input);
-            if (json.RootElement.TryGetProperty("rule", out var ruleProp))
+            System.Text.Json.JsonDocument json = System.Text.Json.JsonDocument.Parse(input);
+            if (json.RootElement.TryGetProperty("rule", out System.Text.Json.JsonElement ruleProp))
             {
                 rule = ruleProp.GetString() ?? input;
             }
@@ -184,8 +184,8 @@ public sealed class MeTTaPlanVerifierTool : ITool
         string plan;
         try
         {
-            var json = System.Text.Json.JsonDocument.Parse(input);
-            if (json.RootElement.TryGetProperty("plan", out var planProp))
+            System.Text.Json.JsonDocument json = System.Text.Json.JsonDocument.Parse(input);
+            if (json.RootElement.TryGetProperty("plan", out System.Text.Json.JsonElement planProp))
             {
                 plan = planProp.GetString() ?? input;
             }
@@ -199,7 +199,7 @@ public sealed class MeTTaPlanVerifierTool : ITool
             plan = input;
         }
 
-        var result = await this.engine.VerifyPlanAsync(plan, ct);
+        Result<bool, string> result = await this.engine.VerifyPlanAsync(plan, ct);
 
         return result.Match(
             isValid => Result<string, string>.Success(isValid ? "Plan is valid" : "Plan is invalid"),
@@ -254,8 +254,8 @@ public sealed class MeTTaFactTool : ITool
         string fact;
         try
         {
-            var json = System.Text.Json.JsonDocument.Parse(input);
-            if (json.RootElement.TryGetProperty("fact", out var factProp))
+            System.Text.Json.JsonDocument json = System.Text.Json.JsonDocument.Parse(input);
+            if (json.RootElement.TryGetProperty("fact", out System.Text.Json.JsonElement factProp))
             {
                 fact = factProp.GetString() ?? input;
             }
@@ -269,7 +269,7 @@ public sealed class MeTTaFactTool : ITool
             fact = input;
         }
 
-        var result = await this.engine.AddFactAsync(fact, ct);
+        Result<Unit, string> result = await this.engine.AddFactAsync(fact, ct);
 
         return result.Match(
             _ => Result<string, string>.Success("Fact added successfully"),

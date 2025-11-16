@@ -28,7 +28,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IChatCompletionModel>(sp =>
         {
-            var (endpoint, apiKey, endpointType) = ChatConfig.Resolve();
+            (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.Resolve();
             if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
             {
                 try
@@ -47,11 +47,11 @@ public static class ServiceCollectionExtensions
                 }
             }
 
-            var provider = sp.GetRequiredService<OllamaProvider>();
-            var chat = new OllamaChatModel(provider, model!);
+            OllamaProvider provider = sp.GetRequiredService<OllamaProvider>();
+            OllamaChatModel chat = new OllamaChatModel(provider, model!);
             try
             {
-                var n = (model ?? string.Empty).ToLowerInvariant();
+                string n = (model ?? string.Empty).ToLowerInvariant();
                 if (n.StartsWith("deepseek-coder:33b"))
                 {
                     chat.Settings = OllamaPresets.DeepSeekCoder33B;
@@ -91,15 +91,15 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IEmbeddingModel>(sp =>
         {
-            var provider = sp.GetRequiredService<OllamaProvider>();
+            OllamaProvider provider = sp.GetRequiredService<OllamaProvider>();
             return new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embed!));
         });
 
         services.AddSingleton<ToolRegistry>();
         services.AddSingleton(sp =>
         {
-            var registry = sp.GetRequiredService<ToolRegistry>();
-            var chat = sp.GetRequiredService<IChatCompletionModel>();
+            ToolRegistry registry = sp.GetRequiredService<ToolRegistry>();
+            IChatCompletionModel chat = sp.GetRequiredService<IChatCompletionModel>();
             return new ToolAwareChatModel(chat, registry);
         });
 

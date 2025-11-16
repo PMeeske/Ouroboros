@@ -13,12 +13,12 @@ public sealed class BranchSnapshot
     /// Name of the branch
     /// </summary>
     public string Name { get; set; } = "";
-    
+
     /// <summary>
     /// List of pipeline events in this branch
     /// </summary>
     public List<PipelineEvent> Events { get; set; } = [];
-    
+
     /// <summary>
     /// Serialized vector store contents
     /// </summary>

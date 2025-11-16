@@ -77,8 +77,8 @@ public sealed class PipelineStepTool : ITool
             {
                 try
                 {
-                    var json = ToolJson.Deserialize<Dictionary<string, string>>(input);
-                    if (json != null && json.TryGetValue("args", out var argsValue))
+                    Dictionary<string, string> json = ToolJson.Deserialize<Dictionary<string, string>>(input);
+                    if (json != null && json.TryGetValue("args", out string? argsValue))
                     {
                         args = argsValue;
                     }
@@ -91,8 +91,8 @@ public sealed class PipelineStepTool : ITool
             }
 
             // Execute the pipeline step
-            var step = _stepFactory(args);
-            var newState = await step(_pipelineState);
+            Step<CliPipelineState, CliPipelineState> step = _stepFactory(args);
+            CliPipelineState newState = await step(_pipelineState);
 
             // Update the pipeline state reference
             _pipelineState.Branch = newState.Branch;
@@ -103,7 +103,7 @@ public sealed class PipelineStepTool : ITool
             _pipelineState.Topic = newState.Topic;
 
             // Return result description
-            var resultMessage = string.IsNullOrWhiteSpace(newState.Output)
+            string resultMessage = string.IsNullOrWhiteSpace(newState.Output)
                 ? $"Executed pipeline step '{_stepName}' successfully"
                 : $"Executed '{_stepName}': {(newState.Output.Length > 200 ? newState.Output.Substring(0, 200) + "..." : newState.Output)}";
 
@@ -129,7 +129,7 @@ public sealed class PipelineStepTool : ITool
             description,
             args =>
             {
-                if (StepRegistry.TryResolve(stepName, args, out var step) && step != null)
+                if (StepRegistry.TryResolve(stepName, args, out Step<CliPipelineState, CliPipelineState>? step) && step != null)
                 {
                     return step;
                 }

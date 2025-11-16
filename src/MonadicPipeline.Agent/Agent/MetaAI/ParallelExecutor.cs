@@ -26,12 +26,12 @@ public sealed class StepDependencyGraph
     /// </summary>
     public List<List<int>> GetParallelGroups()
     {
-        var groups = new List<List<int>>();
-        var executed = new HashSet<int>();
+        List<List<int>> groups = new List<List<int>>();
+        HashSet<int> executed = new HashSet<int>();
 
         while (executed.Count < _steps.Count)
         {
-            var group = new List<int>();
+            List<int> group = new List<int>();
 
             for (int i = 0; i < _steps.Count; i++)
             {
@@ -39,7 +39,7 @@ public sealed class StepDependencyGraph
                     continue;
 
                 // Can execute if all dependencies are satisfied
-                if (!_dependencies.TryGetValue(i, out var deps) ||
+                if (!_dependencies.TryGetValue(i, out List<int>? deps) ||
                     deps.All(d => executed.Contains(d)))
                 {
                     group.Add(i);
@@ -61,13 +61,13 @@ public sealed class StepDependencyGraph
         // Analyze parameter dependencies between steps
         for (int i = 0; i < _steps.Count; i++)
         {
-            var deps = new List<int>();
-            var step = _steps[i];
+            List<int> deps = new List<int>();
+            PlanStep step = _steps[i];
 
             // Check if this step uses outputs from previous steps
             for (int j = 0; j < i; j++)
             {
-                var prevStep = _steps[j];
+                PlanStep prevStep = _steps[j];
 
                 // Check if current step's parameters reference previous step's output
                 if (HasDependency(step, prevStep))
@@ -86,12 +86,12 @@ public sealed class StepDependencyGraph
     private bool HasDependency(PlanStep current, PlanStep previous)
     {
         // Check if current step references previous step's action or expected outcome
-        var prevActionRef = $"${previous.Action}";
-        var prevOutputRef = $"output_{previous.Action}";
+        string prevActionRef = $"${previous.Action}";
+        string prevOutputRef = $"output_{previous.Action}";
 
-        foreach (var param in current.Parameters.Values)
+        foreach (object param in current.Parameters.Values)
         {
-            var paramStr = param?.ToString() ?? "";
+            string paramStr = param?.ToString() ?? "";
             if (paramStr.Contains(prevActionRef) || paramStr.Contains(prevOutputRef))
             {
                 return true;
@@ -125,24 +125,24 @@ public sealed class ParallelExecutor
         Plan plan,
         CancellationToken ct = default)
     {
-        var dependencyGraph = new StepDependencyGraph(plan.Steps);
-        var parallelGroups = dependencyGraph.GetParallelGroups();
+        StepDependencyGraph dependencyGraph = new StepDependencyGraph(plan.Steps);
+        List<List<int>> parallelGroups = dependencyGraph.GetParallelGroups();
 
-        var allResults = new ConcurrentDictionary<int, StepResult>();
-        var overallSuccess = true;
-        var outputs = new ConcurrentBag<string>();
+        ConcurrentDictionary<int, StepResult> allResults = new ConcurrentDictionary<int, StepResult>();
+        bool overallSuccess = true;
+        ConcurrentBag<string> outputs = new ConcurrentBag<string>();
 
-        foreach (var group in parallelGroups)
+        foreach (List<int> group in parallelGroups)
         {
             if (ct.IsCancellationRequested)
                 break;
 
             // Execute all steps in this group in parallel
-            var groupTasks = group.Select(async stepIndex =>
+            IEnumerable<Task<StepResult>> groupTasks = group.Select(async stepIndex =>
             {
-                var step = plan.Steps[stepIndex];
-                var sandboxedStep = _safety.SandboxStep(step);
-                var result = await _executeStep(sandboxedStep, ct);
+                PlanStep step = plan.Steps[stepIndex];
+                PlanStep sandboxedStep = _safety.SandboxStep(step);
+                StepResult result = await _executeStep(sandboxedStep, ct);
 
                 allResults[stepIndex] = result;
 
@@ -160,13 +160,13 @@ public sealed class ParallelExecutor
         }
 
         // Order results by step index
-        var orderedResults = Enumerable.Range(0, plan.Steps.Count)
-            .Select(i => allResults.TryGetValue(i, out var result) ? result : null)
+        List<StepResult> orderedResults = Enumerable.Range(0, plan.Steps.Count)
+            .Select(i => allResults.TryGetValue(i, out StepResult? result) ? result : null)
             .Where(r => r != null)
             .Select(r => r!)
             .ToList();
 
-        var finalOutput = string.Join("\n", outputs.Where(o => !string.IsNullOrEmpty(o)));
+        string finalOutput = string.Join("\n", outputs.Where(o => !string.IsNullOrEmpty(o)));
 
         return (orderedResults, overallSuccess, finalOutput);
     }
@@ -176,12 +176,12 @@ public sealed class ParallelExecutor
     /// </summary>
     public double EstimateSpeedup(Plan plan)
     {
-        var dependencyGraph = new StepDependencyGraph(plan.Steps);
-        var parallelGroups = dependencyGraph.GetParallelGroups();
+        StepDependencyGraph dependencyGraph = new StepDependencyGraph(plan.Steps);
+        List<List<int>> parallelGroups = dependencyGraph.GetParallelGroups();
 
         // Speedup = total steps / number of parallel groups
-        var sequentialSteps = plan.Steps.Count;
-        var parallelSteps = parallelGroups.Count;
+        int sequentialSteps = plan.Steps.Count;
+        int parallelSteps = parallelGroups.Count;
 
         return parallelSteps > 0 ? (double)sequentialSteps / parallelSteps : 1.0;
     }

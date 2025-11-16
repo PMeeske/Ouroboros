@@ -33,7 +33,7 @@ public sealed class RetrievalTool(TrackedVectorStore store, IEmbeddingModel embe
                 return Result<string, string>.Success("No relevant documents found.");
             }
 
-            var result = string.Join("\n---\n", docs.Select(d =>
+            string result = string.Join("\n---\n", docs.Select(d =>
             {
                 object? name = d.Metadata.TryGetValue("name", out object? val) ? val?.ToString() : d.Metadata?["name"];
                 string snippet = d.PageContent;

@@ -5,7 +5,7 @@
 using System.Diagnostics;
 using Microsoft.OpenApi.Models;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Add services
 builder.Services.AddEndpointsApiExplorer();
@@ -48,7 +48,7 @@ builder.Services.AddCors(options =>
 // Add health checks for Kubernetes
 builder.Services.AddHealthChecks();
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 // Configure middleware
 // Enable Swagger in all environments for API documentation
@@ -97,8 +97,8 @@ app.MapPost("/api/ask", async (AskRequest request, IPipelineService service, Can
 {
     try
     {
-        var sw = Stopwatch.StartNew();
-        var answer = await service.AskAsync(request, ct);
+        Stopwatch sw = Stopwatch.StartNew();
+        string answer = await service.AskAsync(request, ct);
         sw.Stop();
 
         return Results.Ok(ApiResponse<AskResponse>.Ok(
@@ -130,8 +130,8 @@ app.MapPost("/api/pipeline", async (PipelineRequest request, IPipelineService se
 {
     try
     {
-        var sw = Stopwatch.StartNew();
-        var result = await service.ExecutePipelineAsync(request, ct);
+        Stopwatch sw = Stopwatch.StartNew();
+        string result = await service.ExecutePipelineAsync(request, ct);
         sw.Stop();
 
         return Results.Ok(ApiResponse<PipelineResponse>.Ok(

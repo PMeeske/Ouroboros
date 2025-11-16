@@ -51,7 +51,7 @@ public sealed class TransferLearner : ITransferLearner
         try
         {
             // Estimate transferability first
-            var transferability = await EstimateTransferabilityAsync(sourceSkill, targetDomain, ct);
+            double transferability = await EstimateTransferabilityAsync(sourceSkill, targetDomain, ct);
 
             if (transferability < config.MinTransferabilityThreshold)
             {
@@ -60,20 +60,20 @@ public sealed class TransferLearner : ITransferLearner
             }
 
             // Find analogies to guide adaptation
-            var sourceDomain = InferDomainFromSkill(sourceSkill);
-            var analogies = await FindAnalogiesAsync(sourceDomain, targetDomain, ct);
+            string sourceDomain = InferDomainFromSkill(sourceSkill);
+            List<(string source, string target, double confidence)> analogies = await FindAnalogiesAsync(sourceDomain, targetDomain, ct);
 
             // Adapt the skill using LLM
-            var adaptationPrompt = BuildAdaptationPrompt(sourceSkill, targetDomain, analogies);
-            var adaptationResponse = await _llm.GenerateTextAsync(adaptationPrompt, ct);
+            string adaptationPrompt = BuildAdaptationPrompt(sourceSkill, targetDomain, analogies);
+            string adaptationResponse = await _llm.GenerateTextAsync(adaptationPrompt, ct);
 
             // Parse the adapted skill
-            var adaptedSteps = ParseAdaptedSteps(adaptationResponse, sourceSkill.Steps);
-            var adaptations = ExtractAdaptations(adaptationResponse);
+            List<PlanStep> adaptedSteps = ParseAdaptedSteps(adaptationResponse, sourceSkill.Steps);
+            List<string> adaptations = ExtractAdaptations(adaptationResponse);
 
             // Create adapted skill
-            var adaptedSkillName = $"{sourceSkill.Name}_adapted_{targetDomain.ToLowerInvariant().Replace(" ", "_")}";
-            var adaptedSkill = new Skill(
+            string adaptedSkillName = $"{sourceSkill.Name}_adapted_{targetDomain.ToLowerInvariant().Replace(" ", "_")}";
+            Skill adaptedSkill = new Skill(
                 adaptedSkillName,
                 $"Adapted from {sourceSkill.Name} for {targetDomain}: {sourceSkill.Description}",
                 sourceSkill.Prerequisites,
@@ -86,7 +86,7 @@ public sealed class TransferLearner : ITransferLearner
             // Register the adapted skill
             _skills.RegisterSkill(adaptedSkill);
 
-            var result = new TransferResult(
+            TransferResult result = new TransferResult(
                 adaptedSkill,
                 transferability,
                 sourceDomain,
@@ -124,9 +124,9 @@ public sealed class TransferLearner : ITransferLearner
 
         try
         {
-            var sourceDomain = InferDomainFromSkill(skill);
+            string sourceDomain = InferDomainFromSkill(skill);
 
-            var prompt = $@"Estimate how well a skill can transfer from one domain to another.
+            string prompt = $@"Estimate how well a skill can transfer from one domain to another.
 
 Source Domain: {sourceDomain}
 Skill: {skill.Name}
@@ -144,19 +144,19 @@ Consider:
 Provide a transferability score from 0.0 (cannot transfer) to 1.0 (perfect transfer).
 Respond with just the number.";
 
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct);
 
             // Extract numeric score
-            var scoreMatch = System.Text.RegularExpressions.Regex.Match(response, @"0?\.\d+|1\.0");
-            if (scoreMatch.Success && double.TryParse(scoreMatch.Value, out var score))
+            System.Text.RegularExpressions.Match scoreMatch = System.Text.RegularExpressions.Regex.Match(response, @"0?\.\d+|1\.0");
+            if (scoreMatch.Success && double.TryParse(scoreMatch.Value, out double score))
             {
                 return Math.Clamp(score, 0.0, 1.0);
             }
 
             // Fallback: use historical data if available
-            if (_transferHistory.TryGetValue(skill.Name, out var history))
+            if (_transferHistory.TryGetValue(skill.Name, out List<TransferResult>? history))
             {
-                var similarTransfers = history
+                List<TransferResult> similarTransfers = history
                     .Where(t => t.TargetDomain.Contains(targetDomain, StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
@@ -183,14 +183,14 @@ Respond with just the number.";
         string targetDomain,
         CancellationToken ct = default)
     {
-        var analogies = new List<(string source, string target, double confidence)>();
+        List<(string source, string target, double confidence)> analogies = new List<(string source, string target, double confidence)>();
 
         if (string.IsNullOrWhiteSpace(sourceDomain) || string.IsNullOrWhiteSpace(targetDomain))
             return analogies;
 
         try
         {
-            var prompt = $@"Identify analogical mappings between two domains.
+            string prompt = $@"Identify analogical mappings between two domains.
 
 Source Domain: {sourceDomain}
 Target Domain: {targetDomain}
@@ -207,20 +207,20 @@ Example:
 database_query -> library_search (confidence: 0.8)
 ";
 
-            var response = await _llm.GenerateTextAsync(prompt, ct);
-            var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string[] lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-            foreach (var line in lines)
+            foreach (string line in lines)
             {
-                var match = System.Text.RegularExpressions.Regex.Match(
+                System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(
                     line,
                     @"(.+?)\s*->\s*(.+?)\s*\(confidence:\s*(0?\.\d+|1\.0)\)");
 
                 if (match.Success)
                 {
-                    var source = match.Groups[1].Value.Trim();
-                    var target = match.Groups[2].Value.Trim();
-                    var confidence = double.Parse(match.Groups[3].Value);
+                    string source = match.Groups[1].Value.Trim();
+                    string target = match.Groups[2].Value.Trim();
+                    double confidence = double.Parse(match.Groups[3].Value);
 
                     analogies.Add((source, target, confidence));
                 }
@@ -242,7 +242,7 @@ database_query -> library_search (confidence: 0.8)
         if (string.IsNullOrWhiteSpace(skillName))
             return new List<TransferResult>();
 
-        return _transferHistory.TryGetValue(skillName, out var history)
+        return _transferHistory.TryGetValue(skillName, out List<TransferResult>? history)
             ? new List<TransferResult>(history)
             : new List<TransferResult>();
     }
@@ -256,7 +256,7 @@ database_query -> library_search (confidence: 0.8)
             return;
 
         // Update the adapted skill's success rate
-        var skillName = transferResult.AdaptedSkill.Name;
+        string skillName = transferResult.AdaptedSkill.Name;
         _skills.RecordSkillExecution(skillName, success);
 
         // Could also update transferability estimates based on validation
@@ -267,8 +267,8 @@ database_query -> library_search (confidence: 0.8)
     private string InferDomainFromSkill(Skill skill)
     {
         // Extract domain hints from skill name and description
-        var words = skill.Name.Split('_', StringSplitOptions.RemoveEmptyEntries);
-        var domainHints = words.Take(2);
+        string[] words = skill.Name.Split('_', StringSplitOptions.RemoveEmptyEntries);
+        IEnumerable<string> domainHints = words.Take(2);
 
         return string.Join(" ", domainHints);
     }
@@ -278,7 +278,7 @@ database_query -> library_search (confidence: 0.8)
         string targetDomain,
         List<(string source, string target, double confidence)> analogies)
     {
-        var analogyText = analogies.Any()
+        string analogyText = analogies.Any()
             ? string.Join("\n", analogies.Select(a => $"- {a.source} → {a.target} (confidence: {a.confidence:F2})"))
             : "No specific analogies identified.";
 
@@ -310,16 +310,16 @@ EXPECTED: [expected outcome]
 
     private List<PlanStep> ParseAdaptedSteps(string response, List<PlanStep> originalSteps)
     {
-        var adaptedSteps = new List<PlanStep>();
-        var lines = response.Split('\n');
+        List<PlanStep> adaptedSteps = new List<PlanStep>();
+        string[] lines = response.Split('\n');
 
         string? currentAction = null;
         Dictionary<string, object>? currentParams = null;
         string? currentExpected = null;
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
-            var trimmed = line.Trim();
+            string trimmed = line.Trim();
 
             if (trimmed.StartsWith("STEP"))
             {
@@ -338,7 +338,7 @@ EXPECTED: [expected outcome]
             }
             else if (trimmed.StartsWith("PARAMETERS:"))
             {
-                var paramsStr = trimmed.Substring("PARAMETERS:".Length).Trim();
+                string paramsStr = trimmed.Substring("PARAMETERS:".Length).Trim();
                 currentParams = new Dictionary<string, object> { ["description"] = paramsStr };
             }
             else if (trimmed.StartsWith("EXPECTED:"))
@@ -362,11 +362,11 @@ EXPECTED: [expected outcome]
 
     private List<string> ExtractAdaptations(string response)
     {
-        var adaptations = new List<string>();
+        List<string> adaptations = new List<string>();
 
         // Look for lines that describe adaptations
-        var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        foreach (var line in lines)
+        string[] lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        foreach (string line in lines)
         {
             if (line.Contains("adapted", StringComparison.OrdinalIgnoreCase) ||
                 line.Contains("modified", StringComparison.OrdinalIgnoreCase) ||

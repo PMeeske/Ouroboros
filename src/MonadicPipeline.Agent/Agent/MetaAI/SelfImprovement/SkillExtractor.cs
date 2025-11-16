@@ -37,7 +37,7 @@ public sealed class SkillExtractor : ISkillExtractor
             return false;
 
         // Check if execution has enough steps
-        var stepCount = verification.Execution.StepResults.Count;
+        int stepCount = verification.Execution.StepResults.Count;
         if (stepCount < config.MinStepsForExtraction)
             return false;
 
@@ -74,11 +74,11 @@ public sealed class SkillExtractor : ISkillExtractor
                     $"Execution does not meet extraction criteria (Quality: {verification.QualityScore:P0}, Steps: {execution.StepResults.Count})");
 
             // Generate skill name and description using LLM
-            var skillName = await GenerateSkillNameAsync(execution, ct);
-            var description = await GenerateSkillDescriptionAsync(execution, ct);
+            string skillName = await GenerateSkillNameAsync(execution, ct);
+            string description = await GenerateSkillDescriptionAsync(execution, ct);
 
             // Check if similar skill already exists
-            var existingSkill = _skillRegistry.GetSkill(skillName);
+            Skill? existingSkill = _skillRegistry.GetSkill(skillName);
             if (existingSkill != null)
             {
                 // Update existing skill with new execution data
@@ -86,10 +86,10 @@ public sealed class SkillExtractor : ISkillExtractor
             }
 
             // Extract prerequisites from successful steps
-            var prerequisites = ExtractPrerequisites(execution, config);
+            List<string> prerequisites = ExtractPrerequisites(execution, config);
 
             // Extract and parameterize steps
-            var steps = config.EnableAutoParameterization
+            List<PlanStep> steps = config.EnableAutoParameterization
                 ? ParameterizeSteps(execution.Plan.Steps)
                 : execution.Plan.Steps;
 
@@ -100,10 +100,10 @@ public sealed class SkillExtractor : ISkillExtractor
             }
 
             // Calculate initial success rate from verification quality
-            var initialSuccessRate = verification.QualityScore;
+            double initialSuccessRate = verification.QualityScore;
 
             // Create new skill
-            var skill = new Skill(
+            Skill skill = new Skill(
                 Name: skillName,
                 Description: description,
                 Prerequisites: prerequisites,
@@ -133,7 +133,7 @@ public sealed class SkillExtractor : ISkillExtractor
     {
         try
         {
-            var prompt = $@"Generate a concise, descriptive name for a reusable skill based on this execution:
+            string prompt = $@"Generate a concise, descriptive name for a reusable skill based on this execution:
 
 Goal: {execution.Plan.Goal}
 Steps:
@@ -146,7 +146,7 @@ Requirements:
 
 Skill name:";
 
-            var skillName = await _llm.GenerateTextAsync(prompt, ct);
+            string skillName = await _llm.GenerateTextAsync(prompt, ct);
             skillName = skillName?.Trim() ?? "extracted_skill";
 
             // Sanitize the name
@@ -170,7 +170,7 @@ Skill name:";
     {
         try
         {
-            var prompt = $@"Generate a clear description of what this skill does:
+            string prompt = $@"Generate a clear description of what this skill does:
 
 Goal: {execution.Plan.Goal}
 Steps:
@@ -181,7 +181,7 @@ Results:
 
 Write a 1-2 sentence description of this skill's capability:";
 
-            var description = await _llm.GenerateTextAsync(prompt, ct);
+            string description = await _llm.GenerateTextAsync(prompt, ct);
             description = description?.Trim() ?? $"Skill for: {execution.Plan.Goal}";
 
             return description;
@@ -198,10 +198,10 @@ Write a 1-2 sentence description of this skill's capability:";
     /// </summary>
     private List<string> ExtractPrerequisites(ExecutionResult execution, SkillExtractionConfig config)
     {
-        var prerequisites = new List<string>();
+        List<string> prerequisites = new List<string>();
 
         // Extract actions from high-confidence successful steps
-        var successfulSteps = execution.StepResults
+        List<string> successfulSteps = execution.StepResults
             .Where(r => r.Success && r.Step.ConfidenceScore > 0.7)
             .Select(r => r.Step.Action)
             .Distinct()
@@ -218,14 +218,14 @@ Write a 1-2 sentence description of this skill's capability:";
     /// </summary>
     private List<PlanStep> ParameterizeSteps(List<PlanStep> steps)
     {
-        var parameterizedSteps = new List<PlanStep>();
+        List<PlanStep> parameterizedSteps = new List<PlanStep>();
 
-        foreach (var step in steps)
+        foreach (PlanStep step in steps)
         {
-            var newParams = new Dictionary<string, object>();
+            Dictionary<string, object> newParams = new Dictionary<string, object>();
 
             // Keep parameters but mark those that could be parameterized
-            foreach (var param in step.Parameters)
+            foreach (KeyValuePair<string, object> param in step.Parameters)
             {
                 // Simple heuristic: if value is a string or number, it might be parameterizable
                 if (param.Value is string || param.Value is int || param.Value is double)
@@ -238,7 +238,7 @@ Write a 1-2 sentence description of this skill's capability:";
                 }
             }
 
-            var parameterizedStep = new PlanStep(
+            PlanStep parameterizedStep = new PlanStep(
                 Action: step.Action,
                 Parameters: newParams.Any() ? newParams : step.Parameters,
                 ExpectedOutcome: step.ExpectedOutcome,
@@ -262,12 +262,12 @@ Write a 1-2 sentence description of this skill's capability:";
         try
         {
             // Calculate updated success rate (weighted average)
-            var totalUsages = existingSkill.UsageCount + 1;
-            var updatedSuccessRate =
+            int totalUsages = existingSkill.UsageCount + 1;
+            double updatedSuccessRate =
                 (existingSkill.SuccessRate * existingSkill.UsageCount + verification.QualityScore) / totalUsages;
 
             // Create updated skill
-            var updatedSkill = existingSkill with
+            Skill updatedSkill = existingSkill with
             {
                 SuccessRate = updatedSuccessRate,
                 UsageCount = totalUsages,
@@ -318,11 +318,11 @@ Write a 1-2 sentence description of this skill's capability:";
     private string GenerateFallbackSkillName(ExecutionResult execution)
     {
         // Extract first action as basis for name
-        var firstAction = execution.Plan.Steps.FirstOrDefault()?.Action ?? "skill";
-        var sanitized = SanitizeSkillName(firstAction);
+        string firstAction = execution.Plan.Steps.FirstOrDefault()?.Action ?? "skill";
+        string sanitized = SanitizeSkillName(firstAction);
 
         // Add timestamp to ensure uniqueness
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+        string timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
 
         return $"{sanitized}_{timestamp}";
     }

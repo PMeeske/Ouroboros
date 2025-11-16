@@ -37,28 +37,28 @@ public static class MonadicExamples
         Console.WriteLine("=== Option Monad Demonstration ===");
 
         // Creating Options
-        var someValue = Option<int>.Some(42);
-        var noneValue = Option<int>.None();
+        Option<int> someValue = Option<int>.Some(42);
+        Option<int> noneValue = Option<int>.None();
 
         Console.WriteLine($"Some(42): {someValue}");
         Console.WriteLine($"None: {noneValue}");
 
         // Functor map operation
-        var mapped = someValue.Map(x => x * 2);
-        var mappedNone = noneValue.Map(x => x * 2);
+        Option<int> mapped = someValue.Map(x => x * 2);
+        Option<int> mappedNone = noneValue.Map(x => x * 2);
 
         Console.WriteLine($"Some(42).Map(x => x * 2): {mapped}");
         Console.WriteLine($"None.Map(x => x * 2): {mappedNone}");
 
         // Monadic bind operation
-        var bound = someValue.Bind(x => x > 40 ? Option<string>.Some($"Large: {x}") : Option<string>.None());
-        var boundNone = noneValue.Bind(x => Option<string>.Some($"Value: {x}"));
+        Option<string> bound = someValue.Bind(x => x > 40 ? Option<string>.Some($"Large: {x}") : Option<string>.None());
+        Option<string> boundNone = noneValue.Bind(x => Option<string>.Some($"Value: {x}"));
 
         Console.WriteLine($"Some(42).Bind(largeCheck): {bound}");
         Console.WriteLine($"None.Bind(largeCheck): {boundNone}");
 
         // Pattern matching
-        var result = someValue.Match(
+        string result = someValue.Match(
             value => $"Got value: {value}",
             "No value");
         Console.WriteLine($"Pattern match result: {result}");
@@ -74,34 +74,34 @@ public static class MonadicExamples
         Console.WriteLine("=== Result Monad Demonstration ===");
 
         // Creating Results
-        var success = Result<int, string>.Success(100);
-        var failure = Result<int, string>.Failure("Something went wrong");
+        Result<int, string> success = Result<int, string>.Success(100);
+        Result<int, string> failure = Result<int, string>.Failure("Something went wrong");
 
         Console.WriteLine($"Success(100): {success}");
         Console.WriteLine($"Failure: {failure}");
 
         // Functor map operation
-        var mappedSuccess = success.Map(x => x / 2);
-        var mappedFailure = failure.Map(x => x / 2);
+        Result<int, string> mappedSuccess = success.Map(x => x / 2);
+        Result<int, string> mappedFailure = failure.Map(x => x / 2);
 
         Console.WriteLine($"Success.Map(x => x / 2): {mappedSuccess}");
         Console.WriteLine($"Failure.Map(x => x / 2): {mappedFailure}");
 
         // Monadic bind operation
-        var boundSuccess = success.Bind(x =>
+        Result<string, string> boundSuccess = success.Bind(x =>
             x > 50 ? Result<string, string>.Success($"Large number: {x}")
                    : Result<string, string>.Failure("Number too small"));
-        var boundFailure = failure.Bind(x => Result<string, string>.Success($"Value: {x}"));
+        Result<string, string> boundFailure = failure.Bind(x => Result<string, string>.Success($"Value: {x}"));
 
         Console.WriteLine($"Success.Bind(largeCheck): {boundSuccess}");
         Console.WriteLine($"Failure.Bind(largeCheck): {boundFailure}");
 
         // Error mapping
-        var mappedError = failure.MapError(error => $"Error: {error}");
+        Result<int, string> mappedError = failure.MapError(error => $"Error: {error}");
         Console.WriteLine($"Failure.MapError: {mappedError}");
 
         // Pattern matching
-        var result = success.Match(
+        string result = success.Match(
             value => $"Success with value: {value}",
             error => $"Failed with error: {error}");
         Console.WriteLine($"Pattern match result: {result}");
@@ -121,7 +121,7 @@ public static class MonadicExamples
         Step<string, int> parseNumber = async input =>
         {
             await Task.Delay(10); // Simulate async work
-            return int.TryParse(input, out var result) ? result : 0;
+            return int.TryParse(input, out int result) ? result : 0;
         };
 
         Step<int, string> formatResult = async input =>
@@ -131,22 +131,22 @@ public static class MonadicExamples
         };
 
         // Compose arrows using Then
-        var pipeline = parseNumber.Then(formatResult);
+        Step<string, string> pipeline = parseNumber.Then(formatResult);
 
         // Execute the pipeline
-        var result1 = await pipeline("42");
-        var result2 = await pipeline("not-a-number");
+        string result1 = await pipeline("42");
+        string result2 = await pipeline("not-a-number");
 
         Console.WriteLine($"Pipeline('42'): {result1}");
         Console.WriteLine($"Pipeline('not-a-number'): {result2}");
 
         // Using Map for transformation
-        var mappedPipeline = parseNumber.Map(x => x * 10);
-        var mappedResult = await mappedPipeline("5");
+        Step<string, int> mappedPipeline = parseNumber.Map(x => x * 10);
+        int mappedResult = await mappedPipeline("5");
         Console.WriteLine($"ParseNumber.Map(x => x * 10)('5'): {mappedResult}");
 
         // Using Tap for side effects
-        var tappedPipeline = parseNumber.Tap(x => Console.WriteLine($"Parsed intermediate value: {x}"));
+        Step<string, int> tappedPipeline = parseNumber.Tap(x => Console.WriteLine($"Parsed intermediate value: {x}"));
         await tappedPipeline("123");
 
         Console.WriteLine();
@@ -164,7 +164,7 @@ public static class MonadicExamples
         KleisliResult<string, int, string> safeParseNumber = async input =>
         {
             await Task.Delay(10);
-            return int.TryParse(input, out var result)
+            return int.TryParse(input, out int result)
                 ? Result<int, string>.Success(result)
                 : Result<int, string>.Failure($"Cannot parse '{input}' as number");
         };
@@ -178,20 +178,20 @@ public static class MonadicExamples
         };
 
         // Compose with error handling
-        var safeResultPipeline = safeParseNumber.Then(checkPositive);
+        KleisliResult<string, string, string> safeResultPipeline = safeParseNumber.Then(checkPositive);
 
         // Test different inputs
-        var result1 = await safeResultPipeline("42");
-        var result2 = await safeResultPipeline("-5");
-        var result3 = await safeResultPipeline("not-a-number");
+        Result<string, string> result1 = await safeResultPipeline("42");
+        Result<string, string> result2 = await safeResultPipeline("-5");
+        Result<string, string> result3 = await safeResultPipeline("not-a-number");
 
         Console.WriteLine($"SafePipeline('42'): {result1}");
         Console.WriteLine($"SafePipeline('-5'): {result2}");
         Console.WriteLine($"SafePipeline('not-a-number'): {result3}");
 
         // Using Map for success transformation
-        var mappedSafePipeline = safeParseNumber.Map(x => x * 100);
-        var mappedSafeResult = await mappedSafePipeline("7");
+        KleisliResult<string, int, string> mappedSafePipeline = safeParseNumber.Map(x => x * 100);
+        Result<int, string> mappedSafeResult = await mappedSafePipeline("7");
         Console.WriteLine($"SafeParseNumber.Map(x => x * 100)('7'): {mappedSafeResult}");
 
         Console.WriteLine();
@@ -209,7 +209,7 @@ public static class MonadicExamples
         KleisliOption<string, int> tryParseNumber = async input =>
         {
             await Task.Delay(10);
-            return int.TryParse(input, out var result)
+            return int.TryParse(input, out int result)
                 ? Option<int>.Some(result)
                 : Option<int>.None();
         };
@@ -223,20 +223,20 @@ public static class MonadicExamples
         };
 
         // Compose with None handling
-        var optionPipeline = tryParseNumber.Then(formatIfLarge);
+        KleisliOption<string, string> optionPipeline = tryParseNumber.Then(formatIfLarge);
 
         // Test different inputs
-        var result1 = await optionPipeline("200");
-        var result2 = await optionPipeline("50");
-        var result3 = await optionPipeline("not-a-number");
+        Option<string> result1 = await optionPipeline("200");
+        Option<string> result2 = await optionPipeline("50");
+        Option<string> result3 = await optionPipeline("not-a-number");
 
         Console.WriteLine($"OptionPipeline('200'): {result1}");
         Console.WriteLine($"OptionPipeline('50'): {result2}");
         Console.WriteLine($"OptionPipeline('not-a-number'): {result3}");
 
         // Convert to Result
-        var resultPipeline = tryParseNumber.ToResult("Failed to parse number");
-        var convertedResult = await resultPipeline("42");
+        KleisliResult<string, int, string> resultPipeline = tryParseNumber.ToResult("Failed to parse number");
+        Result<int, string> convertedResult = await resultPipeline("42");
         Console.WriteLine($"TryParseNumber.ToResult('42'): {convertedResult}");
 
         Console.WriteLine();
@@ -263,14 +263,14 @@ public static class MonadicExamples
         };
 
         // Wrap with exception handling
-        var safeOperation = riskyOperation.Catch();
+        KleisliResult<string, int, Exception> safeOperation = riskyOperation.Catch();
 
         // Test with normal input
-        var result1 = await safeOperation("hello");
+        Result<int, Exception> result1 = await safeOperation("hello");
         Console.WriteLine($"SafeOperation('hello'): {result1}");
 
         // Test with exception-throwing input
-        var result2 = await safeOperation("throw");
+        Result<int, Exception> result2 = await safeOperation("throw");
         Console.WriteLine($"SafeOperation('throw'): {result2}");
 
         Console.WriteLine();
@@ -285,11 +285,11 @@ public static class MonadicExamples
         Console.WriteLine("=== Monadic Laws Demonstration ===");
 
         // Left Identity Law: return(a).bind(f) ≡ f(a)
-        var value = 42;
-        var func = (int x) => Option<string>.Some($"Value: {x}");
+        int value = 42;
+        Func<int, Option<string>> func = (int x) => Option<string>.Some($"Value: {x}");
 
-        var leftSide = Option<int>.Some(value).Bind(func);
-        var rightSide = func(value);
+        Option<string> leftSide = Option<int>.Some(value).Bind(func);
+        Option<string> rightSide = func(value);
 
         Console.WriteLine($"Left Identity Law:");
         Console.WriteLine($"Some({value}).Bind(f): {leftSide}");
@@ -297,8 +297,8 @@ public static class MonadicExamples
         Console.WriteLine($"Equal: {leftSide.Equals(rightSide)}");
 
         // Right Identity Law: m.bind(return) ≡ m
-        var option = Option<int>.Some(42);
-        var boundWithReturn = option.Bind(x => Option<int>.Some(x));
+        Option<int> option = Option<int>.Some(42);
+        Option<int> boundWithReturn = option.Bind(x => Option<int>.Some(x));
 
         Console.WriteLine($"\nRight Identity Law:");
         Console.WriteLine($"Some(42).Bind(Some): {boundWithReturn}");
