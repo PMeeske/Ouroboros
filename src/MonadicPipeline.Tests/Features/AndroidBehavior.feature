@@ -12,7 +12,7 @@ Feature: Android Behavior
         When I initialize with database path "/tmp/test.db"
         Then the executor should be initialized
         When I execute command "help"
-        Then the result should contain "Executed: help"
+        Then the command result should contain "Executed: help"
 
     Scenario: CLI Executor failed initialization throws exception
         Given a CLI executor configured to fail initialization
@@ -69,7 +69,7 @@ Feature: Android Behavior
     Scenario: Activity execute command in resumed state succeeds
         Given a resumed activity
         When I execute command "help"
-        Then the result should contain "Executed: help"
+        Then the command result should contain "Executed: help"
 
     Scenario: Activity execute command not resumed throws exception
         Given an activity in Started state

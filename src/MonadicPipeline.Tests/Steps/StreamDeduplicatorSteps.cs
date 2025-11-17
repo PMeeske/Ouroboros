@@ -43,20 +43,20 @@ public class StreamDeduplicatorSteps
         _deduplicator = new StreamDeduplicator((float)threshold, maxCacheSize);
     }
 
-    [Given("I add vector \\[{float}, {float}, {float}] to cache")]
+    [Given("I add vector [{float}, {float}, {float}] to cache")]
     public void GivenIAddVectorToCache(float x, float y, float z)
     {
         _deduplicator.Should().NotBeNull();
         _deduplicator!.IsDuplicate(new float[] { x, y, z });
     }
 
-    [Given("a stream of vectors \\[{float},{float},{float}], \\[{float},{float},{float}]")]
+    [Given("a stream of vectors [{float},{float},{float}], [{float},{float},{float}]")]
     public void GivenAStreamOfVectorsTwoVectors(float x1, float y1, float z1, float x2, float y2, float z2)
     {
         _streamSource = CreateAsyncEnumerable(new float[] { x1, y1, z1 }, new float[] { x2, y2, z2 });
     }
 
-    [Given("a stream of vectors \\[{float},{float},{float}], \\[{float},{float},{float}], \\[{float},{float},{float}]")]
+    [Given("a stream of vectors [{float},{float},{float}], [{float},{float},{float}], [{float},{float},{float}]")]
     public void GivenAStreamOfVectorsThreeVectors(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3)
     {
         _streamSource = CreateAsyncEnumerable(new float[] { x1, y1, z1 }, new float[] { x2, y2, z2 }, new float[] { x3, y3, z3 });
@@ -94,15 +94,15 @@ public class StreamDeduplicatorSteps
         }
     }
 
-    [When("I check if first vector \\[{float}, {float}, {float}] is duplicate")]
-    [When("I check if vector \\[{float}, {float}, {float}] is duplicate")]
+    [When("I check if first vector [{float}, {float}, {float}] is duplicate")]
+    [When("I check if vector [{float}, {float}, {float}] is duplicate")]
     public void WhenICheckIfVectorIsDuplicate(float x, float y, float z)
     {
         _deduplicator.Should().NotBeNull();
         _isDuplicate = _deduplicator!.IsDuplicate(new float[] { x, y, z });
     }
 
-    [When("I filter batch with vectors \\[{float},{float},{float}], \\[{float},{float},{float}], \\[{float},{float},{float}]")]
+    [When("I filter batch with vectors [{float},{float},{float}], [{float},{float},{float}], [{float},{float},{float}]")]
     public void WhenIFilterBatchWithVectorsThree(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3)
     {
         _deduplicator.Should().NotBeNull();
@@ -115,7 +115,7 @@ public class StreamDeduplicatorSteps
         _filteredBatch = _deduplicator!.FilterBatch(vectors);
     }
 
-    [When("I filter batch with vectors \\[{float},{float},{float}]")]
+    [When("I filter batch with vectors [{float},{float},{float}]")]
     public void WhenIFilterBatchWithVectorsSingle(float x, float y, float z)
     {
         _deduplicator.Should().NotBeNull();
@@ -123,7 +123,7 @@ public class StreamDeduplicatorSteps
         _filteredBatch = _deduplicator!.FilterBatch(vectors);
     }
 
-    [When("I filter another batch with vectors \\[{float},{float},{float}], \\[{float},{float},{float}]")]
+    [When("I filter another batch with vectors [{float},{float},{float}], [{float},{float},{float}]")]
     public void WhenIFilterAnotherBatchWithVectorsTwo(float x1, float y1, float z1, float x2, float y2, float z2)
     {
         _deduplicator.Should().NotBeNull();
@@ -135,7 +135,7 @@ public class StreamDeduplicatorSteps
         _filteredBatch = _deduplicator!.FilterBatch(vectors);
     }
 
-    [When("I filter async stream with vectors \\[{float},{float},{float}], \\[{float},{float},{float}], \\[{float},{float},{float}]")]
+    [When("I filter async stream with vectors [{float},{float},{float}], [{float},{float},{float}], [{float},{float},{float}]")]
     public async Task WhenIFilterAsyncStreamWithVectors(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3)
     {
         _deduplicator.Should().NotBeNull();
@@ -223,7 +223,7 @@ public class StreamDeduplicatorSteps
         _filteredBatch!.Count.Should().Be(count);
     }
 
-    [Then("the filtered batch should contain \\[{float},{float},{float}]")]
+    [Then("the filtered batch should contain [{float},{float},{float}]")]
     public void ThenTheFilteredBatchShouldContainVector(float x, float y, float z)
     {
         _filteredBatch.Should().NotBeNull();

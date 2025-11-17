@@ -29,7 +29,5 @@ global using LangChainPipeline.Pipeline.Branches;
 global using LangChainPipeline.Pipeline.Ingestion;
 global using LangChainPipeline.Pipeline.Reasoning;
 global using LangChainPipeline.Providers;
-// Tests
-global using LangChainPipeline.Tests;
 // Tools and providers
 global using LangChainPipeline.Tools;

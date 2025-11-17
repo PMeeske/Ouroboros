@@ -25,13 +25,13 @@ public class VectorStoreFactorySteps
         _thrownException = null;
     }
 
-    [Given(@"a configuration with type ""(.*)""")]
+    [Given(@"^a configuration with type ""([^""]+)""$")]
     public void GivenAConfigurationWithType(string type)
     {
         _config = new VectorStoreConfiguration { Type = type };
     }
 
-    [Given(@"a configuration with type ""(.*)"" and no connection string")]
+    [Given(@"^a configuration with type ""([^""]+)"" and no connection string$")]
     public void GivenAConfigurationWithTypeAndNoConnectionString(string type)
     {
         _config = new VectorStoreConfiguration
@@ -41,7 +41,7 @@ public class VectorStoreFactorySteps
         };
     }
 
-    [Given(@"a configuration with type ""(.*)"" and connection string ""(.*)""")]
+    [Given(@"^a configuration with type ""([^""]+)"" and connection string ""([^""]+)""$")]
     public void GivenAConfigurationWithTypeAndConnectionString(string type, string connectionString)
     {
         _config = new VectorStoreConfiguration
@@ -119,11 +119,11 @@ public class VectorStoreFactorySteps
         _store.Should().BeOfType<TrackedVectorStore>();
     }
 
-    [Then("it should throw InvalidOperationException")]
-    public void ThenItShouldThrowInvalidOperationException()
+    [Then("the store should be of type QdrantVectorStore")]
+    public void ThenTheStoreShouldBeOfTypeQdrantVectorStore()
     {
-        _thrownException.Should().NotBeNull();
-        _thrownException.Should().BeOfType<InvalidOperationException>();
+        _store.Should().NotBeNull();
+        _store.Should().BeOfType<QdrantVectorStore>();
     }
 
     [Then("it should throw NotImplementedException")]
@@ -140,11 +140,11 @@ public class VectorStoreFactorySteps
         _thrownException.Should().BeOfType<NotSupportedException>();
     }
 
-    [Then("it should throw ArgumentNullException")]
-    public void ThenItShouldThrowArgumentNullException()
+    [Then("the vector store creation should throw InvalidOperationException")]
+    public void ThenTheVectorStoreCreationShouldThrowInvalidOperationException()
     {
         _thrownException.Should().NotBeNull();
-        _thrownException.Should().BeOfType<ArgumentNullException>();
+        _thrownException.Should().BeOfType<InvalidOperationException>();
     }
 
     [Then("the error should mention connection string")]
@@ -154,18 +154,20 @@ public class VectorStoreFactorySteps
         _thrownException!.Message.Should().Contain("Connection string is required");
     }
 
-    [Then("the error should mention Qdrant implementation")]
-    public void ThenTheErrorShouldMentionQdrantImplementation()
-    {
-        _thrownException.Should().NotBeNull();
-        _thrownException!.Message.Should().Contain("Qdrant vector store implementation");
-    }
+    // Qdrant is implemented, so no error expectation step is needed anymore.
 
     [Then("the error should mention Pinecone implementation")]
     public void ThenTheErrorShouldMentionPineconeImplementation()
     {
         _thrownException.Should().NotBeNull();
         _thrownException!.Message.Should().Contain("Pinecone vector store implementation");
+    }
+
+    [Then("the factory creation should throw ArgumentNullException")]
+    public void ThenTheFactoryCreationShouldThrowArgumentNullException()
+    {
+        _thrownException.Should().NotBeNull();
+        _thrownException.Should().BeOfType<ArgumentNullException>();
     }
 
     [Then("the error should mention UnsupportedType")]

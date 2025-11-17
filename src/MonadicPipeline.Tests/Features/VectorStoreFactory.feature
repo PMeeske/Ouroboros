@@ -21,20 +21,19 @@ Feature: Vector Store Factory
     Scenario: Qdrant type without connection string throws exception
         Given a configuration with type "Qdrant" and no connection string
         When I attempt to create a vector store
-        Then it should throw InvalidOperationException
+        Then the vector store creation should throw InvalidOperationException
         And the error should mention connection string
 
     Scenario: Pinecone type without connection string throws exception
         Given a configuration with type "Pinecone" and no connection string
         When I attempt to create a vector store
-        Then it should throw InvalidOperationException
+        Then the vector store creation should throw InvalidOperationException
         And the error should mention connection string
 
-    Scenario: Qdrant with connection string throws not implemented
+    Scenario: Qdrant with connection string creates Qdrant vector store
         Given a configuration with type "Qdrant" and connection string "http://localhost:6333"
-        When I attempt to create a vector store
-        Then it should throw NotImplementedException
-        And the error should mention Qdrant implementation
+        When I create a vector store
+        Then the store should be of type QdrantVectorStore
 
     Scenario: Pinecone with connection string throws not implemented
         Given a configuration with type "Pinecone" and connection string "https://pinecone-api.io"
@@ -56,4 +55,4 @@ Feature: Vector Store Factory
 
     Scenario: Constructor with null config throws exception
         When I attempt to create a factory with null config
-        Then it should throw ArgumentNullException
+        Then the factory creation should throw ArgumentNullException

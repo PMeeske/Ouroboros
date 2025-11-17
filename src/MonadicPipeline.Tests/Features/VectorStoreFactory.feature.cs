@@ -39,8 +39,8 @@ namespace LangChainPipeline.Features
         public static async System.Threading.Tasks.Task FeatureSetupAsync()
         {
             testRunner = TechTalk.SpecFlow.TestRunnerManager.GetTestRunnerForAssembly(null, TechTalk.SpecFlow.xUnit.SpecFlowPlugin.XUnitParallelWorkerTracker.Instance.GetWorkerId());
-            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Vector Store Factory", "    As a developer\n    I want to create vector stores using a factory pattern\n   " +
-                    " So that I can support multiple vector store backends", ProgrammingLanguage.CSharp, featureTags);
+            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Vector Store Factory", "    As a developer\r\n    I want to create vector stores using a factory pattern\r\n " +
+                    "   So that I can support multiple vector store backends", ProgrammingLanguage.CSharp, featureTags);
             await testRunner.OnFeatureStartAsync(featureInfo);
         }
         
@@ -198,7 +198,7 @@ namespace LangChainPipeline.Features
         await testRunner.WhenAsync("I attempt to create a vector store", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 24
-        await testRunner.ThenAsync("it should throw InvalidOperationException", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        await testRunner.ThenAsync("the vector store creation should throw InvalidOperationException", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 25
         await testRunner.AndAsync("the error should mention connection string", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
@@ -235,7 +235,7 @@ namespace LangChainPipeline.Features
         await testRunner.WhenAsync("I attempt to create a vector store", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 30
-        await testRunner.ThenAsync("it should throw InvalidOperationException", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        await testRunner.ThenAsync("the vector store creation should throw InvalidOperationException", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 31
         await testRunner.AndAsync("the error should mention connection string", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
@@ -244,14 +244,14 @@ namespace LangChainPipeline.Features
             await this.ScenarioCleanupAsync();
         }
         
-        [Xunit.SkippableFactAttribute(DisplayName="Qdrant with connection string throws not implemented")]
+        [Xunit.SkippableFactAttribute(DisplayName="Qdrant with connection string creates Qdrant vector store")]
         [Xunit.TraitAttribute("FeatureTitle", "Vector Store Factory")]
-        [Xunit.TraitAttribute("Description", "Qdrant with connection string throws not implemented")]
-        public async System.Threading.Tasks.Task QdrantWithConnectionStringThrowsNotImplemented()
+        [Xunit.TraitAttribute("Description", "Qdrant with connection string creates Qdrant vector store")]
+        public async System.Threading.Tasks.Task QdrantWithConnectionStringCreatesQdrantVectorStore()
         {
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Qdrant with connection string throws not implemented", null, tagsOfScenario, argumentsOfScenario, featureTags);
+            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Qdrant with connection string creates Qdrant vector store", null, tagsOfScenario, argumentsOfScenario, featureTags);
 #line 33
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
@@ -269,13 +269,10 @@ namespace LangChainPipeline.Features
         await testRunner.GivenAsync("a configuration with type \"Qdrant\" and connection string \"http://localhost:6333\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 35
-        await testRunner.WhenAsync("I attempt to create a vector store", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+        await testRunner.WhenAsync("I create a vector store", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 36
-        await testRunner.ThenAsync("it should throw NotImplementedException", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 37
-        await testRunner.AndAsync("the error should mention Qdrant implementation", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.ThenAsync("the store should be of type QdrantVectorStore", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -289,7 +286,7 @@ namespace LangChainPipeline.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Pinecone with connection string throws not implemented", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 39
+#line 38
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -302,17 +299,17 @@ namespace LangChainPipeline.Features
 #line 6
     await this.FeatureBackgroundAsync();
 #line hidden
-#line 40
+#line 39
         await testRunner.GivenAsync("a configuration with type \"Pinecone\" and connection string \"https://pinecone-api." +
                         "io\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 41
+#line 40
         await testRunner.WhenAsync("I attempt to create a vector store", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 42
+#line 41
         await testRunner.ThenAsync("it should throw NotImplementedException", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 43
+#line 42
         await testRunner.AndAsync("the error should mention Pinecone implementation", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -327,7 +324,7 @@ namespace LangChainPipeline.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Unsupported type throws exception", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 45
+#line 44
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -340,16 +337,16 @@ namespace LangChainPipeline.Features
 #line 6
     await this.FeatureBackgroundAsync();
 #line hidden
-#line 46
+#line 45
         await testRunner.GivenAsync("a configuration with type \"UnsupportedType\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 47
+#line 46
         await testRunner.WhenAsync("I attempt to create a vector store", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 48
+#line 47
         await testRunner.ThenAsync("it should throw NotSupportedException", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 49
+#line 48
         await testRunner.AndAsync("the error should mention UnsupportedType", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -364,7 +361,7 @@ namespace LangChainPipeline.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Create factory from pipeline configuration", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 51
+#line 50
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -377,16 +374,16 @@ namespace LangChainPipeline.Features
 #line 6
     await this.FeatureBackgroundAsync();
 #line hidden
-#line 52
+#line 51
         await testRunner.GivenAsync("a pipeline configuration with vector store settings", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 53
+#line 52
         await testRunner.WhenAsync("I create a factory from the pipeline configuration", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 54
+#line 53
         await testRunner.ThenAsync("the factory should not be null", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 55
+#line 54
         await testRunner.AndAsync("creating a store should return TrackedVectorStore", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -401,7 +398,7 @@ namespace LangChainPipeline.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Constructor with null config throws exception", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 57
+#line 56
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -414,11 +411,11 @@ namespace LangChainPipeline.Features
 #line 6
     await this.FeatureBackgroundAsync();
 #line hidden
-#line 58
+#line 57
         await testRunner.WhenAsync("I attempt to create a factory with null config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 59
-        await testRunner.ThenAsync("it should throw ArgumentNullException", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line 58
+        await testRunner.ThenAsync("the factory creation should throw ArgumentNullException", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
