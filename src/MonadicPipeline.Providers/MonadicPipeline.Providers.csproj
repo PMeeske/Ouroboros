@@ -44,6 +44,8 @@
     <!-- Dependencies -->
     <PackageReference Include="LangChain" Version="0.17.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="Polly" Version="8.5.0" />
+    <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
   </ItemGroup>
 
 </Project>
