@@ -43,7 +43,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-      timeout-minutes: 5
+      # Remove timeout-minutes from checkout
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -59,7 +59,7 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
-      uses: nick-fields/retry-action@v3
+      uses: nick-fields/retry@v3  # Fixed action name
       with:
         timeout_minutes: 10
         max_attempts: 3
@@ -67,7 +67,7 @@ jobs:
         command: dotnet restore
 
     - name: Restore dotnet tools
-      uses: nick-fields/retry-action@v3
+      uses: nick-fields/retry@v3  # Fixed action name
       with:
         timeout_minutes: 5
         max_attempts: 3
@@ -81,6 +81,7 @@ jobs:
     - name: Run mutation tests
       id: mutation-test
       continue-on-error: true
+      timeout-minutes: 90
       run: |
         # Set mutation level from input or use default
         ML="${{ github.event.inputs.mutation_level || 'Standard' }}"
@@ -88,39 +89,46 @@ jobs:
 
         echo "Running mutation tests with level: ${ML}, verbosity: ${VERBOSITY}"
 
-        # Run Stryker with configuration
-        dotnet stryker \
-          --config-file stryker-config.json \
-          --mutation-level "${ML}" \
-          --verbosity "${VERBOSITY}" \
-          --reporters "html" "progress" "json" "cleartext"
-      timeout-minutes: 90
+        # Check if stryker config exists
+        if [ ! -f "stryker-config.json" ]; then
+          echo "⚠️ Warning: stryker-config.json not found, using default configuration"
+          # Run with basic default configuration
+          dotnet stryker \
+            --mutation-level "${ML}" \
+            --verbosity "${VERBOSITY}" \
+            --reporters "html" "progress" "json" "cleartext"
+        else
+          # Run Stryker with configuration
+          dotnet stryker \
+            --config-file stryker-config.json \
+            --mutation-level "${ML}" \
+            --verbosity "${VERBOSITY}" \
+            --reporters "html" "progress" "json" "cleartext"
+        fi
 
     - name: Extract mutation score
       id: mutation-score
       if: always()
       run: |
+        # Install jq if not present
+        if ! command -v jq &> /dev/null; then
+          echo "Installing jq..."
+          sudo apt-get update && sudo apt-get install -y jq
+        fi
+        
         # Find the most recent mutation report JSON
-        REPORT=$(find StrykerOutput -name "mutation-report.json" \
-          -type f | sort -r | head -n 1)
+        REPORT=$(find . -name "mutation-report.json" -type f 2>/dev/null | sort -r | head -n 1)
 
         if [ -f "$REPORT" ]; then
           echo "Found mutation report: $REPORT"
 
           # Extract mutation score using jq
-          if command -v jq &> /dev/null; then
-            SCORE=$(jq -r '.thresholds.high' "$REPORT" 2>/dev/null \
-              || echo "N/A")
-            MUTANTS=$(jq -r '.files | length' "$REPORT" 2>/dev/null \
-              || echo "N/A")
+          SCORE=$(jq -r '.thresholds.high // .mutationScore // "N/A"' "$REPORT" 2>/dev/null || echo "N/A")
+          MUTANTS=$(jq -r '.files | length // 0' "$REPORT" 2>/dev/null || echo "N/A")
 
-            echo "mutation_score=${SCORE}" >> $GITHUB_OUTPUT
-            echo "total_mutants=${MUTANTS}" >> $GITHUB_OUTPUT
-            echo "report_found=true" >> $GITHUB_OUTPUT
-          else
-            echo "jq not found, skipping score extraction"
-            echo "report_found=false" >> $GITHUB_OUTPUT
-          fi
+          echo "mutation_score=${SCORE}" >> $GITHUB_OUTPUT
+          echo "total_mutants=${MUTANTS}" >> $GITHUB_OUTPUT
+          echo "report_found=true" >> $GITHUB_OUTPUT
         else
           echo "No mutation report found"
           echo "report_found=false" >> $GITHUB_OUTPUT
@@ -175,7 +183,9 @@ jobs:
       continue-on-error: true
       with:
         name: mutation-report-html
-        path: StrykerOutput/**/reports/mutation-report.html
+        path: |
+          StrykerOutput/**/reports/mutation-report.html
+          **/mutation-report.html
         retention-days: 30
         if-no-files-found: warn
 
@@ -185,7 +195,9 @@ jobs:
       continue-on-error: true
       with:
         name: mutation-report-json
-        path: StrykerOutput/**/mutation-report.json
+        path: |
+          StrykerOutput/**/mutation-report.json
+          **/mutation-report.json
         retention-days: 30
         if-no-files-found: warn
 
@@ -195,7 +207,9 @@ jobs:
       continue-on-error: true
       with:
         name: stryker-logs
-        path: StrykerOutput/**/logs/
+        path: |
+          StrykerOutput/**/logs/
+          **/stryker-log*.txt
         retention-days: 7
         if-no-files-found: ignore
 
