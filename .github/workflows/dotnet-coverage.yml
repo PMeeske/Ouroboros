@@ -38,7 +38,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: '10.0.x'
 
     - name: Cache NuGet packages
       uses: actions/cache@v4
@@ -210,7 +210,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: '10.0.x'
 
     - name: Cache NuGet packages
       uses: actions/cache@v4
@@ -225,10 +225,10 @@ jobs:
       run: |
         if [ -d "src/MonadicPipeline.Benchmarks" ]; then
           cd src/MonadicPipeline.Benchmarks
-          dotnet run -c Release --framework net8.0 -- --exporters json --artifacts ../../../BenchmarkDotNet.Artifacts
+          dotnet run -c Release --framework net10.0 -- --exporters json --artifacts ../../../BenchmarkDotNet.Artifacts
         elif [ -d "tests/MonadicPipeline.Benchmarks" ]; then
           cd tests/MonadicPipeline.Benchmarks
-          dotnet run -c Release --framework net8.0 -- --exporters json --artifacts ../../../BenchmarkDotNet.Artifacts
+          dotnet run -c Release --framework net10.0 -- --exporters json --artifacts ../../../BenchmarkDotNet.Artifacts
         else
           echo "Benchmark project not found, skipping..."
           echo "Looked in: src/MonadicPipeline.Benchmarks and tests/MonadicPipeline.Benchmarks"
