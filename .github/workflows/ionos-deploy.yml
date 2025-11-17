@@ -1,36 +1,3 @@
-# This workflow builds and deploys MonadicPipeline to IONOS Cloud Kubernetes
-#
-# This workflow includes:
-# - Testing: Runs xUnit tests before building images
-# - Building: Creates Docker images for both CLI and WebAPI components
-# - Registry: Pushes images to IONOS Container Registry
-# - Deployment: Deploys both CLI and WebAPI to IONOS Kubernetes cluster
-#
-# Prerequisites:
-# - IONOS Cloud Managed Kubernetes cluster
-# - IONOS Container Registry enabled
-# - kubectl configured with IONOS cluster access
-#
-# Required GitHub Secrets:
-#   - IONOS_REGISTRY_USERNAME: IONOS Container Registry username
-#   - IONOS_REGISTRY_PASSWORD: IONOS Container Registry password (or access token)
-#   - IONOS_KUBECONFIG: Raw kubeconfig YAML content for IONOS Kubernetes cluster
-#   - IONOS_ADMIN_USERNAME: IONOS Cloud API username for infrastructure management
-#   - IONOS_ADMIN_PASSWORD: IONOS Cloud API password for infrastructure management
-#
-# Optional GitHub Secrets/Variables:
-#   - IONOS_REGISTRY: Registry URL (default: adaptive-systems.cr.de-fra.ionos.com)
-#   - IONOS_ADMIN_TOKEN: IONOS Cloud API token (alternative to username/password)
-#
-# To configure kubeconfig secret:
-#   1. Download kubeconfig from IONOS Cloud Console
-#   2. Copy the raw YAML content
-#   3. Add to GitHub Secrets as IONOS_KUBECONFIG
-#
-# For more information:
-#   - IONOS Cloud: https://cloud.ionos.com/
-#   - Documentation: docs/IONOS_DEPLOYMENT_GUIDE.md
-
 name: IONOS Cloud Deployment
 
 on:
@@ -63,6 +30,7 @@ jobs:
           IONOS_USERNAME: ${{ secrets.IONOS_ADMIN_USERNAME }}
           IONOS_PASSWORD: ${{ secrets.IONOS_ADMIN_PASSWORD }}
           IONOS_TOKEN: ${{ secrets.IONOS_ADMIN_TOKEN }}
+        timeout-minutes: 5
         run: |
           echo "Verifying IONOS Cloud API connectivity..."
 
@@ -78,7 +46,6 @@ jobs:
           fi
 
           # Test API connectivity using IONOS Cloud API v6
-          # Reference: .github/workflows/ionos-api.yaml (IONOS Cloud API OpenAPI Specification)
           response=$(curl -s -w "\n%{http_code}" -H "$AUTH_HEADER" \
             -H "Content-Type: application/json" \
             https://api.ionos.com/cloudapi/v6/ || echo "000")
@@ -104,6 +71,7 @@ jobs:
           IONOS_USERNAME: ${{ secrets.IONOS_ADMIN_USERNAME }}
           IONOS_PASSWORD: ${{ secrets.IONOS_ADMIN_PASSWORD }}
           IONOS_TOKEN: ${{ secrets.IONOS_ADMIN_TOKEN }}
+        timeout-minutes: 5
         run: |
           # Skip if no credentials
           if [ -z "$IONOS_TOKEN" ] && [ -z "$IONOS_USERNAME" ]; then
@@ -147,7 +115,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        uses: nick-fields/retry-action@v3
+        uses: nick-fields/retry@v3  # Fixed action name
         with:
           timeout_minutes: 10
           max_attempts: 3
@@ -160,6 +128,7 @@ jobs:
 
       - name: Run xUnit tests
         run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+        timeout-minutes: 15
 
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -251,7 +220,7 @@ jobs:
           version: 'latest'
 
       - name: Configure kubectl for IONOS
-        uses: nick-fields/retry-action@v3
+        uses: nick-fields/retry@v3  # Fixed action name
         with:
           timeout_minutes: 5
           max_attempts: 3
@@ -263,6 +232,7 @@ jobs:
             echo "KUBECONFIG=$(pwd)/kubeconfig.yaml" >> $GITHUB_ENV
 
       - name: Validate IONOS prerequisites
+        timeout-minutes: 5
         run: |
           echo "Validating IONOS Cloud prerequisites..."
 
@@ -286,7 +256,7 @@ jobs:
           fi
 
       - name: Create namespace
-        uses: nick-fields/retry-action@v3
+        uses: nick-fields/retry@v3  # Fixed action name
         with:
           timeout_minutes: 3
           max_attempts: 3
@@ -294,7 +264,7 @@ jobs:
           command: kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Create registry pull secret
-        uses: nick-fields/retry-action@v3
+        uses: nick-fields/retry@v3  # Fixed action name
         with:
           timeout_minutes: 3
           max_attempts: 3
@@ -308,6 +278,7 @@ jobs:
               --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Prepare deployment manifests
+        timeout-minutes: 5
         run: |
           # Create temporary directory for processed manifests
           mkdir -p /tmp/k8s-manifests
@@ -334,7 +305,7 @@ jobs:
           sed -i 's|#   - name: ionos-registry-secret|  - name: ionos-registry-secret|g' /tmp/k8s-manifests/webapi-deployment.yaml
 
       - name: Apply secrets and configmap
-        uses: nick-fields/retry-action@v3
+        uses: nick-fields/retry@v3  # Fixed action name
         with:
           timeout_minutes: 5
           max_attempts: 3
@@ -345,7 +316,7 @@ jobs:
             kubectl apply -f k8s/configmap.yaml
 
       - name: Deploy dependencies
-        uses: nick-fields/retry-action@v3
+        uses: nick-fields/retry@v3  # Fixed action name
         with:
           timeout_minutes: 10
           max_attempts: 3
@@ -356,7 +327,7 @@ jobs:
             kubectl apply -f k8s/jaeger.yaml
 
       - name: Deploy applications
-        uses: nick-fields/retry-action@v3
+        uses: nick-fields/retry@v3  # Fixed action name
         with:
           timeout_minutes: 10
           max_attempts: 3
@@ -366,6 +337,7 @@ jobs:
             kubectl apply -f /tmp/k8s-manifests/webapi-deployment.yaml
 
       - name: Wait for deployments
+        timeout-minutes: 10
         run: |
           echo "Waiting for deployments to be ready..."
 
