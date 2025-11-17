@@ -47,3 +47,13 @@ playwright/.cache/
 # Temporary tool downloads
 actionlint
 actionlint_*.tar.gz
+optimization_results_20251117_144614.txt
+optimization_results_20251117_144826.txt
+optimization_results_20251117_150337.txt
+optimization_results_20251117_150547.txt
+optimization_results_20251117_154308.txt
+examples/litellm-gpt-oss-120b.md
+examples/run-optimization-scenario.ps1
+examples/streaming-reasoning-example.ps1
+docs/STREAMING_REASONING.md
+test-litellm.ps1

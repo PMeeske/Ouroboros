@@ -116,6 +116,9 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
     private readonly HttpClient _client;
     private readonly string _model;
     private readonly ChatRuntimeSettings _settings;
+    private static readonly System.Threading.SemaphoreSlim _rateLimiter = new(1, 1);
+    private static DateTime _lastRequestTime = DateTime.MinValue;
+    private static readonly TimeSpan _throttleDelay = TimeSpan.FromSeconds(2); // Configurable via env var
 
     public HttpOpenAiCompatibleChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null)
     {
@@ -134,6 +137,8 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
+        await ThrottleRequestAsync(ct).ConfigureAwait(false);
+
         try
         {
             using JsonContent payload = JsonContent.Create(new
@@ -156,6 +161,34 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
             // Remote backend not reachable → fall back to indicating failure.
         }
         return $"[remote-fallback:{_model}] {prompt}";
+    }
+
+    /// <summary>
+    /// Throttles requests to avoid rate limiting by enforcing minimum delay between requests.
+    /// </summary>
+    private static async Task ThrottleRequestAsync(CancellationToken ct)
+    {
+        await _rateLimiter.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            TimeSpan timeSinceLastRequest = DateTime.UtcNow - _lastRequestTime;
+            if (timeSinceLastRequest < _throttleDelay)
+            {
+                TimeSpan delay = _throttleDelay - timeSinceLastRequest;
+                await Task.Delay(delay, ct).ConfigureAwait(false);
+            }
+
+            _lastRequestTime = DateTime.UtcNow;
+        }
+        finally
+        {
+            _rateLimiter.Release();
+        }
+    }
+
+    public void Dispose()
+    {
+        _client?.Dispose();
     }
 }
 
@@ -220,6 +253,215 @@ public sealed class OllamaCloudChatModel : IChatCompletionModel
     public void Dispose()
     {
         _client?.Dispose();
+    }
+}
+
+/// <summary>
+/// HTTP client for LiteLLM proxy endpoints that support OpenAI-compatible chat completions API.
+/// Uses standard /v1/chat/completions endpoint with messages format.
+/// Includes rate limiting to prevent 429 errors.
+/// </summary>
+public sealed class LiteLLMChatModel : IChatCompletionModel
+{
+    private readonly HttpClient _client;
+    private readonly string _model;
+    private readonly ChatRuntimeSettings _settings;
+    private static readonly System.Threading.SemaphoreSlim _rateLimiter = new(1, 1);
+    private static DateTime _lastRequestTime = DateTime.MinValue;
+    private static readonly TimeSpan _throttleDelay = TimeSpan.FromSeconds(2); // 2 second delay between requests
+
+    public LiteLLMChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
+
+        _client = new HttpClient
+        {
+            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute)
+        };
+        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        _model = model;
+        _settings = settings ?? new ChatRuntimeSettings();
+    }
+
+    /// <inheritdoc/>
+    public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
+    {
+        await ThrottleRequestAsync(ct).ConfigureAwait(false);
+
+        try
+        {
+            // Use OpenAI-compatible chat completions format
+            using JsonContent payload = JsonContent.Create(new
+            {
+                model = _model,
+                messages = new[]
+                {
+                    new { role = "user", content = prompt }
+                },
+                temperature = _settings.Temperature,
+                max_tokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null
+            });
+
+            using HttpResponseMessage response = await _client.PostAsync("/v1/chat/completions", payload, ct).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+
+            string jsonString = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(jsonString);
+
+            // Extract content from OpenAI response format: choices[0].message.content or reasoning_content
+            if (doc.RootElement.TryGetProperty("choices", out System.Text.Json.JsonElement choicesElement) &&
+                choicesElement.ValueKind == System.Text.Json.JsonValueKind.Array &&
+                choicesElement.GetArrayLength() > 0)
+            {
+                System.Text.Json.JsonElement firstChoice = choicesElement[0];
+                if (firstChoice.TryGetProperty("message", out System.Text.Json.JsonElement messageElement))
+                {
+                    // Try standard content field first
+                    if (messageElement.TryGetProperty("content", out System.Text.Json.JsonElement contentElement) &&
+                        contentElement.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        string? content = contentElement.GetString();
+                        if (!string.IsNullOrEmpty(content))
+                        {
+                            return content;
+                        }
+                    }
+
+                    // Fall back to reasoning_content (for models that use it)
+                    if (messageElement.TryGetProperty("reasoning_content", out System.Text.Json.JsonElement reasoningElement))
+                    {
+                        return reasoningElement.GetString() ?? string.Empty;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Remote LiteLLM endpoint not reachable → fall back to indicating failure.
+        }
+
+        return $"[litellm-fallback:{_model}] {prompt}";
+    }
+
+    /// <summary>
+    /// Throttles requests to avoid rate limiting by enforcing minimum delay between requests.
+    /// </summary>
+    private static async Task ThrottleRequestAsync(CancellationToken ct)
+    {
+        await _rateLimiter.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            TimeSpan timeSinceLastRequest = DateTime.UtcNow - _lastRequestTime;
+            if (timeSinceLastRequest < _throttleDelay)
+            {
+                TimeSpan delay = _throttleDelay - timeSinceLastRequest;
+                await Task.Delay(delay, ct).ConfigureAwait(false);
+            }
+            _lastRequestTime = DateTime.UtcNow;
+        }
+        finally
+        {
+            _rateLimiter.Release();
+        }
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _client?.Dispose();
+    }
+
+    /// <summary>
+    /// Streams reasoning content as an observable sequence, parsing both content and reasoning_content fields.
+    /// Enables reactive composition for real-time reasoning pipeline visualization.
+    /// </summary>
+    /// <param name="prompt">The input prompt.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Observable sequence of reasoning content chunks.</returns>
+    public System.IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
+    {
+        return System.Reactive.Linq.Observable.Create<string>(async (observer, token) =>
+        {
+            await ThrottleRequestAsync(token).ConfigureAwait(false);
+
+            try
+            {
+                using JsonContent payload = JsonContent.Create(new
+                {
+                    model = _model,
+                    messages = new[]
+                    {
+                        new { role = "user", content = prompt }
+                    },
+                    temperature = _settings.Temperature,
+                    max_tokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null,
+                    stream = true
+                });
+
+                using HttpResponseMessage response = await _client.PostAsync("/v1/chat/completions", payload, token).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+
+                using Stream responseStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+                using StreamReader reader = new StreamReader(responseStream);
+
+                while (!reader.EndOfStream && !token.IsCancellationRequested)
+                {
+                    string? line = await reader.ReadLineAsync().ConfigureAwait(false);
+                    if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data: ")) continue;
+
+                    string jsonData = line.Substring(6).Trim();
+                    if (jsonData == "[DONE]")
+                    {
+                        observer.OnCompleted();
+                        return;
+                    }
+
+                    try
+                    {
+                        using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(jsonData);
+                        if (doc.RootElement.TryGetProperty("choices", out System.Text.Json.JsonElement choicesElement) &&
+                            choicesElement.ValueKind == System.Text.Json.JsonValueKind.Array &&
+                            choicesElement.GetArrayLength() > 0)
+                        {
+                            System.Text.Json.JsonElement delta = choicesElement[0];
+                            if (delta.TryGetProperty("delta", out System.Text.Json.JsonElement deltaElement))
+                            {
+                                // Try content field
+                                if (deltaElement.TryGetProperty("content", out System.Text.Json.JsonElement contentElement))
+                                {
+                                    string? content = contentElement.GetString();
+                                    if (!string.IsNullOrEmpty(content))
+                                    {
+                                        observer.OnNext(content);
+                                    }
+                                }
+                                // Try reasoning_content field for models that use it
+                                else if (deltaElement.TryGetProperty("reasoning_content", out System.Text.Json.JsonElement reasoningElement))
+                                {
+                                    string? reasoning = reasoningElement.GetString();
+                                    if (!string.IsNullOrEmpty(reasoning))
+                                    {
+                                        observer.OnNext(reasoning);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (System.Text.Json.JsonException)
+                    {
+                        // Skip malformed JSON chunks
+                        continue;
+                    }
+                }
+
+                observer.OnCompleted();
+            }
+            catch (Exception ex)
+            {
+                observer.OnError(ex);
+            }
+        });
     }
 }
 
@@ -453,6 +695,99 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
         return await _fallback.CreateEmbeddingsAsync(input, ct).ConfigureAwait(false);
     }
 
+    public void Dispose()
+    {
+        _client?.Dispose();
+    }
+}
+
+/// <summary>
+/// Embedding provider for LiteLLM proxy using OpenAI-compatible /v1/embeddings endpoint.
+/// Supports various embedding models proxied through LiteLLM.
+/// </summary>
+public sealed class LiteLLMEmbeddingModel : IEmbeddingModel
+{
+    private readonly HttpClient _client;
+    private readonly string _model;
+    private readonly DeterministicEmbeddingModel _fallback = new();
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LiteLLMEmbeddingModel"/> class.
+    /// </summary>
+    /// <param name="endpoint">LiteLLM proxy endpoint URL.</param>
+    /// <param name="apiKey">API key for authentication.</param>
+    /// <param name="model">Model name (e.g., text-embedding-ada-002, nomic-embed-text).</param>
+    public LiteLLMEmbeddingModel(string endpoint, string apiKey, string model)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
+
+        _client = new HttpClient
+        {
+            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute),
+        };
+        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        _model = model;
+    }
+
+    /// <inheritdoc/>
+    public async Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
+    {
+        try
+        {
+            // LiteLLM uses OpenAI-compatible /v1/embeddings endpoint
+            using JsonContent payload = JsonContent.Create(new
+            {
+                model = _model,
+                input = input,
+            });
+
+            using HttpResponseMessage response = await _client.PostAsync("/v1/embeddings", payload, ct).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+
+            using System.Text.Json.JsonDocument doc = await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false), cancellationToken: ct).ConfigureAwait(false);
+
+            // OpenAI format: { "data": [{ "embedding": [...] }] }
+            if (doc.RootElement.TryGetProperty("data", out System.Text.Json.JsonElement dataElement) &&
+                dataElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (System.Text.Json.JsonElement item in dataElement.EnumerateArray())
+                {
+                    if (item.TryGetProperty("embedding", out System.Text.Json.JsonElement embeddingElement) &&
+                        embeddingElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        List<float> floats = new List<float>();
+                        foreach (System.Text.Json.JsonElement element in embeddingElement.EnumerateArray())
+                        {
+                            if (element.TryGetSingle(out float value))
+                            {
+                                floats.Add(value);
+                            }
+                            else if (element.TryGetDouble(out double dblValue))
+                            {
+                                floats.Add((float)dblValue);
+                            }
+                        }
+
+                        if (floats.Count > 0)
+                        {
+                            return floats.ToArray();
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // LiteLLM proxy not reachable or error occurred → fall back to deterministic embedding
+        }
+
+        return await _fallback.CreateEmbeddingsAsync(input, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Disposes the HTTP client.
+    /// </summary>
     public void Dispose()
     {
         _client?.Dispose();

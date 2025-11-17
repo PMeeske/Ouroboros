@@ -1,5 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using LangChain.DocumentLoaders;
+using System.Reactive.Linq;
 
 namespace LangChainPipeline.Pipeline.Reasoning;
 
@@ -217,4 +218,180 @@ public static class ReasoningArrows
         => SafeDraftArrow(llm, tools, embed, topic, query, k)
             .Then(SafeCritiqueArrow(llm, tools, embed, topic, query, k))
             .Then(SafeImproveArrow(llm, tools, embed, topic, query, k));
+
+    /// <summary>
+    /// Creates a streaming draft arrow using Reactive Extensions that emits reasoning content chunks in real-time.
+    /// </summary>
+    /// <param name="streamingModel">LiteLLMChatModel with streaming support.</param>
+    /// <param name="tools">Tool registry.</param>
+    /// <param name="embed">Embedding model.</param>
+    /// <param name="topic">Topic for reasoning.</param>
+    /// <param name="query">Query for RAG retrieval.</param>
+    /// <param name="k">Number of documents to retrieve.</param>
+    /// <returns>Observable sequence of (chunk, branch) tuples.</returns>
+    public static IObservable<(string chunk, PipelineBranch branch)> StreamingDraftArrow(
+        LangChainPipeline.Providers.LiteLLMChatModel streamingModel,
+        ToolRegistry tools,
+        IEmbeddingModel embed,
+        string topic,
+        string query,
+        int k = 8)
+    {
+        async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            PipelineBranch branch = new PipelineBranch("streaming", new TrackedVectorStore(), DataSource.FromPath("."));
+            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+            string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
+
+            string prompt = Prompts.Draft.Format(new()
+            {
+                ["context"] = context,
+                ["topic"] = topic,
+                ["tools_schemas"] = ToolSchemasOrEmpty(tools)
+            });
+
+            System.Text.StringBuilder fullText = new System.Text.StringBuilder();
+
+            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable())
+            {
+                fullText.Append(chunk);
+                PipelineBranch updatedBranch = branch.WithReasoning(new Draft(fullText.ToString()), prompt, null);
+                yield return (chunk, updatedBranch);
+            }
+        }
+
+        return StreamAsync().ToObservable();
+    }    /// <summary>
+         /// Creates a streaming critique arrow that emits critique chunks in real-time.
+         /// </summary>
+    public static IObservable<(string chunk, PipelineBranch branch)> StreamingCritiqueArrow(
+        LangChainPipeline.Providers.LiteLLMChatModel streamingModel,
+        ToolRegistry tools,
+        IEmbeddingModel embed,
+        PipelineBranch inputBranch,
+        string topic,
+        string query,
+        int k = 8)
+    {
+        async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            ReasoningState? currentState = GetMostRecentReasoningState(inputBranch);
+            if (currentState is null)
+                throw new InvalidOperationException("No draft or previous improvement found to critique");
+
+            IReadOnlyCollection<Document> docs = await inputBranch.Store.GetSimilarDocuments(embed, query, amount: k);
+            string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
+
+            string prompt = Prompts.Critique.Format(new()
+            {
+                ["context"] = context,
+                ["draft"] = currentState.Text,
+                ["topic"] = topic,
+                ["tools_schemas"] = ToolSchemasOrEmpty(tools)
+            });
+
+            System.Text.StringBuilder fullText = new System.Text.StringBuilder();
+
+            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable())
+            {
+                fullText.Append(chunk);
+                PipelineBranch updatedBranch = inputBranch.WithReasoning(new Critique(fullText.ToString()), prompt, null);
+                yield return (chunk, updatedBranch);
+            }
+        }
+
+        return StreamAsync().ToObservable();
+    }
+
+    /// <summary>
+    /// Creates a streaming improvement arrow that emits improvement chunks in real-time.
+    /// </summary>
+    public static IObservable<(string chunk, PipelineBranch branch)> StreamingImproveArrow(
+        LangChainPipeline.Providers.LiteLLMChatModel streamingModel,
+        ToolRegistry tools,
+        IEmbeddingModel embed,
+        PipelineBranch inputBranch,
+        string topic,
+        string query,
+        int k = 8)
+    {
+        async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            ReasoningState? currentState = GetMostRecentReasoningState(inputBranch);
+            Critique? critique = inputBranch.Events.OfType<ReasoningStep>().Select(e => e.State).OfType<Critique>().LastOrDefault();
+
+            if (currentState is null)
+                throw new InvalidOperationException("No draft or previous improvement found");
+            if (critique is null)
+                throw new InvalidOperationException("No critique found for improvement");
+
+            IReadOnlyCollection<Document> docs = await inputBranch.Store.GetSimilarDocuments(embed, query, amount: k);
+            string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
+
+            string prompt = Prompts.Improve.Format(new()
+            {
+                ["context"] = context,
+                ["draft"] = currentState.Text,
+                ["critique"] = critique.CritiqueText,
+                ["topic"] = topic,
+                ["tools_schemas"] = ToolSchemasOrEmpty(tools)
+            });
+
+            System.Text.StringBuilder fullText = new System.Text.StringBuilder();
+
+            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable())
+            {
+                fullText.Append(chunk);
+                PipelineBranch updatedBranch = inputBranch.WithReasoning(new FinalSpec(fullText.ToString()), prompt, null);
+                yield return (chunk, updatedBranch);
+            }
+        }
+
+        return StreamAsync().ToObservable();
+    }
+
+    /// <summary>
+    /// Creates a complete streaming reasoning pipeline (Draft -> Critique -> Improve) using Reactive Extensions.
+    /// Emits incremental updates as reasoning progresses through each stage.
+    /// </summary>
+    public static IObservable<(string stage, string chunk, PipelineBranch branch)> StreamingReasoningPipeline(
+        LangChainPipeline.Providers.LiteLLMChatModel streamingModel,
+        ToolRegistry tools,
+        IEmbeddingModel embed,
+        string topic,
+        string query,
+        int k = 8)
+    {
+        return Observable.Create<(string stage, string chunk, PipelineBranch branch)>(async (observer, ct) =>
+        {
+            try
+            {
+                PipelineBranch branch = new PipelineBranch("streaming-pipeline", new TrackedVectorStore(), DataSource.FromPath("."));
+
+                // Stage 1: Draft
+                await StreamingDraftArrow(streamingModel, tools, embed, topic, query, k)
+                    .Do(tuple => observer.OnNext(("Draft", tuple.chunk, tuple.branch)))
+                    .LastAsync()
+                    .ForEachAsync(tuple => branch = tuple.branch, ct);
+
+                // Stage 2: Critique
+                await StreamingCritiqueArrow(streamingModel, tools, embed, branch, topic, query, k)
+                    .Do(tuple => observer.OnNext(("Critique", tuple.chunk, tuple.branch)))
+                    .LastAsync()
+                    .ForEachAsync(tuple => branch = tuple.branch, ct);
+
+                // Stage 3: Improve
+                await StreamingImproveArrow(streamingModel, tools, embed, branch, topic, query, k)
+                    .Do(tuple => observer.OnNext(("Improve", tuple.chunk, tuple.branch)))
+                    .LastAsync()
+                    .ForEachAsync(tuple => branch = tuple.branch, ct);
+
+                observer.OnCompleted();
+            }
+            catch (Exception ex)
+            {
+                observer.OnError(ex);
+            }
+        });
+    }
 }

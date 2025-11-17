@@ -17,7 +17,11 @@ public enum ChatEndpointType
     /// <summary>
     /// Ollama Cloud API format
     /// </summary>
-    OllamaCloud
+    OllamaCloud,
+    /// <summary>
+    /// LiteLLM proxy with OpenAI-compatible chat completions
+    /// </summary>
+    LiteLLM
 }
 
 /// <summary>
@@ -61,14 +65,24 @@ public static class ChatConfig
         {
             endpointType = ChatEndpointType.OllamaCloud;
         }
+        else if (!string.IsNullOrWhiteSpace(endpointTypeStr) &&
+                 endpointTypeStr.Equals("litellm", StringComparison.OrdinalIgnoreCase))
+        {
+            endpointType = ChatEndpointType.LiteLLM;
+        }
 
-        // Auto-detect Ollama Cloud based on endpoint URL if type is Auto
+        // Auto-detect endpoint type based on URL if type is Auto
         if (endpointType == ChatEndpointType.Auto && !string.IsNullOrWhiteSpace(endpoint))
         {
             if (endpoint.Contains("api.ollama.com", StringComparison.OrdinalIgnoreCase) ||
                 endpoint.Contains("ollama.cloud", StringComparison.OrdinalIgnoreCase))
             {
                 endpointType = ChatEndpointType.OllamaCloud;
+            }
+            else if (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) ||
+                     endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase))
+            {
+                endpointType = ChatEndpointType.LiteLLM;
             }
             else
             {

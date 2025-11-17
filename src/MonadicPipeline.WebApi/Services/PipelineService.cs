@@ -212,6 +212,7 @@ public sealed class PipelineService : IPipelineService
         return endpointType switch
         {
             ChatEndpointType.OllamaCloud => new OllamaCloudChatModel(endpoint, apiKey, modelName, settings),
+            ChatEndpointType.LiteLLM => new LiteLLMChatModel(endpoint, apiKey, modelName, settings),
             ChatEndpointType.OpenAiCompatible => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings),
             ChatEndpointType.Auto => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings),
             _ => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings)
@@ -225,6 +226,7 @@ public sealed class PipelineService : IPipelineService
             return endpointType switch
             {
                 ChatEndpointType.OllamaCloud => new OllamaCloudEmbeddingModel(endpoint, apiKey, embedName),
+                ChatEndpointType.LiteLLM => new LiteLLMEmbeddingModel(endpoint, apiKey, embedName),
                 _ => new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embedName))
             };
         }
