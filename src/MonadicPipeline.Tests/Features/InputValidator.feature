@@ -72,11 +72,15 @@ Feature: Input Validator
             | cmd.exe && dir     |
             | $(whoami)          |
 
-    Scenario: Control characters are blocked
+    Scenario Outline: Control characters are blocked
         Given an input validator
-        When I validate "Hello\0World"
+        When I validate "<input>"
         Then the validation should fail
         And there should be an error about null bytes
+        
+        Examples:
+            | input         |
+            | Hello\0World  |
 
     Scenario: Blocked characters are rejected
         Given an input validator with blocked characters
@@ -84,25 +88,37 @@ Feature: Input Validator
         Then the validation should fail
         And there should be an error about blocked character
 
-    Scenario: Whitespace trimming when enabled
+    Scenario Outline: Whitespace trimming when enabled
         Given an input validator with trimming enabled
-        When I validate "  Hello World  "
+        When I validate "<input>"
         Then the validation should succeed
-        And the sanitized value should be "Hello World"
+        And the sanitized value should be "<expected>"
+        
+        Examples:
+            | input            | expected    |
+            |   Hello World    | Hello World |
 
-    Scenario: Line ending normalization when enabled
+    Scenario Outline: Line ending normalization when enabled
         Given an input validator with line ending normalization
-        When I validate "Line1\r\nLine2\rLine3"
+        When I validate "<input>"
         Then the validation should succeed
-        And the sanitized value should be "Line1\nLine2\nLine3"
+        And the sanitized value should be "<expected>"
+        
+        Examples:
+            | input                | expected           |
+            | Line1\r\nLine2\rLine3 | Line1\nLine2\nLine3 |
 
-    Scenario: HTML escaping when enabled
+    Scenario Outline: HTML escaping when enabled
         Given a lenient input validator with HTML escaping
-        When I validate "<div>Hello & goodbye</div>"
+        When I validate "<input>"
         Then the validation should succeed
-        And the sanitized value should contain "&lt;"
-        And the sanitized value should contain "&gt;"
-        And the sanitized value should contain "&amp;"
+        And the sanitized value should contain "<expected>"
+        
+        Examples:
+            | input                      | expected |
+            | <div>Hello & goodbye</div> | &lt;     |
+            | <div>Hello & goodbye</div> | &gt;     |
+            | <div>Hello & goodbye</div> | &amp;    |
 
     Scenario: Strict validation context has strict settings
         Given a strict validation context

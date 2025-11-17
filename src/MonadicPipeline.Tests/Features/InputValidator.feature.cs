@@ -404,13 +404,15 @@ namespace LangChainPipeline.Features
             await this.ScenarioCleanupAsync();
         }
         
-        [Xunit.SkippableFactAttribute(DisplayName="Control characters are blocked")]
+        [Xunit.SkippableTheoryAttribute(DisplayName="Control characters are blocked")]
         [Xunit.TraitAttribute("FeatureTitle", "Input Validator")]
         [Xunit.TraitAttribute("Description", "Control characters are blocked")]
-        public async System.Threading.Tasks.Task ControlCharactersAreBlocked()
+        [Xunit.InlineDataAttribute("Hello\\0World", new string[0])]
+        public async System.Threading.Tasks.Task ControlCharactersAreBlocked(string input, string[] exampleTags)
         {
-            string[] tagsOfScenario = ((string[])(null));
+            string[] tagsOfScenario = exampleTags;
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            argumentsOfScenario.Add("input", input);
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Control characters are blocked", null, tagsOfScenario, argumentsOfScenario, featureTags);
 #line 75
     this.ScenarioInitialize(scenarioInfo);
@@ -429,7 +431,7 @@ namespace LangChainPipeline.Features
         await testRunner.GivenAsync("an input validator", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 77
-        await testRunner.WhenAsync("I validate \"Hello\\0World\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+        await testRunner.WhenAsync(string.Format("I validate \"{0}\"", input), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 78
         await testRunner.ThenAsync("the validation should fail", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
@@ -449,7 +451,7 @@ namespace LangChainPipeline.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Blocked characters are rejected", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 81
+#line 85
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -462,31 +464,34 @@ namespace LangChainPipeline.Features
 #line 6
     await this.FeatureBackgroundAsync();
 #line hidden
-#line 82
+#line 86
         await testRunner.GivenAsync("an input validator with blocked characters", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 83
+#line 87
         await testRunner.WhenAsync("I validate \"Hello<World>\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 84
+#line 88
         await testRunner.ThenAsync("the validation should fail", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 85
+#line 89
         await testRunner.AndAsync("there should be an error about blocked character", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [Xunit.SkippableFactAttribute(DisplayName="Whitespace trimming when enabled")]
+        [Xunit.SkippableTheoryAttribute(DisplayName="Whitespace trimming when enabled")]
         [Xunit.TraitAttribute("FeatureTitle", "Input Validator")]
         [Xunit.TraitAttribute("Description", "Whitespace trimming when enabled")]
-        public async System.Threading.Tasks.Task WhitespaceTrimmingWhenEnabled()
+        [Xunit.InlineDataAttribute("Hello World", "Hello World", new string[0])]
+        public async System.Threading.Tasks.Task WhitespaceTrimmingWhenEnabled(string input, string expected, string[] exampleTags)
         {
-            string[] tagsOfScenario = ((string[])(null));
+            string[] tagsOfScenario = exampleTags;
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            argumentsOfScenario.Add("input", input);
+            argumentsOfScenario.Add("expected", expected);
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Whitespace trimming when enabled", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 87
+#line 91
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -499,68 +504,34 @@ namespace LangChainPipeline.Features
 #line 6
     await this.FeatureBackgroundAsync();
 #line hidden
-#line 88
+#line 92
         await testRunner.GivenAsync("an input validator with trimming enabled", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 89
-        await testRunner.WhenAsync("I validate \"  Hello World  \"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 90
-        await testRunner.ThenAsync("the validation should succeed", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 91
-        await testRunner.AndAsync("the sanitized value should be \"Hello World\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-            }
-            await this.ScenarioCleanupAsync();
-        }
-        
-        [Xunit.SkippableFactAttribute(DisplayName="Line ending normalization when enabled")]
-        [Xunit.TraitAttribute("FeatureTitle", "Input Validator")]
-        [Xunit.TraitAttribute("Description", "Line ending normalization when enabled")]
-        public async System.Threading.Tasks.Task LineEndingNormalizationWhenEnabled()
-        {
-            string[] tagsOfScenario = ((string[])(null));
-            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Line ending normalization when enabled", null, tagsOfScenario, argumentsOfScenario, featureTags);
 #line 93
-    this.ScenarioInitialize(scenarioInfo);
-#line hidden
-            if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
-            {
-                testRunner.SkipScenario();
-            }
-            else
-            {
-                await this.ScenarioStartAsync();
-#line 6
-    await this.FeatureBackgroundAsync();
+        await testRunner.WhenAsync(string.Format("I validate \"{0}\"", input), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 94
-        await testRunner.GivenAsync("an input validator with line ending normalization", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-#line hidden
-#line 95
-        await testRunner.WhenAsync("I validate \"Line1\\r\\nLine2\\rLine3\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 96
         await testRunner.ThenAsync("the validation should succeed", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 97
-        await testRunner.AndAsync("the sanitized value should be \"Line1\\nLine2\\nLine3\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 95
+        await testRunner.AndAsync(string.Format("the sanitized value should be \"{0}\"", expected), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [Xunit.SkippableFactAttribute(DisplayName="HTML escaping when enabled")]
+        [Xunit.SkippableTheoryAttribute(DisplayName="Line ending normalization when enabled")]
         [Xunit.TraitAttribute("FeatureTitle", "Input Validator")]
-        [Xunit.TraitAttribute("Description", "HTML escaping when enabled")]
-        public async System.Threading.Tasks.Task HTMLEscapingWhenEnabled()
+        [Xunit.TraitAttribute("Description", "Line ending normalization when enabled")]
+        [Xunit.InlineDataAttribute("Line1\\r\nLine2\\rLine3", "Line1\nLine2\nLine3", new string[0])]
+        public async System.Threading.Tasks.Task LineEndingNormalizationWhenEnabled(string input, string expected, string[] exampleTags)
         {
-            string[] tagsOfScenario = ((string[])(null));
+            string[] tagsOfScenario = exampleTags;
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("HTML escaping when enabled", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 99
+            argumentsOfScenario.Add("input", input);
+            argumentsOfScenario.Add("expected", expected);
+            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Line ending normalization when enabled", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 101
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -573,23 +544,59 @@ namespace LangChainPipeline.Features
 #line 6
     await this.FeatureBackgroundAsync();
 #line hidden
-#line 100
-        await testRunner.GivenAsync("a lenient input validator with HTML escaping", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-#line hidden
-#line 101
-        await testRunner.WhenAsync("I validate \"<div>Hello & goodbye</div>\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
 #line 102
-        await testRunner.ThenAsync("the validation should succeed", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        await testRunner.GivenAsync("an input validator with line ending normalization", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 103
-        await testRunner.AndAsync("the sanitized value should contain \"&lt;\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.WhenAsync(string.Format("I validate \"{0}\"", input), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 104
-        await testRunner.AndAsync("the sanitized value should contain \"&gt;\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.ThenAsync("the validation should succeed", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 105
-        await testRunner.AndAsync("the sanitized value should contain \"&amp;\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.AndAsync(string.Format("the sanitized value should be \"{0}\"", expected), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [Xunit.SkippableTheoryAttribute(DisplayName="HTML escaping when enabled")]
+        [Xunit.TraitAttribute("FeatureTitle", "Input Validator")]
+        [Xunit.TraitAttribute("Description", "HTML escaping when enabled")]
+        [Xunit.InlineDataAttribute("<div>Hello & goodbye</div>", "&lt;", new string[0])]
+        [Xunit.InlineDataAttribute("<div>Hello & goodbye</div>", "&gt;", new string[0])]
+        [Xunit.InlineDataAttribute("<div>Hello & goodbye</div>", "&amp;", new string[0])]
+        public async System.Threading.Tasks.Task HTMLEscapingWhenEnabled(string input, string expected, string[] exampleTags)
+        {
+            string[] tagsOfScenario = exampleTags;
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            argumentsOfScenario.Add("input", input);
+            argumentsOfScenario.Add("expected", expected);
+            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("HTML escaping when enabled", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 111
+    this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+    await this.FeatureBackgroundAsync();
+#line hidden
+#line 112
+        await testRunner.GivenAsync("a lenient input validator with HTML escaping", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
+#line 113
+        await testRunner.WhenAsync(string.Format("I validate \"{0}\"", input), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line hidden
+#line 114
+        await testRunner.ThenAsync("the validation should succeed", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line hidden
+#line 115
+        await testRunner.AndAsync(string.Format("the sanitized value should contain \"{0}\"", expected), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -603,7 +610,7 @@ namespace LangChainPipeline.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Strict validation context has strict settings", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 107
+#line 123
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -616,16 +623,16 @@ namespace LangChainPipeline.Features
 #line 6
     await this.FeatureBackgroundAsync();
 #line hidden
-#line 108
+#line 124
         await testRunner.GivenAsync("a strict validation context", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 109
+#line 125
         await testRunner.ThenAsync("the max length should be 1000", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 110
+#line 126
         await testRunner.AndAsync("HTML escaping should be enabled", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 111
+#line 127
         await testRunner.AndAsync("blocked characters should include angle brackets", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -640,7 +647,7 @@ namespace LangChainPipeline.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Tool parameter context has reasonable defaults", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 113
+#line 129
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -653,16 +660,16 @@ namespace LangChainPipeline.Features
 #line 6
     await this.FeatureBackgroundAsync();
 #line hidden
-#line 114
+#line 130
         await testRunner.GivenAsync("a tool parameter validation context", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 115
+#line 131
         await testRunner.ThenAsync("the max length should be 5000", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 116
+#line 132
         await testRunner.AndAsync("whitespace trimming should be enabled", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 117
+#line 133
         await testRunner.AndAsync("line ending normalization should be enabled", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
