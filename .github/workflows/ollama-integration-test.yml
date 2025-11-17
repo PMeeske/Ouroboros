@@ -12,6 +12,7 @@ on:
     paths:
       - 'src/**'
       - '**.csproj'
+      - '.github/workflows/ollama-integration-test.yml'
   workflow_dispatch:
 
 # Cancel in-progress runs for the same workflow on the same branch
@@ -45,7 +46,7 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
-      uses: nick-fields/retry-action@v3
+      uses: nick-fields/retry@v3  # Fixed action name
       with:
         timeout_minutes: 10
         max_attempts: 3
@@ -57,7 +58,7 @@ jobs:
       timeout-minutes: 15
 
     - name: Setup Ollama
-      uses: nick-fields/retry-action@v3
+      uses: nick-fields/retry@v3  # Fixed action name
       with:
         timeout_minutes: 10
         max_attempts: 3
@@ -86,7 +87,7 @@ jobs:
           done
 
     - name: Pull Ollama models
-      uses: nick-fields/retry-action@v3
+      uses: nick-fields/retry@v3  # Fixed action name
       with:
         timeout_minutes: 20
         max_attempts: 3
@@ -102,7 +103,7 @@ jobs:
           ollama list
 
     - name: Test 1 - Basic Ollama Connectivity
-      uses: nick-fields/retry-action@v3
+      uses: nick-fields/retry@v3  # Fixed action name
       with:
         timeout_minutes: 5
         max_attempts: 2
@@ -120,7 +121,7 @@ jobs:
           echo "✓ Basic connectivity test passed"
 
     - name: Test 2 - Pipeline DSL Execution
-      uses: nick-fields/retry-action@v3
+      uses: nick-fields/retry@v3  # Fixed action name
       with:
         timeout_minutes: 5
         max_attempts: 2
@@ -138,7 +139,7 @@ jobs:
           echo "✓ Pipeline DSL test passed"
 
     - name: Test 3 - Memory-Efficient Reverse Engineering
-      uses: nick-fields/retry-action@v3
+      uses: nick-fields/retry@v3  # Fixed action name
       with:
         timeout_minutes: 10
         max_attempts: 2
@@ -163,7 +164,7 @@ jobs:
           echo "✓ Reverse engineering test passed"
 
     - name: Test 4 - RAG with Embeddings
-      uses: nick-fields/retry-action@v3
+      uses: nick-fields/retry@v3  # Fixed action name
       with:
         timeout_minutes: 10
         max_attempts: 2
@@ -219,13 +220,3 @@ jobs:
         echo "- Timeout: 30 minutes" >> $GITHUB_STEP_SUMMARY
 
     - name: Upload Test Artifacts
-      uses: actions/upload-artifact@v4
-      if: always()
-      continue-on-error: true
-      with:
-        name: ollama-integration-logs
-        path: |
-          /tmp/ollama.log
-          /tmp/test-project/
-          /tmp/rag-test/
-        retention-days: 7
