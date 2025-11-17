@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>LangChainPipeline</RootNamespace>
@@ -43,8 +44,7 @@
     <PackageReference Include="SpecFlow" Version="4.0.31-beta" />
     <PackageReference Include="SpecFlow.xUnit" Version="4.0.31-beta" />
     <PackageReference Include="SpecFlow.Tools.MsBuild.Generation" Version="4.0.31-beta" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
-    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup>
