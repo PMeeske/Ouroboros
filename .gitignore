@@ -44,3 +44,6 @@ playwright/.cache/
 *.app
 .DS_Store
 
+# Temporary tool downloads
+actionlint
+actionlint_*.tar.gz
