@@ -53,7 +53,15 @@ public class AndroidBehaviorSteps
     }
 
     // Activity simulation
-    private enum ActivityState { Created, Started, Resumed, Paused, Stopped, Destroyed }
+    private enum ActivityState
+    {
+        Created,
+        Started,
+        Resumed,
+        Paused,
+        Stopped,
+        Destroyed
+    }
 
     private class TestMainPageActivity
     {
