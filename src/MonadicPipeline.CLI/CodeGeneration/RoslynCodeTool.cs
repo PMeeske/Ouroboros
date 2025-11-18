@@ -84,11 +84,11 @@ public class RoslynCodeTool
                 Compilation = compilation
             };
 
-            return Result<CodeAnalysisResult, string>.Ok(result);
+            return Result<CodeAnalysisResult, string>.Success(result);
         }
         catch (Exception ex)
         {
-            return Result<CodeAnalysisResult, string>.Error($"Code analysis failed: {ex.Message}");
+            return Result<CodeAnalysisResult, string>.Failure($"Code analysis failed: {ex.Message}");
         }
     }
 
@@ -178,30 +178,19 @@ public class RoslynCodeTool
             // Build compilation unit
             CompilationUnitSyntax compilationUnit = SyntaxFactory.CompilationUnit()
                 .AddUsings(usingDirectives.ToArray())
-                .AddMembers(namespaceDeclaration);
-
-            // Add pragma to suppress missing doc warnings
-            compilationUnit = compilationUnit.WithLeadingTrivia(
-                SyntaxFactory.Trivia(
-                    SyntaxFactory.PragmaWarningDirectiveTrivia(
-                        SyntaxFactory.Token(SyntaxKind.DisableKeyword),
-                        SyntaxFactory.SeparatedList(new[] {
-                            SyntaxFactory.ExpressionStatement(
-                                SyntaxFactory.LiteralExpression(
-                                    SyntaxKind.NumericLiteralExpression,
-                                    SyntaxFactory.Literal(1591)))
-                        }),
-                        true)));
+                .AddMembers(namespaceDeclaration)
+                .WithLeadingTrivia(
+                    SyntaxFactory.Comment("#pragma warning disable CS1591"));
 
             // Format code
             SyntaxNode formatted = Formatter.Format(compilationUnit, _workspace);
             string code = formatted.ToFullString();
 
-            return Result<string, string>.Ok(code);
+            return Result<string, string>.Success(code);
         }
         catch (Exception ex)
         {
-            return Result<string, string>.Error($"Class creation failed: {ex.Message}");
+            return Result<string, string>.Failure($"Class creation failed: {ex.Message}");
         }
     }
 
@@ -226,7 +215,7 @@ public class RoslynCodeTool
 
             if (targetClass == null)
             {
-                return Result<string, string>.Error($"Class '{className}' not found");
+                return Result<string, string>.Failure($"Class '{className}' not found");
             }
 
             // Parse method
@@ -239,11 +228,11 @@ public class RoslynCodeTool
             SyntaxNode newRoot = root.ReplaceNode(targetClass, modifiedClass);
             SyntaxNode formatted = Formatter.Format(newRoot, _workspace);
 
-            return Result<string, string>.Ok(formatted.ToFullString());
+            return Result<string, string>.Success(formatted.ToFullString());
         }
         catch (Exception ex)
         {
-            return Result<string, string>.Error($"Failed to add method: {ex.Message}");
+            return Result<string, string>.Failure($"Failed to add method: {ex.Message}");
         }
     }
 
@@ -273,11 +262,11 @@ public class RoslynCodeTool
                 SyntaxFactory.Identifier(newName).WithTriviaFrom(original));
 
             SyntaxNode formatted = Formatter.Format(newRoot, _workspace);
-            return Result<string, string>.Ok(formatted.ToFullString());
+            return Result<string, string>.Success(formatted.ToFullString());
         }
         catch (Exception ex)
         {
-            return Result<string, string>.Error($"Rename failed: {ex.Message}");
+            return Result<string, string>.Failure($"Rename failed: {ex.Message}");
         }
     }
 
@@ -303,7 +292,7 @@ public class RoslynCodeTool
 
             if (!statements.Any())
             {
-                return Result<string, string>.Error("No statements found in the specified range");
+                return Result<string, string>.Failure("No statements found in the specified range");
             }
 
             // Create new method
@@ -321,7 +310,7 @@ public class RoslynCodeTool
 
             if (containingMethod == null)
             {
-                return Result<string, string>.Error("Could not find containing method");
+                return Result<string, string>.Failure("Could not find containing method");
             }
 
             // Replace statements with method call
@@ -331,7 +320,7 @@ public class RoslynCodeTool
             BlockSyntax? originalBody = containingMethod.Body;
             if (originalBody == null)
             {
-                return Result<string, string>.Error("Method has no body");
+                return Result<string, string>.Failure("Method has no body");
             }
 
             // Remove extracted statements and add method call
@@ -354,7 +343,7 @@ public class RoslynCodeTool
 
             if (containingClass == null)
             {
-                return Result<string, string>.Error("Could not find containing class");
+                return Result<string, string>.Failure("Could not find containing class");
             }
 
             ClassDeclarationSyntax modifiedClass = containingClass
@@ -364,11 +353,11 @@ public class RoslynCodeTool
             SyntaxNode newRoot = root.ReplaceNode(containingClass, modifiedClass);
             SyntaxNode formatted = Formatter.Format(newRoot, _workspace);
 
-            return Result<string, string>.Ok(formatted.ToFullString());
+            return Result<string, string>.Success(formatted.ToFullString());
         }
         catch (Exception ex)
         {
-            return Result<string, string>.Error($"Extract method failed: {ex.Message}");
+            return Result<string, string>.Failure($"Extract method failed: {ex.Message}");
         }
     }
 
@@ -407,22 +396,22 @@ Respond with only the C# code, no explanations.";
 
             // Validate generated code with Roslyn
             Result<CodeAnalysisResult, string> analysisResult = await AnalyzeCodeAsync(code);
-            if (analysisResult.IsError)
+            if (analysisResult.IsFailure)
             {
-                return Result<string, string>.Error($"Generated code analysis failed: {analysisResult.Error}");
+                return Result<string, string>.Failure($"Generated code analysis failed: {analysisResult.Error}");
             }
 
             if (!analysisResult.Value.IsValid)
             {
                 string errors = string.Join("\n", analysisResult.Value.Diagnostics.Take(5));
-                return Result<string, string>.Error($"Generated code has errors:\n{errors}");
+                return Result<string, string>.Failure($"Generated code has errors:\n{errors}");
             }
 
-            return Result<string, string>.Ok(code);
+            return Result<string, string>.Success(code);
         }
         catch (Exception ex)
         {
-            return Result<string, string>.Error($"Code generation failed: {ex.Message}");
+            return Result<string, string>.Failure($"Code generation failed: {ex.Message}");
         }
     }
 
@@ -475,11 +464,11 @@ namespace LangChainPipeline.SourceGenerators
     }}
 }}";
 
-            return Result<string, string>.Ok(sourceGeneratorCode);
+            return Result<string, string>.Success(sourceGeneratorCode);
         }
         catch (Exception ex)
         {
-            return Result<string, string>.Error($"Generator creation failed: {ex.Message}");
+            return Result<string, string>.Failure($"Generator creation failed: {ex.Message}");
         }
     }
 

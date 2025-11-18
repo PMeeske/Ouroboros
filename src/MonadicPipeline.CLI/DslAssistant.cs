@@ -63,11 +63,11 @@ Example format:
             // Parse response into suggestions
             List<DslSuggestion> suggestions = ParseSuggestions(response, maxSuggestions);
 
-            return Result<List<DslSuggestion>, string>.Ok(suggestions);
+            return Result<List<DslSuggestion>, string>.Success(suggestions);
         }
         catch (Exception ex)
         {
-            return Result<List<DslSuggestion>, string>.Error($"Failed to generate suggestions: {ex.Message}");
+            return Result<List<DslSuggestion>, string>.Failure($"Failed to generate suggestions: {ex.Message}");
         }
     }
 
@@ -83,7 +83,7 @@ Example format:
         {
             if (string.IsNullOrWhiteSpace(partialToken))
             {
-                return Result<List<string>, string>.Ok(StepRegistry.Tokens.Take(maxCompletions).ToList());
+                return Result<List<string>, string>.Success(StepRegistry.Tokens.Take(maxCompletions).ToList());
             }
 
             IReadOnlyCollection<string> availableTokens = StepRegistry.Tokens;
@@ -92,11 +92,11 @@ Example format:
                 .Take(maxCompletions)
                 .ToList();
 
-            return Result<List<string>, string>.Ok(completions);
+            return Result<List<string>, string>.Success(completions);
         }
         catch (Exception ex)
         {
-            return Result<List<string>, string>.Error($"Failed to complete token: {ex.Message}");
+            return Result<List<string>, string>.Failure($"Failed to complete token: {ex.Message}");
         }
     }
 
@@ -158,11 +158,11 @@ Respond with only the corrected DSL, no explanation.";
                 FixedDsl = fixedDsl
             };
 
-            return Result<DslValidationResult, string>.Ok(result);
+            return Result<DslValidationResult, string>.Success(result);
         }
         catch (Exception ex)
         {
-            return Result<DslValidationResult, string>.Error($"Validation failed: {ex.Message}");
+            return Result<DslValidationResult, string>.Failure($"Validation failed: {ex.Message}");
         }
     }
 
@@ -189,11 +189,11 @@ Focus on the high-level purpose and flow, not implementation details.";
 
             (string response, List<ToolExecution> _) = await _llm.GenerateWithToolsAsync(prompt);
 
-            return Result<string, string>.Ok(response.Trim());
+            return Result<string, string>.Success(response.Trim());
         }
         catch (Exception ex)
         {
-            return Result<string, string>.Error($"Failed to explain DSL: {ex.Message}");
+            return Result<string, string>.Failure($"Failed to explain DSL: {ex.Message}");
         }
     }
 
@@ -228,11 +228,11 @@ Example format: SetTopic('AI Ethics') | UseDraft | UseCritique | UseImprove";
 
             (string response, List<ToolExecution> _) = await _llm.GenerateWithToolsAsync(prompt);
 
-            return Result<string, string>.Ok(response.Trim());
+            return Result<string, string>.Success(response.Trim());
         }
         catch (Exception ex)
         {
-            return Result<string, string>.Error($"Failed to build DSL: {ex.Message}");
+            return Result<string, string>.Failure($"Failed to build DSL: {ex.Message}");
         }
     }
 
