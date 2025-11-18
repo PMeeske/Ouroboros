@@ -2,6 +2,8 @@
 using System.Net.Http.Json;
 using System.Text;
 using LangChain.Providers.Ollama;
+using Polly;
+using Polly.Retry;
 
 namespace LangChainPipeline.Providers;
 
@@ -110,15 +112,14 @@ public sealed class OllamaChatAdapter : IChatCompletionModel
 /// <summary>
 /// Shallow HTTP client that mimics an OpenAI-compatible JSON API. We intentionally
 /// keep it permissive – if the call fails we simply echo the prompt with context.
+/// Uses Polly for exponential backoff retry policy to handle rate limiting.
 /// </summary>
 public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
     private readonly ChatRuntimeSettings _settings;
-    private static readonly System.Threading.SemaphoreSlim _rateLimiter = new(1, 1);
-    private static DateTime _lastRequestTime = DateTime.MinValue;
-    private static readonly TimeSpan _throttleDelay = TimeSpan.FromSeconds(2); // Configurable via env var
+    private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
 
     public HttpOpenAiCompatibleChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null)
     {
@@ -132,13 +133,24 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;
         _settings = settings ?? new ChatRuntimeSettings();
+        
+        // Create Polly retry policy with exponential backoff for rate limiting (429) and server errors (5xx)
+        _retryPolicy = Policy
+            .HandleResult<HttpResponseMessage>(r => 
+                (int)r.StatusCode == 429 || // Too Many Requests
+                (int)r.StatusCode >= 500)   // Server errors
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                onRetry: (outcome, timespan, retryCount, context) =>
+                {
+                    Console.WriteLine($"[HttpOpenAiCompatibleChatModel] Retry {retryCount} after {timespan.TotalSeconds}s due to {outcome.Result?.StatusCode}");
+                });
     }
 
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
-        await ThrottleRequestAsync(ct).ConfigureAwait(false);
-
         try
         {
             using JsonContent payload = JsonContent.Create(new
@@ -148,7 +160,12 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
                 max_output_tokens = _settings.MaxTokens,
                 input = prompt
             });
-            using HttpResponseMessage response = await _client.PostAsync("/v1/responses", payload, ct).ConfigureAwait(false);
+            
+            HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
+            {
+                return await _client.PostAsync("/v1/responses", payload, ct).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+            
             response.EnsureSuccessStatusCode();
             Dictionary<string, object?>? json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
             if (json is not null && json.TryGetValue("output_text", out object? text) && text is string s)
@@ -163,29 +180,6 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
         return $"[remote-fallback:{_model}] {prompt}";
     }
 
-    /// <summary>
-    /// Throttles requests to avoid rate limiting by enforcing minimum delay between requests.
-    /// </summary>
-    private static async Task ThrottleRequestAsync(CancellationToken ct)
-    {
-        await _rateLimiter.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            TimeSpan timeSinceLastRequest = DateTime.UtcNow - _lastRequestTime;
-            if (timeSinceLastRequest < _throttleDelay)
-            {
-                TimeSpan delay = _throttleDelay - timeSinceLastRequest;
-                await Task.Delay(delay, ct).ConfigureAwait(false);
-            }
-
-            _lastRequestTime = DateTime.UtcNow;
-        }
-        finally
-        {
-            _rateLimiter.Release();
-        }
-    }
-
     public void Dispose()
     {
         _client?.Dispose();
@@ -195,12 +189,14 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
 /// <summary>
 /// HTTP client specifically designed for Ollama Cloud API endpoints.
 /// Uses Ollama's native JSON API format with /api/generate endpoint.
+/// Includes Polly exponential backoff retry policy to handle rate limiting.
 /// </summary>
 public sealed class OllamaCloudChatModel : IChatCompletionModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
     private readonly ChatRuntimeSettings _settings;
+    private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
 
     public OllamaCloudChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null)
     {
@@ -214,6 +210,19 @@ public sealed class OllamaCloudChatModel : IChatCompletionModel
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;
         _settings = settings ?? new ChatRuntimeSettings();
+        
+        // Create Polly retry policy with exponential backoff for rate limiting (429) and server errors (5xx)
+        _retryPolicy = Policy
+            .HandleResult<HttpResponseMessage>(r => 
+                (int)r.StatusCode == 429 || // Too Many Requests
+                (int)r.StatusCode >= 500)   // Server errors
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                onRetry: (outcome, timespan, retryCount, context) =>
+                {
+                    Console.WriteLine($"[OllamaCloudChatModel] Retry {retryCount} after {timespan.TotalSeconds}s due to {outcome.Result?.StatusCode}");
+                });
     }
 
     /// <inheritdoc/>
@@ -234,7 +243,11 @@ public sealed class OllamaCloudChatModel : IChatCompletionModel
                 }
             });
 
-            using HttpResponseMessage response = await _client.PostAsync("/api/generate", payload, ct).ConfigureAwait(false);
+            HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
+            {
+                return await _client.PostAsync("/api/generate", payload, ct).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+            
             response.EnsureSuccessStatusCode();
 
             Dictionary<string, object?>? json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
@@ -259,16 +272,14 @@ public sealed class OllamaCloudChatModel : IChatCompletionModel
 /// <summary>
 /// HTTP client for LiteLLM proxy endpoints that support OpenAI-compatible chat completions API.
 /// Uses standard /v1/chat/completions endpoint with messages format.
-/// Includes rate limiting to prevent 429 errors.
+/// Includes Polly exponential backoff retry policy to handle rate limiting.
 /// </summary>
 public sealed class LiteLLMChatModel : IChatCompletionModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
     private readonly ChatRuntimeSettings _settings;
-    private static readonly System.Threading.SemaphoreSlim _rateLimiter = new(1, 1);
-    private static DateTime _lastRequestTime = DateTime.MinValue;
-    private static readonly TimeSpan _throttleDelay = TimeSpan.FromSeconds(2); // 2 second delay between requests
+    private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
 
     public LiteLLMChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null)
     {
@@ -282,13 +293,24 @@ public sealed class LiteLLMChatModel : IChatCompletionModel
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;
         _settings = settings ?? new ChatRuntimeSettings();
+        
+        // Create Polly retry policy with exponential backoff for rate limiting (429) and server errors (5xx)
+        _retryPolicy = Policy
+            .HandleResult<HttpResponseMessage>(r => 
+                (int)r.StatusCode == 429 || // Too Many Requests
+                (int)r.StatusCode >= 500)   // Server errors
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                onRetry: (outcome, timespan, retryCount, context) =>
+                {
+                    Console.WriteLine($"[LiteLLMChatModel] Retry {retryCount} after {timespan.TotalSeconds}s due to {outcome.Result?.StatusCode}");
+                });
     }
 
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
-        await ThrottleRequestAsync(ct).ConfigureAwait(false);
-
         try
         {
             // Use OpenAI-compatible chat completions format
@@ -303,7 +325,11 @@ public sealed class LiteLLMChatModel : IChatCompletionModel
                 max_tokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null
             });
 
-            using HttpResponseMessage response = await _client.PostAsync("/v1/chat/completions", payload, ct).ConfigureAwait(false);
+            HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
+            {
+                return await _client.PostAsync("/v1/chat/completions", payload, ct).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+
             response.EnsureSuccessStatusCode();
 
             string jsonString = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
@@ -344,28 +370,6 @@ public sealed class LiteLLMChatModel : IChatCompletionModel
         return $"[litellm-fallback:{_model}] {prompt}";
     }
 
-    /// <summary>
-    /// Throttles requests to avoid rate limiting by enforcing minimum delay between requests.
-    /// </summary>
-    private static async Task ThrottleRequestAsync(CancellationToken ct)
-    {
-        await _rateLimiter.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            TimeSpan timeSinceLastRequest = DateTime.UtcNow - _lastRequestTime;
-            if (timeSinceLastRequest < _throttleDelay)
-            {
-                TimeSpan delay = _throttleDelay - timeSinceLastRequest;
-                await Task.Delay(delay, ct).ConfigureAwait(false);
-            }
-            _lastRequestTime = DateTime.UtcNow;
-        }
-        finally
-        {
-            _rateLimiter.Release();
-        }
-    }
-
     /// <inheritdoc/>
     public void Dispose()
     {
@@ -375,6 +379,7 @@ public sealed class LiteLLMChatModel : IChatCompletionModel
     /// <summary>
     /// Streams reasoning content as an observable sequence, parsing both content and reasoning_content fields.
     /// Enables reactive composition for real-time reasoning pipeline visualization.
+    /// Uses Polly retry policy for resilient streaming.
     /// </summary>
     /// <param name="prompt">The input prompt.</param>
     /// <param name="ct">Cancellation token.</param>
@@ -383,8 +388,6 @@ public sealed class LiteLLMChatModel : IChatCompletionModel
     {
         return System.Reactive.Linq.Observable.Create<string>(async (observer, token) =>
         {
-            await ThrottleRequestAsync(token).ConfigureAwait(false);
-
             try
             {
                 using JsonContent payload = JsonContent.Create(new
@@ -399,7 +402,11 @@ public sealed class LiteLLMChatModel : IChatCompletionModel
                     stream = true
                 });
 
-                using HttpResponseMessage response = await _client.PostAsync("/v1/chat/completions", payload, token).ConfigureAwait(false);
+                HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
+                {
+                    return await _client.PostAsync("/v1/chat/completions", payload, token).ConfigureAwait(false);
+                }).ConfigureAwait(false);
+                
                 response.EnsureSuccessStatusCode();
 
                 using Stream responseStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
@@ -633,12 +640,14 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
 /// <summary>
 /// Embedding adapter specifically for Ollama Cloud API endpoints.
 /// Uses Ollama's native /api/embeddings endpoint and JSON format.
+/// Includes Polly exponential backoff retry policy to handle rate limiting.
 /// </summary>
 public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
     private readonly DeterministicEmbeddingModel _fallback = new();
+    private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
 
     public OllamaCloudEmbeddingModel(string endpoint, string apiKey, string model)
     {
@@ -651,6 +660,19 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
         };
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;
+        
+        // Create Polly retry policy with exponential backoff for rate limiting (429) and server errors (5xx)
+        _retryPolicy = Policy
+            .HandleResult<HttpResponseMessage>(r => 
+                (int)r.StatusCode == 429 || // Too Many Requests
+                (int)r.StatusCode >= 500)   // Server errors
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                onRetry: (outcome, timespan, retryCount, context) =>
+                {
+                    Console.WriteLine($"[OllamaCloudEmbeddingModel] Retry {retryCount} after {timespan.TotalSeconds}s due to {outcome.Result?.StatusCode}");
+                });
     }
 
     /// <inheritdoc/>
@@ -665,7 +687,11 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
                 prompt = input
             });
 
-            using HttpResponseMessage response = await _client.PostAsync("/api/embeddings", payload, ct).ConfigureAwait(false);
+            HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
+            {
+                return await _client.PostAsync("/api/embeddings", payload, ct).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+            
             response.EnsureSuccessStatusCode();
 
             Dictionary<string, object?>? json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
@@ -704,12 +730,14 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
 /// <summary>
 /// Embedding provider for LiteLLM proxy using OpenAI-compatible /v1/embeddings endpoint.
 /// Supports various embedding models proxied through LiteLLM.
+/// Includes Polly exponential backoff retry policy to handle rate limiting.
 /// </summary>
 public sealed class LiteLLMEmbeddingModel : IEmbeddingModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
     private readonly DeterministicEmbeddingModel _fallback = new();
+    private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LiteLLMEmbeddingModel"/> class.
@@ -728,6 +756,19 @@ public sealed class LiteLLMEmbeddingModel : IEmbeddingModel
         };
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;
+        
+        // Create Polly retry policy with exponential backoff for rate limiting (429) and server errors (5xx)
+        _retryPolicy = Policy
+            .HandleResult<HttpResponseMessage>(r => 
+                (int)r.StatusCode == 429 || // Too Many Requests
+                (int)r.StatusCode >= 500)   // Server errors
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                onRetry: (outcome, timespan, retryCount, context) =>
+                {
+                    Console.WriteLine($"[LiteLLMEmbeddingModel] Retry {retryCount} after {timespan.TotalSeconds}s due to {outcome.Result?.StatusCode}");
+                });
     }
 
     /// <inheritdoc/>
@@ -742,7 +783,11 @@ public sealed class LiteLLMEmbeddingModel : IEmbeddingModel
                 input = input,
             });
 
-            using HttpResponseMessage response = await _client.PostAsync("/v1/embeddings", payload, ct).ConfigureAwait(false);
+            HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
+            {
+                return await _client.PostAsync("/v1/embeddings", payload, ct).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+            
             response.EnsureSuccessStatusCode();
 
             using System.Text.Json.JsonDocument doc = await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false), cancellationToken: ct).ConfigureAwait(false);
