@@ -41,7 +41,7 @@ return;
 static async Task ParseAndRunAsync(string[] args)
 {
     // CommandLineParser verbs
-    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions>(args)
+    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions, AssistOptions>(args)
         .MapResult(
             (AskOptions o) => RunAskAsync(o),
             (PipelineOptions o) => RunPipelineAsync(o),
@@ -50,6 +50,7 @@ static async Task ParseAndRunAsync(string[] args)
             (TestOptions o) => RunTestsAsync(o),
             (OrchestratorOptions o) => RunOrchestratorAsync(o),
             (MeTTaOptions o) => RunMeTTaAsync(o),
+            (AssistOptions o) => RunAssistAsync(o),
             _ => Task.CompletedTask
         );
 }
@@ -905,3 +906,130 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
 }
 
 
+
+static async Task RunAssistAsync(AssistOptions o)
+{
+    Console.WriteLine("╔════════════════════════════════════════════════════════════╗");
+    Console.WriteLine("║   DSL Assistant - GitHub Copilot-like Code Intelligence   ║");
+    Console.WriteLine("╚════════════════════════════════════════════════════════════╝\n");
+
+    if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
+
+    try
+    {
+        // Setup LLM
+        OllamaProvider provider = new OllamaProvider();
+        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
+
+        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
+            o.Endpoint,
+            o.ApiKey,
+            o.EndpointType);
+
+        IChatCompletionModel chatModel;
+        if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
+        {
+            chatModel = CreateRemoteChatModel(endpoint, apiKey, o.Model, settings, endpointType);
+        }
+        else
+        {
+            chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
+        }
+
+        ToolRegistry tools = ToolRegistry.CreateDefault();
+        ToolAwareChatModel llm = new ToolAwareChatModel(chatModel, tools);
+        DslAssistant assistant = new DslAssistant(llm, tools);
+
+        Console.WriteLine($"✓ Assistant initialized\n");
+
+        // Execute based on mode
+        switch (o.Mode.ToLowerInvariant())
+        {
+            case "suggest":
+                if (string.IsNullOrEmpty(o.Dsl))
+                {
+                    Console.WriteLine("Error: --dsl required for suggest mode");
+                    return;
+                }
+                var suggestions = await assistant.SuggestNextStepAsync(o.Dsl, maxSuggestions: o.MaxSuggestions);
+                suggestions.Match(
+                    list =>
+                    {
+                        Console.WriteLine("=== Suggested Next Steps ===");
+                        foreach (var s in list)
+                            Console.WriteLine($"  • {s.Token}: {s.Explanation}");
+                    },
+                    error => Console.WriteLine($"Error: {error}"));
+                break;
+
+            case "complete":
+                if (string.IsNullOrEmpty(o.PartialToken))
+                {
+                    Console.WriteLine("Error: --partial required for complete mode");
+                    return;
+                }
+                var completions = assistant.CompleteToken(o.PartialToken, o.MaxSuggestions);
+                completions.Match(
+                    list => Console.WriteLine($"Completions: {string.Join(", ", list)}"),
+                    error => Console.WriteLine($"Error: {error}"));
+                break;
+
+            case "validate":
+                if (string.IsNullOrEmpty(o.Dsl))
+                {
+                    Console.WriteLine("Error: --dsl required for validate mode");
+                    return;
+                }
+                var validation = await assistant.ValidateAndFixAsync(o.Dsl);
+                validation.Match(
+                    result =>
+                    {
+                        Console.WriteLine($"Valid: {result.IsValid}");
+                        if (result.Errors.Count > 0)
+                            Console.WriteLine($"Errors: {string.Join(", ", result.Errors)}");
+                        if (result.FixedDsl != null)
+                            Console.WriteLine($"Fix: {result.FixedDsl}");
+                    },
+                    error => Console.WriteLine($"Error: {error}"));
+                break;
+
+            case "explain":
+                if (string.IsNullOrEmpty(o.Dsl))
+                {
+                    Console.WriteLine("Error: --dsl required for explain mode");
+                    return;
+                }
+                var explanation = await assistant.ExplainDslAsync(o.Dsl);
+                explanation.Match(
+                    text => Console.WriteLine($"=== Explanation ===\n{text}"),
+                    error => Console.WriteLine($"Error: {error}"));
+                break;
+
+            case "build":
+                if (string.IsNullOrEmpty(o.Goal))
+                {
+                    Console.WriteLine("Error: --goal required for build mode");
+                    return;
+                }
+                var dsl = await assistant.BuildDslInteractivelyAsync(o.Goal);
+                dsl.Match(
+                    text => Console.WriteLine($"=== Generated DSL ===\n{text}"),
+                    error => Console.WriteLine($"Error: {error}"));
+                break;
+
+            default:
+                Console.WriteLine($"Unknown mode: {o.Mode}");
+                Console.WriteLine("Available modes: suggest, complete, validate, explain, build");
+                break;
+        }
+
+        Console.WriteLine("\n✓ Assistant execution completed");
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        if (o.Debug)
+            Console.Error.WriteLine(ex.StackTrace);
+        Environment.Exit(1);
+    }
+}
