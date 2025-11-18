@@ -140,7 +140,12 @@ public class StreamDeduplicatorSteps
     {
         _deduplicator.Should().NotBeNull();
         var stream = CreateAsyncEnumerable(new float[] { x1, y1, z1 }, new float[] { x2, y2, z2 }, new float[] { x3, y3, z3 });
-        _filteredStream = await _deduplicator!.FilterStreamAsync(stream).ToListAsync();
+        var filtered = _deduplicator!.FilterStreamAsync(stream);
+        _filteredStream = new List<float[]>();
+        await foreach (var item in filtered)
+        {
+            _filteredStream.Add(item);
+        }
     }
 
     [When("I filter empty async stream")]
@@ -148,7 +153,12 @@ public class StreamDeduplicatorSteps
     {
         _deduplicator.Should().NotBeNull();
         var stream = CreateAsyncEnumerable();
-        _filteredStream = await _deduplicator!.FilterStreamAsync(stream).ToListAsync();
+        var filtered = _deduplicator!.FilterStreamAsync(stream);
+        _filteredStream = new List<float[]>();
+        await foreach (var item in filtered)
+        {
+            _filteredStream.Add(item);
+        }
     }
 
     [When("I filter async stream with cancellation after {int} vector")]
@@ -159,7 +169,12 @@ public class StreamDeduplicatorSteps
             _deduplicator.Should().NotBeNull();
             var cts = new CancellationTokenSource();
             var stream = CreateAsyncEnumerableWithCancellation(cts, count);
-            _filteredStream = await _deduplicator!.FilterStreamAsync(stream, cts.Token).ToListAsync(cts.Token);
+            var filtered = _deduplicator!.FilterStreamAsync(stream, cts.Token);
+            _filteredStream = new List<float[]>();
+            await foreach (var item in filtered.WithCancellation(cts.Token))
+            {
+                _filteredStream.Add(item);
+            }
         }
         catch (Exception ex)
         {
@@ -172,7 +187,12 @@ public class StreamDeduplicatorSteps
     {
         _streamSource.Should().NotBeNull();
         var deduplicator = new StreamDeduplicator((float)threshold);
-        _filteredStream = await _streamSource!.Deduplicate(deduplicator).ToListAsync();
+        var filtered = _streamSource!.Deduplicate(deduplicator);
+        _filteredStream = new List<float[]>();
+        await foreach (var item in filtered)
+        {
+            _filteredStream.Add(item);
+        }
     }
 
     [Then("the deduplicator should not be null")]
