@@ -35,6 +35,7 @@ This directory contains comprehensive technical documentation for MonadicPipelin
 ### 🧠 Architecture & Features
 
 #### Core Architecture
+- [**Architectural Layer Diagram**](ARCHITECTURAL_LAYERS.md) - Comprehensive visual system architecture with component diagrams, data flow, and deployment topology
 - [**Architecture Documentation**](ARCHITECTURE.md) - Detailed system architecture
 - [**Self-Improving Agent**](SELF_IMPROVING_AGENT.md) - Self-improving agent architecture and capabilities
 - [**Iterative Refinement Architecture**](ITERATIVE_REFINEMENT_ARCHITECTURE.md) - Refinement loop architecture

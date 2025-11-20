@@ -67,6 +67,8 @@ MonadicPipeline follows a **Functional Pipeline Architecture** with monadic comp
                     └─────────────────┘
 ```
 
+📘 **[View Detailed Architectural Layer Diagram](docs/ARCHITECTURAL_LAYERS.md)** - Comprehensive system architecture documentation including component responsibilities, data flow patterns, deployment topology, and extensibility points.
+
 ### Iterative Refinement Architecture
 
 The reasoning pipeline implements a **sophisticated iterative refinement architecture** that enables true progressive enhancement across multiple critique-improve cycles:
