@@ -308,11 +308,11 @@ jobs:
 
             const issueNumbers = '${{ steps.create.outputs.issue_numbers }}'.split(',').filter(n => n);
             console.log(`Checking assignments for issues: ${issueNumbers.join(', ')}`);
-            
+
             for (const issueNum of issueNumbers) {
               const num = parseInt(issueNum);
               if (!num) continue;
-              
+
               try {
                 // Check if already assigned
                 const { data: issue } = await github.rest.issues.get({
@@ -320,12 +320,12 @@ jobs:
                   repo: context.repo.repo,
                   issue_number: num
                 });
-                
+
                 if (issue.assignees && issue.assignees.length > 0) {
                   console.log(`✅ Issue #${num} already has assignees, skipping`);
                   continue;
                 }
-                
+
                 // Assign via API
                 console.log(`🧑‍🚀 Attempting to assign ${copilotUser} to #${num} via API...`);
                 await github.rest.issues.addAssignees({
@@ -416,11 +416,11 @@ jobs:
 
             const issueNumbers = '${{ steps.find.outputs.issue_numbers }}'.split(',').filter(n => n);
             console.log(`Checking assignments for issues: ${issueNumbers.join(', ')}`);
-            
+
             for (const issueNum of issueNumbers) {
               const num = parseInt(issueNum);
               if (!num) continue;
-              
+
               try {
                 // Check if already assigned
                 const { data: issue } = await github.rest.issues.get({
@@ -428,12 +428,12 @@ jobs:
                   repo: context.repo.repo,
                   issue_number: num
                 });
-                
+
                 if (issue.assignees && issue.assignees.length > 0) {
                   console.log(`✅ Issue #${num} already has assignees, skipping`);
                   continue;
                 }
-                
+
                 // Assign via API
                 console.log(`🧑‍🚀 Attempting to assign ${copilotUser} to #${num} via API...`);
                 await github.rest.issues.addAssignees({

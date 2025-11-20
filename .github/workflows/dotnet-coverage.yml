@@ -49,7 +49,7 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
-      uses: nick-fields/retry@v3  # Use the correct action name
+      uses: nick-fields/retry-action@v3
       with:
         timeout_minutes: 10
         max_attempts: 3
@@ -61,7 +61,7 @@ jobs:
       timeout-minutes: 15
 
     - name: Run tests with coverage
-      uses: nick-fields/retry@v3  # Use the correct action name
+      uses: nick-fields/retry-action@v3
       with:
         timeout_minutes: 20
         max_attempts: 2
@@ -76,7 +76,7 @@ jobs:
             --logger "trx;LogFileName=test-results.trx"
 
     - name: Install ReportGenerator
-      uses: nick-fields/retry@v3  # Use the correct action name
+      uses: nick-fields/retry-action@v3
       with:
         timeout_minutes: 5
         max_attempts: 3
