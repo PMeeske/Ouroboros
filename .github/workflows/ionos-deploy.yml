@@ -115,7 +115,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore dependencies
-        uses: nick-fields/retry@v3  # Fixed action name
+        uses: nick-fields/retry-action@v3
         with:
           timeout_minutes: 10
           max_attempts: 3
@@ -220,7 +220,7 @@ jobs:
           version: 'latest'
 
       - name: Configure kubectl for IONOS
-        uses: nick-fields/retry@v3  # Fixed action name
+        uses: nick-fields/retry-action@v3
         with:
           timeout_minutes: 5
           max_attempts: 3
@@ -256,7 +256,7 @@ jobs:
           fi
 
       - name: Create namespace
-        uses: nick-fields/retry@v3  # Fixed action name
+        uses: nick-fields/retry-action@v3
         with:
           timeout_minutes: 3
           max_attempts: 3
@@ -264,7 +264,7 @@ jobs:
           command: kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Create registry pull secret
-        uses: nick-fields/retry@v3  # Fixed action name
+        uses: nick-fields/retry-action@v3
         with:
           timeout_minutes: 3
           max_attempts: 3
@@ -305,7 +305,7 @@ jobs:
           sed -i 's|#   - name: ionos-registry-secret|  - name: ionos-registry-secret|g' /tmp/k8s-manifests/webapi-deployment.yaml
 
       - name: Apply secrets and configmap
-        uses: nick-fields/retry@v3  # Fixed action name
+        uses: nick-fields/retry-action@v3
         with:
           timeout_minutes: 5
           max_attempts: 3
@@ -316,7 +316,7 @@ jobs:
             kubectl apply -f k8s/configmap.yaml
 
       - name: Deploy dependencies
-        uses: nick-fields/retry@v3  # Fixed action name
+        uses: nick-fields/retry-action@v3
         with:
           timeout_minutes: 10
           max_attempts: 3
@@ -327,7 +327,7 @@ jobs:
             kubectl apply -f k8s/jaeger.yaml
 
       - name: Deploy applications
-        uses: nick-fields/retry@v3  # Fixed action name
+        uses: nick-fields/retry-action@v3
         with:
           timeout_minutes: 10
           max_attempts: 3
