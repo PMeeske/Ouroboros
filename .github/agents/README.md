@@ -76,7 +76,36 @@ This agent specializes in:
 @cloud-devops-expert How do I set up zero-downtime deployments with health checks?
 ```
 
-### 4. Android & MAUI Expert (`android-expert.md`)
+### 4. GitHub Actions Expert (`github-actions-expert.md`)
+
+**Expertise:** GitHub Actions Workflows, CI/CD Automation, Workflow Optimization
+
+This agent specializes in:
+- GitHub Actions workflow design and optimization
+- CI/CD pipeline automation and best practices
+- Reusable workflows and composite actions
+- Matrix strategies and parallel execution
+- Caching strategies for faster builds
+- Security scanning and vulnerability detection
+- Deployment automation and release management
+- Workflow debugging and troubleshooting
+
+**Use this agent when:**
+- Designing or optimizing GitHub Actions workflows
+- Setting up CI/CD pipelines with GitHub Actions
+- Implementing automated testing and deployment
+- Troubleshooting workflow failures
+- Optimizing build times with caching
+- Implementing security scanning in workflows
+- Creating reusable workflow components
+
+**Example invocation:**
+```
+@github-actions-expert How do I create a reusable workflow for .NET builds with caching?
+@github-actions-expert How do I implement a progressive deployment workflow with staging and production environments?
+```
+
+### 5. Android & MAUI Expert (`android-expert.md`)
 
 **Expertise:** Android Development (Kotlin), .NET MAUI Cross-Platform (C#), Mobile Architecture
 
@@ -106,7 +135,7 @@ This agent specializes in:
 @android-expert How do I build a cross-platform app with .NET MAUI that shares business logic?
 ```
 
-### 5. Testing & Quality Assurance Expert (`testing-quality-expert.md`)
+### 6. Testing & Quality Assurance Expert (`testing-quality-expert.md`)
 
 **Expertise:** Comprehensive Testing, Code Coverage, Mutation Testing, Quality Metrics
 
@@ -133,7 +162,7 @@ This agent specializes in:
 @testing-quality-expert How do I set up mutation testing for my monadic pipeline code?
 ```
 
-### 6. C# & .NET Architecture Expert (`csharp-dotnet-expert.md`)
+### 7. C# & .NET Architecture Expert (`csharp-dotnet-expert.md`)
 
 **Expertise:** C# Language Features, .NET 8 Patterns, Performance Optimization
 
@@ -159,7 +188,7 @@ This agent specializes in:
 @csharp-dotnet-expert How do I optimize this LINQ query for better performance?
 ```
 
-### 7. API Design & Documentation Expert (`api-design-expert.md`)
+### 8. API Design & Documentation Expert (`api-design-expert.md`)
 
 **Expertise:** RESTful API Design, OpenAPI, API Versioning, Developer Experience
 
@@ -185,7 +214,7 @@ This agent specializes in:
 @api-design-expert How do I design a RESTful API for pipeline management with proper versioning?
 ```
 
-### 8. Database & Persistence Expert (`database-persistence-expert.md`)
+### 9. Database & Persistence Expert (`database-persistence-expert.md`)
 
 **Expertise:** Vector Databases (Qdrant), Event Sourcing, Data Modeling, Caching
 
@@ -211,7 +240,7 @@ This agent specializes in:
 @database-persistence-expert How do I optimize vector similarity search in Qdrant?
 ```
 
-### 9. Security & Compliance Expert (`security-compliance-expert.md`)
+### 10. Security & Compliance Expert (`security-compliance-expert.md`)
 
 **Expertise:** Application Security, Authentication, Authorization, Secrets Management
 
@@ -263,6 +292,7 @@ This agent specializes in:
    - Functional programming questions → `@functional-pipeline-expert`
    - AI/ML orchestration questions → `@ai-orchestration-specialist`
    - Infrastructure/deployment questions → `@cloud-devops-expert`
+   - GitHub Actions/CI/CD questions → `@github-actions-expert`
    - Mobile development questions → `@android-expert`
    - Testing and quality questions → `@testing-quality-expert`
    - C# and .NET questions → `@csharp-dotnet-expert`
@@ -287,40 +317,44 @@ This agent specializes in:
 
 ## Agent Capabilities Matrix
 
-| Capability | Functional | AI Orch | DevOps | Android | Testing | C#/.NET | API | Database | Security |
-|------------|------------|---------|--------|---------|---------|---------|-----|----------|----------|
-| Monadic Composition | ✅ | ⚠️ | ❌ | ❌ | ✅ | ✅ | ❌ | ⚠️ | ❌ |
-| Event Sourcing | ✅ | ⚠️ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ✅ | ❌ |
-| LangChain Integration | ✅ | ✅ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
-| Model Orchestration | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Self-Improving Agents | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Kubernetes | ❌ | ❌ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ |
-| CI/CD Pipelines | ❌ | ❌ | ✅ | ⚠️ | ✅ | ⚠️ | ❌ | ❌ | ⚠️ |
-| Infrastructure as Code | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ |
-| Observability | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Unit Testing | ✅ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ |
-| Integration Testing | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ |
-| Mutation Testing | ❌ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ❌ | ❌ |
-| Code Coverage | ⚠️ | ❌ | ⚠️ | ⚠️ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| C# Language Features | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Async/Await Patterns | ✅ | ⚠️ | ❌ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ |
-| Memory Optimization | ⚠️ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ |
-| Dependency Injection | ⚠️ | ⚠️ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
-| RESTful API Design | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ | ⚠️ |
-| OpenAPI/Swagger | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ❌ | ❌ |
-| API Versioning | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| Vector Databases | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ✅ | ❌ |
-| Qdrant | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| CQRS | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ |
-| Repository Pattern | ⚠️ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ❌ | ✅ | ❌ |
-| Caching Strategies | ❌ | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ⚠️ | ✅ | ❌ |
-| Authentication | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ |
-| Authorization | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ |
-| Secrets Management | ❌ | ❌ | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Input Validation | ⚠️ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ | ✅ |
-| Audit Logging | ⚠️ | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ |
-| OWASP Top 10 | ❌ | ❌ | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ✅ |
-| Mobile Development | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Capability | Functional | AI Orch | DevOps | GH Actions | Android | Testing | C#/.NET | API | Database | Security |
+|------------|------------|---------|--------|------------|---------|---------|---------|-----|----------|----------|
+| Monadic Composition | ✅ | ⚠️ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ⚠️ | ❌ |
+| Event Sourcing | ✅ | ⚠️ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ✅ | ❌ |
+| LangChain Integration | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
+| Model Orchestration | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Self-Improving Agents | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Kubernetes | ❌ | ❌ | ✅ | ⚠️ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ |
+| CI/CD Pipelines | ❌ | ❌ | ✅ | ✅ | ⚠️ | ✅ | ⚠️ | ❌ | ❌ | ⚠️ |
+| GitHub Actions | ❌ | ❌ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ |
+| Workflow Optimization | ❌ | ❌ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
+| Reusable Workflows | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Matrix Strategies | ❌ | ❌ | ❌ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
+| Infrastructure as Code | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ |
+| Observability | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Unit Testing | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ |
+| Integration Testing | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ |
+| Mutation Testing | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ❌ | ❌ |
+| Code Coverage | ⚠️ | ❌ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| C# Language Features | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Async/Await Patterns | ✅ | ⚠️ | ❌ | ❌ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ |
+| Memory Optimization | ⚠️ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ |
+| Dependency Injection | ⚠️ | ⚠️ | ⚠️ | ❌ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
+| RESTful API Design | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ | ⚠️ |
+| OpenAPI/Swagger | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ❌ | ❌ |
+| API Versioning | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Vector Databases | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ✅ | ❌ |
+| Qdrant | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| CQRS | ⚠️ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ |
+| Repository Pattern | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ❌ | ✅ | ❌ |
+| Caching Strategies | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ❌ | ⚠️ | ⚠️ | ✅ | ❌ |
+| Authentication | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ |
+| Authorization | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ |
+| Secrets Management | ❌ | ❌ | ✅ | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Input Validation | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ | ✅ |
+| Audit Logging | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ |
+| OWASP Top 10 | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ✅ |
+| Mobile Development | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 **Legend:**
 - ✅ Expert: Deep expertise, primary responsibility
@@ -331,6 +365,7 @@ This agent specializes in:
 - Functional = Functional Pipeline Expert
 - AI Orch = AI Orchestration Specialist
 - DevOps = Cloud-Native DevOps Expert
+- GH Actions = GitHub Actions Expert
 - Android = Android & MAUI Expert
 - Testing = Testing & Quality Assurance Expert
 - C#/.NET = C# & .NET Architecture Expert
@@ -396,7 +431,7 @@ This agent specializes in:
 
 3. **CI/CD:**
    ```
-   @cloud-devops-expert Set up a GitHub Actions workflow that builds, tests,
+   @github-actions-expert Set up a GitHub Actions workflow that builds, tests,
    and deploys to Kubernetes on merge to main.
    ```
 
@@ -444,6 +479,32 @@ This agent specializes in:
    ```
    @testing-quality-expert How do I test database interactions with
    integration tests?
+   ```
+
+### Workflow 6: CI/CD Pipeline Optimization
+
+1. **Workflow Design:**
+   ```
+   @github-actions-expert How do I create a reusable workflow for .NET builds
+   that includes caching, testing, and code coverage reporting?
+   ```
+
+2. **Matrix Testing:**
+   ```
+   @github-actions-expert How do I set up matrix testing across multiple .NET
+   versions and operating systems with optimal parallelization?
+   ```
+
+3. **Security Scanning:**
+   ```
+   @github-actions-expert How do I integrate CodeQL and dependency scanning
+   into my CI pipeline with proper failure thresholds?
+   ```
+
+4. **Performance:**
+   ```
+   @github-actions-expert My workflow takes 20 minutes to complete. How can I
+   optimize it using caching and conditional job execution?
    ```
 
 ## Contributing

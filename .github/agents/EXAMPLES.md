@@ -96,6 +96,33 @@ the existing MetaAI planner to enable automatic learning from execution experien
 extraction feature, including metrics monitoring for skill extraction success rates?
 ```
 
+## Example 6: Optimizing GitHub Actions Workflows
+
+**Scenario:** Your CI/CD pipeline takes 20 minutes to run and you want to optimize it.
+
+**Question to @github-actions-expert:**
+> "My GitHub Actions workflow for MonadicPipeline takes 20 minutes to build, test, and deploy. It runs on every PR and uses .NET 8. How can I optimize it to run in under 5 minutes?"
+
+**Expected Guidance:**
+The agent would provide:
+- Caching strategies for NuGet packages and build outputs
+- Matrix strategies for parallel test execution
+- Conditional job execution based on changed files
+- Reusable workflow patterns to reduce duplication
+- Docker layer caching for container builds
+- Optimization of restore/build/test steps
+
+**Question to @github-actions-expert:**
+> "I want to create a reusable workflow for .NET builds that all my projects can use. It should support multiple .NET versions, run tests with coverage, and upload artifacts. How do I structure this?"
+
+**Expected Guidance:**
+The agent would provide:
+- Reusable workflow YAML with workflow_call trigger
+- Input parameters for customization (dotnet-version, configuration)
+- Output values for downstream jobs
+- Best practices for parameter validation
+- Example of consuming the reusable workflow
+
 ## Testing the Agents
 
 ### Functional Pipeline Expert Tests
@@ -210,12 +237,61 @@ fun UserScreen(viewModel: UserViewModel) {
 
 **Expected Response:** The agent should explain IDisposable implementation, proper cleanup in ViewModels, and lifecycle management in MAUI.
 
+### GitHub Actions Expert Tests
+
+**Test 1: Workflow Optimization**
+```
+@github-actions-expert Review this workflow and suggest optimizations:
+
+name: CI
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: dotnet restore
+    - run: dotnet build
+    - run: dotnet test
+```
+
+**Expected Response:** The agent should identify missing caching, suggest combining steps with --no-restore flags, recommend matrix strategies for parallel testing, and add code coverage reporting.
+
+**Test 2: Reusable Workflows**
+```
+@github-actions-expert How do I create a reusable workflow for .NET builds that accepts parameters?
+```
+
+**Expected Response:** The agent should provide a complete reusable workflow example with workflow_call trigger, input parameters, outputs, and best practices for parameterization.
+
+**Test 3: Security Best Practices**
+```
+@github-actions-expert Review this workflow for security issues:
+
+jobs:
+  deploy:
+    permissions: write-all
+    steps:
+    - uses: actions/checkout@latest
+    - run: echo "Secret: ${{ secrets.API_KEY }}"
+```
+
+**Expected Response:** The agent should identify overly broad permissions, unpinned action version (@latest), and secret exposure in logs. Should suggest minimal permissions, SHA pinning, and proper secret masking.
+
+**Test 4: Matrix Strategies**
+```
+@github-actions-expert How do I test across multiple .NET versions and OS with include/exclude?
+```
+
+**Expected Response:** The agent should provide matrix configuration examples with include/exclude patterns, demonstrate conditional logic based on matrix values, and explain optimization strategies.
+
 ## Verification Checklist
 
 - [ ] Agents understand MonadicPipeline architecture
 - [ ] Functional Pipeline Expert provides monadic patterns
 - [ ] AI Orchestration Specialist knows Meta-AI architecture
 - [ ] Cloud DevOps Expert has Kubernetes expertise
+- [ ] GitHub Actions Expert provides workflow optimization guidance
 - [ ] Android & MAUI Expert provides modern mobile best practices (Kotlin & C#)
 - [ ] Agents provide code examples with explanations
 - [ ] Agents identify anti-patterns and suggest improvements
