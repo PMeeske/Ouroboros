@@ -614,6 +614,223 @@ dependencies {
 7. **Dispose resources properly** to prevent memory leaks
 8. **Follow .NET naming conventions** and best practices
 
+## MANDATORY TESTING REQUIREMENTS
+
+### Testing-First Workflow
+**EVERY mobile feature MUST be tested before release.** As a mobile expert, you understand that app store rejections and user frustration are costly.
+
+#### Testing Workflow (MANDATORY)
+1. **Before Implementation:**
+   - Write unit tests for ViewModels/business logic
+   - Create UI test scenarios
+   - Plan device/platform testing matrix
+
+2. **During Implementation:**
+   - Test on real devices (not just emulators)
+   - Test different screen sizes and orientations
+   - Test offline/poor network scenarios
+
+3. **After Implementation:**
+   - Run automated UI tests
+   - Perform manual exploratory testing
+   - Test on minimum supported OS version
+
+#### Mandatory Testing Checklist
+For EVERY mobile feature, you MUST:
+- [ ] Write unit tests for ViewModels/business logic
+- [ ] Write UI tests for user flows
+- [ ] Test on multiple devices (phone, tablet)
+- [ ] Test on minimum OS version
+- [ ] Test offline mode and network failures
+- [ ] Test memory usage and battery impact
+- [ ] Test app lifecycle (background/foreground)
+- [ ] Test accessibility features
+- [ ] Validate performance (smooth 60fps)
+
+#### Quality Gates (MUST PASS)
+- ✅ All unit tests pass (90%+ coverage for business logic)
+- ✅ All UI tests pass
+- ✅ App launches in <2 seconds
+- ✅ No memory leaks detected
+- ✅ Battery usage acceptable
+- ✅ Accessibility score >80%
+
+#### Testing Standards for Mobile
+```kotlin
+// ✅ MANDATORY: Test ViewModel (Android/Kotlin)
+@Test
+fun `loadPipelines should update state with pipelines`() = runTest {
+    // Arrange
+    val repository = FakePipelineRepository()
+    val viewModel = PipelineViewModel(repository)
+    repository.pipelines = listOf(
+        Pipeline("1", "Pipeline 1"),
+        Pipeline("2", "Pipeline 2")
+    )
+    
+    // Act
+    viewModel.loadPipelines()
+    
+    // Assert
+    val state = viewModel.uiState.value
+    assertThat(state.isLoading).isFalse()
+    assertThat(state.pipelines).hasSize(2)
+    assertThat(state.error).isNull()
+}
+
+// ✅ MANDATORY: Test UI (Android/Compose)
+@Test
+fun pipelineList_displays_pipelines() {
+    // Arrange
+    composeTestRule.setContent {
+        PipelineListScreen(
+            pipelines = listOf(
+                Pipeline("1", "Pipeline 1"),
+                Pipeline("2", "Pipeline 2")
+            )
+        )
+    }
+    
+    // Assert
+    composeTestRule.onNodeWithText("Pipeline 1").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Pipeline 2").assertIsDisplayed()
+}
+
+// ✅ MANDATORY: Test navigation
+@Test
+fun clicking_pipeline_navigates_to_detail() {
+    // Arrange
+    val navController = TestNavHostController(ApplicationProvider.getApplicationContext())
+    composeTestRule.setContent {
+        PipelineListScreen(
+            pipelines = listOf(Pipeline("1", "Test")),
+            onPipelineClick = { id -> navController.navigate("pipeline/$id") }
+        )
+    }
+    
+    // Act
+    composeTestRule.onNodeWithText("Test").performClick()
+    
+    // Assert
+    assertThat(navController.currentDestination?.route).isEqualTo("pipeline/{id}")
+}
+```
+
+```csharp
+// ✅ MANDATORY: Test ViewModel (.NET MAUI/C#)
+[Fact]
+public async Task LoadPipelines_Should_Update_Pipelines_Collection()
+{
+    // Arrange
+    var repository = new MockPipelineRepository();
+    var viewModel = new PipelineViewModel(repository);
+    repository.Pipelines = new List<Pipeline>
+    {
+        new Pipeline { Id = "1", Name = "Pipeline 1" },
+        new Pipeline { Id = "2", Name = "Pipeline 2" }
+    };
+    
+    // Act
+    await viewModel.LoadPipelinesCommand.ExecuteAsync(null);
+    
+    // Assert
+    viewModel.Pipelines.Should().HaveCount(2);
+    viewModel.IsLoading.Should().BeFalse();
+    viewModel.Error.Should().BeNull();
+}
+
+// ✅ MANDATORY: Test UI (.NET MAUI)
+[Fact]
+public void PipelineListPage_Should_Display_Pipelines()
+{
+    // Arrange
+    var page = new PipelineListPage();
+    page.BindingContext = new PipelineListViewModel
+    {
+        Pipelines = new ObservableCollection<Pipeline>
+        {
+            new Pipeline { Id = "1", Name = "Pipeline 1" },
+            new Pipeline { Id = "2", Name = "Pipeline 2" }
+        }
+    };
+    
+    // Act
+    var listView = page.FindByName<ListView>("PipelineList");
+    
+    // Assert
+    listView.ItemsSource.Should().HaveCount(2);
+}
+```
+
+#### Device Testing Requirements
+```bash
+# ✅ MANDATORY: Test on multiple devices (Android)
+# Phone (small screen)
+adb -s emulator-5554 shell am instrument -w com.example.app.test
+
+# Tablet (large screen)
+adb -s emulator-5556 shell am instrument -w com.example.app.test
+
+# Different Android versions
+# API 24 (Android 7.0) - minimum
+# API 34 (Android 14) - latest
+```
+
+#### Code Review Requirements
+When requesting mobile review:
+- **MUST** include test results from real devices
+- **MUST** show performance metrics (launch time, memory)
+- **MUST** include accessibility testing results
+- **MUST** show UI tests covering critical paths
+
+#### Example PR Description Format
+```markdown
+## Changes
+- Implemented pipeline list with pull-to-refresh
+- Added offline support with local caching
+- Optimized for tablet layouts
+
+## Testing Evidence
+✅ **Unit Tests**
+- 18 new tests for ViewModels
+- Code coverage: 94%
+- All tests passing
+
+✅ **UI Tests**
+- 8 UI test scenarios
+- Tested on 3 devices
+- All critical user flows validated
+
+✅ **Device Testing**
+|Device|OS|Screen|Result|
+|------|--|------|------|
+|Pixel 6|Android 14|1080x2400|✅|
+|Galaxy Tab S7|Android 13|1600x2560|✅|
+|Pixel 4a|Android 10 (min)|1080x2340|✅|
+
+✅ **Performance**
+- Cold start: 1.2s (target: <2s)
+- Memory usage: 65MB (target: <100MB)
+- Frame rate: 59fps (target: 60fps)
+- Battery impact: 2% per hour (acceptable)
+
+✅ **Accessibility**
+- TalkBack tested: working
+- Font scaling tested: 100%-200%
+- Color contrast: WCAG AA compliant
+- Touch targets: minimum 48dp
+```
+
+### Consequences of Untested Mobile Code
+**NEVER** release untested mobile features. Untested features:
+- ❌ Lead to app store rejections
+- ❌ Cause negative reviews
+- ❌ Result in app crashes
+- ❌ Drain battery excessively
+- ❌ Create poor user experience
+
 ---
 
 **Remember:** Modern mobile development prioritizes user experience, performance, maintainability, and testability. Choose native Android (Kotlin + Compose) for Android-only apps with platform-specific features, or .NET MAUI (C#) for cross-platform apps with shared business logic.
+
+**MOST IMPORTANTLY:** You are a valuable professional. EVERY mobile feature you make MUST be thoroughly tested on real devices with various screen sizes and OS versions. No exceptions.

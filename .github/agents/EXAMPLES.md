@@ -2,12 +2,24 @@
 
 This document demonstrates practical examples of using the GitHub Copilot custom agents in real-world scenarios.
 
-## Example 1: Building a New Pipeline Step
+## 🔴 IMPORTANT: All Examples Include Mandatory Testing 🔴
+
+Every example in this document now demonstrates proper testing practices. Custom agents are configured as valuable professionals who NEVER provide untested code.
+
+When working with agents:
+1. ✅ **Always ask about testing** - "How do I test this?"
+2. ✅ **Request test examples** - "Show me the unit tests for this"
+3. ✅ **Include tests in implementation** - Tests are part of the solution, not optional
+4. ✅ **Follow test-first workflow** - Write tests before or during implementation
+
+---
+
+## Example 1: Building a New Pipeline Step (WITH TESTS)
 
 **Scenario:** You want to add a new reasoning step that validates LLM outputs.
 
 **Question to @functional-pipeline-expert:**
-> "I need to create a composable pipeline step that validates LLM outputs against a JSON schema. The step should use Result<T> for error handling and integrate with the existing PipelineBranch. How should I structure this?"
+> "I need to create a composable pipeline step that validates LLM outputs against a JSON schema. The step should use Result<T> for error handling and integrate with the existing PipelineBranch. **Please include comprehensive unit tests that verify monadic laws and error handling.**"
 
 **Expected Guidance:**
 The agent would provide:
@@ -15,13 +27,47 @@ The agent would provide:
 - Proper use of `Result<T>` monad for validation errors
 - Integration with event sourcing
 - Example implementation following MonadicPipeline patterns
+- **✅ Complete test suite including:**
+  - Unit tests for validation logic
+  - Property-based tests for monadic laws
+  - Integration tests for pipeline composition
+  - Error handling test cases
 
-## Example 2: Setting Up Model Orchestration
+**Example Test Code:**
+```csharp
+[Fact]
+public async Task ValidationArrow_Should_Add_Validation_Event()
+{
+    // Arrange
+    var branch = CreateTestBranch();
+    var schema = LoadTestSchema();
+    var validationStep = ValidationArrow(schema);
+    
+    // Act
+    var result = await validationStep(branch);
+    
+    // Assert
+    result.Events.Should().ContainSingle(e => e.State is ValidationResult);
+}
+
+[Theory]
+[InlineData("{\"valid\":true}", true)]
+[InlineData("{\"invalid\":123}", false)]
+public async Task ValidationArrow_Should_Validate_Against_Schema(
+    string json, bool shouldPass)
+{
+    // Test implementation...
+}
+```
+
+---
+
+## Example 2: Setting Up Model Orchestration (WITH TESTS)
 
 **Scenario:** You want to optimize model selection based on task complexity.
 
 **Question to @ai-orchestration-specialist:**
-> "I have multiple LLMs (GPT-4, GPT-3.5, and a local Ollama model). How do I set up SmartModelOrchestrator to automatically select the best model based on task complexity, cost, and performance?"
+> "I have multiple LLMs (GPT-4, GPT-3.5, and a local Ollama model). How do I set up SmartModelOrchestrator to automatically select the best model based on task complexity, cost, and performance? **I need comprehensive tests to verify the selection logic works correctly under various scenarios.**"
 
 **Expected Guidance:**
 The agent would provide:
@@ -29,13 +75,42 @@ The agent would provide:
 - Use case classification strategies
 - Performance metrics tracking
 - Code examples for orchestrator setup
+- **✅ Complete test suite including:**
+  - Unit tests for model selection logic
+  - Tests for confidence-based routing
+  - Performance benchmarks
+  - Integration tests with mock LLMs
 
-## Example 3: Production Deployment
+**Example Test Code:**
+```csharp
+[Theory]
+[InlineData("simple query", "gpt-3.5-turbo")]
+[InlineData("complex reasoning task", "gpt-4")]
+[InlineData("code generation", "codex")]
+public async Task Orchestrator_Should_Select_Appropriate_Model(
+    string prompt, string expectedModel)
+{
+    // Arrange
+    var orchestrator = CreateConfiguredOrchestrator();
+    
+    // Act
+    var result = await orchestrator.SelectModelAsync(prompt);
+    
+    // Assert
+    result.Match(
+        selected => selected.ModelName.Should().Be(expectedModel),
+        error => Assert.Fail($"Selection failed: {error}"));
+}
+```
+
+---
+
+## Example 3: Production Deployment (WITH TESTS)
 
 **Scenario:** You need to deploy the WebApi to Kubernetes with zero downtime.
 
 **Question to @cloud-devops-expert:**
-> "I need to deploy MonadicPipeline WebApi to Kubernetes with health checks, autoscaling, and zero-downtime updates. What's the complete setup?"
+> "I need to deploy MonadicPipeline WebApi to Kubernetes with health checks, autoscaling, and zero-downtime updates. **Show me how to test the deployment configuration before applying it to production, including health check testing and rollback procedures.**"
 
 **Expected Guidance:**
 The agent would provide:
@@ -44,13 +119,38 @@ The agent would provide:
 - Rolling update strategy
 - Service and Ingress setup
 - Complete CI/CD pipeline
+- **✅ Complete testing strategy including:**
+  - Terraform/Kubernetes manifest validation
+  - Health check endpoint testing
+  - Load testing configuration
+  - Rollback procedure testing
 
-## Example 4: Building an Android or MAUI App
+**Example Test Commands:**
+```bash
+# Validate Kubernetes manifests
+kubectl apply --dry-run=server -f k8s/
+kubectl apply --dry-run=client -f k8s/
+
+# Test health endpoints
+curl -f http://localhost:8080/health/ready
+curl -f http://localhost:8080/health/live
+
+# Load test
+k6 run --vus 100 --duration 30s load-test.js
+
+# Test rollback
+kubectl rollout undo deployment/monadic-pipeline
+kubectl rollout status deployment/monadic-pipeline
+```
+
+---
+
+## Example 4: Building an Android or MAUI App (WITH TESTS)
 
 **Scenario:** You need to create a mobile app that uses the MonadicPipeline API.
 
 **Question to @android-expert (for native Android):**
-> "I need to build an Android app with Kotlin that connects to the MonadicPipeline API. How should I structure the app using MVVM, Jetpack Compose, and Hilt for dependency injection?"
+> "I need to build an Android app with Kotlin that connects to the MonadicPipeline API. How should I structure the app using MVVM, Jetpack Compose, and Hilt for dependency injection? **Please include comprehensive tests for ViewModels, repositories, and UI components.**"
 
 **Expected Guidance:**
 The agent would provide:
@@ -58,6 +158,42 @@ The agent would provide:
 - Repository pattern for API integration with Retrofit
 - ViewModel with StateFlow for UI state management
 - Compose UI components with proper state hoisting
+- **✅ Complete test suite including:**
+  - Unit tests for ViewModels
+  - Repository tests with mock API
+  - UI tests with Compose Testing
+  - Integration tests
+
+**Example Test Code:**
+```kotlin
+@Test
+fun `loadPipelines should update state with pipelines`() = runTest {
+    // Arrange
+    val repository = FakePipelineRepository()
+    val viewModel = PipelineViewModel(repository)
+    
+    // Act
+    viewModel.loadPipelines()
+    
+    // Assert
+    viewModel.uiState.value.apply {
+        isLoading shouldBe false
+        pipelines shouldHaveSize 2
+        error shouldBe null
+    }
+}
+
+@Test
+fun pipelineList_displays_pipelines() {
+    composeTestRule.setContent {
+        PipelineListScreen(pipelines = testPipelines)
+    }
+    
+    composeTestRule.onNodeWithText("Pipeline 1").assertIsDisplayed()
+}
+```
+
+---
 - Hilt modules for dependency injection
 - Example implementation with proper error handling
 
@@ -308,12 +444,144 @@ After validating the agents:
 4. Add more specialized agents if needed (e.g., Testing Expert, Security Specialist)
 5. Update agents when new features are added to MonadicPipeline
 
+## 🔴 Testing Mandate Examples 🔴
+
+### Example: Agent Response WITH Mandatory Testing
+
+**Question:**
+> "@functional-pipeline-expert I need to create a new pipeline step that filters data."
+
+**✅ GOOD Agent Response (Includes Tests):**
+```markdown
+Here's the pipeline step implementation:
+
+\`\`\`csharp
+public static Step<PipelineBranch, PipelineBranch> FilterArrow(
+    Func<string, bool> predicate) =>
+    async branch =>
+    {
+        var filtered = branch.Data.Where(predicate).ToList();
+        return branch with { Data = filtered };
+    };
+\`\`\`
+
+**MANDATORY TESTS (you must implement these):**
+
+\`\`\`csharp
+[Fact]
+public async Task FilterArrow_Should_Filter_Data_Correctly()
+{
+    // Arrange
+    var branch = CreateBranchWithData(["item1", "item2", "item3"]);
+    var filterStep = FilterArrow(x => x.StartsWith("item1"));
+    
+    // Act
+    var result = await filterStep(branch);
+    
+    // Assert
+    result.Data.Should().ContainSingle();
+    result.Data.Should().Contain("item1");
+}
+
+[Fact]
+public async Task FilterArrow_Should_Preserve_Immutability()
+{
+    // Arrange
+    var original = CreateBranchWithData(["a", "b"]);
+    var originalData = original.Data.ToList();
+    
+    // Act
+    var filtered = await FilterArrow(x => x == "a")(original);
+    
+    // Assert
+    original.Data.Should().BeEquivalentTo(originalData);
+    filtered.Should().NotBeSameAs(original);
+}
+\`\`\`
+
+**Quality Gates:**
+- ✅ Test coverage: 100% for new FilterArrow function
+- ✅ Immutability verified
+- ✅ Edge cases tested (empty list, all filtered, none filtered)
+```
+
+### Example: Agent Rejects Untested Code
+
+**Question:**
+> "@api-design-expert Here's my new API endpoint, can you review it?"
+> [shows code without tests]
+
+**✅ GOOD Agent Response:**
+```markdown
+❌ **REJECTED: No tests provided**
+
+As a valuable professional, I cannot approve this code without comprehensive tests.
+
+**REQUIRED before review:**
+1. Unit tests for endpoint logic
+2. Integration tests for API calls
+3. Validation tests for input
+4. Error scenario tests
+5. Authentication/authorization tests
+
+**Minimum requirements:**
+- [ ] Test all HTTP status codes (200, 400, 401, 404, 500)
+- [ ] Test request validation
+- [ ] Test response schema matches OpenAPI spec
+- [ ] Test error messages are helpful
+- [ ] Achieve ≥90% code coverage
+
+Please provide tests and I'll review the complete solution.
+```
+
+### Example: Testing Evidence in PR
+
+**Good PR Description Format:**
+```markdown
+## Feature: Add Pipeline Filtering
+
+### Implementation
+- Created FilterArrow step
+- Added validation logic
+- Integrated with existing pipeline
+
+### ✅ Testing Evidence (REQUIRED)
+**Unit Tests:**
+- 12 tests added, all passing
+- Coverage: 94% (previous: 87%)
+
+**Integration Tests:**
+- 3 end-to-end scenarios tested
+- Pipeline composition verified
+
+**Property-Based Tests:**
+- Filter preserves list ordering: ✓ (100 cases)
+- Filter never adds elements: ✓ (100 cases)
+
+**Quality Gates:**
+- ✅ All 847 existing tests pass (no regressions)
+- ✅ Mutation score: 89% (target: 80%)
+- ✅ Performance: < 10ms per operation
+- ✅ Memory: no leaks detected
+
+### Test Execution Results
+\`\`\`
+Test run for MonadicPipeline.Tests.dll (.NET 10.0)
+Total tests: 859
+     Passed: 859
+     Failed: 0
+    Skipped: 0
+     Total time: 4.2s
+\`\`\`
+```
+
 ## Known Limitations
 
 - Agents are based on the documented knowledge in their markdown files
 - They may not have access to the latest code changes without updates
 - Complex questions may require multiple agent consultations
 - Agents work best with specific, focused questions
+- **Agents will REJECT code without adequate testing**
 
 ## Feedback
 
@@ -322,7 +590,10 @@ If you encounter issues:
 2. Provide more context or code examples
 3. Try breaking complex questions into smaller parts
 4. Consult multiple agents for different aspects
+5. **Always include testing in your questions and implementations**
 
 ---
 
 **Remember:** These custom agents are tools to enhance productivity. They provide guidance based on best practices and MonadicPipeline's architecture, but always review and test their suggestions before implementing in production code.
+
+**🔴 CRITICAL:** Every custom agent now enforces mandatory testing. If an agent provides code without tests or allows you to skip testing, report it as a bug immediately. Our agents are valuable professionals who take pride in their thoroughly tested work.
