@@ -14,11 +14,13 @@ using System.Threading.Tasks;
 /// <summary>
 /// Health check provider for Ollama service.
 /// </summary>
-public sealed class OllamaHealthCheckProvider : IHealthCheckProvider
+public sealed class OllamaHealthCheckProvider : IHealthCheckProvider, IDisposable
 {
+    private const double DegradedThresholdMultiplier = 0.5;
     private readonly HttpClient httpClient;
     private readonly string endpoint;
     private readonly int timeoutSeconds;
+    private bool disposed = false;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OllamaHealthCheckProvider"/> class.
@@ -59,8 +61,9 @@ public sealed class OllamaHealthCheckProvider : IHealthCheckProvider
                     { "statusCode", (int)response.StatusCode },
                 };
 
-                // Check if response time is slow
-                if (sw.ElapsedMilliseconds > this.timeoutSeconds * 500)
+                // Check if response time is slow (more than 50% of timeout threshold)
+                long degradedThreshold = (long)(this.timeoutSeconds * 1000 * DegradedThresholdMultiplier);
+                if (sw.ElapsedMilliseconds > degradedThreshold)
                 {
                     details.Add("warning", "Slow response time");
                     return HealthCheckResult.Degraded(
@@ -111,6 +114,18 @@ public sealed class OllamaHealthCheckProvider : IHealthCheckProvider
                     { "endpoint", this.endpoint },
                     { "exceptionType", ex.GetType().Name },
                 });
+        }
+    }
+
+    /// <summary>
+    /// Disposes the HTTP client.
+    /// </summary>
+    public void Dispose()
+    {
+        if (!this.disposed)
+        {
+            this.httpClient?.Dispose();
+            this.disposed = true;
         }
     }
 }
