@@ -80,7 +80,7 @@ jobs:
           fi
 
       - name: Terraform Init
-        uses: nick-fields/retry-action@v3
+        uses: nick-fields/retry@v3
         with:
           timeout_minutes: 10
           max_attempts: 3
