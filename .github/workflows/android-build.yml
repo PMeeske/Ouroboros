@@ -18,8 +18,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check-android-project:
+    name: Check if Android project exists
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      android_exists: ${{ steps.check.outputs.exists }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Check for Android project
+      id: check
+      run: |
+        if [ -d "src/MonadicPipeline.Android" ] && [ -f "src/MonadicPipeline.Android/MonadicPipeline.Android.csproj" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "✓ Android project found"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "⚠️  Android project not found, skipping build"
+        fi
+
   build-android:
     name: Build Android APK
+    needs: check-android-project
+    if: needs.check-android-project.outputs.android_exists == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -87,7 +111,7 @@ jobs:
       run: |
         echo "Building Android APK..."
         cd src/MonadicPipeline.Android
-        dotnet build -c Release -f net8.0-android --verbosity normal
+        dotnet build -c Release -f net10.0-android --verbosity normal
       timeout-minutes: 20
 
     - name: List build output
@@ -100,7 +124,7 @@ jobs:
       id: find-apk
       run: |
         echo "Searching for APK files..."
-        APK_PATH=$(find src/MonadicPipeline.Android/bin/Release/net8.0-android -name "*.apk" -type f 2>/dev/null | head -n 1)
+        APK_PATH=$(find src/MonadicPipeline.Android/bin/Release/net10.0-android -name "*.apk" -type f 2>/dev/null | head -n 1)
         if [ -z "$APK_PATH" ]; then
           echo "Error: No APK found!"
           echo "Listing all files in build directory:"
@@ -144,6 +168,8 @@ jobs:
       uses: dawidd6/action-send-mail@v3
       continue-on-error: true
       timeout-minutes: 5
+      env:
+        HAS_SMTP_CONFIG: ${{ secrets.SMTP_SERVER != '' && secrets.SMTP_USERNAME != '' && secrets.SMTP_PASSWORD != '' && secrets.NOTIFICATION_EMAIL != '' }}
       with:
         server_address: ${{ secrets.SMTP_SERVER }}
         server_port: ${{ secrets.SMTP_PORT }}
@@ -183,6 +209,21 @@ jobs:
 
           This is an automated message from GitHub Actions.
         priority: normal
+    
+    - name: Email notification skipped
+      if: success() && (secrets.SMTP_SERVER == '' || secrets.SMTP_USERNAME == '' || secrets.SMTP_PASSWORD == '' || secrets.NOTIFICATION_EMAIL == '')
+      run: |
+        echo "## 📧 Email Notification" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "⚠️  Email notification skipped - SMTP credentials not configured" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "To enable email notifications, configure these secrets:" >> $GITHUB_STEP_SUMMARY
+        echo "- \`SMTP_SERVER\`" >> $GITHUB_STEP_SUMMARY
+        echo "- \`SMTP_PORT\`" >> $GITHUB_STEP_SUMMARY
+        echo "- \`SMTP_USERNAME\`" >> $GITHUB_STEP_SUMMARY
+        echo "- \`SMTP_PASSWORD\`" >> $GITHUB_STEP_SUMMARY
+        echo "- \`SMTP_FROM_EMAIL\`" >> $GITHUB_STEP_SUMMARY
+        echo "- \`NOTIFICATION_EMAIL\`" >> $GITHUB_STEP_SUMMARY
 
     - name: Failure summary
       if: failure()
@@ -195,3 +236,21 @@ jobs:
         echo "- MAUI workload installation failed" >> $GITHUB_STEP_SUMMARY
         echo "- Missing dependencies" >> $GITHUB_STEP_SUMMARY
         echo "- Build configuration errors" >> $GITHUB_STEP_SUMMARY
+
+  android-skipped:
+    name: Android Build Skipped
+    needs: check-android-project
+    if: needs.check-android-project.outputs.android_exists == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+    - name: Android project not found
+      run: |
+        echo "## ℹ️ Android Build Skipped" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "The Android project was not found in this repository." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Expected location**: \`src/MonadicPipeline.Android/\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "This is normal if the Android app has not been created yet." >> $GITHUB_STEP_SUMMARY

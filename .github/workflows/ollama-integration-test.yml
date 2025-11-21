@@ -206,7 +206,7 @@ jobs:
         echo "### Environment" >> $GITHUB_STEP_SUMMARY
         echo "- **Runner**: ubuntu-latest" >> $GITHUB_STEP_SUMMARY
         echo "- **Models**: llama3:8b, nomic-embed-text" >> $GITHUB_STEP_SUMMARY
-        echo "- **.NET Version**: 8.0.x" >> $GITHUB_STEP_SUMMARY
+        echo "- **.NET Version**: 10.0.x" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
         echo "1. ✅ Basic Ollama Connectivity" >> $GITHUB_STEP_SUMMARY
