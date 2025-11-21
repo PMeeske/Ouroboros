@@ -59,7 +59,7 @@ static async Task RunPipelineDslAsync(string dsl, string modelName, string embed
 {
     // Setup minimal environment for reasoning/ingest arrows
     // Remote model support (OpenAI-compatible and Ollama Cloud) via environment variables or CLI overrides
-    (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
+    (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
         pipelineOpts?.Endpoint,
         pipelineOpts?.ApiKey,
         pipelineOpts?.EndpointType);
@@ -215,7 +215,7 @@ static Step<string, string> CreateSemanticCliPipeline(bool withRag, string model
     {
         // Initialize models
         OllamaProvider provider = new OllamaProvider();
-        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
+        (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
             askOpts?.Endpoint,
             askOpts?.ApiKey,
             askOpts?.EndpointType);
@@ -432,7 +432,7 @@ static async Task RunAskAsync(AskOptions o)
     {
         // Build minimal environment (always RAG off for initial agent version; agent can internally call tools)
         OllamaProvider provider = new OllamaProvider();
-        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(o.Endpoint, o.ApiKey, o.EndpointType);
+        (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(o.Endpoint, o.ApiKey, o.EndpointType);
         IChatCompletionModel chatModel;
         if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
         {
@@ -541,7 +541,7 @@ static async Task RunAskAsync(AskOptions o)
 
 static void ValidateSecrets(AskOptions? askOpts = null)
 {
-    (string endpoint, string apiKey, ChatEndpointType _) = ChatConfig.ResolveWithOverrides(askOpts?.Endpoint, askOpts?.ApiKey, askOpts?.EndpointType);
+    (string? endpoint, string? apiKey, ChatEndpointType _) = ChatConfig.ResolveWithOverrides(askOpts?.Endpoint, askOpts?.ApiKey, askOpts?.EndpointType);
     if (!string.IsNullOrWhiteSpace(endpoint) ^ !string.IsNullOrWhiteSpace(apiKey))
     {
         Console.WriteLine("[WARN] Only one of CHAT_ENDPOINT / CHAT_API_KEY is set; remote backend will be ignored.");
@@ -550,7 +550,7 @@ static void ValidateSecrets(AskOptions? askOpts = null)
 
 static void LogBackendSelection(string model, ChatRuntimeSettings settings, AskOptions? askOpts = null)
 {
-    (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(askOpts?.Endpoint, askOpts?.ApiKey, askOpts?.EndpointType);
+    (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(askOpts?.Endpoint, askOpts?.ApiKey, askOpts?.EndpointType);
     string backend = (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
         ? $"remote-{endpointType.ToString().ToLowerInvariant()}"
         : "ollama-local";
@@ -756,7 +756,7 @@ static async Task RunMeTTaAsync(MeTTaOptions o)
         ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false);
 
         // Check for remote endpoint configuration
-        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
+        (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
             o.Endpoint,
             o.ApiKey,
             o.EndpointType);
@@ -921,7 +921,7 @@ static async Task RunAssistAsync(AssistOptions o)
         OllamaProvider provider = new OllamaProvider();
         ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
 
-        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
+        (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
             o.Endpoint,
             o.ApiKey,
             o.EndpointType);

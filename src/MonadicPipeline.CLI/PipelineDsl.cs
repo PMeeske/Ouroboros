@@ -79,7 +79,7 @@ public static class PipelineDsl
         List<Step<CliPipelineState, CliPipelineState>> steps = new List<Step<CliPipelineState, CliPipelineState>>(parts.Length);
         foreach (string token in parts)
         {
-            (string name, string args) = ParseToken(token);
+            (string name, string? args) = ParseToken(token);
             if (!StepRegistry.TryResolve(name, args, out Step<CliPipelineState, CliPipelineState>? found) || found is null)
             {
                 // Unknown token: no-op but recorded
@@ -131,7 +131,7 @@ public static class PipelineDsl
 
         foreach (string token in parts)
         {
-            (string name, string args) = ParseToken(token);
+            (string name, string? args) = ParseToken(token);
             if (StepRegistry.TryResolveInfo(name, out System.Reflection.MethodInfo? mi) && mi is not null)
             {
                 lines.Add($"- {name}{(args is null ? string.Empty : $"({args})")} -> {mi.DeclaringType?.Name}.{mi.Name}()");

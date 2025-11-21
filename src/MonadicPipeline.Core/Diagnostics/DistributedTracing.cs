@@ -33,7 +33,7 @@ public static class DistributedTracing
 
         if (activity != null && tags != null)
         {
-            foreach ((string key, object value) in tags)
+            foreach ((string key, object? value) in tags)
             {
                 activity.SetTag(key, value);
             }
