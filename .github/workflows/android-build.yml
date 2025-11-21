@@ -168,8 +168,6 @@ jobs:
       uses: dawidd6/action-send-mail@v3
       continue-on-error: true
       timeout-minutes: 5
-      env:
-        HAS_SMTP_CONFIG: ${{ secrets.SMTP_SERVER != '' && secrets.SMTP_USERNAME != '' && secrets.SMTP_PASSWORD != '' && secrets.NOTIFICATION_EMAIL != '' }}
       with:
         server_address: ${{ secrets.SMTP_SERVER }}
         server_port: ${{ secrets.SMTP_PORT }}

@@ -62,6 +62,8 @@ jobs:
     needs: terraform-validate
 
     strategy:
+      # Continue testing all modules even if some fail to get comprehensive feedback
+      # This is appropriate for validation workflows where we want to see all issues
       fail-fast: false
       matrix:
         module:

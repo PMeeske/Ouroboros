@@ -55,7 +55,7 @@ jobs:
 
     - name: Build
       run: |
-        # Build main projects (excluding tests which have TreatWarningsAsErrors=true)
+        # Build CLI project for integration tests
         dotnet build --configuration Release --no-restore \
           src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj
       timeout-minutes: 15
