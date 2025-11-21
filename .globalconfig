@@ -1,0 +1,46 @@
+# MonadicPipeline Global Analyzer Configuration
+is_global = true
+
+# Suppress StyleCop rules that conflict with global usings and modern C# patterns
+dotnet_diagnostic.SA1200.severity = none  # Using directives should appear within namespace - conflicts with global usings
+dotnet_diagnostic.SA1201.severity = none  # Elements should be ordered by access level
+dotnet_diagnostic.SA1202.severity = none  # Elements should be ordered by modifier
+dotnet_diagnostic.SA1204.severity = none  # Static elements should appear before non-static
+dotnet_diagnostic.SA1214.severity = none  # Readonly elements should appear before non-readonly
+dotnet_diagnostic.SA1507.severity = none  # Code should not contain multiple blank lines in a row
+dotnet_diagnostic.SA1516.severity = none  # Elements should be separated by blank line
+dotnet_diagnostic.SA1633.severity = none  # File must have header - not required for all files
+dotnet_diagnostic.SA1649.severity = none  # File name must match first type name - sometimes intentional
+dotnet_diagnostic.SA1402.severity = none  # File may only contain single type - sometimes multiple related types
+dotnet_diagnostic.SA1512.severity = none  # Single-line comments should not be followed by blank line
+dotnet_diagnostic.SA1513.severity = none  # Closing brace should be followed by blank line
+dotnet_diagnostic.SA1009.severity = none  # Closing parenthesis should not be preceded by space
+
+# Suppress some Roslynator stylistic rules
+dotnet_diagnostic.RCS1036.severity = none  # Remove unnecessary blank line
+dotnet_diagnostic.RCS1188.severity = none  # Remove redundant auto-property initialization
+dotnet_diagnostic.RCS1189.severity = none  # Add region name to #endregion
+
+# Documentation warnings - handled separately
+dotnet_diagnostic.CS1591.severity = none  # Missing XML comment for publicly visible type or member
+
+# Keep important analyzers enabled
+dotnet_diagnostic.CA1001.severity = warning  # Types that own disposable fields should be disposable
+dotnet_diagnostic.CA1031.severity = warning  # Do not catch general exception types
+dotnet_diagnostic.CA1063.severity = warning  # Implement IDisposable correctly
+dotnet_diagnostic.CA1303.severity = suggestion  # Do not pass literals as localized parameters
+dotnet_diagnostic.CA1305.severity = suggestion  # Specify IFormatProvider
+dotnet_diagnostic.CA2007.severity = warning  # Consider calling ConfigureAwait
+dotnet_diagnostic.CA2016.severity = warning  # Forward CancellationToken parameter
+
+# Enable all Roslynator analyzers by default
+dotnet_analyzer_diagnostic.category-roslynator.severity = warning
+
+# Enable SonarAnalyzer rules
+dotnet_analyzer_diagnostic.category-sonaranalyzer.severity = warning
+
+# Suppress some overly strict SonarAnalyzer rules
+dotnet_diagnostic.S1450.severity = none  # Private fields only used as local variables
+dotnet_diagnostic.S2094.severity = none  # Classes should not be empty
+dotnet_diagnostic.S3881.severity = none  # "IDisposable" should be implemented correctly
+dotnet_diagnostic.S4487.severity = none  # Unread "private" fields should be removed (can be overly aggressive)

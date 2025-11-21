@@ -28,7 +28,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IChatCompletionModel>(sp =>
         {
-            (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.Resolve();
+            (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.Resolve();
             if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
             {
                 try

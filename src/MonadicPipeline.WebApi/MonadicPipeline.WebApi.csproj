@@ -31,6 +31,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Override vulnerable transitive dependencies from project references -->
+    <PackageReference Include="Microsoft.Build.Tasks.Core" Version="17.14.28" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.14.28" />
+    
     <PackageReference Include="LangChain" Version="0.17.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.12" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />

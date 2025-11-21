@@ -31,6 +31,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Override vulnerable transitive dependencies from project references -->
+    <PackageReference Include="Microsoft.Build.Tasks.Core" Version="17.14.28" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.14.28" />
+    
     <PackageReference Include="LangChain" Version="0.17.0" />
   </ItemGroup>
 

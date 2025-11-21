@@ -28,15 +28,12 @@ public class DslAssistantSimulationSteps
     private List<string>? _properties;
     private string? _methodSignature;
     private string? _methodBody;
-    private string? _oldSymbolName;
-    private string? _newSymbolName;
     private int _startLine;
     private int _endLine;
     private string? _newMethodName;
     private string? _codeDescription;
     private string? _codeContext;
     private Dictionary<string, object>? _mcpParameters;
-    private string? _mcpToolName;
     
     private Result<List<DslSuggestion>, string>? _suggestions;
     private Result<List<string>, string>? _completions;
@@ -906,8 +903,10 @@ namespace Test
     public void ThenTheCodeShouldFollowMonadicPatterns()
     {
         _generatedCode.Should().NotBeNull();
-        bool hasMonadicPattern = _generatedCode!.Value.Contains("Result<") || 
-                                  _generatedCode.Value.Contains("Option<");
+        _generatedCode!.IsSuccess.Should().BeTrue();
+        string code = _generatedCode.Value.Value;
+        bool hasMonadicPattern = code.Contains("Result<", StringComparison.Ordinal) || 
+                                  code.Contains("Option<", StringComparison.Ordinal);
         hasMonadicPattern.Should().BeTrue();
     }
 
@@ -950,7 +949,7 @@ namespace Test
 /// </summary>
 internal class SimulatedLlm : IChatCompletionModel
 {
-    public Task<string> GenerateAsync(string prompt, CancellationToken cancellationToken = default)
+    public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
         // Return simulated responses based on prompt content
         if (prompt.Contains("suggest", StringComparison.OrdinalIgnoreCase))
