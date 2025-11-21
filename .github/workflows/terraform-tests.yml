@@ -63,7 +63,8 @@ jobs:
 
     strategy:
       # Continue testing all modules even if some fail to get comprehensive feedback
-      # This is appropriate for validation workflows where we want to see all issues
+      # This applies to parallel matrix job execution - each job will still fail on step errors
+      # This is appropriate for validation workflows where we want to see all module issues
       fail-fast: false
       matrix:
         module:
