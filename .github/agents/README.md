@@ -290,6 +290,42 @@ This agent specializes in:
 ```
 @security-compliance-expert How do I implement secure JWT authentication with proper secret management?
 ```
+
+### 11. .NET Senior Developer Customer Agent (`dotnet-senior-developer-agent.md`)
+
+**Expertise:** Production-Ready Code, Specification Compliance, Comprehensive Testing, No Shortcuts
+
+This agent specializes in:
+- **Diligent Development**: Thorough, persistent, and meticulous implementation
+- **Specification Adherence**: Exact compliance with requirements, no assumptions
+- **Complete Solutions**: Features are finished when they're truly finished, not just "mostly done"
+- **Production Readiness**: Error handling, logging, monitoring, security from day one
+- **Comprehensive Testing**: ≥90% coverage, mutation testing, all scenarios covered
+- **Quality Standards**: SOLID principles, Clean Architecture, code review excellence
+- **No Compromises**: Takes no shortcuts, does things the right way even if it takes longer
+
+**Use this agent when:**
+- You need someone who won't take shortcuts or deliver half-solutions
+- Requirements must be followed exactly without deviation
+- Production-ready code quality is non-negotiable
+- Comprehensive testing and error handling are mandatory
+- You need a persistent developer who ensures tasks are truly complete
+- Code must meet the highest professional standards
+- Features must work perfectly, not just in the happy path
+
+**Example invocation:**
+```
+@dotnet-senior-developer-agent Implement a customer registration API that meets production standards with comprehensive error handling and testing.
+@dotnet-senior-developer-agent Review this code and ensure it meets all specification requirements with no shortcuts taken.
+```
+
+**Key Characteristics:**
+- ✅ **No TODOs in production code** - either implement it or don't ship it
+- ✅ **Every error path handled** - production systems encounter errors constantly
+- ✅ **Comprehensive testing** - untested code is broken code
+- ✅ **Specification compliance** - requirements are sacred
+- ✅ **Production-ready from day one** - logging, monitoring, security, resilience
+- ✅ **Professional pride** - code represents your reputation
 ## How to Use Custom Agents
 
 ### In GitHub Copilot Chat
@@ -324,6 +360,7 @@ This agent specializes in:
    - API design questions → `@api-design-expert`
    - Database and persistence questions → `@database-persistence-expert`
    - Security and compliance questions → `@security-compliance-expert`
+   - Production-ready development, specification compliance → `@dotnet-senior-developer-agent`
 
 2. **Provide Context:**
    - Include relevant code snippets
@@ -350,44 +387,49 @@ This agent specializes in:
 
 ## Agent Capabilities Matrix
 
-| Capability | Functional | AI Orch | DevOps | GH Actions | Android | Testing | C#/.NET | API | Database | Security |
-|------------|------------|---------|--------|------------|---------|---------|---------|-----|----------|----------|
-| Monadic Composition | ✅ | ⚠️ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ⚠️ | ❌ |
-| Event Sourcing | ✅ | ⚠️ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ✅ | ❌ |
-| LangChain Integration | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
-| Model Orchestration | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Self-Improving Agents | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Kubernetes | ❌ | ❌ | ✅ | ⚠️ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ |
-| CI/CD Pipelines | ❌ | ❌ | ✅ | ✅ | ⚠️ | ✅ | ⚠️ | ❌ | ❌ | ⚠️ |
-| GitHub Actions | ❌ | ❌ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ |
-| Workflow Optimization | ❌ | ❌ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
-| Reusable Workflows | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Matrix Strategies | ❌ | ❌ | ❌ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
-| Infrastructure as Code | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ |
-| Observability | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Unit Testing | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ |
-| Integration Testing | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ |
-| Mutation Testing | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ❌ | ❌ |
-| Code Coverage | ⚠️ | ❌ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| C# Language Features | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Async/Await Patterns | ✅ | ⚠️ | ❌ | ❌ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ |
-| Memory Optimization | ⚠️ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ |
-| Dependency Injection | ⚠️ | ⚠️ | ⚠️ | ❌ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
-| RESTful API Design | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ | ⚠️ |
-| OpenAPI/Swagger | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ❌ | ❌ |
-| API Versioning | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| Vector Databases | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ✅ | ❌ |
-| Qdrant | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| CQRS | ⚠️ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ |
-| Repository Pattern | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ❌ | ✅ | ❌ |
-| Caching Strategies | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ❌ | ⚠️ | ⚠️ | ✅ | ❌ |
-| Authentication | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ |
-| Authorization | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ |
-| Secrets Management | ❌ | ❌ | ✅ | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Input Validation | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ | ✅ |
-| Audit Logging | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ |
-| OWASP Top 10 | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ✅ |
-| Mobile Development | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Capability | Functional | AI Orch | DevOps | GH Actions | Android | Testing | C#/.NET | API | Database | Security | Sr Dev |
+|------------|------------|---------|--------|------------|---------|---------|---------|-----|----------|----------|--------|
+| Monadic Composition | ✅ | ⚠️ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ⚠️ | ❌ | ✅ |
+| Event Sourcing | ✅ | ⚠️ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ✅ | ❌ | ✅ |
+| LangChain Integration | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ⚠️ |
+| Model Orchestration | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ |
+| Self-Improving Agents | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Kubernetes | ❌ | ❌ | ✅ | ⚠️ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ |
+| CI/CD Pipelines | ❌ | ❌ | ✅ | ✅ | ⚠️ | ✅ | ⚠️ | ❌ | ❌ | ⚠️ | ✅ |
+| GitHub Actions | ❌ | ❌ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ |
+| Workflow Optimization | ❌ | ❌ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ⚠️ |
+| Reusable Workflows | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Matrix Strategies | ❌ | ❌ | ❌ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Infrastructure as Code | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ |
+| Observability | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ |
+| Unit Testing | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ | ✅ |
+| Integration Testing | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| Mutation Testing | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ❌ | ❌ | ✅ |
+| Code Coverage | ⚠️ | ❌ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| C# Language Features | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Async/Await Patterns | ✅ | ⚠️ | ❌ | ❌ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| Memory Optimization | ⚠️ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ | ✅ |
+| Dependency Injection | ⚠️ | ⚠️ | ⚠️ | ❌ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| RESTful API Design | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ | ⚠️ | ✅ |
+| OpenAPI/Swagger | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ❌ | ❌ | ⚠️ |
+| API Versioning | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ⚠️ |
+| Vector Databases | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ✅ | ❌ | ⚠️ |
+| Qdrant | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| CQRS | ⚠️ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ |
+| Repository Pattern | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ❌ | ✅ | ❌ | ✅ |
+| Caching Strategies | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ❌ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ |
+| Authentication | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ | ✅ |
+| Authorization | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ | ✅ |
+| Secrets Management | ❌ | ❌ | ✅ | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Input Validation | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ |
+| Audit Logging | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ | ✅ |
+| OWASP Top 10 | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ✅ | ✅ |
+| Mobile Development | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Error Handling | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| Production Readiness | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Specification Compliance | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ |
+| Code Quality Standards | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
+| No Shortcuts Allowed | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ |
 
 **Legend:**
 - ✅ Expert: Deep expertise, primary responsibility
@@ -405,6 +447,7 @@ This agent specializes in:
 - API = API Design & Documentation Expert
 - Database = Database & Persistence Expert
 - Security = Security & Compliance Expert
+- Sr Dev = .NET Senior Developer Customer Agent
 
 ## Common Workflows
 
@@ -538,6 +581,50 @@ This agent specializes in:
    ```
    @github-actions-expert My workflow takes 20 minutes to complete. How can I
    optimize it using caching and conditional job execution?
+   ```
+
+### Workflow 7: Production-Ready Feature Development
+
+1. **Requirements Analysis:**
+   ```
+   @dotnet-senior-developer-agent I need to implement a customer registration
+   feature. Review the specification document and identify all requirements,
+   edge cases, and error scenarios that must be handled.
+   ```
+
+2. **Complete Implementation:**
+   ```
+   @dotnet-senior-developer-agent Implement the customer registration API with:
+   - Full input validation and error handling
+   - Database persistence with transactions
+   - Event publishing for successful registrations
+   - Comprehensive logging and monitoring
+   - 90%+ test coverage including all error paths
+   - Production-ready security and performance
+   No shortcuts - do it right the first time.
+   ```
+
+3. **Verification:**
+   ```
+   @dotnet-senior-developer-agent Review this implementation against the
+   specification. Verify that:
+   - All requirements are met exactly
+   - All error scenarios are handled
+   - Tests cover all code paths
+   - Documentation is complete
+   - Code is production-ready
+   Report any gaps or issues that must be fixed.
+   ```
+
+4. **Quality Assurance:**
+   ```
+   @dotnet-senior-developer-agent Run the complete quality checklist:
+   - Code quality standards met
+   - All tests pass (unit, integration, performance)
+   - Security vulnerabilities addressed
+   - Documentation complete
+   - Specification compliance verified
+   Provide evidence for each quality gate.
    ```
 
 ## Contributing
