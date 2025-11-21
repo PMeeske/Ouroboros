@@ -35,7 +35,7 @@ jobs:
         dotnet-version: '10.0.x'
 
     - name: Install MAUI workload
-      uses: nick-fields/retry-action@v3
+      uses: nick-fields/retry@v3
       with:
         timeout_minutes: 15
         max_attempts: 3
@@ -57,7 +57,7 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies (Core libraries)
-      uses: nick-fields/retry-action@v3
+      uses: nick-fields/retry@v3
       with:
         timeout_minutes: 10
         max_attempts: 3
@@ -73,7 +73,7 @@ jobs:
           dotnet restore MonadicPipeline.Agent/MonadicPipeline.Agent.csproj
 
     - name: Restore Android project dependencies
-      uses: nick-fields/retry-action@v3
+      uses: nick-fields/retry@v3
       with:
         timeout_minutes: 10
         max_attempts: 3
