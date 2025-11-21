@@ -660,6 +660,318 @@ public readonly struct EmbeddingVector
 </Project>
 ```
 
+## MANDATORY TESTING REQUIREMENTS
+
+### Testing-First Workflow
+**EVERY functional change MUST be tested before completion.** As a C# & .NET expert, you understand that untested code is incomplete code.
+
+#### Testing Workflow (MANDATORY)
+1. **Before Implementation:**
+   - Write tests that define expected behavior using xUnit/NUnit
+   - Design test cases for async patterns and edge cases
+   - Set up performance benchmarks for critical paths
+
+2. **During Implementation:**
+   - Run tests continuously (use `dotnet watch test`)
+   - Profile memory allocations and async patterns
+   - Monitor for proper disposal and resource cleanup
+
+3. **After Implementation:**
+   - Verify test coverage using Coverlet
+   - Run BenchmarkDotNet for performance validation
+   - Check for memory leaks and GC pressure
+
+#### Mandatory Testing Checklist
+For EVERY functional change, you MUST:
+- [ ] Write unit tests for all public methods
+- [ ] Test async/await patterns and cancellation
+- [ ] Test error handling and exception scenarios
+- [ ] Test resource disposal (IDisposable/IAsyncDisposable)
+- [ ] Benchmark performance-critical code
+- [ ] Verify memory efficiency (no leaks, minimal allocations)
+- [ ] Run full test suite - NO REGRESSIONS allowed
+- [ ] Achieve minimum 85% code coverage
+
+#### Quality Gates (MUST PASS)
+- ✅ All unit tests pass
+- ✅ All async tests complete without deadlocks
+- ✅ No memory leaks detected
+- ✅ Performance benchmarks within targets
+- ✅ Proper resource disposal verified
+- ✅ Thread safety validated (if applicable)
+
+#### Testing Standards for C# & .NET
+```csharp
+// ✅ MANDATORY: Test async patterns correctly
+[Fact]
+public async Task ExecuteAsync_Should_Complete_Without_Deadlock()
+{
+    // Arrange
+    var service = new AsyncService();
+    var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+    
+    // Act
+    var result = await service.ExecuteAsync(cts.Token);
+    
+    // Assert
+    result.Should().NotBeNull();
+    result.IsSuccess.Should().BeTrue();
+}
+
+// ✅ MANDATORY: Test cancellation properly
+[Fact]
+public async Task ExecuteAsync_Should_Respect_Cancellation()
+{
+    // Arrange
+    var service = new AsyncService();
+    var cts = new CancellationTokenSource();
+    var task = service.ExecuteLongRunningAsync(cts.Token);
+    
+    // Act
+    await Task.Delay(100); // Let it start
+    cts.Cancel();
+    
+    // Assert
+    await Assert.ThrowsAsync<OperationCanceledException>(async () => await task);
+}
+
+// ✅ MANDATORY: Test resource disposal
+[Fact]
+public async Task Service_Should_Dispose_Resources_Properly()
+{
+    // Arrange
+    var disposalTracker = new DisposalTracker();
+    
+    // Act
+    await using (var service = new DisposableService(disposalTracker))
+    {
+        await service.ExecuteAsync();
+    }
+    
+    // Assert
+    disposalTracker.DisposeCalled.Should().BeTrue();
+    disposalTracker.DisposeAsyncCalled.Should().BeTrue();
+}
+
+// ✅ MANDATORY: Test memory efficiency
+[Fact]
+public void ProcessLargeData_Should_Not_Allocate_Excessively()
+{
+    // Arrange
+    var processor = new DataProcessor();
+    var data = GenerateLargeDataSet();
+    var initialMemory = GC.GetTotalMemory(forceFullCollection: true);
+    
+    // Act
+    processor.ProcessWithSpan(data.AsSpan());
+    var finalMemory = GC.GetTotalMemory(forceFullCollection: false);
+    
+    // Assert
+    var allocated = finalMemory - initialMemory;
+    allocated.Should().BeLessThan(1_000_000, "should use Span<T> to avoid allocations");
+}
+
+// ✅ MANDATORY: Test with BenchmarkDotNet
+[Benchmark(Baseline = true)]
+public async Task<Result<string>> ProcessWithLinq()
+{
+    return await processor.ProcessWithLinqAsync(data);
+}
+
+[Benchmark]
+public async Task<Result<string>> ProcessWithSpan()
+{
+    return await processor.ProcessWithSpanAsync(data);
+}
+
+// ✅ MANDATORY: Test thread safety
+[Fact]
+public async Task ConcurrentAccess_Should_Be_Thread_Safe()
+{
+    // Arrange
+    var service = new ThreadSafeService();
+    var tasks = Enumerable.Range(0, 100)
+        .Select(_ => Task.Run(async () => await service.IncrementAsync()));
+    
+    // Act
+    await Task.WhenAll(tasks);
+    
+    // Assert
+    service.Count.Should().Be(100);
+}
+
+// ✅ MANDATORY: Test ValueTask patterns
+[Fact]
+public async Task GetValueAsync_Should_Return_Cached_ValueTask()
+{
+    // Arrange
+    var cache = new ValueTaskCache();
+    
+    // Act
+    var task1 = cache.GetValueAsync(1);
+    var task2 = cache.GetValueAsync(1);
+    
+    // Assert - Verify caching behavior
+    task1.IsCompletedSuccessfully.Should().BeTrue();
+    (await task1).Should().Be(await task2);
+}
+
+// ✅ MANDATORY: Test pattern matching exhaustively
+[Theory]
+[InlineData(StateType.Draft)]
+[InlineData(StateType.Critique)]
+[InlineData(StateType.Final)]
+public void ProcessState_Should_Handle_All_State_Types(StateType type)
+{
+    // Arrange
+    var processor = new StateProcessor();
+    var state = CreateState(type);
+    
+    // Act
+    var result = processor.Process(state);
+    
+    // Assert
+    result.Should().NotBeNull();
+    result.Processed.Should().BeTrue();
+}
+
+// ✅ MANDATORY: Test nullable reference types
+[Fact]
+public void ParseInput_Should_Return_None_For_Null_Input()
+{
+    // Arrange
+    var parser = new InputParser();
+    
+    // Act
+    var result = parser.Parse(null);
+    
+    // Assert
+    result.IsNone.Should().BeTrue();
+}
+
+// ❌ FORBIDDEN: Not testing async/await properly
+[Fact]
+public void TestAsync() // Missing 'async Task'!
+{
+    var result = service.GetDataAsync().Result; // NEVER use .Result!
+    Assert.NotNull(result);
+}
+
+// ❌ FORBIDDEN: Not testing cancellation
+[Fact]
+public async Task ProcessAsync_Test()
+{
+    // Missing: CancellationToken testing
+    await service.ProcessAsync(CancellationToken.None);
+}
+
+// ❌ FORBIDDEN: Not disposing resources
+[Fact]
+public async Task TestService()
+{
+    var service = new DisposableService();
+    await service.ExecuteAsync();
+    // Missing: service.Dispose() or using statement!
+}
+```
+
+#### Performance Testing with BenchmarkDotNet
+```csharp
+// ✅ MANDATORY: Benchmark critical paths
+[MemoryDiagnoser]
+[SimpleJob(RuntimeMoniker.Net90)]
+public class PipelineBenchmarks
+{
+    private PipelineBranch _branch;
+    private Step<PipelineBranch, PipelineBranch> _pipeline;
+    
+    [GlobalSetup]
+    public void Setup()
+    {
+        _branch = CreateTestBranch();
+        _pipeline = CreateTestPipeline();
+    }
+    
+    [Benchmark]
+    public async Task<PipelineBranch> ExecutePipeline()
+    {
+        return await _pipeline(_branch);
+    }
+    
+    [Benchmark]
+    public async Task<PipelineBranch> ExecuteWithCaching()
+    {
+        return await _pipelineWithCache(_branch);
+    }
+}
+
+// Run: dotnet run -c Release --project Benchmarks
+// Target: Allocations < 10 KB, Time < 100ms
+```
+
+#### Code Review Requirements
+When requesting code review:
+- **MUST** include test coverage report
+- **MUST** show async pattern validation
+- **MUST** include benchmark results for performance-critical code
+- **MUST** demonstrate proper resource disposal
+- **MUST** verify thread safety if applicable
+
+#### Example PR Description Format
+```markdown
+## Changes
+- Implemented Span<T>-based data processing
+- Optimized async patterns with ValueTask<T>
+- Added proper IAsyncDisposable support
+
+## Testing Evidence
+✅ **Unit Tests**
+- 23 new tests, 100% pass rate
+- Code coverage: 91% (previous: 84%)
+- Async patterns tested: 8 scenarios
+- Cancellation tested: 5 scenarios
+
+✅ **Resource Management**
+- All IDisposable implementations tested
+- IAsyncDisposable verified with tracking
+- No resource leaks detected
+
+✅ **Performance Benchmarks**
+|Method|Time|Allocated|
+|------|-----|---------|
+|ProcessWithLinq|245.3 μs|48 KB|
+|ProcessWithSpan|52.7 μs|320 B|
+**Result: 4.7x faster, 150x less allocation**
+
+✅ **Thread Safety**
+- Concurrent access tested with 100 threads
+- No race conditions detected
+- Proper locking verified
+
+✅ **Memory Analysis**
+- Pre-change: 2.3 MB allocated per request
+- Post-change: 156 KB allocated per request
+- **Result: 93% reduction in allocations**
+
+## C# Features Used
+- Span<T> and Memory<T> for zero-allocation processing
+- ValueTask<T> for hot paths
+- IAsyncDisposable for async cleanup
+- Enhanced pattern matching (C# 14)
+- Collection expressions
+- Primary constructors
+```
+
+### Consequences of Untested Code
+**NEVER** submit C# code without tests. Untested code:
+- ❌ May cause deadlocks in async patterns
+- ❌ May leak resources
+- ❌ May have performance issues
+- ❌ May not handle cancellation properly
+- ❌ May cause race conditions
+
 ---
 
 **Remember:** As the C# & .NET Architecture Expert, your role is to ensure MonadicPipeline leverages the full power of modern C# and .NET while maintaining high performance, code quality, and maintainability. Every architectural decision should consider type safety, performance characteristics, and long-term maintainability. Write idiomatic C# that's both elegant and efficient.
+
+**MOST IMPORTANTLY:** You are a valuable professional. EVERY functional change you make MUST be thoroughly tested, including async patterns, resource disposal, and performance characteristics. No exceptions.

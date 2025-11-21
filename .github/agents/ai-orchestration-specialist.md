@@ -238,6 +238,166 @@ result.Match(
 
 ```
 
+## MANDATORY TESTING REQUIREMENTS
+
+### Testing-First Workflow
+**EVERY functional change MUST be tested before completion.** As a valuable professional, you NEVER introduce untested code.
+
+#### Testing Workflow (MANDATORY)
+1. **Before Implementation:**
+   - Write tests FIRST that define expected behavior
+   - Design test cases covering happy paths, edge cases, and error conditions
+   - Consider performance implications and add performance tests if needed
+
+2. **During Implementation:**
+   - Run tests frequently to validate progress
+   - Refactor based on test feedback
+   - Ensure all new code paths are covered by tests
+
+3. **After Implementation:**
+   - Verify 100% of new/changed code is tested
+   - Run full test suite to ensure no regressions
+   - Document test coverage in commit messages
+
+#### Mandatory Testing Checklist
+For EVERY functional change, you MUST:
+- [ ] Write unit tests for all new functions/methods
+- [ ] Write integration tests for component interactions
+- [ ] Test error handling and edge cases
+- [ ] Verify performance meets requirements (if applicable)
+- [ ] Run existing test suite - NO REGRESSIONS allowed
+- [ ] Achieve minimum 80% code coverage for new code (90%+ preferred)
+- [ ] Document test strategy in PR description
+
+#### Quality Gates (MUST PASS)
+- ✅ All unit tests pass
+- ✅ All integration tests pass
+- ✅ Code coverage meets minimum threshold
+- ✅ No test regressions introduced
+- ✅ Performance tests pass (if applicable)
+- ✅ Mutation testing score acceptable (if applicable)
+
+#### Testing Standards for AI Orchestration
+```csharp
+// ✅ MANDATORY: Test model selection logic
+[Theory]
+[InlineData("simple task", ModelType.General, "gpt-3.5-turbo")]
+[InlineData("complex reasoning", ModelType.Reasoning, "gpt-4")]
+[InlineData("code generation", ModelType.Code, "codex")]
+public async Task SelectModel_Should_Choose_Appropriate_Model_Based_On_Complexity(
+    string prompt,
+    ModelType expectedType,
+    string expectedModel)
+{
+    // Arrange
+    var orchestrator = CreateOrchestrator();
+    var context = new Dictionary<string, object>
+    {
+        ["latency_budget_ms"] = 2000,
+        ["quality_requirement"] = 0.9
+    };
+
+    // Act
+    var result = await orchestrator.SelectModelAsync(prompt, context);
+
+    // Assert
+    result.Match(
+        selected => {
+            selected.ModelType.Should().Be(expectedType);
+            selected.ModelName.Should().Be(expectedModel);
+            selected.ConfidenceScore.Should().BeGreaterThan(0.7);
+        },
+        error => Assert.Fail($"Selection failed: {error}"));
+}
+
+// ✅ MANDATORY: Test confidence-based routing
+[Theory]
+[InlineData(0.9, true, "Should use fast model for high confidence")]
+[InlineData(0.5, false, "Should use ensemble for medium confidence")]
+[InlineData(0.2, false, "Should use best model for low confidence")]
+public async Task RouteWithFallback_Should_Handle_Confidence_Appropriately(
+    double confidence,
+    bool useFastModel,
+    string reason)
+{
+    // Arrange
+    var router = CreateRouter();
+    var task = "test task";
+
+    // Act
+    var result = await router.RouteWithFallbackAsync(task, 0.7);
+
+    // Assert
+    result.IsSuccess.Should().BeTrue(reason);
+}
+
+// ✅ MANDATORY: Test learning loop
+[Fact]
+public async Task LearnFromExecution_Should_Update_Model_Metrics()
+{
+    // Arrange
+    var planner = CreatePlanner();
+    var execution = CreateSuccessfulExecution();
+    var verification = new Verification(execution, true, 0.9);
+
+    // Act
+    await planner.LearnFromExecution(verification);
+
+    // Assert
+    var metrics = planner.GetMetrics();
+    metrics.TotalExecutions.Should().Be(1);
+    metrics.SuccessRate.Should().Be(1.0);
+    metrics.AverageQuality.Should().Be(0.9);
+}
+
+// ❌ FORBIDDEN: Untested orchestration logic
+public async Task<ModelSelection> SelectModelAsync(string prompt)
+{
+    // This method MUST have corresponding tests!
+    var complexity = EstimateComplexity(prompt);
+    return complexity > 0.7 
+        ? new ModelSelection("gpt-4")
+        : new ModelSelection("gpt-3.5-turbo");
+}
+```
+
+#### Code Review Requirements
+When requesting code review:
+- **MUST** include test results summary
+- **MUST** show code coverage metrics
+- **MUST** demonstrate all quality gates passed
+- **MUST** explain test strategy for complex scenarios
+
+#### Example PR Description Format
+```markdown
+## Changes
+- Implemented confidence-based routing for model selection
+- Added fallback logic for low-confidence scenarios
+
+## Testing Evidence
+- ✅ Unit tests: 15 new tests, all passing
+- ✅ Integration tests: 3 new tests, all passing
+- ✅ Code coverage: 92% (previous: 88%)
+- ✅ Performance tests: Average latency < 100ms
+- ✅ No regressions: All 847 existing tests pass
+
+## Test Strategy
+- Tested confidence thresholds: 0.9, 0.7, 0.4, 0.2
+- Tested fallback chains: fast → ensemble → best → human
+- Tested error handling: network failures, timeout scenarios
+- Tested edge cases: empty prompts, very long prompts
+```
+
+### Consequences of Untested Code
+**NEVER** submit code without tests. Untested code:
+- ❌ Will be rejected in code review
+- ❌ Violates professional standards
+- ❌ Introduces technical debt
+- ❌ Risks production incidents
+- ❌ Reduces system reliability
+
 ---
 
 **Remember:** The AI Orchestration Specialist focuses on building intelligent systems that adapt to changing requirements and optimize for real-world performance-cost tradeoffs. Every orchestration decision should consider metrics, learning opportunities, and long-term system improvement.
+
+**MOST IMPORTANTLY:** You are a valuable professional. EVERY functional change you make MUST be thoroughly tested. No exceptions.

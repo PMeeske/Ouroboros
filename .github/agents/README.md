@@ -2,6 +2,31 @@
 
 This directory contains specialized GitHub Copilot custom agents designed to assist with different aspects of the MonadicPipeline project. Each agent has deep domain expertise and provides context-aware guidance.
 
+## 🔴 MANDATORY TESTING POLICY 🔴
+
+**ALL custom agents enforce mandatory testing for EVERY functional change.**
+
+Each agent is configured as a **valuable professional** who:
+- ✅ NEVER introduces untested code
+- ✅ ALWAYS writes tests BEFORE or DURING implementation
+- ✅ ENSURES 100% of new/changed code is tested
+- ✅ VALIDATES all quality gates pass before completion
+- ✅ DOCUMENTS test coverage and results
+
+**This policy is NON-NEGOTIABLE.** Untested code will be rejected in code review regardless of how well-written it appears.
+
+### Testing Standards
+All agents adhere to these minimum standards:
+- **Unit Test Coverage:** ≥85% for new code (≥90% for core logic)
+- **Integration Tests:** All component interactions tested
+- **Quality Gates:** All tests pass, no regressions
+- **Documentation:** Test strategy explained in PR descriptions
+- **Code Review:** Test evidence MUST be provided
+
+See individual agent files for domain-specific testing requirements.
+
+---
+
 ## Available Agents
 
 ### 1. Functional Pipeline Expert (`functional-pipeline-expert.md`)
@@ -315,6 +340,14 @@ This agent specializes in:
    - Follow up with implementation details
    - Request code reviews for critical changes
 
+5. **🔴 ALWAYS Include Testing 🔴:**
+   - **EVERY agent requires tests for EVERY functional change**
+   - Write tests BEFORE or DURING implementation
+   - Include test coverage in your questions (e.g., "How do I test this?")
+   - Show test results when requesting code review
+   - Follow the testing standards defined by each agent
+   - **Untested code will be REJECTED - no exceptions**
+
 ## Agent Capabilities Matrix
 
 | Capability | Functional | AI Orch | DevOps | GH Actions | Android | Testing | C#/.NET | API | Database | Security |
@@ -517,8 +550,10 @@ When adding new agents:
    - Design principles with examples
    - Code patterns and best practices
    - Common mistakes to avoid
+   - **🔴 MANDATORY TESTING REQUIREMENTS section (REQUIRED)**
 3. Update this README with agent information
 4. Add to the capabilities matrix
+5. **Ensure the agent enforces mandatory testing for all functional changes**
 
 ## Agent Update Policy
 
@@ -527,6 +562,7 @@ Custom agents should be updated when:
 - Architecture patterns change
 - New best practices emerge
 - Common questions are identified
+- **Testing standards or requirements change**
 
 ## Feedback
 
@@ -537,10 +573,19 @@ If you find issues with agent responses or have suggestions for improvements:
 
 ---
 
-**Last Updated:** 2025-11-16
+**Last Updated:** 2025-11-21
 
-**Version:** 2.0.0
-
-**Maintained by:** MonadicPipeline Team
+**Version:** 3.0.0 - MANDATORY TESTING ENFORCED
 
 **Maintained by:** MonadicPipeline Team
+
+## 🔴 Final Reminder 🔴
+
+**Every custom agent is now a "most valuable professional" who:**
+- Takes pride in their work by ensuring it's thoroughly tested
+- Understands that untested code is incomplete code
+- Never compromises on quality for speed
+- Documents testing evidence in every PR
+- Helps maintain the high standards of the MonadicPipeline project
+
+**If you encounter an agent that suggests untested code or allows you to skip testing, report it immediately as a bug.**
