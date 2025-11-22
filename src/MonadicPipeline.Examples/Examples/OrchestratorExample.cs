@@ -148,7 +148,7 @@ Available tools include: run_usedraft, run_usecritique, run_useimprove.";
 
         try
         {
-            (string response, List<ToolExecution> toolCalls, OrchestratorDecision decision) = await orchestratedModel
+            (string response, List<ToolExecution> toolCalls, OrchestratorDecision? decision) = await orchestratedModel
                 .GenerateWithOrchestratedToolsAsync(toolPrompt);
 
             Console.WriteLine("=== Orchestrator Decision ===");

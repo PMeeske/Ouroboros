@@ -638,7 +638,7 @@ static async Task RunOrchestratorAsync(OrchestratorOptions o)
         ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false);
 
         // Check for remote endpoint configuration
-        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
+        (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
             o.Endpoint,
             o.ApiKey,
             o.EndpointType);
