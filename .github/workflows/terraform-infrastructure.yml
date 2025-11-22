@@ -46,7 +46,7 @@ env:
 
 jobs:
   terraform:
-    name: Terraform ${{ github.event.inputs.action || 'plan' }} - ${{ github.event.inputs.environment || 'dev' }}
+    name: TF ${{ github.event.inputs.action || 'plan' }} (${{ github.event.inputs.environment || 'dev' }})
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: IONOS  # Use IONOS environment for secrets
