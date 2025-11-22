@@ -136,8 +136,6 @@ jobs:
       - name: Prepare analysis for Gemini
         id: prepare-analysis
         if: secrets.GOOGLE_CREDENTIALS != ''
-        env:
-          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: |
           if [ -f "analysis-output/todos.txt" ]; then
             echo "ANALYSIS_CONTENT<<EOF" >> $GITHUB_ENV
@@ -151,8 +149,6 @@ jobs:
         uses: google-github-actions/run-gemini-cli@v0.1.15
         continue-on-error: true
         if: secrets.GOOGLE_CREDENTIALS != ''
-        env:
-          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
           model: 'gemini-pro'
