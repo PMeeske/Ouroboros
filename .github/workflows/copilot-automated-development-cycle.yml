@@ -133,6 +133,20 @@ jobs:
           echo "Analysis complete. Preview:"
           head -20 analysis-output/todos.txt || true
 
+      - name: Prepare analysis for Gemini
+        id: prepare-analysis
+        if: env.GOOGLE_CREDENTIALS != ''
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          if [ -f "analysis-output/todos.txt" ]; then
+            echo "ANALYSIS_CONTENT<<EOF" >> $GITHUB_ENV
+            head -30 analysis-output/todos.txt >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          else
+            echo "ANALYSIS_CONTENT=No findings" >> $GITHUB_ENV
+          fi
+
       - name: Run Gemini CLI for enhanced analysis
         id: gemini-analysis
         uses: google-github-actions/run-gemini-cli@v0.1.15
@@ -152,7 +166,7 @@ jobs:
             - Code maintainability
             
             Findings:
-            $(cat analysis-output/todos.txt | head -30)
+            ${{ env.ANALYSIS_CONTENT }}
             
             Provide actionable recommendations as JSON array with format:
             [{"title": "...", "description": "...", "priority": "high|medium|low"}]
