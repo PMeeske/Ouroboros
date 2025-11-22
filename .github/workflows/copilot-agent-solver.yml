@@ -28,7 +28,7 @@ jobs:
       - name: Run Gemini CLI for issue analysis
         uses: google-github-actions/run-gemini-cli@v0.1.15
         continue-on-error: true
-        if: env.GOOGLE_CREDENTIALS != ''
+        if: secrets.GOOGLE_CREDENTIALS != ''
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           ISSUE_TITLE: ${{ github.event.issue.title }}

@@ -135,7 +135,7 @@ jobs:
 
       - name: Prepare analysis for Gemini
         id: prepare-analysis
-        if: env.GOOGLE_CREDENTIALS != ''
+        if: secrets.GOOGLE_CREDENTIALS != ''
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: |
@@ -150,7 +150,7 @@ jobs:
       - name: Run Gemini CLI for enhanced analysis
         uses: google-github-actions/run-gemini-cli@v0.1.15
         continue-on-error: true
-        if: env.GOOGLE_CREDENTIALS != ''
+        if: secrets.GOOGLE_CREDENTIALS != ''
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         with:
