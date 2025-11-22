@@ -148,7 +148,6 @@ jobs:
           fi
 
       - name: Run Gemini CLI for enhanced analysis
-        id: gemini-analysis
         uses: google-github-actions/run-gemini-cli@v0.1.15
         continue-on-error: true
         if: env.GOOGLE_CREDENTIALS != ''

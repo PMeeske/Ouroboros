@@ -26,7 +26,6 @@ jobs:
         # Remove timeout-minutes from checkout step
 
       - name: Run Gemini CLI for issue analysis
-        id: gemini-analysis
         uses: google-github-actions/run-gemini-cli@v0.1.15
         continue-on-error: true
         if: env.GOOGLE_CREDENTIALS != ''
