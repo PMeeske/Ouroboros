@@ -1498,7 +1498,7 @@ public static class CliSteps
             }
             if (string.IsNullOrWhiteSpace(newModel) && string.IsNullOrWhiteSpace(newEmbed)) return s; // nothing to do
             // Rebuild chat model similar to Program.cs logic but simplified, prioritizing remote if key present OR remote flag
-            (string endpoint, string key, ChatEndpointType endpointType) = ChatConfig.Resolve();
+            (string? endpoint, string? key, ChatEndpointType endpointType) = ChatConfig.Resolve();
             IChatCompletionModel? model = null;
             if (!string.IsNullOrWhiteSpace(key) && (forceRemote || !string.IsNullOrWhiteSpace(newModel)))
             {

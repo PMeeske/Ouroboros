@@ -46,7 +46,7 @@ public sealed class PipelineService : IPipelineService
             120,
             false);
 
-        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(request.Endpoint, request.ApiKey);
+        (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(request.Endpoint, request.ApiKey);
         OllamaProvider provider = new OllamaProvider();
         IChatCompletionModel chatModel;
 
@@ -146,7 +146,7 @@ public sealed class PipelineService : IPipelineService
             120,
             false);
 
-        (string endpoint, string apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(request.Endpoint, request.ApiKey);
+        (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(request.Endpoint, request.ApiKey);
         OllamaProvider provider = new OllamaProvider();
         IChatCompletionModel chatModel;
 
