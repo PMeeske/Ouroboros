@@ -133,6 +133,30 @@ jobs:
           echo "Analysis complete. Preview:"
           head -20 analysis-output/todos.txt || true
 
+      - name: Run Gemini CLI for enhanced analysis
+        id: gemini-analysis
+        uses: google-github-actions/run-gemini-cli@v0.1.15
+        continue-on-error: true
+        if: env.GOOGLE_CREDENTIALS != ''
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+          model: 'gemini-pro'
+          prompt: |
+            Analyze the following TODO/FIXME/HACK findings from a C# functional programming codebase using LangChain and category theory principles.
+            Suggest 2-3 high-priority improvements focusing on:
+            - Monadic error handling (Result<T>, Option<T>)
+            - Functional composition patterns
+            - Type safety enhancements
+            - Code maintainability
+            
+            Findings:
+            $(cat analysis-output/todos.txt | head -30)
+            
+            Provide actionable recommendations as JSON array with format:
+            [{"title": "...", "description": "...", "priority": "high|medium|low"}]
+
       - name: Generate improvement tasks
         id: generate
         uses: actions/github-script@v7
