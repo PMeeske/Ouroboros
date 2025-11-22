@@ -25,6 +25,35 @@ jobs:
         uses: actions/checkout@v4
         # Remove timeout-minutes from checkout step
 
+      - name: Run Gemini CLI for issue analysis
+        uses: google-github-actions/run-gemini-cli@v0.1.15
+        continue-on-error: true
+        if: secrets.GOOGLE_CREDENTIALS != ''
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+          model: 'gemini-pro'
+          prompt: |
+            Analyze this GitHub issue for a C# functional programming project (MonadicPipeline) using LangChain.
+            
+            Issue Title: ${{ github.event.issue.title }}
+            
+            Issue Description:
+            ${{ github.event.issue.body }}
+            
+            Provide:
+            1. Root cause analysis
+            2. Recommended solution approach using functional programming patterns (monads, composition, etc.)
+            3. Potential risks and edge cases
+            4. Testing strategy
+            
+            Format as structured JSON:
+            {
+              "root_cause": "...",
+              "solution_approach": "...",
+              "risks": ["..."],
+              "testing_strategy": "..."
+            }
+
       - name: Authenticate, Install, and Run Copilot
         id: copilot-suggest
         shell: bash
