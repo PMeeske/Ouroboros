@@ -13,6 +13,9 @@ using LangChain.Splitters.Text;
 using LangChainPipeline.CLI.Interop; // for ChainAdapters
 using LangChainPipeline.Interop.LangChain; // for ExternalChainRegistry (reflection-based chain integration)
 using LangChainPipeline.Pipeline.Ingestion.Zip;
+using LangChainPipeline.CLI.Configuration;
+using LangChainPipeline.CLI.Services;
+using LangChainPipeline.CLI.Utilities;
 
 namespace LangChainPipeline.CLI;
 
@@ -49,199 +52,78 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> UseDir(string? args = null)
         => async s =>
         {
-            string root = s.Branch.Source.Value as string ?? Environment.CurrentDirectory;
-            bool recursive = true;
-            List<string> exts = new List<string>();
-            List<string> excludeDirs = new List<string>();
-            List<string> patterns = new List<string>();
-            long maxBytes = 0;
-            string raw = ParseString(args);
-            if (!string.IsNullOrWhiteSpace(raw))
-            {
-                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                {
-                    if (part.StartsWith("root=", StringComparison.OrdinalIgnoreCase)) root = Path.GetFullPath(part.Substring(5));
-                    else if (part.StartsWith("ext=", StringComparison.OrdinalIgnoreCase)) exts.AddRange(part.Substring(4).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-                    else if (part.StartsWith("exclude=", StringComparison.OrdinalIgnoreCase)) excludeDirs.AddRange(part.Substring(8).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-                    else if (part.StartsWith("pattern=", StringComparison.OrdinalIgnoreCase)) patterns.AddRange(part.Substring(8).Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-                    else if (part.StartsWith("max=", StringComparison.OrdinalIgnoreCase) && long.TryParse(part.AsSpan(4), out long m)) maxBytes = m;
-                    else if (part.Equals("norec", StringComparison.OrdinalIgnoreCase)) recursive = false;
-                }
-            }
-            if (!Directory.Exists(root))
-            {
-                s.Branch = s.Branch.WithIngestEvent($"dir:missing:{root}", Array.Empty<string>());
-                return s;
-            }
-            try
-            {
-                DirectoryIngestionOptions options = new DirectoryIngestionOptions
-                {
-                    Recursive = recursive,
-                    Extensions = exts.Count == 0 ? null : exts.ToArray(),
-                    ExcludeDirectories = excludeDirs.Count == 0 ? null : excludeDirs.ToArray(),
-                    Patterns = patterns.Count == 0 ? ["*"] : patterns.ToArray(),
-                    MaxFileBytes = maxBytes,
-                    ChunkSize = 1800,
-                    ChunkOverlap = 180
-                };
-                DirectoryDocumentLoader<FileLoader> loader = new DirectoryDocumentLoader<FileLoader>(options);
-                DirectoryIngestionStats stats = new DirectoryIngestionStats();
-                loader.AttachStats(stats);
-                TrackedVectorStore store = s.Branch.Store as TrackedVectorStore ?? new TrackedVectorStore();
-                RecursiveCharacterTextSplitter splitter = new RecursiveCharacterTextSplitter(chunkSize: options.ChunkSize, chunkOverlap: options.ChunkOverlap);
-                IReadOnlyCollection<Document> docs = await loader.LoadAsync(DataSource.FromPath(root));
-                List<Vector> vectors = new List<Vector>();
-                int fileIndex = 0;
-                foreach (Document doc in docs)
-                {
-                    if (string.IsNullOrWhiteSpace(doc.PageContent))
-                    {
-                        fileIndex++;
-                        continue;
-                    }
+            var defaultRoot = s.Branch.Source.Value as string ?? Environment.CurrentDirectory;
+            var configResult = DirectoryIngestionConfigBuilder.Parse(args, defaultRoot);
 
-                    IReadOnlyList<string> chunks = splitter.SplitText(doc.PageContent);
-                    int chunkCount = chunks.Count;
-                    Dictionary<string, object> baseMetadata = BuildDocumentMetadata(doc, root, fileIndex);
+            return await configResult.MatchAsync(
+                success: async config =>
+                {
+                    var ingestionResult = await DirectoryIngestionService.IngestAsync(
+                        config,
+                        s.Branch.Store,
+                        s.Embed);
 
-                    int chunkIdx = 0;
-                    foreach (string chunk in chunks)
-                    {
-                        string vectorId = $"dir:{fileIndex}:{chunkIdx}";
-                        Dictionary<string, object> chunkMetadata = BuildChunkMetadata(baseMetadata, chunkIdx, chunkCount, vectorId);
-
-                        try
+                    return ingestionResult.Match(
+                        onSuccess: result =>
                         {
-                            float[] emb = await s.Embed.CreateEmbeddingsAsync(chunk);
-                            vectors.Add(new Vector
-                            {
-                                Id = vectorId,
-                                Text = chunk,
-                                Embedding = emb,
-                                Metadata = chunkMetadata
-                            });
-                        }
-                        catch
-                        {
-                            chunkMetadata["embedding"] = "fallback";
-                            vectors.Add(new Vector
-                            {
-                                Id = $"{vectorId}:fallback",
-                                Text = chunk,
-                                Embedding = new float[8],
-                                Metadata = chunkMetadata
-                            });
-                        }
-                        chunkIdx++;
-                    }
-                    fileIndex++;
-                }
-                if (vectors.Count > 0) await store.AddAsync(vectors);
-                stats.VectorsProduced += vectors.Count;
-                s.Branch = s.Branch.WithIngestEvent($"dir:ingest:{Path.GetFileName(root)}", vectors.Select(v => v.Id));
-                Console.WriteLine($"[dir] {stats}");
-            }
-            catch (Exception ex)
-            {
-                s.Branch = s.Branch.WithIngestEvent($"dir:error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
-            }
-            return s;
+                            if (s.Trace)
+                                Console.WriteLine($"[dir] {result.Stats}");
+                            
+                            return s.WithBranch(
+                                s.Branch.WithIngestEvent(
+                                    $"dir:ingest:{Path.GetFileName(config.Root)}",
+                                    result.VectorIds));
+                        },
+                        onFailure: error => s.WithBranch(
+                            s.Branch.WithIngestEvent(
+                                $"dir:error:{error.Replace('|', ':')}",
+                                Array.Empty<string>())));
+                },
+                failure: error => Task.FromResult(
+                    s.WithBranch(
+                        s.Branch.WithIngestEvent(
+                            $"dir:config-error:{error.Replace('|', ':')}",
+                            Array.Empty<string>()))));
         };
 
     [PipelineToken("UseDirBatched", "DirIngestBatched")] // Usage: UseDirBatched('root=src|ext=.cs,.md|exclude=bin,obj|max=500000|pattern=*.cs;*.md|norec|addEvery=256')
     public static Step<CliPipelineState, CliPipelineState> UseDirBatched(string? args = null)
         => async s =>
         {
-            string root = s.Branch.Source.Value as string ?? Environment.CurrentDirectory;
-            bool recursive = true;
-            List<string> exts = new List<string>();
-            List<string> excludeDirs = new List<string>();
-            List<string> patterns = new List<string>();
-            long maxBytes = 0;
-            int addEvery = 256; // number of vectors per AddAsync batch
-            string raw = ParseString(args);
-            if (!string.IsNullOrWhiteSpace(raw))
-            {
-                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            var defaultRoot = s.Branch.Source.Value as string ?? Environment.CurrentDirectory;
+            
+            // Parse with addEvery parameter
+            var configResult = DirectoryIngestionConfigBuilder.ParseBatched(args, defaultRoot);
+
+            return await configResult.MatchAsync(
+                success: async config =>
                 {
-                    if (part.StartsWith("root=", StringComparison.OrdinalIgnoreCase)) root = Path.GetFullPath(part.Substring(5));
-                    else if (part.StartsWith("ext=", StringComparison.OrdinalIgnoreCase)) exts.AddRange(part.Substring(4).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-                    else if (part.StartsWith("exclude=", StringComparison.OrdinalIgnoreCase)) excludeDirs.AddRange(part.Substring(8).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-                    else if (part.StartsWith("pattern=", StringComparison.OrdinalIgnoreCase)) patterns.AddRange(part.Substring(8).Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-                    else if (part.StartsWith("max=", StringComparison.OrdinalIgnoreCase) && long.TryParse(part.AsSpan(4), out long m)) maxBytes = m;
-                    else if (part.Equals("norec", StringComparison.OrdinalIgnoreCase)) recursive = false;
-                    else if (part.StartsWith("addEvery=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(9), out int ae) && ae > 0) addEvery = ae;
-                }
-            }
-            if (!Directory.Exists(root))
-            {
-                s.Branch = s.Branch.WithIngestEvent($"dir:missing:{root}", Array.Empty<string>());
-                return s;
-            }
-            try
-            {
-                DirectoryIngestionOptions options = new DirectoryIngestionOptions
-                {
-                    Recursive = recursive,
-                    Extensions = exts.Count == 0 ? null : exts.ToArray(),
-                    ExcludeDirectories = excludeDirs.Count == 0 ? null : excludeDirs.ToArray(),
-                    Patterns = patterns.Count == 0 ? new[] { "*" } : patterns.ToArray(),
-                    MaxFileBytes = maxBytes,
-                    ChunkSize = 1800,
-                    ChunkOverlap = 180
-                };
-                DirectoryDocumentLoader<FileLoader> loader = new DirectoryDocumentLoader<FileLoader>(options);
-                DirectoryIngestionStats stats = new DirectoryIngestionStats();
-                loader.AttachStats(stats);
-                TrackedVectorStore store = s.Branch.Store as TrackedVectorStore ?? new TrackedVectorStore();
-                RecursiveCharacterTextSplitter splitter = new RecursiveCharacterTextSplitter(chunkSize: options.ChunkSize, chunkOverlap: options.ChunkOverlap);
-                IReadOnlyCollection<Document> docs = await loader.LoadAsync(DataSource.FromPath(root));
-                List<Vector> buffer = new List<Vector>(capacity: addEvery);
-                int fileIndex = 0;
-                foreach (Document doc in docs)
-                {
-                    if (string.IsNullOrWhiteSpace(doc.PageContent)) { fileIndex++; continue; }
-                    IReadOnlyList<string> chunks = splitter.SplitText(doc.PageContent);
-                    int chunkCount = chunks.Count;
-                    Dictionary<string, object> baseMetadata = BuildDocumentMetadata(doc, root, fileIndex);
-                    int chunkIdx = 0;
-                    foreach (string chunk in chunks)
-                    {
-                        string vectorId = $"dir:{fileIndex}:{chunkIdx}";
-                        Dictionary<string, object> chunkMetadata = BuildChunkMetadata(baseMetadata, chunkIdx, chunkCount, vectorId);
-                        try
+                    var ingestionResult = await DirectoryIngestionService.IngestAsync(
+                        config with { BatchSize = config.BatchSize > 0 ? config.BatchSize : 256 },
+                        s.Branch.Store,
+                        s.Embed);
+
+                    return ingestionResult.Match(
+                        onSuccess: result =>
                         {
-                            float[] emb = await s.Embed.CreateEmbeddingsAsync(chunk);
-                            buffer.Add(new Vector { Id = vectorId, Text = chunk, Embedding = emb, Metadata = chunkMetadata });
-                        }
-                        catch
-                        {
-                            chunkMetadata["embedding"] = "fallback";
-                            buffer.Add(new Vector { Id = vectorId + ":fallback", Text = chunk, Embedding = new float[8], Metadata = chunkMetadata });
-                        }
-                        if (buffer.Count >= addEvery)
-                        {
-                            await store.AddAsync(buffer);
-                            buffer.Clear();
-                        }
-                        chunkIdx++;
-                    }
-                    fileIndex++;
-                }
-                if (buffer.Count > 0)
-                {
-                    await store.AddAsync(buffer);
-                    buffer.Clear();
-                }
-                s.Branch = s.Branch.WithIngestEvent($"dir:ingest-batched:{Path.GetFileName(root)}", Array.Empty<string>());
-                Console.WriteLine($"[dir-batched] {stats}");
-            }
-            catch (Exception ex)
-            {
-                s.Branch = s.Branch.WithIngestEvent($"dirbatched:error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
-            }
-            return s;
+                            if (s.Trace)
+                                Console.WriteLine($"[dir-batched] {result.Stats}");
+                            
+                            return s.WithBranch(
+                                s.Branch.WithIngestEvent(
+                                    $"dir:ingest-batched:{Path.GetFileName(config.Root)}",
+                                    Array.Empty<string>())); // Batched doesn't track individual IDs
+                        },
+                        onFailure: error => s.WithBranch(
+                            s.Branch.WithIngestEvent(
+                                $"dirbatched:error:{error.Replace('|', ':')}",
+                                Array.Empty<string>())));
+                },
+                failure: error => Task.FromResult(
+                    s.WithBranch(
+                        s.Branch.WithIngestEvent(
+                            $"dirbatched:config-error:{error.Replace('|', ':')}",
+                            Array.Empty<string>()))));
         };
 
     [PipelineToken("UseSolution", "Solution", "UseSolutionIngest")] // Usage: Solution('maxFiles=400|maxFileBytes=600000|ext=.cs,.razor')
@@ -829,8 +711,8 @@ public static class CliSteps
         }
         catch (Exception ex)
         {
-            foreach ((string id, string _) in batch)
-                s.Branch = s.Branch.WithIngestEvent($"zipstream:batch-error:{id}:{ex.GetType().Name}", Array.Empty<string>());
+            foreach (var item in batch)
+                s.Branch = s.Branch.WithIngestEvent($"zipstream:batch-error:{item.id}:{ex.GetType().Name}", Array.Empty<string>());
         }
     }
 

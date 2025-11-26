@@ -23,4 +23,10 @@ public sealed class CliPipelineState
     // Streaming infrastructure
     public StreamingContext? Streaming { get; set; }
     public IObservable<object>? ActiveStream { get; set; }
+
+    public CliPipelineState WithBranch(PipelineBranch branch)
+    {
+        this.Branch = branch;
+        return this;
+    }
 }
