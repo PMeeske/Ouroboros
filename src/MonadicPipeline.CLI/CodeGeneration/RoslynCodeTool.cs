@@ -7,6 +7,9 @@ using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.MSBuild;
 using LangChainPipeline.Agent.MetaAI;
+using LangChainPipeline.Roslynator.Providers;
+using LangChainPipeline.Roslynator.Pipeline;
+using System.Collections.Immutable;
 
 namespace LangChainPipeline.CLI.CodeGeneration;
 
@@ -469,6 +472,64 @@ namespace LangChainPipeline.SourceGenerators
         catch (Exception ex)
         {
             return Result<string, string>.Failure($"Generator creation failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Applies the UniversalCodeFixProvider (AI + Standard) to the given code.
+    /// </summary>
+    public async Task<Result<string, string>> ApplyUniversalFixAsync(string code, string diagnosticId)
+    {
+        try
+        {
+            var tree = CSharpSyntaxTree.ParseText(code);
+            var root = await tree.GetRootAsync();
+            
+            // Create a dummy compilation to get diagnostics
+            var compilation = CSharpCompilation.Create("FixCompilation")
+                .AddReferences(GetDefaultReferences())
+                .AddSyntaxTrees(tree)
+                .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary).WithNullableContextOptions(NullableContextOptions.Enable));
+
+            var diagnostics = compilation.GetDiagnostics();
+            var targetDiagnostic = diagnostics.FirstOrDefault(d => d.Id == diagnosticId);
+
+            if (targetDiagnostic == null)
+            {
+                var allDiags = string.Join(", ", diagnostics.Select(d => d.Id));
+                return Result<string, string>.Failure($"Diagnostic {diagnosticId} not found in code. Found: {allDiags}");
+            }
+
+            // Create a dummy document/project/solution for the fix provider
+            var workspace = new AdhocWorkspace();
+            var project = workspace.AddProject("FixProject", LanguageNames.CSharp)
+                .AddMetadataReferences(GetDefaultReferences());
+            var document = project.AddDocument("FixDocument.cs", root);
+
+            // Re-fetch diagnostic on the document context if needed, or just pass the one we have
+            // Note: FixChain.ExecuteAsync takes a Document and Diagnostic.
+            
+            // Instantiate the provider to access the chain logic directly or via its public methods if exposed.
+            // However, UniversalCodeFixProvider is a CodeFixProvider. 
+            // We can access the inner chain logic if we made it public or use the provider's logic.
+            // The UniversalCodeFixProvider.ConcreteChains.UniversalChain is private/internal.
+            // But we can instantiate UniversalCodeFixProvider and see if we can leverage it, 
+            // OR we can just use the FixChain infrastructure if we expose the specific chain.
+            
+            // Let's assume we want to run the specific UniversalChain logic.
+            // Since UniversalCodeFixProvider defines the chain in RegisterCodeFixesAsync, 
+            // we might need to expose the chain or duplicate the composition here.
+            // Let's look at UniversalCodeFixProvider again. It has a nested class ConcreteChains.UniversalChain.
+            
+            var chain = new UniversalCodeFixProvider.ConcreteChains.UniversalChain();
+            Document newDocument = await chain.ExecuteAsync(document, targetDiagnostic, CancellationToken.None);
+            
+            SyntaxNode? newRoot = await newDocument.GetSyntaxRootAsync();
+            return Result<string, string>.Success(newRoot?.ToFullString() ?? code);
+        }
+        catch (Exception ex)
+        {
+            return Result<string, string>.Failure($"Fix failed: {ex.Message}");
         }
     }
 

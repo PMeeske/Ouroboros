@@ -28,6 +28,7 @@
     <ProjectReference Include="..\MonadicPipeline.Tools\MonadicPipeline.Tools.csproj" />
     <ProjectReference Include="..\MonadicPipeline.Providers\MonadicPipeline.Providers.csproj" />
     <ProjectReference Include="..\MonadicPipeline.Agent\MonadicPipeline.Agent.csproj" />
+    <ProjectReference Include="..\MonadicPipeline.Roslynator\MonadicPipeline.Roslynator.csproj" />
   </ItemGroup>
 
   <ItemGroup>

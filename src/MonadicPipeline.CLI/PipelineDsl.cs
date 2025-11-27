@@ -103,7 +103,7 @@ public static class PipelineDsl
         // Generic patterns: Name(), Name(arg), Step<...>(arg)
         string name = token;
         string? args = null;
-        Match m = Regex.Match(token, @"^(?<name>[A-Za-z0-9_<>:, ]+)\s*\((?<args>.*)\)\s*$");
+        Match m = Regex.Match(token, @"^(?<name>[A-Za-z0-9_<>:, ]+)\s*\((?<args>.*)\)\s*$", RegexOptions.Singleline);
         if (m.Success)
         {
             name = m.Groups["name"].Value.Trim();
