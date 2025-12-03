@@ -13,6 +13,11 @@ namespace LangChainPipeline.Providers;
 public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry registry)
 {
     /// <summary>
+    /// Gets the underlying chat completion model.
+    /// </summary>
+    public IChatCompletionModel InnerModel => llm;
+
+    /// <summary>
     /// Generates a response and executes any tools mentioned in the response.
     /// </summary>
     /// <param name="prompt">The input prompt.</param>
@@ -22,25 +27,23 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
     {
         string result = await llm.GenerateTextAsync(prompt, ct);
         List<ToolExecution> toolCalls = [];
+        string modifiedResult = result;
 
-        foreach (string rawLine in result.Split('\n'))
+        // Use regex to find all tool invocations
+        var toolPattern = new System.Text.RegularExpressions.Regex(@"\[TOOL:([^\s]+)\s*([^\]]*)\]");
+        var matches = toolPattern.Matches(result);
+
+        foreach (System.Text.RegularExpressions.Match match in matches)
         {
-            string line = rawLine.Trim();
-            if (!line.StartsWith("[TOOL:", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            // Parse tool invocation: [TOOL:name args]
-            string inside = line.Trim('[', ']')[5..].Trim(); // Remove "[TOOL:" prefix
-            string[] split = inside.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-            string name = split[0];
-            string args = split.Length > 1 ? split[1] : string.Empty;
+            string fullMatch = match.Value;
+            string name = match.Groups[1].Value;
+            string args = match.Groups[2].Value.Trim();
 
             ITool? tool = registry.Get(name);
             if (tool is null)
             {
-                result += $"\n[TOOL-RESULT:{name}] error: tool not found";
+                string errorResult = $"[TOOL-RESULT:{name}] error: tool not found";
+                modifiedResult = modifiedResult.Replace(fullMatch, errorResult);
                 continue;
             }
 
@@ -58,10 +61,13 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
             }
 
             toolCalls.Add(new ToolExecution(name, args, output, DateTime.UtcNow));
-            result += $"\n[TOOL-RESULT:{name}] {output}";
+            
+            // Replace the tool invocation with the result in the text
+            string replacement = $"[TOOL-RESULT:{name}] {output}";
+            modifiedResult = modifiedResult.Replace(fullMatch, replacement);
         }
 
-        return (result, toolCalls);
+        return (modifiedResult, toolCalls);
     }
 
     /// <summary>

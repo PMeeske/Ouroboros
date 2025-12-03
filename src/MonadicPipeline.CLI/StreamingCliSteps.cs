@@ -2,6 +2,7 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Channels;
+using LangChainPipeline.Tools;
 
 namespace LangChainPipeline.CLI;
 
@@ -260,6 +261,63 @@ public static class StreamingCliSteps
             }
 
             return Task.FromResult(s);
+        };
+
+    /// <summary>
+    /// Streaming Reasoning pipeline: Thinking -> Draft -> Critique -> Improve.
+    /// Uses the configured streaming model.
+    /// Args: 'topic=...|k=5'
+    /// </summary>
+    [PipelineToken("StreamReasoning", "ReasoningStream")]
+    public static Step<CliPipelineState, CliPipelineState> StreamingReasoning(string? args = null)
+        => async s =>
+        {
+            if (s.Llm.InnerModel is not LangChainPipeline.Providers.IStreamingChatModel streamingModel)
+            {
+                Console.WriteLine("[error] Current model does not support streaming reasoning.");
+                return s;
+            }
+
+            Dictionary<string, string> options = ParseKeyValueArgs(args);
+            string topic = options.TryGetValue("topic", out string? t) ? t : "General";
+            int k = options.TryGetValue("k", out string? kStr) && int.TryParse(kStr, out int kv) ? kv : 5;
+            
+            // Use query from state if not provided in args
+            string query = s.Query; 
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                 Console.WriteLine("[error] No query provided in state.");
+                 return s;
+            }
+
+            Console.WriteLine($"[stream] Starting reasoning pipeline for topic: {topic}");
+
+            var pipeline = LangChainPipeline.Pipeline.Reasoning.ReasoningArrows.StreamingReasoningPipeline(
+                streamingModel,
+                s.Tools ?? new LangChainPipeline.Tools.ToolRegistry(),
+                s.Embed,
+                topic,
+                query,
+                k
+            );
+
+            try 
+            {
+                await pipeline.ForEachAsync(item => 
+                {
+                    Console.Write(item.chunk); 
+                    s.Branch = item.branch;
+                });
+                
+                Console.WriteLine(); // Newline at end
+                Console.WriteLine("[stream] Reasoning pipeline completed.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[stream:error] {ex.Message}");
+            }
+
+            return s;
         };
 
     /// <summary>

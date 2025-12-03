@@ -254,25 +254,32 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> UseStreamingDraft(string? args = null)
         => async s =>
         {
-            // Check if using LiteLLM endpoint via environment variable or create streaming model
-            string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
-            string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-            string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
 
-            if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(apiKey) ||
-                (!endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) && !endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+            if (streamingModel == null)
             {
-                Console.WriteLine("[streaming] Warning: Streaming requires LiteLLM endpoint (CHAT_ENDPOINT), falling back to non-streaming");
-                return await UseDraft(args)(s);
+                // Check if using LiteLLM endpoint via environment variable or create streaming model
+                string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
+                string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+
+                if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
+                    (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+                {
+                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                }
             }
 
-            // Create streaming model
-            LangChainPipeline.Providers.LiteLLMChatModel streamingModel = new(endpoint, apiKey, modelName);
+            if (streamingModel == null)
+            {
+                Console.WriteLine("[streaming] Warning: Current model does not support streaming and no LiteLLM endpoint configured. Falling back to non-streaming.");
+                return await UseDraft(args)(s);
+            }
 
             (string topic, string query) = Normalize(s);
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
 
-            await ReasoningArrows.StreamingDraftArrow(streamingModel, s.Tools, s.Embed, topic, query, s.RetrievalK)
+            await ReasoningArrows.StreamingDraftArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
                 .Do(tuple =>
                 {
                     Console.Write(tuple.chunk);
@@ -293,18 +300,26 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> UseStreamingCritique(string? args = null)
         => async s =>
         {
-            string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
-            string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-            string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
 
-            if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(apiKey) ||
-                (!endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) && !endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+            if (streamingModel == null)
             {
-                Console.WriteLine("[streaming] Warning: Streaming requires LiteLLM endpoint, falling back to non-streaming");
-                return await UseCritique(args)(s);
+                string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
+                string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+
+                if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
+                    (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+                {
+                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                }
             }
 
-            LangChainPipeline.Providers.LiteLLMChatModel streamingModel = new(endpoint, apiKey, modelName);
+            if (streamingModel == null)
+            {
+                Console.WriteLine("[streaming] Warning: Current model does not support streaming and no LiteLLM endpoint configured. Falling back to non-streaming.");
+                return await UseCritique(args)(s);
+            }
 
             (string topic, string query) = Normalize(s);
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
@@ -330,18 +345,26 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> UseStreamingImprove(string? args = null)
         => async s =>
         {
-            string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
-            string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-            string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
 
-            if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(apiKey) ||
-                (!endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) && !endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+            if (streamingModel == null)
             {
-                Console.WriteLine("[streaming] Warning: Streaming requires LiteLLM endpoint, falling back to non-streaming");
-                return await UseImprove(args)(s);
+                string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
+                string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+
+                if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
+                    (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+                {
+                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                }
             }
 
-            LangChainPipeline.Providers.LiteLLMChatModel streamingModel = new(endpoint, apiKey, modelName);
+            if (streamingModel == null)
+            {
+                Console.WriteLine("[streaming] Warning: Current model does not support streaming and no LiteLLM endpoint configured. Falling back to non-streaming.");
+                return await UseImprove(args)(s);
+            }
 
             (string topic, string query) = Normalize(s);
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
@@ -368,18 +391,26 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> UseStreamingPipeline(string? args = null)
         => async s =>
         {
-            string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
-            string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-            string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
 
-            if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(apiKey) ||
-                (!endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) && !endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+            if (streamingModel == null)
             {
-                Console.WriteLine("[streaming] Warning: Streaming requires LiteLLM endpoint, falling back to non-streaming");
-                return await UseRefinementLoop("1")(s);
+                string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
+                string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+
+                if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
+                    (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+                {
+                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                }
             }
 
-            LangChainPipeline.Providers.LiteLLMChatModel streamingModel = new(endpoint, apiKey, modelName);
+            if (streamingModel == null)
+            {
+                Console.WriteLine("[streaming] Warning: Current model does not support streaming and no LiteLLM endpoint configured. Falling back to non-streaming.");
+                return await UseRefinementLoop("1")(s);
+            }
 
             (string topic, string query) = Normalize(s);
             string currentStage = string.Empty;

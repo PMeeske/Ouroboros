@@ -31,6 +31,56 @@ public static class ReasoningArrows
     }
 
     /// <summary>
+    /// Creates a thinking arrow that generates a reasoning process before drafting.
+    /// </summary>
+    public static Step<PipelineBranch, PipelineBranch> ThinkingArrow(
+        ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
+        => async branch =>
+        {
+            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+            string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
+
+            string prompt = Prompts.Thinking.Format(new()
+            {
+                ["context"] = context,
+                ["topic"] = topic,
+                ["tools_schemas"] = ToolSchemasOrEmpty(tools)
+            });
+
+            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+            return branch.WithReasoning(new Thinking(text), prompt, toolCalls);
+        };
+
+    /// <summary>
+    /// Creates a Result-safe thinking arrow.
+    /// </summary>
+    public static KleisliResult<PipelineBranch, PipelineBranch, string> SafeThinkingArrow(
+        ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
+        => async branch =>
+        {
+            try
+            {
+                IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+                string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
+
+                string prompt = Prompts.Thinking.Format(new()
+                {
+                    ["context"] = context,
+                    ["topic"] = topic,
+                    ["tools_schemas"] = ToolSchemasOrEmpty(tools)
+                });
+
+                (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+                PipelineBranch result = branch.WithReasoning(new Thinking(text), prompt, toolCalls);
+                return Result<PipelineBranch, string>.Success(result);
+            }
+            catch (Exception ex)
+            {
+                return Result<PipelineBranch, string>.Failure($"Thinking generation failed: {ex.Message}");
+            }
+        };
+
+    /// <summary>
     /// Creates a draft arrow that generates an initial response.
     /// </summary>
     public static Step<PipelineBranch, PipelineBranch> DraftArrow(
@@ -210,27 +260,22 @@ public static class ReasoningArrows
         };
 
     /// <summary>
-    /// Creates a complete safe reasoning pipeline that chains draft -> critique -> improve with error handling.
+    /// Creates a complete safe reasoning pipeline that chains thinking -> draft -> critique -> improve with error handling.
     /// Demonstrates monadic composition for robust pipeline execution.
     /// </summary>
     public static KleisliResult<PipelineBranch, PipelineBranch, string> SafeReasoningPipeline(
         ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
-        => SafeDraftArrow(llm, tools, embed, topic, query, k)
+        => SafeThinkingArrow(llm, tools, embed, topic, query, k)
+            .Then(SafeDraftArrow(llm, tools, embed, topic, query, k))
             .Then(SafeCritiqueArrow(llm, tools, embed, topic, query, k))
             .Then(SafeImproveArrow(llm, tools, embed, topic, query, k));
 
     /// <summary>
-    /// Creates a streaming draft arrow using Reactive Extensions that emits reasoning content chunks in real-time.
+    /// Creates a streaming thinking arrow that emits reasoning chunks in real-time.
+    /// Supports agentic tool calls within the thinking process.
     /// </summary>
-    /// <param name="streamingModel">LiteLLMChatModel with streaming support.</param>
-    /// <param name="tools">Tool registry.</param>
-    /// <param name="embed">Embedding model.</param>
-    /// <param name="topic">Topic for reasoning.</param>
-    /// <param name="query">Query for RAG retrieval.</param>
-    /// <param name="k">Number of documents to retrieve.</param>
-    /// <returns>Observable sequence of (chunk, branch) tuples.</returns>
-    public static IObservable<(string chunk, PipelineBranch branch)> StreamingDraftArrow(
-        LangChainPipeline.Providers.LiteLLMChatModel streamingModel,
+    public static IObservable<(string chunk, PipelineBranch branch)> StreamingThinkingArrow(
+        LangChainPipeline.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
         string topic,
@@ -240,6 +285,111 @@ public static class ReasoningArrows
         async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             PipelineBranch branch = new PipelineBranch("streaming", new TrackedVectorStore(), DataSource.FromPath("."));
+            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+            string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
+
+            string prompt = Prompts.Thinking.Format(new()
+            {
+                ["context"] = context,
+                ["topic"] = topic,
+                ["tools_schemas"] = ToolSchemasOrEmpty(tools)
+            });
+
+            System.Text.StringBuilder fullText = new System.Text.StringBuilder();
+            System.Text.StringBuilder currentTurnText = new System.Text.StringBuilder();
+            List<ToolExecution> allToolCalls = new List<ToolExecution>();
+            
+            // Agent loop: continue as long as tools are called
+            while (!ct.IsCancellationRequested)
+            {
+                bool toolCalled = false;
+                currentTurnText.Clear();
+
+                await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable())
+                {
+                    fullText.Append(chunk);
+                    currentTurnText.Append(chunk);
+                    
+                    PipelineBranch updatedBranch = branch.WithReasoning(new Thinking(fullText.ToString()), prompt, allToolCalls);
+                    yield return (chunk, updatedBranch);
+                }
+
+                // Check for tool calls in the current turn's output
+                var toolPattern = new System.Text.RegularExpressions.Regex(@"\[TOOL:([^\s]+)\s*([^\]]*)\]");
+                var matches = toolPattern.Matches(currentTurnText.ToString());
+
+                foreach (System.Text.RegularExpressions.Match match in matches)
+                {
+                    toolCalled = true;
+                    string name = match.Groups[1].Value;
+                    string args = match.Groups[2].Value.Trim();
+
+                    ITool? tool = tools.Get(name);
+                    string output;
+                    if (tool is null)
+                    {
+                        output = $"error: tool '{name}' not found";
+                    }
+                    else
+                    {
+                        try
+                        {
+                            Result<string, string> toolResult = await tool.InvokeAsync(args, ct);
+                            output = toolResult.Match(success => success, error => $"error: {error}");
+                        }
+                        catch (Exception ex)
+                        {
+                            output = $"error: {ex.Message}";
+                        }
+                    }
+
+                    ToolExecution execution = new ToolExecution(name, args, output, DateTime.UtcNow);
+                    allToolCalls.Add(execution);
+
+                    string resultTag = $"[TOOL-RESULT:{name}] {output}";
+                    
+                    // Emit the tool result as a chunk so the user sees it
+                    fullText.Append(resultTag);
+                    PipelineBranch withTool = branch.WithReasoning(new Thinking(fullText.ToString()), prompt, allToolCalls);
+                    yield return (resultTag, withTool);
+
+                    // Append to prompt for the next turn
+                    prompt += $"\n{match.Value} {resultTag}\nContinue thinking.";
+                }
+
+                if (!toolCalled)
+                {
+                    break; // No tools called, thinking is done
+                }
+            }
+        }
+
+        return StreamAsync().ToObservable();
+    }
+
+    /// <summary>
+    /// Creates a streaming draft arrow using Reactive Extensions that emits reasoning content chunks in real-time.
+    /// </summary>
+    /// <param name="streamingModel">IStreamingChatModel with streaming support.</param>
+    /// <param name="tools">Tool registry.</param>
+    /// <param name="embed">Embedding model.</param>
+    /// <param name="inputBranch">Input branch from previous step.</param>
+    /// <param name="topic">Topic for reasoning.</param>
+    /// <param name="query">Query for RAG retrieval.</param>
+    /// <param name="k">Number of documents to retrieve.</param>
+    /// <returns>Observable sequence of (chunk, branch) tuples.</returns>
+    public static IObservable<(string chunk, PipelineBranch branch)> StreamingDraftArrow(
+        LangChainPipeline.Providers.IStreamingChatModel streamingModel,
+        ToolRegistry tools,
+        IEmbeddingModel embed,
+        PipelineBranch inputBranch,
+        string topic,
+        string query,
+        int k = 8)
+    {
+        async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            PipelineBranch branch = inputBranch;
             IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
@@ -265,7 +415,7 @@ public static class ReasoningArrows
          /// Creates a streaming critique arrow that emits critique chunks in real-time.
          /// </summary>
     public static IObservable<(string chunk, PipelineBranch branch)> StreamingCritiqueArrow(
-        LangChainPipeline.Providers.LiteLLMChatModel streamingModel,
+        LangChainPipeline.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
         PipelineBranch inputBranch,
@@ -307,7 +457,7 @@ public static class ReasoningArrows
     /// Creates a streaming improvement arrow that emits improvement chunks in real-time.
     /// </summary>
     public static IObservable<(string chunk, PipelineBranch branch)> StreamingImproveArrow(
-        LangChainPipeline.Providers.LiteLLMChatModel streamingModel,
+        LangChainPipeline.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
         PipelineBranch inputBranch,
@@ -351,11 +501,11 @@ public static class ReasoningArrows
     }
 
     /// <summary>
-    /// Creates a complete streaming reasoning pipeline (Draft -> Critique -> Improve) using Reactive Extensions.
+    /// Creates a complete streaming reasoning pipeline (Thinking -> Draft -> Critique -> Improve) using Reactive Extensions.
     /// Emits incremental updates as reasoning progresses through each stage.
     /// </summary>
     public static IObservable<(string stage, string chunk, PipelineBranch branch)> StreamingReasoningPipeline(
-        LangChainPipeline.Providers.LiteLLMChatModel streamingModel,
+        LangChainPipeline.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
         string topic,
@@ -368,19 +518,25 @@ public static class ReasoningArrows
             {
                 PipelineBranch branch = new PipelineBranch("streaming-pipeline", new TrackedVectorStore(), DataSource.FromPath("."));
 
-                // Stage 1: Draft
-                await StreamingDraftArrow(streamingModel, tools, embed, topic, query, k)
+                // Stage 1: Thinking
+                await StreamingThinkingArrow(streamingModel, tools, embed, topic, query, k)
+                    .Do(tuple => observer.OnNext(("Thinking", tuple.chunk, tuple.branch)))
+                    .LastAsync()
+                    .ForEachAsync(tuple => branch = tuple.branch, ct);
+
+                // Stage 2: Draft
+                await StreamingDraftArrow(streamingModel, tools, embed, branch, topic, query, k)
                     .Do(tuple => observer.OnNext(("Draft", tuple.chunk, tuple.branch)))
                     .LastAsync()
                     .ForEachAsync(tuple => branch = tuple.branch, ct);
 
-                // Stage 2: Critique
+                // Stage 3: Critique
                 await StreamingCritiqueArrow(streamingModel, tools, embed, branch, topic, query, k)
                     .Do(tuple => observer.OnNext(("Critique", tuple.chunk, tuple.branch)))
                     .LastAsync()
                     .ForEachAsync(tuple => branch = tuple.branch, ct);
 
-                // Stage 3: Improve
+                // Stage 4: Improve
                 await StreamingImproveArrow(streamingModel, tools, embed, branch, topic, query, k)
                     .Do(tuple => observer.OnNext(("Improve", tuple.chunk, tuple.branch)))
                     .LastAsync()

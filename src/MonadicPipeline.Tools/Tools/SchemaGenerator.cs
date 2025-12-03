@@ -34,7 +34,7 @@ public static class SchemaGenerator
                     description = p.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? string.Empty,
                 }),
             required = properties
-                .Where(p => !IsNullable(p.PropertyType))
+                .Where(p => !IsNullableProperty(p))
                 .Select(p => p.Name)
                 .ToArray(),
         };
@@ -44,27 +44,30 @@ public static class SchemaGenerator
 
     private static string MapType(Type type)
     {
-        if (type == typeof(string))
+        // Handle nullable types
+        Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+
+        if (underlyingType == typeof(string))
         {
             return "string";
         }
 
-        if (type == typeof(int) || type == typeof(long))
+        if (underlyingType == typeof(int) || underlyingType == typeof(long))
         {
             return "integer";
         }
 
-        if (type == typeof(float) || type == typeof(double) || type == typeof(decimal))
+        if (underlyingType == typeof(float) || underlyingType == typeof(double) || underlyingType == typeof(decimal))
         {
             return "number";
         }
 
-        if (type == typeof(bool))
+        if (underlyingType == typeof(bool))
         {
             return "boolean";
         }
 
-        if (type.IsArray || (typeof(System.Collections.IEnumerable).IsAssignableFrom(type) && type != typeof(string)))
+        if (underlyingType.IsArray || (typeof(System.Collections.IEnumerable).IsAssignableFrom(underlyingType) && underlyingType != typeof(string)))
         {
             return "array";
         }
@@ -72,13 +75,28 @@ public static class SchemaGenerator
         return "object";
     }
 
-    private static bool IsNullable(Type type)
+    private static bool IsNullableProperty(PropertyInfo property)
     {
-        if (!type.IsValueType)
+        Type type = property.PropertyType;
+        
+        // Check if it's a nullable value type (e.g., int?, double?)
+        if (type.IsValueType)
         {
-            return true;
+            return Nullable.GetUnderlyingType(type) != null;
         }
 
-        return Nullable.GetUnderlyingType(type) != null;
+        // For reference types, check nullability context
+        // If the property has a default value or is an array, it's optional
+        if (type.IsArray)
+        {
+            return true; // Arrays are optional by default
+        }
+
+        // Check if property has a default value initializer (approximation)
+        // In practice, properties with = string.Empty or = [] are not truly nullable
+        // but for JSON schema purposes, we want to mark them as required
+        // We'll check the NullabilityInfo API if available
+        var nullabilityInfo = new System.Reflection.NullabilityInfoContext().Create(property);
+        return nullabilityInfo.WriteState == System.Reflection.NullabilityState.Nullable;
     }
 }

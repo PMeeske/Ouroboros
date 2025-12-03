@@ -12,16 +12,23 @@ public class ToolAwareChatModelTests
 {
     private class MockChatModel : IChatCompletionModel
     {
-        private readonly string _response;
+        private readonly string response;
+        private readonly bool shouldCheckCancellation;
 
-        public MockChatModel(string response)
+        public MockChatModel(string response, bool shouldCheckCancellation = false)
         {
-            _response = response;
+            this.response = response;
+            this.shouldCheckCancellation = shouldCheckCancellation;
         }
 
         public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
         {
-            return Task.FromResult(_response);
+            if (shouldCheckCancellation)
+            {
+                ct.ThrowIfCancellationRequested();
+            }
+
+            return Task.FromResult(this.response);
         }
     }
 
@@ -53,8 +60,9 @@ public class ToolAwareChatModelTests
         var (text, tools) = await toolAwareModel.GenerateWithToolsAsync("Calculate 2+2");
 
         // Assert
-        text.Should().Contain("[TOOL:math 2+2]");
+        text.Should().NotContain("[TOOL:math 2+2]"); // Tool invocation should be replaced
         text.Should().Contain("[TOOL-RESULT:math] 4");
+        text.Should().Contain("Let me calculate:");
         tools.Should().HaveCount(1);
         tools[0].ToolName.Should().Be("math");
         tools[0].Arguments.Should().Be("2+2");
@@ -171,8 +179,8 @@ public class ToolAwareChatModelTests
     [Fact]
     public async Task GenerateWithToolsAsync_CancellationRequested_PropagatesToken()
     {
-        // Arrange
-        var mockModel = new MockChatModel("[TOOL:math 1+1]");
+        // Arrange - use a mock that actually checks cancellation
+        var mockModel = new MockChatModel("[TOOL:math 1+1]", shouldCheckCancellation: true);
         var registry = new ToolRegistry();
         registry = registry.WithTool(new MathTool());
         var toolAwareModel = new ToolAwareChatModel(mockModel, registry);
