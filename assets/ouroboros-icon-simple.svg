@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="50%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#a855f7"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Main Ouroboros serpent - simplified -->
+  <path d="
+    M 256 46
+    C 372 46 466 140 466 256
+    C 466 372 372 466 256 466
+    C 140 466 46 372 46 256
+    C 46 165 105 86 190 55
+    L 175 90
+    C 110 118 66 182 66 256
+    C 66 361 151 446 256 446
+    C 361 446 446 361 446 256
+    C 446 151 361 66 256 66
+    L 256 46
+    Z
+  " fill="url(#sg)"/>
+  
+  <!-- Snake head -->
+  <ellipse cx="215" cy="52" rx="50" ry="32" fill="url(#sg)"/>
+  
+  <!-- Eye -->
+  <ellipse cx="192" cy="48" rx="9" ry="11" fill="#fef3c7"/>
+  <ellipse cx="190" cy="48" rx="5" ry="7" fill="#1e1b4b"/>
+  <circle cx="188" cy="46" r="2" fill="#fff"/>
+  
+  <!-- Tail in mouth -->
+  <path d="M 165 60 Q 145 70 150 85 L 175 75 Z" fill="url(#sg)"/>
+  
+  <!-- Center infinity -->
+  <path d="M 196 256 
+           C 196 226 226 226 256 256 
+           C 286 286 316 286 316 256 
+           C 316 226 286 226 256 256 
+           C 226 286 196 286 196 256 Z" 
+        fill="none" stroke="#c4b5fd" stroke-width="12" stroke-linecap="round"/>
+</svg>
