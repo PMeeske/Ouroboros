@@ -126,7 +126,8 @@ class ModelConfig:
     temperature: float = 0.7
     
     def __post_init__(self):
-        """Validate configuration."""
+        """Validate configuration after initialization."""
+        # Use object.__setattr__ for frozen dataclasses
         if not 0 <= self.temperature <= 2:
             raise ValueError("Temperature must be between 0 and 2")
 
