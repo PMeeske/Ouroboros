@@ -1,11 +1,17 @@
-# Ouroboros
+<p align="center">
+  <img src="assets/ouroboros-icon.svg" alt="Ouroboros Logo" width="180" height="180">
+</p>
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/PMeeske/Ouroboros)
-[![.NET Version](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/download/dotnet/8.0)
-[![LangChain](https://img.shields.io/badge/LangChain-0.17.0-purple)](https://www.nuget.org/packages/LangChain/)
-[![Coverage](https://img.shields.io/badge/coverage-8.4%25-yellow)](TEST_COVERAGE_REPORT.md)
-[![Tests](https://img.shields.io/badge/tests-304%20passing-brightgreen)](src/Ouroboros.Tests)
-[![Mutation Testing](https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml/badge.svg)](https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml)
+<h1 align="center">Ouroboros</h1>
+
+<p align="center">
+  <a href="https://github.com/PMeeske/Ouroboros"><img src="https://img.shields.io/badge/build-passing-brightgreen" alt="Build Status"></a>
+  <a href="https://dotnet.microsoft.com/download/dotnet/8.0"><img src="https://img.shields.io/badge/.NET-8.0-blue" alt=".NET Version"></a>
+  <a href="https://www.nuget.org/packages/LangChain/"><img src="https://img.shields.io/badge/LangChain-0.17.0-purple" alt="LangChain"></a>
+  <a href="TEST_COVERAGE_REPORT.md"><img src="https://img.shields.io/badge/coverage-8.4%25-yellow" alt="Coverage"></a>
+  <a href="src/Ouroboros.Tests"><img src="https://img.shields.io/badge/tests-304%20passing-brightgreen" alt="Tests"></a>
+  <a href="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml"><img src="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml/badge.svg" alt="Mutation Testing"></a>
+</p>
 
 A **sophisticated functional programming-based AI pipeline system** built on LangChain, implementing category theory principles, monadic composition, and functional programming patterns to create type-safe, composable AI workflows.
 
