@@ -1,6 +1,9 @@
 # MonadicPipeline Global Analyzer Configuration
 is_global = true
 
+# SonarAnalyzer.CSharp version 10.15.0 or later recommended
+# Install via: dotnet add package SonarAnalyzer.CSharp --version 10.15.0
+
 # Suppress StyleCop rules that conflict with global usings and modern C# patterns
 dotnet_diagnostic.SA1200.severity = none  # Using directives should appear within namespace - conflicts with global usings
 dotnet_diagnostic.SA1201.severity = none  # Elements should be ordered by access level
@@ -40,7 +43,9 @@ dotnet_analyzer_diagnostic.category-roslynator.severity = warning
 dotnet_analyzer_diagnostic.category-sonaranalyzer.severity = warning
 
 # Suppress some overly strict SonarAnalyzer rules
+dotnet_diagnostic.S109.severity = suggestion  # Magic numbers - documented constants in CliStepsConstants are acceptable
 dotnet_diagnostic.S1450.severity = none  # Private fields only used as local variables
 dotnet_diagnostic.S2094.severity = none  # Classes should not be empty
+dotnet_diagnostic.S3776.severity = warning  # Cognitive complexity warnings enabled
 dotnet_diagnostic.S3881.severity = none  # "IDisposable" should be implemented correctly
 dotnet_diagnostic.S4487.severity = none  # Unread "private" fields should be removed (can be overly aggressive)

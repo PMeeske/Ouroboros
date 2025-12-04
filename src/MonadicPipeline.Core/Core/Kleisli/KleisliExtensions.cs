@@ -6,7 +6,7 @@ namespace LangChainPipeline.Core.Kleisli;
 
 /// <summary>
 /// Unified extension methods for Kleisli arrows.
-/// Since Step{T,U} and Kleisli{T,U} are conceptually identical (both are Task monad arrows),
+/// Since Step{TInput,TOutput} and Kleisli{TInput,TOutput} are conceptually identical (both are Task monad arrows),
 /// this provides a single, elegant set of operations for both.
 /// </summary>
 public static class KleisliExtensions
@@ -16,7 +16,7 @@ public static class KleisliExtensions
     /// Kleisli composition: (f >=> g)(a) = f(a) >>= g
     /// This is the fundamental operation for chaining monadic computations.
     /// Maintains associativity law for proper category theory compliance.
-    /// Works with both Step{T,U} and Kleisli{T,U}.
+    /// Works with both Step{TInput,TOutput} and Kleisli{TInput,TOutput}.
     /// </summary>
     /// <typeparam name="TA">The input type of the first arrow.</typeparam>
     /// <typeparam name="TB">The intermediate type between the two arrows.</typeparam>
@@ -30,7 +30,7 @@ public static class KleisliExtensions
         => async input => await g(await f(input).ConfigureAwait(false)).ConfigureAwait(false);
 
     /// <summary>
-    /// Kleisli composition for pure Kleisli{T,U} delegates.
+    /// Kleisli composition for pure Kleisli{TInput,TOutput} delegates.
     /// </summary>
     /// <typeparam name="TA">The input type of the first arrow.</typeparam>
     /// <typeparam name="TB">The intermediate type between the two arrows.</typeparam>
@@ -46,7 +46,12 @@ public static class KleisliExtensions
     /// <summary>
     /// Mixed composition: Step -> Kleisli.
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the first arrow.</typeparam>
+    /// <typeparam name="TB">The intermediate type between the two arrows.</typeparam>
+    /// <typeparam name="TC">The output type of the second arrow.</typeparam>
+    /// <param name="f">The first arrow to apply.</param>
+    /// <param name="g">The second arrow to apply to the result of f.</param>
+    /// <returns>A new arrow representing the composition.</returns>
     public static Kleisli<TA, TC> Then<TA, TB, TC>(
         this Step<TA, TB> f,
         Kleisli<TB, TC> g)
@@ -55,7 +60,12 @@ public static class KleisliExtensions
     /// <summary>
     /// Mixed composition: Kleisli -> Step.
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the first arrow.</typeparam>
+    /// <typeparam name="TB">The intermediate type between the two arrows.</typeparam>
+    /// <typeparam name="TC">The output type of the second arrow.</typeparam>
+    /// <param name="f">The first arrow to apply.</param>
+    /// <param name="g">The second arrow to apply to the result of f.</param>
+    /// <returns>A new arrow representing the composition.</returns>
     public static Step<TA, TC> Then<TA, TB, TC>(
         this Kleisli<TA, TB> f,
         Step<TB, TC> g)
@@ -64,7 +74,12 @@ public static class KleisliExtensions
     /// <summary>
     /// Maps a function over the result of a Step arrow (functor operation).
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the arrow.</typeparam>
+    /// <typeparam name="TB">The output type of the arrow.</typeparam>
+    /// <typeparam name="TC">The result type after mapping.</typeparam>
+    /// <param name="arrow">The arrow to map over.</param>
+    /// <param name="func">The function to apply to the arrow result.</param>
+    /// <returns>A new arrow with the mapped result.</returns>
     public static Step<TA, TC> Map<TA, TB, TC>(
         this Step<TA, TB> arrow,
         Func<TB, TC> func)
@@ -73,7 +88,12 @@ public static class KleisliExtensions
     /// <summary>
     /// Maps a function over the result of a Kleisli arrow (functor operation).
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the arrow.</typeparam>
+    /// <typeparam name="TB">The output type of the arrow.</typeparam>
+    /// <typeparam name="TC">The result type after mapping.</typeparam>
+    /// <param name="arrow">The arrow to map over.</param>
+    /// <param name="func">The function to apply to the arrow result.</param>
+    /// <returns>A new arrow with the mapped result.</returns>
     public static Kleisli<TA, TC> Map<TA, TB, TC>(
         this Kleisli<TA, TB> arrow,
         Func<TB, TC> func)
@@ -82,7 +102,12 @@ public static class KleisliExtensions
     /// <summary>
     /// Maps an async function over the result of a Step arrow.
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the arrow.</typeparam>
+    /// <typeparam name="TB">The output type of the arrow.</typeparam>
+    /// <typeparam name="TC">The result type after mapping.</typeparam>
+    /// <param name="arrow">The arrow to map over.</param>
+    /// <param name="func">The async function to apply to the arrow result.</param>
+    /// <returns>A new arrow with the mapped result.</returns>
     public static Step<TA, TC> MapAsync<TA, TB, TC>(
         this Step<TA, TB> arrow,
         Func<TB, Task<TC>> func)
@@ -91,7 +116,12 @@ public static class KleisliExtensions
     /// <summary>
     /// Maps an async function over the result of a Kleisli arrow.
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the arrow.</typeparam>
+    /// <typeparam name="TB">The output type of the arrow.</typeparam>
+    /// <typeparam name="TC">The result type after mapping.</typeparam>
+    /// <param name="arrow">The arrow to map over.</param>
+    /// <param name="func">The async function to apply to the arrow result.</param>
+    /// <returns>A new arrow with the mapped result.</returns>
     public static Kleisli<TA, TC> MapAsync<TA, TB, TC>(
         this Kleisli<TA, TB> arrow,
         Func<TB, Task<TC>> func)
@@ -100,7 +130,11 @@ public static class KleisliExtensions
     /// <summary>
     /// Executes a side effect on the result of a Step without modifying it (tap operation).
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the arrow.</typeparam>
+    /// <typeparam name="TB">The output type of the arrow.</typeparam>
+    /// <param name="arrow">The arrow to tap.</param>
+    /// <param name="action">The action to execute on the result.</param>
+    /// <returns>The original arrow with side effect applied.</returns>
     public static Step<TA, TB> Tap<TA, TB>(
         this Step<TA, TB> arrow,
         Action<TB> action)
@@ -114,7 +148,11 @@ public static class KleisliExtensions
     /// <summary>
     /// Executes a side effect on the result of a Kleisli arrow without modifying it (tap operation).
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the arrow.</typeparam>
+    /// <typeparam name="TB">The output type of the arrow.</typeparam>
+    /// <param name="arrow">The arrow to tap.</param>
+    /// <param name="action">The action to execute on the result.</param>
+    /// <returns>The original arrow with side effect applied.</returns>
     public static Kleisli<TA, TB> Tap<TA, TB>(
         this Kleisli<TA, TB> arrow,
         Action<TB> action)
@@ -128,7 +166,10 @@ public static class KleisliExtensions
     /// <summary>
     /// Catches exceptions in a Step arrow and converts them to a Result.
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the arrow.</typeparam>
+    /// <typeparam name="TB">The output type of the arrow.</typeparam>
+    /// <param name="arrow">The arrow to wrap with exception handling.</param>
+    /// <returns>A KleisliResult arrow that catches exceptions.</returns>
     public static KleisliResult<TA, TB, Exception> Catch<TA, TB>(
         this Step<TA, TB> arrow)
         => async input =>
@@ -147,7 +188,10 @@ public static class KleisliExtensions
     /// <summary>
     /// Catches exceptions in a Kleisli arrow and converts them to a Result.
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the arrow.</typeparam>
+    /// <typeparam name="TB">The output type of the arrow.</typeparam>
+    /// <param name="arrow">The arrow to wrap with exception handling.</param>
+    /// <returns>A KleisliResult arrow that catches exceptions.</returns>
     public static KleisliResult<TA, TB, Exception> Catch<TA, TB>(
         this Kleisli<TA, TB> arrow)
         => async input =>
@@ -167,7 +211,13 @@ public static class KleisliExtensions
     /// Composes KleisliResult arrows with proper error handling.
     /// If the first computation fails, the error is propagated without executing the second.
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the first arrow.</typeparam>
+    /// <typeparam name="TB">The intermediate type between arrows.</typeparam>
+    /// <typeparam name="TC">The output type of the second arrow.</typeparam>
+    /// <typeparam name="TError">The error type.</typeparam>
+    /// <param name="first">The first arrow to apply.</param>
+    /// <param name="second">The second arrow to apply to the result of first.</param>
+    /// <returns>A composed KleisliResult arrow.</returns>
     public static KleisliResult<TA, TC, TError> Then<TA, TB, TC, TError>(
         this KleisliResult<TA, TB, TError> first,
         KleisliResult<TB, TC, TError> second)
@@ -182,7 +232,13 @@ public static class KleisliExtensions
     /// <summary>
     /// Maps a function over the success result of a KleisliResult.
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the arrow.</typeparam>
+    /// <typeparam name="TB">The output type of the arrow.</typeparam>
+    /// <typeparam name="TC">The result type after mapping.</typeparam>
+    /// <typeparam name="TError">The error type.</typeparam>
+    /// <param name="arrow">The arrow to map over.</param>
+    /// <param name="func">The function to apply to the success result.</param>
+    /// <returns>A new KleisliResult arrow with the mapped result.</returns>
     public static KleisliResult<TA, TC, TError> Map<TA, TB, TC, TError>(
         this KleisliResult<TA, TB, TError> arrow,
         Func<TB, TC> func)
@@ -197,7 +253,12 @@ public static class KleisliExtensions
     /// <summary>
     /// Executes a side effect on the success result without modifying it.
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the arrow.</typeparam>
+    /// <typeparam name="TB">The output type of the arrow.</typeparam>
+    /// <typeparam name="TError">The error type.</typeparam>
+    /// <param name="arrow">The arrow to tap.</param>
+    /// <param name="action">The action to execute on the success result.</param>
+    /// <returns>The original KleisliResult arrow with side effect applied.</returns>
     public static KleisliResult<TA, TB, TError> Tap<TA, TB, TError>(
         this KleisliResult<TA, TB, TError> arrow,
         Action<TB> action)
@@ -216,7 +277,12 @@ public static class KleisliExtensions
     /// Composes KleisliOption arrows with proper None handling.
     /// If the first computation returns None, the second is not executed.
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the first arrow.</typeparam>
+    /// <typeparam name="TB">The intermediate type between arrows.</typeparam>
+    /// <typeparam name="TC">The output type of the second arrow.</typeparam>
+    /// <param name="first">The first arrow to apply.</param>
+    /// <param name="second">The second arrow to apply to the result of first.</param>
+    /// <returns>A composed KleisliOption arrow.</returns>
     public static KleisliOption<TA, TC> Then<TA, TB, TC>(
         this KleisliOption<TA, TB> first,
         KleisliOption<TB, TC> second)
@@ -231,7 +297,12 @@ public static class KleisliExtensions
     /// <summary>
     /// Maps a function over the Some result of a KleisliOption.
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the arrow.</typeparam>
+    /// <typeparam name="TB">The output type of the arrow.</typeparam>
+    /// <typeparam name="TC">The result type after mapping.</typeparam>
+    /// <param name="arrow">The arrow to map over.</param>
+    /// <param name="func">The function to apply to the Some result.</param>
+    /// <returns>A new KleisliOption arrow with the mapped result.</returns>
     public static KleisliOption<TA, TC> Map<TA, TB, TC>(
         this KleisliOption<TA, TB> arrow,
         Func<TB, TC> func)
@@ -247,7 +318,12 @@ public static class KleisliExtensions
     /// Converts a KleisliOption to a KleisliResult.
     /// None becomes a Failure with the provided error.
     /// </summary>
-    /// <returns></returns>
+    /// <typeparam name="TA">The input type of the arrow.</typeparam>
+    /// <typeparam name="TB">The output type of the arrow.</typeparam>
+    /// <typeparam name="TError">The error type.</typeparam>
+    /// <param name="arrow">The KleisliOption arrow to convert.</param>
+    /// <param name="error">The error to use for None results.</param>
+    /// <returns>A KleisliResult arrow.</returns>
     public static KleisliResult<TA, TB, TError> ToResult<TA, TB, TError>(
         this KleisliOption<TA, TB> arrow,
         TError error)

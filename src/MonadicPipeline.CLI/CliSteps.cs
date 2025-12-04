@@ -153,7 +153,7 @@ public static class CliSteps
                 success: async config =>
                 {
                     var ingestionResult = await DirectoryIngestionService.IngestAsync(
-                        config with { BatchSize = config.BatchSize > 0 ? config.BatchSize : 256 },
+                        config with { BatchSize = config.BatchSize > 0 ? config.BatchSize : DefaultIngestionSettings.DirectoryBatchedDefaultSize },
                         s.Branch.Store,
                         s.Embed);
 
@@ -778,14 +778,14 @@ public static class CliSteps
             string raw = ParseString(args);
             string? path = raw;
             bool includeXmlText = true;
-            int csvMaxLines = 50;
-            int binaryMaxBytes = 128 * 1024;
-            long sizeBudget = 500 * 1024 * 1024; // 500MB default
-            double maxRatio = 200d;
+            int csvMaxLines = DefaultIngestionSettings.CsvMaxLines;
+            int binaryMaxBytes = DefaultIngestionSettings.BinaryMaxBytes;
+            long sizeBudget = DefaultIngestionSettings.MaxArchiveSizeBytes;
+            double maxRatio = DefaultIngestionSettings.MaxCompressionRatio;
             HashSet<string>? skipKinds = null;
             HashSet<string>? onlyKinds = null;
             bool noEmbed = false;
-            int batchSize = 16;
+            int batchSize = DefaultIngestionSettings.DefaultBatchSize;
             // Allow modifiers separated by |, e.g. 'archive.zip|noText'
             if (!string.IsNullOrWhiteSpace(raw) && raw.Contains('|'))
             {
@@ -905,7 +905,7 @@ public static class CliSteps
             string raw = ParseString(args);
             if (string.IsNullOrWhiteSpace(raw)) return s;
             string path = raw.Split('|', 2)[0];
-            int batchSize = 8;
+            int batchSize = DefaultIngestionSettings.StreamingBatchSize;
             bool includeXmlText = true;
             bool noEmbed = false;
             if (raw.Contains('|'))
@@ -928,7 +928,7 @@ public static class CliSteps
                     string text;
                     if (rec.Kind == ZipContentKind.Csv || rec.Kind == ZipContentKind.Xml || rec.Kind == ZipContentKind.Text)
                     {
-                        IReadOnlyList<ZipFileRecord> parsedList = await ZipIngestion.ParseAsync(new[] { rec }, csvMaxLines: 20, binaryMaxBytes: 32 * 1024, includeXmlText: includeXmlText);
+                        IReadOnlyList<ZipFileRecord> parsedList = await ZipIngestion.ParseAsync(new[] { rec }, csvMaxLines: DefaultIngestionSettings.StreamingCsvMaxLines, binaryMaxBytes: DefaultIngestionSettings.StreamingBinaryMaxBytes, includeXmlText: includeXmlText);
                         ZipFileRecord parsed = parsedList[0];
                         text = parsed.Kind switch
                         {
@@ -1012,8 +1012,8 @@ public static class CliSteps
             Console.WriteLine($"[vectors] count={count}");
             if (!string.IsNullOrWhiteSpace(args) && args.Contains("ids", StringComparison.OrdinalIgnoreCase))
             {
-                foreach (Vector? v in all.Take(100)) Console.WriteLine($" - {v.Id}");
-                if (count > 100) Console.WriteLine($" ... (truncated) ...");
+                foreach (Vector? v in all.Take(DefaultIngestionSettings.MaxConsoleDisplayItems)) Console.WriteLine($" - {v.Id}");
+                if (count > DefaultIngestionSettings.MaxConsoleDisplayItems) Console.WriteLine($" ... (truncated) ...");
             }
             return Task.FromResult(s);
         };
@@ -1022,7 +1022,7 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> EmbedZip(string? args = null)
         => async s =>
         {
-            int batchSize = 16;
+            int batchSize = DefaultIngestionSettings.DefaultBatchSize;
             if (!string.IsNullOrWhiteSpace(args) && args.StartsWith("batch=", StringComparison.OrdinalIgnoreCase) && int.TryParse(args.AsSpan(6), out int bs) && bs > 0)
                 batchSize = bs;
             // Heuristic: any events zip:no-embed OR zipstream:no-embed; we can't recover original text fully unless stored; for now embed placeholders.
@@ -1195,7 +1195,7 @@ public static class CliSteps
             if (string.IsNullOrWhiteSpace(templateRaw)) return Task.FromResult(s);
             PromptTemplate pt = new PromptTemplate(templateRaw);
             string question = string.IsNullOrWhiteSpace(s.Query) ? (string.IsNullOrWhiteSpace(s.Prompt) ? s.Topic : s.Prompt) : s.Query;
-            string formatted = pt.Format(new() { ["context"] = s.Context, ["question"] = question, ["prompt"] = s.Prompt, ["topic"] = s.Topic });
+            string formatted = pt.Format(new() { [StateKeys.Context] = s.Context, [StateKeys.Question] = question, [StateKeys.Prompt] = s.Prompt, [StateKeys.Topic] = s.Topic });
             s.Prompt = formatted; // prepared for LLM
             return Task.FromResult(s);
         };
@@ -1228,9 +1228,9 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> DivideAndConquerRag(string? args = null)
         => async s =>
         {
-            int k = Math.Max(4, s.RetrievalK);
-            int group = 6;
-            string sep = "\n---\n";
+            int k = Math.Max(DefaultIngestionSettings.DefaultRetrievalK, s.RetrievalK);
+            int group = DefaultIngestionSettings.DefaultRagGroupSize;
+            string sep = DefaultIngestionSettings.DocumentSeparator;
             string? template = null;
             string? finalTemplate = null;
             bool streamPartials = false; // print intermediate outputs to console
