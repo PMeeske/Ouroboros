@@ -247,6 +247,195 @@ public static class CliSteps
         };
 
     /// <summary>
+    /// Performs self-critique on any prior output with Draft → Critique → Improve cycles.
+    /// Supports optional iteration count parameter: UseSelfCritique or UseSelfCritique('2').
+    /// </summary>
+    [PipelineToken("UseSelfCritique")]
+    public static Step<CliPipelineState, CliPipelineState> UseSelfCritique(string? args = null)
+        => async s =>
+        {
+            (string topic, string query) = Normalize(s);
+            
+            // Parse iteration count from args, default to 1
+            int iterations = 1;
+            if (!string.IsNullOrWhiteSpace(args))
+            {
+                string parsed = ParseString(args);
+                if (int.TryParse(parsed, out int value) && value > 0)
+                {
+                    iterations = value;
+                }
+            }
+
+            // Create self-critique agent
+            LangChainPipeline.Agent.SelfCritiqueAgent agent = new(s.Llm, s.Tools, s.Embed);
+            
+            // Generate with critique
+            Result<LangChainPipeline.Agent.SelfCritiqueResult, string> result = 
+                await agent.GenerateWithCritiqueAsync(s.Branch, topic, query, iterations, s.RetrievalK);
+
+            if (result.IsSuccess)
+            {
+                LangChainPipeline.Agent.SelfCritiqueResult critiqueResult = result.Value;
+                s.Branch = critiqueResult.Branch;
+                
+                // Format output to show Draft → Critique → Improved sections
+                StringBuilder output = new();
+                output.AppendLine("\n=== Self-Critique Result ===");
+                output.AppendLine($"Iterations: {critiqueResult.IterationsPerformed}");
+                output.AppendLine($"Confidence: {critiqueResult.Confidence}");
+                output.AppendLine("\n--- Draft ---");
+                output.AppendLine(critiqueResult.Draft);
+                output.AppendLine("\n--- Critique ---");
+                output.AppendLine(critiqueResult.Critique);
+                output.AppendLine("\n--- Improved Response ---");
+                output.AppendLine(critiqueResult.ImprovedResponse);
+                output.AppendLine("\n=========================");
+                
+                s.Output = output.ToString();
+                s.Context = critiqueResult.ImprovedResponse;
+                
+                if (s.Trace) 
+                {
+                    Console.WriteLine($"[trace] Self-critique completed with {critiqueResult.IterationsPerformed} iteration(s), confidence: {critiqueResult.Confidence}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[error] Self-critique failed: {result.Error}");
+                s.Branch = s.Branch.WithIngestEvent($"self-critique:error:{result.Error.Replace('|', ':')}", Array.Empty<string>());
+            }
+
+            return s;
+        };
+
+    /// <summary>
+    /// Streaming version of self-critique that shows incremental updates for each stage.
+    /// Supports optional iteration count parameter: UseStreamingSelfCritique or UseStreamingSelfCritique('2').
+    /// </summary>
+    [PipelineToken("UseStreamingSelfCritique", "StreamSelfCritique")]
+    public static Step<CliPipelineState, CliPipelineState> UseStreamingSelfCritique(string? args = null)
+        => async s =>
+        {
+            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
+
+            if (streamingModel == null)
+            {
+                // Check if using LiteLLM endpoint
+                string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
+                string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+
+                if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
+                    (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+                {
+                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                }
+            }
+
+            if (streamingModel == null)
+            {
+                Console.WriteLine("[streaming] Warning: Current model does not support streaming. Falling back to non-streaming self-critique.");
+                return await UseSelfCritique(args)(s);
+            }
+
+            (string topic, string query) = Normalize(s);
+            
+            // Parse iteration count from args, default to 1
+            int iterations = 1;
+            if (!string.IsNullOrWhiteSpace(args))
+            {
+                string parsed = ParseString(args);
+                if (int.TryParse(parsed, out int value) && value > 0)
+                {
+                    iterations = Math.Min(value, 5); // Cap at 5
+                }
+            }
+
+            System.Text.StringBuilder draftText = new();
+            System.Text.StringBuilder critiqueText = new();
+            System.Text.StringBuilder improvedText = new();
+
+            Console.WriteLine("\n=== Streaming Self-Critique ===");
+            Console.WriteLine($"Iterations: {iterations}\n");
+
+            // Perform critique-improve cycles with streaming
+            for (int i = 0; i < iterations; i++)
+            {
+                Console.WriteLine($"--- Iteration {i + 1} ---");
+                
+                // Stream Draft (only on first iteration)
+                if (i == 0)
+                {
+                    Console.WriteLine("\n[Draft]");
+                    draftText.Clear();
+                    await ReasoningArrows.StreamingDraftArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
+                        .Do(tuple =>
+                        {
+                            Console.Write(tuple.chunk);
+                            draftText.Append(tuple.chunk);
+                        })
+                        .LastAsync()
+                        .ForEachAsync(tuple => s.Branch = tuple.branch);
+                    Console.WriteLine();
+                }
+
+                // Stream Critique
+                Console.WriteLine("\n[Critique]");
+                critiqueText.Clear();
+                await ReasoningArrows.StreamingCritiqueArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
+                    .Do(tuple =>
+                    {
+                        Console.Write(tuple.chunk);
+                        critiqueText.Append(tuple.chunk);
+                    })
+                    .LastAsync()
+                    .ForEachAsync(tuple => s.Branch = tuple.branch);
+                Console.WriteLine();
+
+                // Stream Improvement
+                Console.WriteLine("\n[Improvement]");
+                improvedText.Clear();
+                await ReasoningArrows.StreamingImproveArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
+                    .Do(tuple =>
+                    {
+                        Console.Write(tuple.chunk);
+                        improvedText.Append(tuple.chunk);
+                    })
+                    .LastAsync()
+                    .ForEachAsync(tuple => s.Branch = tuple.branch);
+                Console.WriteLine("\n");
+            }
+
+            // Compute confidence
+            string lastCritique = critiqueText.ToString();
+            ConfidenceRating confidence = ConfidenceRating.Medium;
+            if (lastCritique.Contains("excellent", StringComparison.OrdinalIgnoreCase) || 
+                lastCritique.Contains("high quality", StringComparison.OrdinalIgnoreCase))
+            {
+                confidence = ConfidenceRating.High;
+            }
+            else if (lastCritique.Contains("needs work", StringComparison.OrdinalIgnoreCase) ||
+                     lastCritique.Contains("significant issues", StringComparison.OrdinalIgnoreCase))
+            {
+                confidence = ConfidenceRating.Low;
+            }
+
+            Console.WriteLine($"Confidence: {confidence}");
+            Console.WriteLine("=========================\n");
+
+            s.Output = improvedText.ToString();
+            s.Context = improvedText.ToString();
+
+            if (s.Trace)
+            {
+                Console.WriteLine($"[trace] Streaming self-critique completed with {iterations} iteration(s), confidence: {confidence}");
+            }
+
+            return s;
+        };
+
+    /// <summary>
     /// Streams draft reasoning content in real-time using Reactive Extensions.
     /// Outputs incremental chunks as they are generated by the LLM.
     /// </summary>
@@ -589,14 +778,14 @@ public static class CliSteps
             string raw = ParseString(args);
             string? path = raw;
             bool includeXmlText = true;
-            int csvMaxLines = 50;
-            int binaryMaxBytes = 128 * 1024;
-            long sizeBudget = 500 * 1024 * 1024; // 500MB default
-            double maxRatio = 200d;
+            int csvMaxLines = DefaultIngestionSettings.CsvMaxLines;
+            int binaryMaxBytes = DefaultIngestionSettings.BinaryMaxBytes;
+            long sizeBudget = DefaultIngestionSettings.MaxArchiveSizeBytes;
+            double maxRatio = DefaultIngestionSettings.MaxCompressionRatio;
             HashSet<string>? skipKinds = null;
             HashSet<string>? onlyKinds = null;
             bool noEmbed = false;
-            int batchSize = 16;
+            int batchSize = DefaultIngestionSettings.DefaultBatchSize;
             // Allow modifiers separated by |, e.g. 'archive.zip|noText'
             if (!string.IsNullOrWhiteSpace(raw) && raw.Contains('|'))
             {
@@ -716,7 +905,7 @@ public static class CliSteps
             string raw = ParseString(args);
             if (string.IsNullOrWhiteSpace(raw)) return s;
             string path = raw.Split('|', 2)[0];
-            int batchSize = 8;
+            int batchSize = DefaultIngestionSettings.StreamingBatchSize;
             bool includeXmlText = true;
             bool noEmbed = false;
             if (raw.Contains('|'))
@@ -739,7 +928,7 @@ public static class CliSteps
                     string text;
                     if (rec.Kind == ZipContentKind.Csv || rec.Kind == ZipContentKind.Xml || rec.Kind == ZipContentKind.Text)
                     {
-                        IReadOnlyList<ZipFileRecord> parsedList = await ZipIngestion.ParseAsync(new[] { rec }, csvMaxLines: 20, binaryMaxBytes: 32 * 1024, includeXmlText: includeXmlText);
+                        IReadOnlyList<ZipFileRecord> parsedList = await ZipIngestion.ParseAsync(new[] { rec }, csvMaxLines: DefaultIngestionSettings.StreamingCsvMaxLines, binaryMaxBytes: DefaultIngestionSettings.StreamingBinaryMaxBytes, includeXmlText: includeXmlText);
                         ZipFileRecord parsed = parsedList[0];
                         text = parsed.Kind switch
                         {
@@ -930,7 +1119,7 @@ public static class CliSteps
         => s =>
         {
             string raw = ParseString(args);
-            string separator = "\n---\n";
+            string separator = DefaultIngestionSettings.DocumentSeparator;
             string prefix = string.Empty;
             string suffix = string.Empty;
             int take = s.Retrieved.Count;
@@ -1040,8 +1229,8 @@ public static class CliSteps
         => async s =>
         {
             int k = Math.Max(4, s.RetrievalK);
-            int group = 6;
-            string sep = "\n---\n";
+            int group = RagDefaults.GroupSize;
+            string sep = DefaultIngestionSettings.DocumentSeparator;
             string? template = null;
             string? finalTemplate = null;
             bool streamPartials = false; // print intermediate outputs to console
@@ -1168,10 +1357,10 @@ public static class CliSteps
         => async s =>
         {
             // Defaults and args
-            int subs = 4;
-            int per = 6;
+            int subs = RagDefaults.SubQuestions;
+            int per = RagDefaults.DocumentsPerSubQuestion;
             int k = Math.Max(4, s.RetrievalK);
-            string sep = "\n---\n";
+            string sep = DefaultIngestionSettings.DocumentSeparator;
             bool stream = false;
             string? decomposeTpl = null;
             string? subTpl = null;
