@@ -778,14 +778,14 @@ public static class CliSteps
             string raw = ParseString(args);
             string? path = raw;
             bool includeXmlText = true;
-            int csvMaxLines = 50;
-            int binaryMaxBytes = 128 * 1024;
-            long sizeBudget = 500 * 1024 * 1024; // 500MB default
-            double maxRatio = 200d;
+            int csvMaxLines = DefaultIngestionSettings.CsvMaxLines;
+            int binaryMaxBytes = DefaultIngestionSettings.BinaryMaxBytes;
+            long sizeBudget = DefaultIngestionSettings.MaxArchiveSizeBytes;
+            double maxRatio = DefaultIngestionSettings.MaxCompressionRatio;
             HashSet<string>? skipKinds = null;
             HashSet<string>? onlyKinds = null;
             bool noEmbed = false;
-            int batchSize = 16;
+            int batchSize = DefaultIngestionSettings.DefaultBatchSize;
             // Allow modifiers separated by |, e.g. 'archive.zip|noText'
             if (!string.IsNullOrWhiteSpace(raw) && raw.Contains('|'))
             {
@@ -905,7 +905,7 @@ public static class CliSteps
             string raw = ParseString(args);
             if (string.IsNullOrWhiteSpace(raw)) return s;
             string path = raw.Split('|', 2)[0];
-            int batchSize = 8;
+            int batchSize = DefaultIngestionSettings.StreamingBatchSize;
             bool includeXmlText = true;
             bool noEmbed = false;
             if (raw.Contains('|'))
@@ -928,7 +928,7 @@ public static class CliSteps
                     string text;
                     if (rec.Kind == ZipContentKind.Csv || rec.Kind == ZipContentKind.Xml || rec.Kind == ZipContentKind.Text)
                     {
-                        IReadOnlyList<ZipFileRecord> parsedList = await ZipIngestion.ParseAsync(new[] { rec }, csvMaxLines: 20, binaryMaxBytes: 32 * 1024, includeXmlText: includeXmlText);
+                        IReadOnlyList<ZipFileRecord> parsedList = await ZipIngestion.ParseAsync(new[] { rec }, csvMaxLines: DefaultIngestionSettings.StreamingCsvMaxLines, binaryMaxBytes: DefaultIngestionSettings.StreamingBinaryMaxBytes, includeXmlText: includeXmlText);
                         ZipFileRecord parsed = parsedList[0];
                         text = parsed.Kind switch
                         {
@@ -1119,7 +1119,7 @@ public static class CliSteps
         => s =>
         {
             string raw = ParseString(args);
-            string separator = "\n---\n";
+            string separator = DefaultIngestionSettings.DocumentSeparator;
             string prefix = string.Empty;
             string suffix = string.Empty;
             int take = s.Retrieved.Count;
@@ -1229,8 +1229,8 @@ public static class CliSteps
         => async s =>
         {
             int k = Math.Max(4, s.RetrievalK);
-            int group = 6;
-            string sep = "\n---\n";
+            int group = RagDefaults.GroupSize;
+            string sep = DefaultIngestionSettings.DocumentSeparator;
             string? template = null;
             string? finalTemplate = null;
             bool streamPartials = false; // print intermediate outputs to console
@@ -1357,10 +1357,10 @@ public static class CliSteps
         => async s =>
         {
             // Defaults and args
-            int subs = 4;
-            int per = 6;
+            int subs = RagDefaults.SubQuestions;
+            int per = RagDefaults.DocumentsPerSubQuestion;
             int k = Math.Max(4, s.RetrievalK);
-            string sep = "\n---\n";
+            string sep = DefaultIngestionSettings.DocumentSeparator;
             bool stream = false;
             string? decomposeTpl = null;
             string? subTpl = null;
