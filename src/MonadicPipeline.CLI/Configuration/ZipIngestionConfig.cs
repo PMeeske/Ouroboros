@@ -4,12 +4,12 @@ public record ZipIngestionConfig
 {
     public required string ArchivePath { get; init; }
     public bool IncludeXmlText { get; init; } = true;
-    public int CsvMaxLines { get; init; } = 50;
-    public int BinaryMaxBytes { get; init; } = 128 * 1024;
-    public long MaxTotalBytes { get; init; } = 500 * 1024 * 1024;
-    public double MaxCompressionRatio { get; init; } = 200.0;
+    public int CsvMaxLines { get; init; } = DefaultIngestionSettings.CsvMaxLines;
+    public int BinaryMaxBytes { get; init; } = DefaultIngestionSettings.BinaryMaxBytes;
+    public long MaxTotalBytes { get; init; } = DefaultIngestionSettings.MaxArchiveSizeBytes;
+    public double MaxCompressionRatio { get; init; } = DefaultIngestionSettings.MaxCompressionRatio;
     public HashSet<string>? SkipKinds { get; init; }
     public HashSet<string>? OnlyKinds { get; init; }
     public bool NoEmbed { get; init; } = false;
-    public int BatchSize { get; init; } = 16;
+    public int BatchSize { get; init; } = DefaultIngestionSettings.DefaultBatchSize;
 }
