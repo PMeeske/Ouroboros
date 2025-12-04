@@ -6,7 +6,7 @@ namespace LangChainPipeline.Core.Kleisli;
 
 /// <summary>
 /// Kleisli arrow for computations in a monadic context.
-/// Since Step{TInput,TOutput} and Kleisli{TInput,TOutput} are identical, this primarily serves as an alias for conceptual clarity.
+/// Since <c>Step&lt;TInput,TOutput&gt;</c> and <c>Kleisli&lt;TInput,TOutput&gt;</c> are identical, this primarily serves as an alias for conceptual clarity.
 /// A Kleisli arrow from A to B in monad M is a function A → M(B).
 /// </summary>
 /// <typeparam name="TInput">The input type.</typeparam>
@@ -51,7 +51,7 @@ public delegate Kleisli<TIn, TOut> KleisliCompose<TIn, TMid, TOut>(
 
 /// <summary>
 /// Unified factory methods for creating Kleisli arrows.
-/// These work with both Step{TInput,TOutput} and Kleisli{TInput,TOutput} since they are conceptually identical.
+/// These work with both <c>Step&lt;TInput,TOutput&gt;</c> and <c>Kleisli&lt;TInput,TOutput&gt;</c> since they are conceptually identical.
 /// </summary>
 public static class Arrow
 {
