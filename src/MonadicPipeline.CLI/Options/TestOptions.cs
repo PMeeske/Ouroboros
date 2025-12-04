@@ -14,4 +14,7 @@ sealed class TestOptions
 
     [Option("cli", Required = false, HelpText = "Run CLI end-to-end tests", Default = false)]
     public bool CliOnly { get; set; }
+
+    [Option("metta", Required = false, HelpText = "Run MeTTa integration tests", Default = false)]
+    public bool MeTTa { get; set; }
 }

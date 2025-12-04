@@ -3,6 +3,24 @@ namespace LangChainPipeline.Pipeline.Reasoning;
 
 public static class Prompts
 {
+    public static readonly PromptTemplate Thinking = new(@"
+You are a deep thinker.
+
+Available tools (JSON Schema):
+{tools_schemas}
+
+Context:
+{context}
+
+Task:
+Think deeply about '{topic}'.
+Analyze the requirements, potential pitfalls, and architectural implications.
+Output your thoughts in a structured manner.
+If you need to verify facts or perform calculations, use tools.
+Emit tool calls like: [TOOL:tool_name arguments]
+Do not generate the final spec yet, just the reasoning process.
+");
+
     public static readonly PromptTemplate Draft = new(@"
 You are a careful, evidence-grounded architect. Use tools if asked.
 

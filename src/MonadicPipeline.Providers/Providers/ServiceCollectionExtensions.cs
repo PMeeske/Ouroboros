@@ -5,7 +5,11 @@
 namespace LangChainPipeline.Providers;
 
 using LangChain.Providers.Ollama;
+using LangChainPipeline.Core.Configuration;
+using LangChainPipeline.Domain.Vectors;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 /// <summary>
 /// Dependency injection helpers for registering chat and embedding models.
@@ -104,5 +108,58 @@ public static class ServiceCollectionExtensions
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// Register vector store based on configuration.
+    /// Supports InMemory (default), Qdrant, and extensible to other backends.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">Optional explicit configuration. If null, reads from IOptions.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddVectorStore(this IServiceCollection services, VectorStoreConfiguration? configuration = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        // Register the factory
+        services.AddSingleton<VectorStoreFactory>(sp =>
+        {
+            var config = configuration ?? sp.GetService<IOptions<VectorStoreConfiguration>>()?.Value ?? new VectorStoreConfiguration();
+            var logger = sp.GetService<ILogger<VectorStoreFactory>>();
+            return new VectorStoreFactory(config, logger);
+        });
+
+        // Register IVectorStore using the factory
+        services.AddSingleton<IVectorStore>(sp =>
+        {
+            var factory = sp.GetRequiredService<VectorStoreFactory>();
+            return factory.Create();
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Register vector store with explicit type selection.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="storeType">Type of store: "InMemory", "Qdrant".</param>
+    /// <param name="connectionString">Connection string for external stores.</param>
+    /// <param name="collectionName">Collection/index name.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddVectorStore(
+        this IServiceCollection services,
+        string storeType,
+        string? connectionString = null,
+        string collectionName = "pipeline_vectors")
+    {
+        var config = new VectorStoreConfiguration
+        {
+            Type = storeType,
+            ConnectionString = connectionString,
+            DefaultCollection = collectionName
+        };
+
+        return services.AddVectorStore(config);
     }
 }

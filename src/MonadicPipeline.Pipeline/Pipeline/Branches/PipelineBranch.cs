@@ -1,6 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.Collections.Immutable;
 using LangChain.DocumentLoaders;
+using LangChainPipeline.Domain.Vectors;
 
 namespace LangChainPipeline.Pipeline.Branches;
 
@@ -18,9 +19,9 @@ public sealed record PipelineBranch
     public string Name { get; }
 
     /// <summary>
-    /// The vector store associated with this branch.
+    /// The vector store associated with this branch (IOC-injectable).
     /// </summary>
-    public TrackedVectorStore Store { get; }
+    public IVectorStore Store { get; }
 
     /// <summary>
     /// The data source for this branch.
@@ -35,7 +36,7 @@ public sealed record PipelineBranch
     /// <summary>
     /// Creates a new PipelineBranch instance.
     /// </summary>
-    public PipelineBranch(string name, TrackedVectorStore store, DataSource source) : this(name, store, source, ImmutableList<PipelineEvent>.Empty)
+    public PipelineBranch(string name, IVectorStore store, DataSource source) : this(name, store, source, ImmutableList<PipelineEvent>.Empty)
     {
     }
 
@@ -48,7 +49,7 @@ public sealed record PipelineBranch
     /// <param name="source">The data source</param>
     /// <param name="events">The existing events to initialize with</param>
     /// <returns>A new PipelineBranch with the specified events</returns>
-    public static PipelineBranch WithEvents(string name, TrackedVectorStore store, DataSource source, IEnumerable<PipelineEvent> events)
+    public static PipelineBranch WithEvents(string name, IVectorStore store, DataSource source, IEnumerable<PipelineEvent> events)
     {
         return new PipelineBranch(name, store, source, events.ToImmutableList());
     }
@@ -56,7 +57,7 @@ public sealed record PipelineBranch
     /// <summary>
     /// Internal constructor for creating branches with existing events.
     /// </summary>
-    private PipelineBranch(string name, TrackedVectorStore store, DataSource source, ImmutableList<PipelineEvent> events)
+    private PipelineBranch(string name, IVectorStore store, DataSource source, ImmutableList<PipelineEvent> events)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         Store = store ?? throw new ArgumentNullException(nameof(store));
@@ -114,7 +115,7 @@ public sealed record PipelineBranch
     /// <param name="newName">The name for the forked branch</param>
     /// <param name="newStore">The vector store for the forked branch</param>
     /// <returns>A new PipelineBranch that is a fork of this one</returns>
-    public PipelineBranch Fork(string newName, TrackedVectorStore newStore)
+    public PipelineBranch Fork(string newName, IVectorStore newStore)
     {
         ArgumentNullException.ThrowIfNull(newName);
         ArgumentNullException.ThrowIfNull(newStore);

@@ -1,4 +1,4 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+﻿#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.Reflection; // for BindingFlags
 using System.Reactive.Linq;
 using System.Text;
@@ -16,6 +16,7 @@ using LangChainPipeline.Pipeline.Ingestion.Zip;
 using LangChainPipeline.CLI.Configuration;
 using LangChainPipeline.CLI.Services;
 using LangChainPipeline.CLI.Utilities;
+using LangChainPipeline.CLI.CodeGeneration;
 
 namespace LangChainPipeline.CLI;
 
@@ -31,6 +32,59 @@ public static class CliSteps
         string query = string.IsNullOrWhiteSpace(s.Query) ? (string.IsNullOrWhiteSpace(s.Prompt) ? topic : s.Prompt) : s.Query;
         return (topic, query);
     }
+
+    [PipelineToken("UseUniversalFix", "UniversalFix")] // Usage: UseUniversalFix('code=...|id=CS8600')
+    public static Step<CliPipelineState, CliPipelineState> UseUniversalFix(string? args = null)
+        => async s =>
+        {
+            string raw = ParseString(args);
+            string? code = null;
+            string? id = null;
+            
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    if (part.StartsWith("code=", StringComparison.OrdinalIgnoreCase)) code = part.Substring(5);
+                    else if (part.StartsWith("id=", StringComparison.OrdinalIgnoreCase)) id = part.Substring(3);
+                }
+            }
+
+            // Fallback to context or prompt if code not provided
+            code ??= s.Context;
+            if (string.IsNullOrWhiteSpace(code)) code = s.Prompt;
+            
+            if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(id))
+            {
+                Console.WriteLine("[universal-fix] Missing code or diagnostic ID");
+                return s;
+            }
+
+            try
+            {
+                var tool = new RoslynCodeTool();
+                var result = await tool.ApplyUniversalFixAsync(code, id);
+                
+                if (result.IsSuccess)
+                {
+                    s.Output = result.Value;
+                    s.Context = result.Value; // Update context for chaining
+                    s.Branch = s.Branch.WithReasoning(new FinalSpec(result.Value), $"Fix {id}", new List<ToolExecution>());
+                    if (s.Trace) Console.WriteLine($"[universal-fix] Applied fix for {id}");
+                }
+                else
+                {
+                    Console.WriteLine($"[universal-fix] Failed: {result.Error}");
+                    s.Branch = s.Branch.WithIngestEvent($"fix:error:{id}:{result.Error.Replace('|', ':')}", Array.Empty<string>());
+                }
+            }
+            catch (Exception ex)
+            {
+                s.Branch = s.Branch.WithIngestEvent($"fix:exception:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
+            }
+            
+            return s;
+        };
 
     [PipelineToken("UseIngest")]
     public static Step<CliPipelineState, CliPipelineState> UseIngest(string? args = null)
@@ -193,6 +247,195 @@ public static class CliSteps
         };
 
     /// <summary>
+    /// Performs self-critique on any prior output with Draft → Critique → Improve cycles.
+    /// Supports optional iteration count parameter: UseSelfCritique or UseSelfCritique('2').
+    /// </summary>
+    [PipelineToken("UseSelfCritique")]
+    public static Step<CliPipelineState, CliPipelineState> UseSelfCritique(string? args = null)
+        => async s =>
+        {
+            (string topic, string query) = Normalize(s);
+            
+            // Parse iteration count from args, default to 1
+            int iterations = 1;
+            if (!string.IsNullOrWhiteSpace(args))
+            {
+                string parsed = ParseString(args);
+                if (int.TryParse(parsed, out int value) && value > 0)
+                {
+                    iterations = value;
+                }
+            }
+
+            // Create self-critique agent
+            LangChainPipeline.Agent.SelfCritiqueAgent agent = new(s.Llm, s.Tools, s.Embed);
+            
+            // Generate with critique
+            Result<LangChainPipeline.Agent.SelfCritiqueResult, string> result = 
+                await agent.GenerateWithCritiqueAsync(s.Branch, topic, query, iterations, s.RetrievalK);
+
+            if (result.IsSuccess)
+            {
+                LangChainPipeline.Agent.SelfCritiqueResult critiqueResult = result.Value;
+                s.Branch = critiqueResult.Branch;
+                
+                // Format output to show Draft → Critique → Improved sections
+                StringBuilder output = new();
+                output.AppendLine("\n=== Self-Critique Result ===");
+                output.AppendLine($"Iterations: {critiqueResult.IterationsPerformed}");
+                output.AppendLine($"Confidence: {critiqueResult.Confidence}");
+                output.AppendLine("\n--- Draft ---");
+                output.AppendLine(critiqueResult.Draft);
+                output.AppendLine("\n--- Critique ---");
+                output.AppendLine(critiqueResult.Critique);
+                output.AppendLine("\n--- Improved Response ---");
+                output.AppendLine(critiqueResult.ImprovedResponse);
+                output.AppendLine("\n=========================");
+                
+                s.Output = output.ToString();
+                s.Context = critiqueResult.ImprovedResponse;
+                
+                if (s.Trace) 
+                {
+                    Console.WriteLine($"[trace] Self-critique completed with {critiqueResult.IterationsPerformed} iteration(s), confidence: {critiqueResult.Confidence}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[error] Self-critique failed: {result.Error}");
+                s.Branch = s.Branch.WithIngestEvent($"self-critique:error:{result.Error.Replace('|', ':')}", Array.Empty<string>());
+            }
+
+            return s;
+        };
+
+    /// <summary>
+    /// Streaming version of self-critique that shows incremental updates for each stage.
+    /// Supports optional iteration count parameter: UseStreamingSelfCritique or UseStreamingSelfCritique('2').
+    /// </summary>
+    [PipelineToken("UseStreamingSelfCritique", "StreamSelfCritique")]
+    public static Step<CliPipelineState, CliPipelineState> UseStreamingSelfCritique(string? args = null)
+        => async s =>
+        {
+            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
+
+            if (streamingModel == null)
+            {
+                // Check if using LiteLLM endpoint
+                string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
+                string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+
+                if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
+                    (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+                {
+                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                }
+            }
+
+            if (streamingModel == null)
+            {
+                Console.WriteLine("[streaming] Warning: Current model does not support streaming. Falling back to non-streaming self-critique.");
+                return await UseSelfCritique(args)(s);
+            }
+
+            (string topic, string query) = Normalize(s);
+            
+            // Parse iteration count from args, default to 1
+            int iterations = 1;
+            if (!string.IsNullOrWhiteSpace(args))
+            {
+                string parsed = ParseString(args);
+                if (int.TryParse(parsed, out int value) && value > 0)
+                {
+                    iterations = Math.Min(value, 5); // Cap at 5
+                }
+            }
+
+            System.Text.StringBuilder draftText = new();
+            System.Text.StringBuilder critiqueText = new();
+            System.Text.StringBuilder improvedText = new();
+
+            Console.WriteLine("\n=== Streaming Self-Critique ===");
+            Console.WriteLine($"Iterations: {iterations}\n");
+
+            // Perform critique-improve cycles with streaming
+            for (int i = 0; i < iterations; i++)
+            {
+                Console.WriteLine($"--- Iteration {i + 1} ---");
+                
+                // Stream Draft (only on first iteration)
+                if (i == 0)
+                {
+                    Console.WriteLine("\n[Draft]");
+                    draftText.Clear();
+                    await ReasoningArrows.StreamingDraftArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
+                        .Do(tuple =>
+                        {
+                            Console.Write(tuple.chunk);
+                            draftText.Append(tuple.chunk);
+                        })
+                        .LastAsync()
+                        .ForEachAsync(tuple => s.Branch = tuple.branch);
+                    Console.WriteLine();
+                }
+
+                // Stream Critique
+                Console.WriteLine("\n[Critique]");
+                critiqueText.Clear();
+                await ReasoningArrows.StreamingCritiqueArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
+                    .Do(tuple =>
+                    {
+                        Console.Write(tuple.chunk);
+                        critiqueText.Append(tuple.chunk);
+                    })
+                    .LastAsync()
+                    .ForEachAsync(tuple => s.Branch = tuple.branch);
+                Console.WriteLine();
+
+                // Stream Improvement
+                Console.WriteLine("\n[Improvement]");
+                improvedText.Clear();
+                await ReasoningArrows.StreamingImproveArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
+                    .Do(tuple =>
+                    {
+                        Console.Write(tuple.chunk);
+                        improvedText.Append(tuple.chunk);
+                    })
+                    .LastAsync()
+                    .ForEachAsync(tuple => s.Branch = tuple.branch);
+                Console.WriteLine("\n");
+            }
+
+            // Compute confidence
+            string lastCritique = critiqueText.ToString();
+            ConfidenceRating confidence = ConfidenceRating.Medium;
+            if (lastCritique.Contains("excellent", StringComparison.OrdinalIgnoreCase) || 
+                lastCritique.Contains("high quality", StringComparison.OrdinalIgnoreCase))
+            {
+                confidence = ConfidenceRating.High;
+            }
+            else if (lastCritique.Contains("needs work", StringComparison.OrdinalIgnoreCase) ||
+                     lastCritique.Contains("significant issues", StringComparison.OrdinalIgnoreCase))
+            {
+                confidence = ConfidenceRating.Low;
+            }
+
+            Console.WriteLine($"Confidence: {confidence}");
+            Console.WriteLine("=========================\n");
+
+            s.Output = improvedText.ToString();
+            s.Context = improvedText.ToString();
+
+            if (s.Trace)
+            {
+                Console.WriteLine($"[trace] Streaming self-critique completed with {iterations} iteration(s), confidence: {confidence}");
+            }
+
+            return s;
+        };
+
+    /// <summary>
     /// Streams draft reasoning content in real-time using Reactive Extensions.
     /// Outputs incremental chunks as they are generated by the LLM.
     /// </summary>
@@ -200,25 +443,32 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> UseStreamingDraft(string? args = null)
         => async s =>
         {
-            // Check if using LiteLLM endpoint via environment variable or create streaming model
-            string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
-            string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-            string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
 
-            if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(apiKey) ||
-                (!endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) && !endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+            if (streamingModel == null)
             {
-                Console.WriteLine("[streaming] Warning: Streaming requires LiteLLM endpoint (CHAT_ENDPOINT), falling back to non-streaming");
-                return await UseDraft(args)(s);
+                // Check if using LiteLLM endpoint via environment variable or create streaming model
+                string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
+                string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+
+                if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
+                    (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+                {
+                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                }
             }
 
-            // Create streaming model
-            LangChainPipeline.Providers.LiteLLMChatModel streamingModel = new(endpoint, apiKey, modelName);
+            if (streamingModel == null)
+            {
+                Console.WriteLine("[streaming] Warning: Current model does not support streaming and no LiteLLM endpoint configured. Falling back to non-streaming.");
+                return await UseDraft(args)(s);
+            }
 
             (string topic, string query) = Normalize(s);
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
 
-            await ReasoningArrows.StreamingDraftArrow(streamingModel, s.Tools, s.Embed, topic, query, s.RetrievalK)
+            await ReasoningArrows.StreamingDraftArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
                 .Do(tuple =>
                 {
                     Console.Write(tuple.chunk);
@@ -239,18 +489,26 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> UseStreamingCritique(string? args = null)
         => async s =>
         {
-            string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
-            string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-            string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
 
-            if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(apiKey) ||
-                (!endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) && !endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+            if (streamingModel == null)
             {
-                Console.WriteLine("[streaming] Warning: Streaming requires LiteLLM endpoint, falling back to non-streaming");
-                return await UseCritique(args)(s);
+                string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
+                string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+
+                if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
+                    (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+                {
+                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                }
             }
 
-            LangChainPipeline.Providers.LiteLLMChatModel streamingModel = new(endpoint, apiKey, modelName);
+            if (streamingModel == null)
+            {
+                Console.WriteLine("[streaming] Warning: Current model does not support streaming and no LiteLLM endpoint configured. Falling back to non-streaming.");
+                return await UseCritique(args)(s);
+            }
 
             (string topic, string query) = Normalize(s);
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
@@ -276,18 +534,26 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> UseStreamingImprove(string? args = null)
         => async s =>
         {
-            string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
-            string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-            string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
 
-            if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(apiKey) ||
-                (!endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) && !endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+            if (streamingModel == null)
             {
-                Console.WriteLine("[streaming] Warning: Streaming requires LiteLLM endpoint, falling back to non-streaming");
-                return await UseImprove(args)(s);
+                string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
+                string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+
+                if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
+                    (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+                {
+                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                }
             }
 
-            LangChainPipeline.Providers.LiteLLMChatModel streamingModel = new(endpoint, apiKey, modelName);
+            if (streamingModel == null)
+            {
+                Console.WriteLine("[streaming] Warning: Current model does not support streaming and no LiteLLM endpoint configured. Falling back to non-streaming.");
+                return await UseImprove(args)(s);
+            }
 
             (string topic, string query) = Normalize(s);
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
@@ -314,18 +580,26 @@ public static class CliSteps
     public static Step<CliPipelineState, CliPipelineState> UseStreamingPipeline(string? args = null)
         => async s =>
         {
-            string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
-            string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-            string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
 
-            if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(apiKey) ||
-                (!endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) && !endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+            if (streamingModel == null)
             {
-                Console.WriteLine("[streaming] Warning: Streaming requires LiteLLM endpoint, falling back to non-streaming");
-                return await UseRefinementLoop("1")(s);
+                string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
+                string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+
+                if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
+                    (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+                {
+                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                }
             }
 
-            LangChainPipeline.Providers.LiteLLMChatModel streamingModel = new(endpoint, apiKey, modelName);
+            if (streamingModel == null)
+            {
+                Console.WriteLine("[streaming] Warning: Current model does not support streaming and no LiteLLM endpoint configured. Falling back to non-streaming.");
+                return await UseRefinementLoop("1")(s);
+            }
 
             (string topic, string query) = Normalize(s);
             string currentStage = string.Empty;
@@ -795,9 +1069,9 @@ public static class CliSteps
     private static string ParseString(string? arg)
     {
         arg ??= string.Empty;
-        Match m = Regex.Match(arg, @"^'(?<s>.*)'$");
+        Match m = Regex.Match(arg, @"^'(?<s>.*)'$", RegexOptions.Singleline);
         if (m.Success) return m.Groups["s"].Value;
-        m = Regex.Match(arg, @"^""(?<s>.*)""$");
+        m = Regex.Match(arg, @"^""(?<s>.*)""$", RegexOptions.Singleline);
         if (m.Success) return m.Groups["s"].Value;
         return arg;
     }
@@ -1260,1007 +1534,75 @@ public static class CliSteps
             return s;
         };
 
-    [PipelineToken("EnhanceMarkdown", "ImproveMarkdown", "RewriteMarkdown")]
-    public static Step<CliPipelineState, CliPipelineState> EnhanceMarkdown(string? args = null)
-        => async s =>
-        {
-            Dictionary<string, string> options = ParseKeyValueArgs(args);
-            if (!options.TryGetValue("file", out string? fileValue) || string.IsNullOrWhiteSpace(fileValue))
-            {
-                s.Branch = s.Branch.WithIngestEvent("markdown:error:no-file", Array.Empty<string>());
-                return s;
-            }
-
-            int iterations = 1;
-            if (options.TryGetValue("iterations", out string? iterationsRaw) && int.TryParse(iterationsRaw, out int parsedIterations) && parsedIterations > 0)
-            {
-                iterations = Math.Min(parsedIterations, 10);
-            }
-
-            int contextCount = s.RetrievalK;
-            if (options.TryGetValue("context", out string? contextRaw) && int.TryParse(contextRaw, out int parsedContext) && parsedContext >= 0)
-            {
-                contextCount = parsedContext;
-            }
-            contextCount = Math.Clamp(contextCount, 0, 16);
-
-            bool createBackup = true;
-            if (options.TryGetValue("backup", out string? backupRaw))
-            {
-                createBackup = ParseBool(backupRaw, true);
-            }
-
-            string? goal = options.TryGetValue("goal", out string? goalValue) ? goalValue : null;
-            goal = ChooseFirstNonEmpty(goal, s.Prompt, s.Topic, s.Query);
-
-            string basePath = s.Branch.Source.Value as string ?? Environment.CurrentDirectory;
-            string resolvedFile = Path.IsPathRooted(fileValue)
-                ? Path.GetFullPath(fileValue)
-                : Path.GetFullPath(Path.Combine(basePath, fileValue));
-
-            if (!File.Exists(resolvedFile))
-            {
-                s.Branch = s.Branch.WithIngestEvent($"markdown:missing:{resolvedFile}", Array.Empty<string>());
-                return s;
-            }
-
-            if (createBackup)
-            {
-                try
-                {
-                    string backupPath = resolvedFile + ".bak";
-                    if (!File.Exists(backupPath))
-                    {
-                        File.Copy(resolvedFile, backupPath, overwrite: false);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    s.Branch = s.Branch.WithIngestEvent($"markdown:backup-failed:{ex.GetType().Name}:{resolvedFile}", Array.Empty<string>());
-                }
-            }
-
-            for (int iteration = 1; iteration <= iterations; iteration++)
-            {
-                string original = await File.ReadAllTextAsync(resolvedFile);
-                List<string> contextBlocks = await BuildMarkdownContextAsync(s, resolvedFile, goal, contextCount);
-                string prompt = BuildMarkdownRewritePrompt(resolvedFile, original, goal, contextBlocks, iteration, iterations);
-
-                try
-                {
-                    (string response, List<ToolExecution> toolCalls) = await s.Llm.GenerateWithToolsAsync(prompt);
-                    string improved = NormalizeMarkdownOutput(response);
-                    if (string.IsNullOrWhiteSpace(improved))
-                    {
-                        improved = original;
-                    }
-
-                    bool changed = !string.Equals(improved.Trim(), original.Trim(), StringComparison.Ordinal);
-                    if (changed)
-                    {
-                        await File.WriteAllTextAsync(resolvedFile, improved);
-                    }
-
-                    DocumentRevision revision = new DocumentRevision(resolvedFile, improved, iteration, goal);
-                    s.Branch = s.Branch.WithReasoning(revision, prompt, toolCalls);
-                    s.Output = improved;
-                    s.Context = string.Join("\n---\n", contextBlocks);
-
-                    if (!changed)
-                    {
-                        break;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    s.Branch = s.Branch.WithIngestEvent($"markdown:error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
-                    break;
-                }
-            }
-
-            return s;
-        };
-
-    [PipelineToken("SwitchModel", "Model")] // Usage: SwitchModel('model=gpt-4o-mini|embed=text-embedding-3-small|remote')
-    public static Step<CliPipelineState, CliPipelineState> SwitchModel(string? args = null)
-        => async s =>
-        {
-            await Task.Yield(); // ensure truly async to satisfy analyzer (treat warnings as errors)
-            // Parse args
-            string? newModel = null; string? newEmbed = null; bool forceRemote = false;
-            string raw = ParseString(args);
-            if (!string.IsNullOrWhiteSpace(raw))
-            {
-                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                {
-                    if (part.StartsWith("model=", StringComparison.OrdinalIgnoreCase)) newModel = part.Substring(6);
-                    else if (part.StartsWith("embed=", StringComparison.OrdinalIgnoreCase)) newEmbed = part.Substring(6);
-                    else if (part.Equals("remote", StringComparison.OrdinalIgnoreCase)) forceRemote = true;
-                }
-            }
-            if (string.IsNullOrWhiteSpace(newModel) && string.IsNullOrWhiteSpace(newEmbed)) return s; // nothing to do
-            // Rebuild chat model similar to Program.cs logic but simplified, prioritizing remote if key present OR remote flag
-            (string? endpoint, string? key, ChatEndpointType endpointType) = ChatConfig.Resolve();
-            IChatCompletionModel? model = null;
-            if (!string.IsNullOrWhiteSpace(key) && (forceRemote || !string.IsNullOrWhiteSpace(newModel)))
-            {
-                try
-                {
-                    string baseUrl = string.IsNullOrWhiteSpace(endpoint) ? "https://api.openai.com" : endpoint!;
-                    // Create appropriate model based on detected endpoint type
-                    model = endpointType switch
-                    {
-                        ChatEndpointType.OllamaCloud => new OllamaCloudChatModel(baseUrl, key!, newModel ?? "llama3.2", new ChatRuntimeSettings()),
-                        ChatEndpointType.OpenAiCompatible => new HttpOpenAiCompatibleChatModel(baseUrl, key!, newModel ?? "gpt-4o-mini", new ChatRuntimeSettings()),
-                        ChatEndpointType.Auto => new HttpOpenAiCompatibleChatModel(baseUrl, key!, newModel ?? "gpt-4o-mini", new ChatRuntimeSettings()),
-                        _ => new HttpOpenAiCompatibleChatModel(baseUrl, key!, newModel ?? "gpt-4o-mini", new ChatRuntimeSettings())
-                    };
-                }
-                catch (Exception ex)
-                {
-                    s.Branch = s.Branch.WithIngestEvent($"switchmodel:remote-fail:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
-                }
-            }
-            if (model == null && !string.IsNullOrWhiteSpace(newModel))
-            {
-                OllamaProvider provider = new OllamaProvider();
-                OllamaChatModel oc = new OllamaChatModel(provider, newModel);
-                if (newModel == "deepseek-coder:33b") oc.Settings = OllamaPresets.DeepSeekCoder33B;
-                model = new OllamaChatAdapter(oc);
-            }
-            if (model != null)
-            {
-                s.Llm = new ToolAwareChatModel(model, s.Tools); // preserve existing tool registry
-                s.Branch = s.Branch.WithIngestEvent($"switchmodel:chat:{newModel}", Array.Empty<string>());
-            }
-
-            if (!string.IsNullOrWhiteSpace(newEmbed))
-            {
-                try
-                {
-                    OllamaProvider provider = new OllamaProvider();
-                    OllamaEmbeddingModel oe = new OllamaEmbeddingModel(provider, newEmbed);
-                    s.Embed = new LangChainPipeline.Providers.OllamaEmbeddingAdapter(oe);
-                    s.Branch = s.Branch.WithIngestEvent($"switchmodel:embed:{newEmbed}", Array.Empty<string>());
-                }
-                catch (Exception ex)
-                {
-                    s.Branch = s.Branch.WithIngestEvent($"switchmodel:embed-error:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
-                }
-            }
-            return s;
-        };
-
-    [PipelineToken("UseChain", "Chain")] // Usage: UseChain('name=myChain|in=Prompt,Query|out=Output|trace')
-    public static Step<CliPipelineState, CliPipelineState> UseExternalChain(string? args = null)
-        => async s =>
-        {
-            string raw = ParseString(args);
-            if (string.IsNullOrWhiteSpace(raw)) return s;
-            string? name = null; string[] inKeys = Array.Empty<string>(); string[] outKeys = ["Output"]; bool trace = false;
-            foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                if (part.StartsWith("name=", StringComparison.OrdinalIgnoreCase)) name = part.Substring(5);
-                else if (part.StartsWith("in=", StringComparison.OrdinalIgnoreCase)) inKeys = part.Substring(3).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                else if (part.StartsWith("out=", StringComparison.OrdinalIgnoreCase)) outKeys = part.Substring(4).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                else if (part.Equals("trace", StringComparison.OrdinalIgnoreCase)) trace = true;
-            }
-            if (string.IsNullOrWhiteSpace(name)) { s.Branch = s.Branch.WithIngestEvent("chain:error:no-name", Array.Empty<string>()); return s; }
-            if (!ExternalChainRegistry.TryGet(name, out object? chain) || chain is null)
-            {
-                s.Branch = s.Branch.WithIngestEvent($"chain:error:not-found:{name}", Array.Empty<string>());
-                return s;
-            }
-            try
-            {
-                // Locate CallAsync via reflection
-                Type type = chain.GetType();
-                MethodInfo? call = type.GetMethod("CallAsync", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (call is null)
-                {
-                    s.Branch = s.Branch.WithIngestEvent($"chain:error:no-call:{name}", Array.Empty<string>()); return s;
-                }
-                // Try to create StackableChainValues if present
-                object valuesObj;
-                Type? valuesType = Type.GetType("LangChain.Chains.StackableChains.Context.StackableChainValues, LangChain");
-                if (valuesType is not null)
-                {
-                    valuesObj = Activator.CreateInstance(valuesType)!;
-                }
-                else
-                {
-                    // fallback: simple dictionary holder
-                    valuesObj = new Dictionary<string, object?>();
-                }
-                // Attempt to set Hook=null and populate Value dict
-                IDictionary<string, object?>? dict = null;
-                PropertyInfo? valueProp = valuesObj.GetType().GetProperty("Value", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (valueProp?.GetValue(valuesObj) is IDictionary<string, object?> existing)
-                {
-                    dict = existing;
-                }
-                else if (valuesObj is IDictionary<string, object?> fallbackDict)
-                {
-                    dict = fallbackDict;
-                }
-                // export selected keys
-                if (dict is not null)
-                {
-                    foreach (string key in inKeys)
-                    {
-                        string? val = key switch
-                        {
-                            "Prompt" => s.Prompt,
-                            "Query" => s.Query,
-                            "Topic" => s.Topic,
-                            "Context" => s.Context,
-                            "Output" => s.Output,
-                            _ => null
-                        };
-                        if (val is not null) dict[key] = val;
-                    }
-                }
-                if (trace) Console.WriteLine($"[chain] {name} export={dict?.Count ?? 0}");
-                object? taskObj = call.Invoke(chain, [valuesObj]);
-                if (taskObj is Task t) await t.ConfigureAwait(false);
-                // if Task<T> try to get Result object as updated values
-                if (taskObj?.GetType().IsGenericType == true && taskObj.GetType().GetProperty("Result") is { } rp)
-                {
-                    valuesObj = rp.GetValue(taskObj) ?? valuesObj;
-                }
-                // Re-read dictionary (some implementations mutate Value in place)
-                if (valueProp?.GetValue(valuesObj) is IDictionary<string, object?> dict2) dict = dict2;
-                // import
-                if (dict is not null)
-                {
-                    foreach (string key in outKeys)
-                    {
-                        if (dict.TryGetValue(key, out object? v) && v is not null)
-                        {
-                            switch (key)
-                            {
-                                case "Prompt": s.Prompt = v.ToString()!; break;
-                                case "Query": s.Query = v.ToString()!; break;
-                                case "Topic": s.Topic = v.ToString()!; break;
-                                case "Context": s.Context = v.ToString()!; break;
-                                case "Output": s.Output = v.ToString()!; break;
-                            }
-                        }
-                    }
-                }
-                if (trace) Console.WriteLine($"[chain] {name} import keys={string.Join(',', outKeys)}");
-            }
-            catch (Exception ex)
-            {
-                s.Branch = s.Branch.WithIngestEvent($"chain:error:{name}:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
-            }
-            return s;
-        };
-
-    [PipelineToken("VectorStats")] // Quick stats about vectors
-    public static Step<CliPipelineState, CliPipelineState> VectorStats(string? args = null)
-        => s =>
-        {
-            IEnumerable<Vector> all = s.Branch.Store is TrackedVectorStore tvs ? tvs.GetAll() : Enumerable.Empty<Vector>();
-            int count = 0;
-            double sumNorm = 0;
-            foreach (Vector v in all)
-            {
-                count++;
-                if (v.Embedding is { Length: > 0 })
-                {
-                    double norm = 0;
-                    foreach (float f in v.Embedding) norm += f * f;
-                    sumNorm += Math.Sqrt(norm);
-                }
-            }
-            double avgNorm = count == 0 ? 0 : sumNorm / count;
-            Console.WriteLine($"[vectorstats] count={count} avgNorm={avgNorm:F3}");
-            return Task.FromResult(s);
-        };
-
-    [PipelineToken("GenerateTokenDocs")] // regenerate docs/TOKENS.md
-    public static Step<CliPipelineState, CliPipelineState> GenerateTokenDocs(string? args = null)
-        => s =>
-        {
-            var groups = StepRegistry.GetTokenGroups()
-                .Select(g => new { g.Method, g.Names })
-                .OrderBy(g => g.Names.First(), StringComparer.OrdinalIgnoreCase);
-            List<string> lines = new List<string>
-            {
-                "# Pipeline Tokens Index",
-                "",
-                "| Token(s) | Declaring Method |",
-                "|----------|------------------|"
-            };
-            foreach (var g in groups)
-            {
-                lines.Add($"| {string.Join(", ", g.Names)} | {g.Method.DeclaringType?.Name}.{g.Method.Name}() |");
-            }
-            string docPath = Path.Combine(Environment.CurrentDirectory, "docs", "TOKENS.md");
-            Directory.CreateDirectory(Path.GetDirectoryName(docPath)!);
-            File.WriteAllText(docPath, string.Join(Environment.NewLine, lines));
-            Console.WriteLine($"[tokendocs] updated {docPath}");
-            return Task.FromResult(s);
-        };
-
-    /// <summary>
-    /// Guided installation step for missing dependencies.
-    /// When executed, this step can validate or install missing dependencies interactively.
-    /// </summary>
-    /// <param name="args">Optional parameters for dependency validation</param>
-    /// <returns>A step that processes dependency installation</returns>
-    [PipelineToken("InstallDependenciesGuided", "MissingDependencies", "ValidateMissingDependencies")]
+    [PipelineToken("InstallDependenciesGuided", "GuidedInstall")]
     public static Step<CliPipelineState, CliPipelineState> InstallDependenciesGuided(string? args = null)
         => async s =>
         {
-            await Task.Yield(); // Ensure truly async
-
             string raw = ParseString(args);
-            string? dependencyName = null;
-            string? errorMessage = null;
+            string? dep = null;
+            string? error = null;
 
             if (!string.IsNullOrWhiteSpace(raw))
             {
                 foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
-                    if (part.StartsWith("dep=", StringComparison.OrdinalIgnoreCase))
-                        dependencyName = part.Substring(4);
-                    else if (part.StartsWith("error=", StringComparison.OrdinalIgnoreCase))
-                        errorMessage = part.Substring(6);
+                    if (part.StartsWith("dep=", StringComparison.OrdinalIgnoreCase)) dep = part.Substring(4);
+                    else if (part.StartsWith("error=", StringComparison.OrdinalIgnoreCase)) error = part.Substring(6);
                 }
             }
 
-            Console.WriteLine("[guided-install] Dependency installation step triggered");
-
-            if (!string.IsNullOrWhiteSpace(dependencyName))
-            {
-                Console.WriteLine($"[guided-install] Missing dependency: {dependencyName}");
-            }
-
-            if (!string.IsNullOrWhiteSpace(errorMessage))
-            {
-                Console.WriteLine($"[guided-install] Error context: {errorMessage}");
-            }
-
-            // Record the guided installation event
-            string eventSource = string.IsNullOrWhiteSpace(dependencyName)
-                ? "guided-install:triggered:generic"
-                : $"guided-install:triggered:{dependencyName}";
+            string eventSource = "guided-install:triggered";
+            if (!string.IsNullOrEmpty(dep)) eventSource += $":{dep}";
+            if (!string.IsNullOrEmpty(error)) eventSource += $":{error}";
 
             s.Branch = s.Branch.WithIngestEvent(eventSource, Array.Empty<string>());
+            
+            // If we have a specific dependency, we might want to schedule a fix or prompt the user
+            if (!string.IsNullOrEmpty(dep))
+            {
+                if (s.Trace) Console.WriteLine($"[guided-install] Dependency missing: {dep}");
+                
+                // In a real scenario, this might trigger an interactive prompt or a specific agent flow
+            }
 
-            Console.WriteLine("[guided-install] To install dependencies, please run the appropriate package manager:");
-            Console.WriteLine("  - For .NET: dotnet restore");
-            Console.WriteLine("  - For npm: npm install");
-            Console.WriteLine("  - For Python: pip install -r requirements.txt");
-
-            return s;
+            return await Task.FromResult(s);
         };
 
-    private static Dictionary<string, string> ParseKeyValueArgs(string? args)
+    private static async Task<CliPipelineState> HandleDependencyExceptionAsync(CliPipelineState s, Exception ex)
     {
-        Dictionary<string, string> map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        string raw = ParseString(args);
-        if (string.IsNullOrWhiteSpace(raw))
+        string msg = ex.Message;
+        string? dep = null;
+
+        if (msg.Contains("NuGet", StringComparison.OrdinalIgnoreCase)) dep = "NuGet";
+        else if (msg.Contains("npm", StringComparison.OrdinalIgnoreCase)) dep = "NPM";
+        else if (msg.Contains("ollama", StringComparison.OrdinalIgnoreCase)) dep = "Ollama";
+        else if (msg.Contains("pip", StringComparison.OrdinalIgnoreCase)) dep = "Python";
+        else if (msg.Contains("docker", StringComparison.OrdinalIgnoreCase)) dep = "Docker";
+
+        if (dep != null)
         {
-            return map;
-        }
-
-        foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            int idx = part.IndexOf('=');
-            if (idx > 0)
-            {
-                string key = part.Substring(0, idx).Trim();
-                string value = part.Substring(idx + 1).Trim();
-                map[key] = value;
-            }
-            else
-            {
-                map[part.Trim()] = "true";
-            }
-        }
-
-        return map;
-    }
-
-    private static bool ParseBool(string raw, bool defaultValue)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return defaultValue;
-        if (bool.TryParse(raw, out bool parsed)) return parsed;
-        if (int.TryParse(raw, out int numeric)) return numeric != 0;
-
-        return raw.Equals("yes", StringComparison.OrdinalIgnoreCase)
-            || raw.Equals("y", StringComparison.OrdinalIgnoreCase)
-            || raw.Equals("on", StringComparison.OrdinalIgnoreCase)
-            || raw.Equals("enable", StringComparison.OrdinalIgnoreCase)
-            || raw.Equals("enabled", StringComparison.OrdinalIgnoreCase)
-            || raw.Equals("true", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string? ChooseFirstNonEmpty(params string?[] values)
-        => values.FirstOrDefault(static v => !string.IsNullOrWhiteSpace(v));
-
-    private static async Task<List<string>> BuildMarkdownContextAsync(
-        CliPipelineState state,
-        string filePath,
-        string? goal,
-        int count)
-    {
-        List<string> blocks = new List<string>();
-        if (count <= 0) return blocks;
-        if (state.Branch.Store is not TrackedVectorStore store) return blocks;
-
-        string? query = ChooseFirstNonEmpty(goal, Path.GetFileNameWithoutExtension(filePath), state.Topic, state.Query, state.Prompt);
-        query ??= Path.GetFileName(filePath);
-
-        try
-        {
-            IReadOnlyCollection<Document> docs = await store.GetSimilarDocuments(state.Embed, query, count);
-            foreach (Document? doc in docs)
-            {
-                if (doc is null || string.IsNullOrWhiteSpace(doc.PageContent))
-                {
-                    continue;
-                }
-
-                IDictionary<string, object> metadata = doc.Metadata ?? new Dictionary<string, object>();
-                if (metadata.TryGetValue("source", out object? sourceObj) && sourceObj is string src && PathsEqual(src, filePath))
-                {
-                    continue;
-                }
-
-                string sourceLabel = metadata.TryGetValue("relative", out object? relObj) && relObj is string rel && !string.IsNullOrWhiteSpace(rel)
-                    ? rel
-                    : metadata.TryGetValue("source", out object? srcObj2) && srcObj2 is string src2
-                        ? src2
-                        : "unknown source";
-
-                blocks.Add($"Source: {sourceLabel}\n{Truncate(doc.PageContent, 1200)}");
-
-                if (blocks.Count >= count)
-                {
-                    break;
-                }
-            }
-        }
-        catch
-        {
-            // Retrieval context is optional; ignore failures.
-        }
-
-        return blocks;
-    }
-
-    private static string BuildMarkdownRewritePrompt(
-        string filePath,
-        string original,
-        string? goal,
-        List<string> contextBlocks,
-        int iteration,
-        int totalIterations)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.AppendLine("You are an expert technical writer and software engineer.");
-        sb.AppendLine($"File path: {filePath}");
-        sb.AppendLine($"Iteration: {iteration} of {Math.Max(totalIterations, 1)}.");
-        if (!string.IsNullOrWhiteSpace(goal))
-        {
-            sb.AppendLine($"Primary objective: {goal}");
-        }
-
-        sb.AppendLine("Revise the markdown to improve clarity, accuracy, and usefulness while preserving correct facts.");
-        sb.AppendLine("Apply these rules:");
-        sb.AppendLine("- Keep markdown syntax valid and consistent.");
-        sb.AppendLine("- Promote clear headings, ordered steps, and actionable guidance.");
-        sb.AppendLine("- Integrate important insights from the provided context when relevant.");
-        sb.AppendLine("- Remove redundancies, fix typography, and ensure concise language.");
-        sb.AppendLine("- Respond with the complete rewritten markdown only; don't wrap it in fences or add narration.");
-
-        if (contextBlocks.Count > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine("Supporting context:");
-            foreach (string block in contextBlocks)
-            {
-                sb.AppendLine("---");
-                sb.AppendLine(block);
-            }
-        }
-
-        sb.AppendLine();
-        sb.AppendLine("Current markdown:");
-        sb.AppendLine("```markdown");
-        sb.AppendLine(original);
-        sb.AppendLine("```");
-        sb.AppendLine();
-        sb.AppendLine("Return the rewritten markdown now (no backticks, no extra commentary).");
-        return sb.ToString();
-    }
-
-    private static string NormalizeMarkdownOutput(string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
-        string text = raw.Trim();
-
-        if (text.StartsWith("```", StringComparison.Ordinal))
-        {
-            int firstLineBreak = text.IndexOf('\n');
-            if (firstLineBreak >= 0)
-            {
-                text = text[(firstLineBreak + 1)..];
-            }
-            int closingFence = text.LastIndexOf("```", StringComparison.Ordinal);
-            if (closingFence >= 0)
-            {
-                text = text[..closingFence];
-            }
-        }
-
-        if (text.StartsWith("Updated Markdown:", StringComparison.OrdinalIgnoreCase))
-        {
-            text = text.Substring("Updated Markdown:".Length).TrimStart();
-        }
-
-        return text.Trim();
-    }
-
-    private static string Truncate(string value, int maxLength)
-    {
-        if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
-        {
-            return value;
-        }
-
-        return value[..maxLength] + "…";
-    }
-
-    private static bool PathsEqual(string a, string b)
-    {
-        try
-        {
-            return string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
-        }
-    }
-
-    private static string TryGetRelativePath(string root, string path)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(path))
-            {
-                return path;
-            }
-
-            return Path.GetRelativePath(root, path);
-        }
-        catch
-        {
-            return path;
-        }
-    }
-
-    private static Dictionary<string, object> BuildDocumentMetadata(Document doc, string root, int fileIndex)
-    {
-        Dictionary<string, object> metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-        if (doc.Metadata is not null)
-        {
-            foreach (KeyValuePair<string, object> kvp in doc.Metadata)
-            {
-                metadata[kvp.Key] = kvp.Value ?? string.Empty;
-            }
-        }
-
-        string? sourcePath = null;
-        if (metadata.TryGetValue("source", out object? sourceObj) && sourceObj is string sourceStr)
-        {
-            sourcePath = sourceStr;
-        }
-        else if (metadata.TryGetValue("path", out object? pathObj) && pathObj is string pathStr)
-        {
-            sourcePath = pathStr;
-        }
-
-        if (!string.IsNullOrWhiteSpace(sourcePath))
-        {
-            try
-            {
-                sourcePath = Path.GetFullPath(sourcePath);
-            }
-            catch
-            {
-                // ignore invalid paths
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(sourcePath))
-        {
-            sourcePath = Path.Combine(root, $"document_{fileIndex}.md");
-        }
-
-        metadata["source"] = sourcePath;
-        metadata["relative"] = TryGetRelativePath(root, sourcePath);
-        return metadata;
-    }
-
-    private static Dictionary<string, object> BuildChunkMetadata(
-        Dictionary<string, object> baseMetadata,
-        int chunkIndex,
-        int chunkCount,
-        string vectorId)
-    {
-        Dictionary<string, object> metadata = new Dictionary<string, object>(baseMetadata, StringComparer.OrdinalIgnoreCase)
-        {
-            ["chunkIndex"] = chunkIndex,
-            ["chunkCount"] = chunkCount,
-            ["vectorId"] = vectorId
-        };
-        return metadata;
-    }
-
-    /// <summary>
-    /// Helper method to handle dependency exceptions by scheduling guided-install step via ingest-event.
-    /// Instead of calling Environment.Exit, this method emits an ingest-event to schedule the guided installation step.
-    /// </summary>
-    /// <param name="state">The current CLI pipeline state</param>
-    /// <param name="exception">The exception that occurred</param>
-    /// <returns>Updated pipeline state with appropriate ingest events</returns>
-    private static async Task<CliPipelineState> HandleDependencyExceptionAsync(CliPipelineState state, Exception exception)
-    {
-        await Task.Yield(); // Ensure truly async
-
-        string exceptionMessage = exception.Message;
-        string exceptionType = exception.GetType().Name;
-
-        // Known dependency-related exception patterns
-        Dictionary<string, string[]> dependencyPatterns = new Dictionary<string, string[]>
-        {
-            ["NuGet"] = new[] { "nuget", "package", "restore", "project.assets.json" },
-            ["NPM"] = new[] { "npm", "node_modules", "package.json" },
-            ["Python"] = new[] { "pip", "requirements.txt", "python package" },
-            ["Docker"] = new[] { "docker", "container", "image not found" },
-            ["Ollama"] = new[] { "ollama", "model not found", "pull model" },
-            ["LangChain"] = new[] { "langchain", "provider not found" }
-        };
-
-        // Check if exception matches known dependency patterns
-        string? matchedDependency = null;
-        foreach ((string depName, string[] patterns) in dependencyPatterns)
-        {
-            if (patterns.Any(pattern => exceptionMessage.Contains(pattern, StringComparison.OrdinalIgnoreCase)))
-            {
-                matchedDependency = depName;
-                break;
-            }
-        }
-
-        if (matchedDependency != null)
-        {
-            // Schedule guided-install step via ingest-event for known dependency issues
-            Console.WriteLine($"[dependency-handler] Detected {matchedDependency} dependency issue");
-
-            string eventSource = $"dependency:missing:{matchedDependency}:{exceptionType}";
-            state.Branch = state.Branch.WithIngestEvent(eventSource, Array.Empty<string>());
-
-            // Schedule the guided installation step to run
-            string scheduleEvent = $"schedule:guided-install|dep={matchedDependency}|error={exceptionMessage.Replace('|', ':')}";
-            state.Branch = state.Branch.WithIngestEvent(scheduleEvent, Array.Empty<string>());
-
-            Console.WriteLine($"[dependency-handler] Scheduled guided installation for {matchedDependency}");
-            Console.WriteLine($"[dependency-handler] You can manually run: InstallDependenciesGuided('dep={matchedDependency}')");
+            s.Branch = s.Branch.WithIngestEvent($"dependency:missing:{dep}", Array.Empty<string>());
+            s.Branch = s.Branch.WithIngestEvent("schedule:guided-install", Array.Empty<string>());
+            if (s.Trace) Console.WriteLine($"[dependency-handler] Detected missing dependency: {dep}");
         }
         else
         {
-            // For non-dependency errors, record generic error event (preserve previous behavior)
-            string errorEvent = $"error:generic:{exceptionType}:{exceptionMessage.Replace('|', ':')}";
-            state.Branch = state.Branch.WithIngestEvent(errorEvent, Array.Empty<string>());
-
-            Console.WriteLine($"[dependency-handler] Recorded generic error: {exceptionType}");
+            s.Branch = s.Branch.WithIngestEvent($"error:generic:{ex.GetType().Name}", Array.Empty<string>());
         }
 
-        return state;
+        return await Task.FromResult(s);
     }
 
-    // ============================================================================
-    // LangChain Native Pipe Operators
-    // These steps leverage the original LangChain.Chains.Chain static helpers
-    // to provide direct access to LangChain's pipe operator pattern
-    // ============================================================================
-
-    /// <summary>
-    /// Uses LangChain's native Chain.Set() operator to set a value in the chain context.
-    /// Wraps the LangChain operator for use in the monadic pipeline system.
-    /// </summary>
-    /// <param name="args">Format: 'value|key' where key defaults to 'text' if not specified</param>
-    [PipelineToken("LangChainSet", "ChainSet")]
-    public static Step<CliPipelineState, CliPipelineState> LangChainSetStep(string? args = null)
-    {
-        string raw = ParseString(args);
-        string[] parts = raw?.Split('|', 2, StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
-        string value = parts.Length > 0 ? parts[0] : string.Empty;
-        string key = parts.Length > 1 ? parts[1] : "text";
-
-        LangChain.Chains.HelperChains.SetChain chain = LangChain.Chains.Chain.Set(value, key);
-        return chain.ToStep(
-            inputKeys: Array.Empty<string>(),
-            outputKeys: new[] { key },
-            trace: false);
-    }
-
-    /// <summary>
-    /// Uses LangChain's native Chain.RetrieveSimilarDocuments() operator.
-    /// Retrieves similar documents from the vector store using the query.
-    /// </summary>
-    /// <param name="args">Optional: 'amount=5'</param>
-    [PipelineToken("LangChainRetrieve", "ChainRetrieve")]
+    // Aliases for Pipe.cs compatibility
     public static Step<CliPipelineState, CliPipelineState> LangChainRetrieveStep(string? args = null)
-        => async s =>
-        {
-            int amount = 5;
+        => RetrieveSimilarDocuments(args);
 
-            string raw = ParseString(args);
-            if (!string.IsNullOrWhiteSpace(raw))
-            {
-                Match m = Regex.Match(raw, @"amount=(\d+)");
-                if (m.Success && int.TryParse(m.Groups[1].Value, out int amt))
-                    amount = amt;
-            }
-
-            // Get vector collection from the branch store
-            if (s.Branch.Store is not IVectorCollection vectorCollection)
-            {
-                if (s.Trace) Console.WriteLine("[trace] LangChainRetrieve: store is not IVectorCollection");
-                return s;
-            }
-
-            // Set the input text from Query or Prompt
-            string query = string.IsNullOrWhiteSpace(s.Query) ? s.Prompt : s.Query;
-            if (string.IsNullOrWhiteSpace(query))
-            {
-                if (s.Trace) Console.WriteLine("[trace] LangChainRetrieve: no query text");
-                return s;
-            }
-
-            // Retrieve using the vector collection directly
-            try
-            {
-                // Create embedding for the query
-                float[] queryEmbedding = await s.Embed.CreateEmbeddingsAsync(query);
-
-                // Create search request
-                VectorSearchRequest request = new LangChain.Databases.VectorSearchRequest
-                {
-                    Embeddings = new[] { queryEmbedding }
-                };
-
-                VectorSearchSettings settings = new LangChain.Databases.VectorSearchSettings
-                {
-                    NumberOfResults = amount
-                };
-
-                // Search in vector store
-                VectorSearchResponse results = await vectorCollection.SearchAsync(request, settings);
-
-                s.Retrieved.Clear();
-                foreach (Vector result in results.Items)
-                {
-                    if (!string.IsNullOrWhiteSpace(result.Text))
-                    {
-                        s.Retrieved.Add(result.Text);
-                    }
-                }
-
-                if (s.Trace) Console.WriteLine($"[trace] LangChainRetrieve: retrieved {s.Retrieved.Count} documents");
-            }
-            catch (Exception ex)
-            {
-                if (s.Trace) Console.WriteLine($"[trace] LangChainRetrieve: error {ex.Message}");
-            }
-
-            return s;
-        };
-
-    /// <summary>
-    /// Uses LangChain's native Chain.CombineDocuments() operator.
-    /// Combines documents from the retrieved list into a single context string.
-    /// </summary>
-    /// <param name="args">Optional: 'inputKey=documents|outputKey=context'</param>
-    [PipelineToken("LangChainCombine", "ChainCombine")]
     public static Step<CliPipelineState, CliPipelineState> LangChainCombineStep(string? args = null)
-        => async s =>
-        {
-            string inputKey = "documents";
-            string outputKey = "context";
+        => CombineDocuments(args);
 
-            string raw = ParseString(args);
-            if (!string.IsNullOrWhiteSpace(raw))
-            {
-                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                {
-                    if (part.StartsWith("inputKey=", StringComparison.OrdinalIgnoreCase))
-                        inputKey = part.Substring(9);
-                    else if (part.StartsWith("outputKey=", StringComparison.OrdinalIgnoreCase))
-                        outputKey = part.Substring(10);
-                }
-            }
-
-            LangChain.Chains.HelperChains.StuffDocumentsChain chain = LangChain.Chains.Chain.CombineDocuments(inputKey, outputKey);
-
-            // Prepare documents from Retrieved list
-            List<Document> docs = s.Retrieved
-                .Where(r => !string.IsNullOrWhiteSpace(r))
-                .Select(text => new Document { PageContent = text })
-                .ToList();
-
-            if (docs.Count == 0)
-            {
-                if (s.Trace) Console.WriteLine("[trace] LangChainCombine: no documents to combine");
-                return s;
-            }
-
-            StackableChainValues values = new StackableChainValues();
-            values.Value[inputKey] = docs;
-
-            LangChain.Abstractions.Schema.IChainValues result = await chain.CallAsync(values);
-
-            if (result.Value.TryGetValue(outputKey, out object? context))
-            {
-                s.Context = context?.ToString() ?? string.Empty;
-                if (s.Trace) Console.WriteLine($"[trace] LangChainCombine: combined context length={s.Context.Length}");
-            }
-
-            return s;
-        };
-
-    /// <summary>
-    /// Uses LangChain's native Chain.Template() operator.
-    /// Applies a prompt template with variable substitution.
-    /// </summary>
-    /// <param name="args">Template string with {variable} placeholders</param>
-    [PipelineToken("LangChainTemplate", "ChainTemplate")]
     public static Step<CliPipelineState, CliPipelineState> LangChainTemplateStep(string? args = null)
-        => async s =>
-        {
-            string templateText = ParseString(args);
-            if (string.IsNullOrWhiteSpace(templateText))
-            {
-                if (s.Trace) Console.WriteLine("[trace] LangChainTemplate: no template provided");
-                return s;
-            }
+        => TemplateStep(args);
 
-            LangChain.Chains.HelperChains.PromptChain chain = LangChain.Chains.Chain.Template(templateText, "text");
-
-            StackableChainValues values = new StackableChainValues();
-            values.Value["context"] = s.Context;
-            values.Value["text"] = string.IsNullOrWhiteSpace(s.Query) ? s.Prompt : s.Query;
-            values.Value["question"] = values.Value["text"];
-            values.Value["input"] = values.Value["text"];
-            values.Value["prompt"] = s.Prompt;
-            values.Value["topic"] = s.Topic;
-            values.Value["query"] = s.Query;
-
-            LangChain.Abstractions.Schema.IChainValues result = await chain.CallAsync(values);
-
-            if (result.Value.TryGetValue("text", out object? output))
-            {
-                s.Prompt = output?.ToString() ?? string.Empty;
-                if (s.Trace) Console.WriteLine($"[trace] LangChainTemplate: formatted prompt length={s.Prompt.Length}");
-            }
-
-            return s;
-        };
-
-    /// <summary>
-    /// Uses LangChain's native Chain.LLM() operator.
-    /// Sends the prompt to the language model using LangChain's chain system.
-    /// </summary>
-    /// <param name="args">Optional: 'inputKey=text|outputKey=text'</param>
-    [PipelineToken("LangChainLLM", "ChainLLM")]
     public static Step<CliPipelineState, CliPipelineState> LangChainLlmStep(string? args = null)
-        => async s =>
-        {
-            string inputKey = "text";
-            string outputKey = "text";
-
-            string raw = ParseString(args);
-            if (!string.IsNullOrWhiteSpace(raw))
-            {
-                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                {
-                    if (part.StartsWith("inputKey=", StringComparison.OrdinalIgnoreCase))
-                        inputKey = part.Substring(9);
-                    else if (part.StartsWith("outputKey=", StringComparison.OrdinalIgnoreCase))
-                        outputKey = part.Substring(10);
-                }
-            }
-
-            // Extract the underlying IChatModel from ToolAwareChatModel
-            FieldInfo? llmField = s.Llm.GetType().GetField("_model", BindingFlags.NonPublic | BindingFlags.Instance);
-            if (llmField == null)
-            {
-                if (s.Trace) Console.WriteLine("[trace] LangChainLLM: cannot access underlying chat model");
-                return s;
-            }
-
-            IChatModel? chatModel = llmField.GetValue(s.Llm) as IChatModel;
-            if (chatModel == null)
-            {
-                if (s.Trace) Console.WriteLine("[trace] LangChainLLM: chat model is null");
-                return s;
-            }
-
-            LangChain.Chains.HelperChains.LLMChain chain = LangChain.Chains.Chain.LLM(chatModel, inputKey, outputKey);
-
-            StackableChainValues values = new StackableChainValues();
-            values.Value[inputKey] = s.Prompt;
-
-            LangChain.Abstractions.Schema.IChainValues result = await chain.CallAsync(values);
-
-            if (result.Value.TryGetValue(outputKey, out object? output))
-            {
-                s.Output = output?.ToString() ?? string.Empty;
-                s.Branch = s.Branch.WithReasoning(new FinalSpec(s.Output), s.Prompt, null);
-                if (s.Trace) Console.WriteLine($"[trace] LangChainLLM: output length={s.Output.Length}");
-            }
-
-            return s;
-        };
-
-    /// <summary>
-    /// Creates a complete RAG pipeline using LangChain native operators.
-    /// This demonstrates the pivot example pattern: Set | Retrieve | Combine | Template | LLM
-    /// </summary>
-    /// <param name="args">Optional: 'question=...|template=...|k=5'</param>
-    [PipelineToken("LangChainRAG", "ChainRAG")]
-    public static Step<CliPipelineState, CliPipelineState> LangChainRagPipeline(string? args = null)
-        => async s =>
-        {
-            string? question = null;
-            string? template = null;
-            int k = 5;
-
-            string raw = ParseString(args);
-            if (!string.IsNullOrWhiteSpace(raw))
-            {
-                foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                {
-                    if (part.StartsWith("question=", StringComparison.OrdinalIgnoreCase))
-                        question = part.Substring(9);
-                    else if (part.StartsWith("template=", StringComparison.OrdinalIgnoreCase))
-                        template = part.Substring(9);
-                    else if (part.StartsWith("k=", StringComparison.OrdinalIgnoreCase) && int.TryParse(part.AsSpan(2), out int kVal))
-                        k = kVal;
-                }
-            }
-
-            // Use default question and template if not provided
-            question ??= string.IsNullOrWhiteSpace(s.Query) ? s.Prompt : s.Query;
-            template ??= @"Use the following pieces of context to answer the question at the end. If the answer is not in context then just say that you don't know, don't try to make up an answer. Keep the answer as short as possible.
-{context}
-Question: {text}
-Helpful Answer:";
-
-            if (string.IsNullOrWhiteSpace(question))
-            {
-                if (s.Trace) Console.WriteLine("[trace] LangChainRAG: no question provided");
-                return s;
-            }
-
-            // Set the question
-            s.Query = question;
-            s.Prompt = question;
-
-            // Execute the pipeline: Retrieve | Combine | Template | LLM
-            s = await LangChainRetrieveStep($"amount={k}")(s);
-            s = await LangChainCombineStep()(s);
-            s = await LangChainTemplateStep($"'{template}'")(s);
-            s = await LangChainLlmStep()(s);
-
-            return s;
-        };
+        => LlmStep(args);
 }

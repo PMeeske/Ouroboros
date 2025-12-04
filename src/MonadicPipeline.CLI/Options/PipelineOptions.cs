@@ -58,11 +58,14 @@ sealed class PipelineOptions
     [Option("agent", Required = false, HelpText = "Enable iterative agent loop with tool execution", Default = false)]
     public bool Agent { get; set; }
 
-    [Option("agent-mode", Required = false, HelpText = "Agent implementation: simple|lc|react", Default = "lc")]
+    [Option("agent-mode", Required = false, HelpText = "Agent implementation: simple|lc|react|self-critique", Default = "lc")]
     public string AgentMode { get; set; } = "lc";
 
     [Option("agent-max-steps", Required = false, HelpText = "Max iterations for agent loop", Default = 6)]
     public int AgentMaxSteps { get; set; } = 6;
+
+    [Option("critique-iterations", Required = false, HelpText = "Number of critique-improve cycles for self-critique mode (max 5)", Default = 1)]
+    public int CritiqueIterations { get; set; } = 1;
 
     [Option("strict-model", Required = false, HelpText = "Fail instead of falling back when remote model invalid", Default = false)]
     public bool StrictModel { get; set; }

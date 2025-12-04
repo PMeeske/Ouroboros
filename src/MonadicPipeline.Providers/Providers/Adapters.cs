@@ -4,6 +4,7 @@ using System.Text;
 using LangChain.Providers.Ollama;
 using Polly;
 using Polly.Retry;
+using System.Reactive.Linq;
 
 namespace LangChainPipeline.Providers;
 
@@ -16,10 +17,18 @@ public interface IChatCompletionModel
 }
 
 /// <summary>
+/// Extended contract for models that support streaming responses.
+/// </summary>
+public interface IStreamingChatModel : IChatCompletionModel
+{
+    IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default);
+}
+
+/// <summary>
 /// Adapter for local Ollama models. We attempt to call the SDK when available,
 /// falling back to a deterministic stub when the local daemon is not reachable.
 /// </summary>
-public sealed class OllamaChatAdapter : IChatCompletionModel
+public sealed class OllamaChatAdapter : IStreamingChatModel
 {
     private readonly OllamaChatModel _model;
 
@@ -57,6 +66,31 @@ public sealed class OllamaChatAdapter : IChatCompletionModel
             // Deterministic fallback keeps the pipeline running in offline scenarios.
             return $"[ollama-fallback:{_model.GetType().Name}] {prompt}";
         }
+    }
+
+    /// <inheritdoc/>
+    public IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
+    {
+        return Observable.Create<string>(async (observer, token) =>
+        {
+            try
+            {
+                IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(prompt, cancellationToken: token);
+                await foreach (LangChain.Providers.ChatResponse? chunk in stream.WithCancellation(token).ConfigureAwait(false))
+                {
+                    string text = ExtractResponseText(chunk);
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        observer.OnNext(text);
+                    }
+                }
+                observer.OnCompleted();
+            }
+            catch (Exception ex)
+            {
+                observer.OnError(ex);
+            }
+        });
     }
 
     private static string ExtractResponseText(object? response)
@@ -191,7 +225,7 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
 /// Uses Ollama's native JSON API format with /api/generate endpoint.
 /// Includes Polly exponential backoff retry policy to handle rate limiting.
 /// </summary>
-public sealed class OllamaCloudChatModel : IChatCompletionModel
+public sealed class OllamaCloudChatModel : IStreamingChatModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
@@ -263,6 +297,74 @@ public sealed class OllamaCloudChatModel : IChatCompletionModel
         return $"[ollama-cloud-fallback:{_model}] {prompt}";
     }
 
+    /// <inheritdoc/>
+    public IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
+    {
+        return Observable.Create<string>(async (observer, token) =>
+        {
+            try
+            {
+                using JsonContent payload = JsonContent.Create(new
+                {
+                    model = _model,
+                    prompt = prompt,
+                    stream = true,
+                    options = new
+                    {
+                        temperature = _settings.Temperature,
+                        num_predict = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null
+                    }
+                });
+
+                HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
+                {
+                    return await _client.PostAsync("/api/generate", payload, token).ConfigureAwait(false);
+                }).ConfigureAwait(false);
+                
+                response.EnsureSuccessStatusCode();
+
+                using Stream responseStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+                using StreamReader reader = new StreamReader(responseStream);
+
+                while (!reader.EndOfStream && !token.IsCancellationRequested)
+                {
+                    string? line = await reader.ReadLineAsync().ConfigureAwait(false);
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    try
+                    {
+                        using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(line);
+                        if (doc.RootElement.TryGetProperty("response", out System.Text.Json.JsonElement responseElement))
+                        {
+                            string? content = responseElement.GetString();
+                            if (!string.IsNullOrEmpty(content))
+                            {
+                                observer.OnNext(content);
+                            }
+                        }
+                        
+                        if (doc.RootElement.TryGetProperty("done", out System.Text.Json.JsonElement doneElement) && doneElement.GetBoolean())
+                        {
+                            observer.OnCompleted();
+                            return;
+                        }
+                    }
+                    catch (System.Text.Json.JsonException)
+                    {
+                        // Skip malformed JSON chunks
+                        continue;
+                    }
+                }
+
+                observer.OnCompleted();
+            }
+            catch (Exception ex)
+            {
+                observer.OnError(ex);
+            }
+        });
+    }
+
     public void Dispose()
     {
         _client?.Dispose();
@@ -274,7 +376,7 @@ public sealed class OllamaCloudChatModel : IChatCompletionModel
 /// Uses standard /v1/chat/completions endpoint with messages format.
 /// Includes Polly exponential backoff retry policy to handle rate limiting.
 /// </summary>
-public sealed class LiteLLMChatModel : IChatCompletionModel
+public sealed class LiteLLMChatModel : IStreamingChatModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
@@ -376,14 +478,7 @@ public sealed class LiteLLMChatModel : IChatCompletionModel
         _client?.Dispose();
     }
 
-    /// <summary>
-    /// Streams reasoning content as an observable sequence, parsing both content and reasoning_content fields.
-    /// Enables reactive composition for real-time reasoning pipeline visualization.
-    /// Uses Polly retry policy for resilient streaming.
-    /// </summary>
-    /// <param name="prompt">The input prompt.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>Observable sequence of reasoning content chunks.</returns>
+    /// <inheritdoc/>
     public System.IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
     {
         return System.Reactive.Linq.Observable.Create<string>(async (observer, token) =>

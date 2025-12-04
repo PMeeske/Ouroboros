@@ -33,7 +33,7 @@
 
   <!-- Exclude legacy xUnit tests in Tests folder now covered by SpecFlow -->
   <ItemGroup>
-    <Compile Remove="Tests\**\*.cs" />
+    <!-- <Compile Remove="Tests\**\*.cs" /> -->
     <!-- Temporarily exclude DslAssistantSimulationSteps until FluentAssertions usage is fixed -->
     <Compile Remove="Steps\DslAssistantSimulationSteps.cs" />
     <Compile Remove="Features\DslAssistantSimulation.feature.cs" />

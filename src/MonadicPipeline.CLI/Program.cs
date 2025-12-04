@@ -13,6 +13,9 @@ using LangChainPipeline.Diagnostics; // added
 using LangChainPipeline.Options;
 using Microsoft.Extensions.Hosting;
 
+using LangChainPipeline.Tools.MeTTa; // added
+using MonadicPipeline.CLI; // added
+
 try
 {
     // Optional minimal host
@@ -53,6 +56,45 @@ static async Task ParseAndRunAsync(string[] args)
             (AssistOptions o) => RunAssistAsync(o),
             _ => Task.CompletedTask
         );
+}
+
+static async Task RunMeTTaDockerTest()
+{
+    Console.WriteLine("=== Test: Subprocess MeTTa Engine (Docker) ===");
+
+    using var engine = new SubprocessMeTTaEngine();
+
+    // 1. Basic Math
+    var result = await engine.ExecuteQueryAsync("(+ 1 2)", CancellationToken.None);
+
+    result.Match(
+        success => Console.WriteLine($"✓ Basic Query succeeded: {success}"),
+        error => Console.WriteLine($"✗ Basic Query failed: {error}"));
+
+    // 2. Motto Initialization
+    Console.WriteLine("\n=== Test: Motto Initialization ===");
+    var initStep = new MottoSteps.MottoInitializeStep(engine);
+    var initResult = await initStep.ExecuteAsync(Unit.Value, CancellationToken.None);
+    initResult.Match(
+        success => Console.WriteLine("✓ Motto Initialized"),
+        error => Console.WriteLine($"✗ Motto Initialization failed: {error}")
+    );
+
+    // 3. Motto Chat (Mock)
+    // Note: This requires OPENAI_API_KEY or similar in the docker container if it actually calls LLM.
+    // If not configured, it might fail or return error.
+    // But we can at least verify the MeTTa command generation and execution attempt.
+    
+    Console.WriteLine("\n=== Test: Motto Chat Step ===");
+    var chatStep = new MottoSteps.MottoChatStep(engine);
+    // We expect this to fail if no API key, but the command should run.
+    var chatResult = await chatStep.ExecuteAsync("Hello", CancellationToken.None);
+    chatResult.Match(
+        success => Console.WriteLine($"✓ Chat Response: {success}"),
+        error => Console.WriteLine($"? Chat Result: {error} (Expected if no API key)")
+    );
+
+    Console.WriteLine("✓ Subprocess MeTTa engine test completed\n");
 }
 
 static async Task RunPipelineDslAsync(string dsl, string modelName, string embedName, string sourcePath, int k, bool trace, ChatRuntimeSettings? settings = null, PipelineOptions? pipelineOpts = null)
@@ -558,12 +600,18 @@ static void LogBackendSelection(string model, ChatRuntimeSettings settings, AskO
     Console.WriteLine($"[INIT] Backend={backend} Model={model} Temp={settings.Temperature} MaxTok={settings.MaxTokens} Key={maskedKey} Endpoint={(endpoint ?? "(none)")}");
 }
 
-static Task RunTestsAsync(TestOptions o)
+static async Task RunTestsAsync(TestOptions o)
 {
     Console.WriteLine("=== Running MonadicPipeline Tests ===\n");
 
     try
     {
+        if (o.MeTTa)
+        {
+            await RunMeTTaDockerTest();
+            return;
+        }
+
         if (o.All || o.IntegrationOnly)
         {
             // await LangChainPipeline.Tests.OllamaCloudIntegrationTests.RunAllTests();
@@ -621,7 +669,6 @@ static Task RunTestsAsync(TestOptions o)
         Console.Error.WriteLine(ex.StackTrace);
         Environment.Exit(1);
     }
-    return Task.CompletedTask;
 }
 
 static async Task RunOrchestratorAsync(OrchestratorOptions o)

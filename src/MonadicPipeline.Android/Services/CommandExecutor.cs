@@ -218,7 +218,7 @@ public class CommandResult
     /// <summary>
     /// Gets or sets a value indicating whether the command succeeded
     /// </summary>
-    public bool Success { get; set; }
+    public bool Success { get; set; } 
 }
 
 /// <summary>

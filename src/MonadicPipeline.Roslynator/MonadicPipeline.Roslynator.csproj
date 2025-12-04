@@ -2,45 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <LangVersion>14.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>MonadicPipeline.Roslynator</RootNamespace>
-    <AssemblyName>MonadicPipeline.Roslynator</AssemblyName>
-    <Product>MonadicPipeline Roslynator</Product>
-    <Description>Roslyn-based code fix implementations for MonadicPipeline</Description>
-    <Copyright>Copyright © 2025</Copyright>
-    <Version>1.0.0</Version>
-
-    <!-- Temporarily relax analyzers to unblock builds/tests -->
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <WarningsNotAsErrors>CS1591;CS1570</WarningsNotAsErrors>
-
-    <!-- Code Quality & Documentation -->
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
-    <EnableNETAnalyzers>false</EnableNETAnalyzers>
-    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
-    <RunAnalyzersDuringLiveAnalysis>false</RunAnalyzersDuringLiveAnalysis>
-    <AnalysisLevel>latest</AnalysisLevel>
+    <RootNamespace>LangChainPipeline.Roslynator</RootNamespace>
+    <IsRoslynComponent>true</IsRoslynComponent>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Roslyn Code Analysis -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.12.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Static Analysis -->
-    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Roslynator.Analyzers" Version="4.7.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.8.0" />
+    <PackageReference Include="System.Composition" Version="8.0.0" />
   </ItemGroup>
 
 </Project>

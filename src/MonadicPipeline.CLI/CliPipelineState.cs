@@ -1,4 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+using LangChainPipeline.Domain.Vectors;
+
 namespace LangChainPipeline.CLI;
 
 public sealed class CliPipelineState
@@ -19,6 +21,12 @@ public sealed class CliPipelineState
     public List<string> Retrieved { get; } = [];
     public string Context { get; set; } = string.Empty;
     public string Output { get; set; } = string.Empty;
+
+    // MeTTa Engine State
+    public LangChainPipeline.Tools.MeTTa.IMeTTaEngine? MeTTaEngine { get; set; }
+
+    // Vector Store (IOC-based, can be InMemory, Qdrant, Pinecone, etc.)
+    public IVectorStore? VectorStore { get; set; }
 
     // Streaming infrastructure
     public StreamingContext? Streaming { get; set; }

@@ -39,9 +39,9 @@ namespace LangChainPipeline.Features
         public static async System.Threading.Tasks.Task FeatureSetupAsync()
         {
             testRunner = TechTalk.SpecFlow.TestRunnerManager.GetTestRunnerForAssembly(null, TechTalk.SpecFlow.xUnit.SpecFlowPlugin.XUnitParallelWorkerTracker.Instance.GetWorkerId());
-            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "DSL Assistant Simulation Integration Tests", "  As a developer using MonadicPipeline CLI\r\n  I want AI-powered DSL assistance wi" +
-                    "th code generation\r\n  So that I can build pipelines efficiently like GitHub Copi" +
-                    "lot", ProgrammingLanguage.CSharp, featureTags);
+            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "DSL Assistant Simulation Integration Tests", "  As a developer using MonadicPipeline CLI\n  I want AI-powered DSL assistance wit" +
+                    "h code generation\n  So that I can build pipelines efficiently like GitHub Copilo" +
+                    "t", ProgrammingLanguage.CSharp, featureTags);
             await testRunner.OnFeatureStartAsync(featureInfo);
         }
         

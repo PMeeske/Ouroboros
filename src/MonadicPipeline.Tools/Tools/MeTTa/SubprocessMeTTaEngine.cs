@@ -27,14 +27,66 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
     /// <param name="mettaExecutablePath">Path to the MeTTa executable (defaults to 'metta' in PATH).</param>
     public SubprocessMeTTaEngine(string? mettaExecutablePath = null)
     {
-        string execPath = mettaExecutablePath ?? "metta";
+        // If path is provided, use it (legacy/local override).
+        // If not, default to docker execution using a Python REPL wrapper
+        // because the 'metta' binary in the container may not support --repl or interactive mode correctly via pipe.
+        bool useDocker = mettaExecutablePath == null;
+        string fileName = mettaExecutablePath ?? "docker";
+        
+        // Python script to act as a REPL for MeTTa with motto and ollama_agent support
+        string pythonScript = 
+            "import sys\n" +
+            "import os\n" +
+            "from hyperon import MeTTa\n" +
+            "sys.stderr.write('MeTTa REPL Started\\n')\n" +
+            "sys.stderr.flush()\n" +
+            "m = MeTTa()\n" +
+            "m.run('!(import! &self motto)')\n" +
+            "m.run('!(import! &self ollama_agent)')\n" +
+            "while True:\n" +
+            "    try:\n" +
+            "        line = sys.stdin.readline()\n" +
+            "        if not line: break\n" +
+            "        line = line.strip()\n" +
+            "        if not line: continue\n" +
+            "        if not line.startswith('!'): line = '!' + line\n" +
+            "        result = m.run(line)\n" +
+            "        print(result)\n" +
+            "        sys.stdout.flush()\n" +
+            "    except Exception as e:\n" +
+            "        print(f'Error: {e}')\n" +
+            "        sys.stdout.flush()";
+
+        // Escape double quotes for the command line argument
+        string escapedScript = pythonScript.Replace("\"", "\\\"");
+
+        string currentDir = Directory.GetCurrentDirectory();
+        
+        // Pass environment variables to Docker container
+        StringBuilder envArgs = new StringBuilder();
+        string[] envVarsToPass = { "OPENAI_API_KEY", "OPENAI_API_BASE", "OPENAI_API_MODEL" };
+        foreach (var envVar in envVarsToPass)
+        {
+            string? value = Environment.GetEnvironmentVariable(envVar);
+            if (!string.IsNullOrEmpty(value))
+            {
+                // If running on Windows, we might need to be careful with quoting, but -e VAR=VAL usually works.
+                // Better to use -e VAR (pass-through) if the value is in the host env.
+                // Docker supports -e VAR to take from host.
+                envArgs.Append($" -e {envVar}");
+            }
+        }
+
+        string arguments = useDocker 
+            ? $"run --rm -i --add-host=host.docker.internal:host-gateway {envArgs} my-metta-agent python3 -c \"{escapedScript}\"" 
+            : "--repl";
 
         try
         {
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                FileName = execPath,
-                Arguments = "--repl",
+                FileName = fileName,
+                Arguments = arguments,
                 UseShellExecute = false,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
@@ -78,7 +130,7 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
 
             // Read response with timeout
             using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(TimeSpan.FromSeconds(10));
+            cts.CancelAfter(TimeSpan.FromSeconds(30));
 
             string? response = await this.stdout.ReadLineAsync();
 
