@@ -12,7 +12,16 @@ using LangChain.DocumentLoaders;
 /// </summary>
 public sealed class SelfCritiqueAgent
 {
+    /// <summary>
+    /// Maximum number of critique-improve cycles allowed.
+    /// Set to 5 to balance thoroughness with performance and cost.
+    /// </summary>
     private const int MaxIterations = 5;
+
+    /// <summary>
+    /// Default timeout per iteration to prevent long-running operations.
+    /// Set to 30 seconds as a reasonable limit for LLM generation.
+    /// </summary>
     private static readonly TimeSpan DefaultIterationTimeout = TimeSpan.FromSeconds(30);
 
     private readonly ToolAwareChatModel llm;
@@ -163,20 +172,37 @@ public sealed class SelfCritiqueAgent
     }
 
     /// <summary>
+    /// Quality indicators that suggest high confidence in the response.
+    /// </summary>
+    private static readonly string[] HighQualityIndicators =
+    [
+        "excellent",
+        "well done",
+        "high quality",
+        "no major issues"
+    ];
+
+    /// <summary>
+    /// Quality indicators that suggest low confidence in the response.
+    /// </summary>
+    private static readonly string[] LowQualityIndicators =
+    [
+        "needs work",
+        "significant issues",
+        "poor quality"
+    ];
+
+    /// <summary>
     /// Computes confidence rating based on iterations performed and critique content.
     /// </summary>
     private static ConfidenceRating ComputeConfidence(int iterations, string critique)
     {
-        // Simple heuristic: more iterations generally means higher confidence
-        // Also check if critique indicates satisfaction
-        bool indicatesHighQuality = critique.Contains("excellent", StringComparison.OrdinalIgnoreCase) ||
-                                     critique.Contains("well done", StringComparison.OrdinalIgnoreCase) ||
-                                     critique.Contains("high quality", StringComparison.OrdinalIgnoreCase) ||
-                                     critique.Contains("no major issues", StringComparison.OrdinalIgnoreCase);
+        // Check if critique indicates high or low quality
+        bool indicatesHighQuality = HighQualityIndicators.Any(indicator =>
+            critique.Contains(indicator, StringComparison.OrdinalIgnoreCase));
 
-        bool indicatesLowQuality = critique.Contains("needs work", StringComparison.OrdinalIgnoreCase) ||
-                                    critique.Contains("significant issues", StringComparison.OrdinalIgnoreCase) ||
-                                    critique.Contains("poor quality", StringComparison.OrdinalIgnoreCase);
+        bool indicatesLowQuality = LowQualityIndicators.Any(indicator =>
+            critique.Contains(indicator, StringComparison.OrdinalIgnoreCase));
 
         if (indicatesHighQuality && iterations >= 2)
         {

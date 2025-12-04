@@ -24,7 +24,7 @@ public class SelfCritiqueAgentTests
     /// <summary>
     /// Tests that the agent generates a proper self-critique result with one iteration.
     /// </summary>
-    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
+    /// <returns>A task representing the asynchronous test operation</returns>
     [Fact]
     public async Task GenerateWithCritique_ShouldProduceDraftCritiqueImprove_WithOneIteration()
     {
@@ -51,7 +51,7 @@ public class SelfCritiqueAgentTests
     /// <summary>
     /// Tests that the agent respects the maximum iteration limit of 5.
     /// </summary>
-    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
+    /// <returns>A task representing the asynchronous test operation</returns>
     [Fact]
     public async Task GenerateWithCritique_ShouldCapIterations_AtMaximumFive()
     {
@@ -74,7 +74,7 @@ public class SelfCritiqueAgentTests
     /// <summary>
     /// Tests that the agent performs multiple critique-improve cycles correctly.
     /// </summary>
-    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
+    /// <returns>A task representing the asynchronous test operation</returns>
     [Fact]
     public async Task GenerateWithCritique_ShouldPerformMultipleIterations_Correctly()
     {
@@ -106,7 +106,7 @@ public class SelfCritiqueAgentTests
     /// <summary>
     /// Tests that confidence rating is High when critique indicates high quality.
     /// </summary>
-    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
+    /// <returns>A task representing the asynchronous test operation</returns>
     [Fact]
     public async Task GenerateWithCritique_ShouldReturnHighConfidence_WhenCritiqueIndicatesQuality()
     {
@@ -129,7 +129,7 @@ public class SelfCritiqueAgentTests
     /// <summary>
     /// Tests that confidence rating is Low when critique indicates poor quality.
     /// </summary>
-    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
+    /// <returns>A task representing the asynchronous test operation</returns>
     [Fact]
     public async Task GenerateWithCritique_ShouldReturnLowConfidence_WhenCritiqueIndicatesPoorQuality()
     {
@@ -152,7 +152,7 @@ public class SelfCritiqueAgentTests
     /// <summary>
     /// Tests that the agent produces event sourcing for each step.
     /// </summary>
-    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
+    /// <returns>A task representing the asynchronous test operation</returns>
     [Fact]
     public async Task GenerateWithCritique_ShouldEmitEvents_ForEachStep()
     {
@@ -190,7 +190,7 @@ public class SelfCritiqueAgentTests
     /// <summary>
     /// Tests that invalid iteration counts are normalized properly.
     /// </summary>
-    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
+    /// <returns>A task representing the asynchronous test operation</returns>
     [Fact]
     public async Task GenerateWithCritique_ShouldNormalizeInvalidIterations_ToMinimumOne()
     {
@@ -213,7 +213,7 @@ public class SelfCritiqueAgentTests
     /// <summary>
     /// Tests that the improved response differs from the initial draft.
     /// </summary>
-    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
+    /// <returns>A task representing the asynchronous test operation</returns>
     [Fact]
     public async Task GenerateWithCritique_ShouldProduceDifferentImprovedResponse_FromDraft()
     {
