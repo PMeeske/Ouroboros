@@ -127,9 +127,11 @@ class ModelConfig:
     
     def __post_init__(self):
         """Validate configuration after initialization."""
-        # Use object.__setattr__ for frozen dataclasses
+        # Validation-only __post_init__ works fine with frozen=True
         if not 0 <= self.temperature <= 2:
             raise ValueError("Temperature must be between 0 and 2")
+        if self.max_tokens <= 0:
+            raise ValueError("max_tokens must be positive")
 
 # ❌ Bad: Using old-style Optional
 from typing import Optional, Union
@@ -145,6 +147,7 @@ Proper async code:
 import asyncio
 from typing import AsyncIterator
 from contextlib import asynccontextmanager
+import aiohttp
 
 class OllamaClient:
     """Async client for Ollama API."""
@@ -187,6 +190,20 @@ class OllamaClient:
         except aiohttp.ClientError as e:
             raise RuntimeError(f"API error: {e}")
 
+# ✅ Good: Using @asynccontextmanager decorator
+@asynccontextmanager
+async def get_ollama_client(base_url: str) -> AsyncIterator[OllamaClient]:
+    """Context manager factory for OllamaClient."""
+    client = OllamaClient(base_url)
+    async with client:
+        yield client
+
+# Usage with decorator pattern
+async def main():
+    async with get_ollama_client("http://localhost:11434") as client:
+        response = await client.generate("Hello")
+        print(response)
+
 # ✅ Good: Async iterator
 async def stream_responses(
     client: OllamaClient, 
@@ -198,7 +215,7 @@ async def stream_responses(
         yield response
 
 # Usage
-async def main():
+async def process_prompts():
     async with OllamaClient("http://localhost:11434") as client:
         async for response in stream_responses(client, ["Q1", "Q2"]):
             print(response)
