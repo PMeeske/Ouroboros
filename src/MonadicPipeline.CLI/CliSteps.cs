@@ -247,6 +247,195 @@ public static class CliSteps
         };
 
     /// <summary>
+    /// Performs self-critique on any prior output with Draft → Critique → Improve cycles.
+    /// Supports optional iteration count parameter: UseSelfCritique or UseSelfCritique('2').
+    /// </summary>
+    [PipelineToken("UseSelfCritique")]
+    public static Step<CliPipelineState, CliPipelineState> UseSelfCritique(string? args = null)
+        => async s =>
+        {
+            (string topic, string query) = Normalize(s);
+            
+            // Parse iteration count from args, default to 1
+            int iterations = 1;
+            if (!string.IsNullOrWhiteSpace(args))
+            {
+                string parsed = ParseString(args);
+                if (int.TryParse(parsed, out int value) && value > 0)
+                {
+                    iterations = value;
+                }
+            }
+
+            // Create self-critique agent
+            LangChainPipeline.Agent.SelfCritiqueAgent agent = new(s.Llm, s.Tools, s.Embed);
+            
+            // Generate with critique
+            Result<LangChainPipeline.Agent.SelfCritiqueResult, string> result = 
+                await agent.GenerateWithCritiqueAsync(s.Branch, topic, query, iterations, s.RetrievalK);
+
+            if (result.IsSuccess)
+            {
+                LangChainPipeline.Agent.SelfCritiqueResult critiqueResult = result.Value;
+                s.Branch = critiqueResult.Branch;
+                
+                // Format output to show Draft → Critique → Improved sections
+                StringBuilder output = new();
+                output.AppendLine("\n=== Self-Critique Result ===");
+                output.AppendLine($"Iterations: {critiqueResult.IterationsPerformed}");
+                output.AppendLine($"Confidence: {critiqueResult.Confidence}");
+                output.AppendLine("\n--- Draft ---");
+                output.AppendLine(critiqueResult.Draft);
+                output.AppendLine("\n--- Critique ---");
+                output.AppendLine(critiqueResult.Critique);
+                output.AppendLine("\n--- Improved Response ---");
+                output.AppendLine(critiqueResult.ImprovedResponse);
+                output.AppendLine("\n=========================");
+                
+                s.Output = output.ToString();
+                s.Context = critiqueResult.ImprovedResponse;
+                
+                if (s.Trace) 
+                {
+                    Console.WriteLine($"[trace] Self-critique completed with {critiqueResult.IterationsPerformed} iteration(s), confidence: {critiqueResult.Confidence}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[error] Self-critique failed: {result.Error}");
+                s.Branch = s.Branch.WithIngestEvent($"self-critique:error:{result.Error.Replace('|', ':')}", Array.Empty<string>());
+            }
+
+            return s;
+        };
+
+    /// <summary>
+    /// Streaming version of self-critique that shows incremental updates for each stage.
+    /// Supports optional iteration count parameter: UseStreamingSelfCritique or UseStreamingSelfCritique('2').
+    /// </summary>
+    [PipelineToken("UseStreamingSelfCritique", "StreamSelfCritique")]
+    public static Step<CliPipelineState, CliPipelineState> UseStreamingSelfCritique(string? args = null)
+        => async s =>
+        {
+            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
+
+            if (streamingModel == null)
+            {
+                // Check if using LiteLLM endpoint
+                string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
+                string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+
+                if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
+                    (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
+                {
+                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                }
+            }
+
+            if (streamingModel == null)
+            {
+                Console.WriteLine("[streaming] Warning: Current model does not support streaming. Falling back to non-streaming self-critique.");
+                return await UseSelfCritique(args)(s);
+            }
+
+            (string topic, string query) = Normalize(s);
+            
+            // Parse iteration count from args, default to 1
+            int iterations = 1;
+            if (!string.IsNullOrWhiteSpace(args))
+            {
+                string parsed = ParseString(args);
+                if (int.TryParse(parsed, out int value) && value > 0)
+                {
+                    iterations = Math.Min(value, 5); // Cap at 5
+                }
+            }
+
+            System.Text.StringBuilder draftText = new();
+            System.Text.StringBuilder critiqueText = new();
+            System.Text.StringBuilder improvedText = new();
+
+            Console.WriteLine("\n=== Streaming Self-Critique ===");
+            Console.WriteLine($"Iterations: {iterations}\n");
+
+            // Perform critique-improve cycles with streaming
+            for (int i = 0; i < iterations; i++)
+            {
+                Console.WriteLine($"--- Iteration {i + 1} ---");
+                
+                // Stream Draft (only on first iteration)
+                if (i == 0)
+                {
+                    Console.WriteLine("\n[Draft]");
+                    draftText.Clear();
+                    await ReasoningArrows.StreamingDraftArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
+                        .Do(tuple =>
+                        {
+                            Console.Write(tuple.chunk);
+                            draftText.Append(tuple.chunk);
+                        })
+                        .LastAsync()
+                        .ForEachAsync(tuple => s.Branch = tuple.branch);
+                    Console.WriteLine();
+                }
+
+                // Stream Critique
+                Console.WriteLine("\n[Critique]");
+                critiqueText.Clear();
+                await ReasoningArrows.StreamingCritiqueArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
+                    .Do(tuple =>
+                    {
+                        Console.Write(tuple.chunk);
+                        critiqueText.Append(tuple.chunk);
+                    })
+                    .LastAsync()
+                    .ForEachAsync(tuple => s.Branch = tuple.branch);
+                Console.WriteLine();
+
+                // Stream Improvement
+                Console.WriteLine("\n[Improvement]");
+                improvedText.Clear();
+                await ReasoningArrows.StreamingImproveArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
+                    .Do(tuple =>
+                    {
+                        Console.Write(tuple.chunk);
+                        improvedText.Append(tuple.chunk);
+                    })
+                    .LastAsync()
+                    .ForEachAsync(tuple => s.Branch = tuple.branch);
+                Console.WriteLine("\n");
+            }
+
+            // Compute confidence
+            string lastCritique = critiqueText.ToString();
+            ConfidenceRating confidence = ConfidenceRating.Medium;
+            if (lastCritique.Contains("excellent", StringComparison.OrdinalIgnoreCase) || 
+                lastCritique.Contains("high quality", StringComparison.OrdinalIgnoreCase))
+            {
+                confidence = ConfidenceRating.High;
+            }
+            else if (lastCritique.Contains("needs work", StringComparison.OrdinalIgnoreCase) ||
+                     lastCritique.Contains("significant issues", StringComparison.OrdinalIgnoreCase))
+            {
+                confidence = ConfidenceRating.Low;
+            }
+
+            Console.WriteLine($"Confidence: {confidence}");
+            Console.WriteLine("=========================\n");
+
+            s.Output = improvedText.ToString();
+            s.Context = improvedText.ToString();
+
+            if (s.Trace)
+            {
+                Console.WriteLine($"[trace] Streaming self-critique completed with {iterations} iteration(s), confidence: {confidence}");
+            }
+
+            return s;
+        };
+
+    /// <summary>
     /// Streams draft reasoning content in real-time using Reactive Extensions.
     /// Outputs incremental chunks as they are generated by the LLM.
     /// </summary>
