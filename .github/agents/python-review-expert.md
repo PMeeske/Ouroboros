@@ -126,17 +126,25 @@ class ModelConfig:
     temperature: float = 0.7
     
     def __post_init__(self):
-        """Validate configuration after initialization."""
-        # Validation-only __post_init__ works fine with frozen=True
+        """
+        Validate configuration after initialization.
+        
+        Note: Validation-only __post_init__ works perfectly with frozen=True.
+        The frozen constraint only prevents *modification* after __init__ completes.
+        Validation that raises exceptions is allowed.
+        """
         if not 0 <= self.temperature <= 2:
             raise ValueError("Temperature must be between 0 and 2")
         if self.max_tokens <= 0:
             raise ValueError("max_tokens must be positive")
 
-# ❌ Bad: Using old-style Optional
+# ❌ Bad: Using old-style Optional (pre-Python 3.10)
 from typing import Optional, Union
-def get_config(key: str) -> Union[str, int, None]:
-    pass
+
+def get_config_old_style(key: str) -> Union[str, int, None]:
+    """Old-style type hints - prefer | syntax in Python 3.10+."""
+    config = {"key1": "value", "key2": 42}
+    return config.get(key)
 ```
 
 ### 3. Async/Await Patterns

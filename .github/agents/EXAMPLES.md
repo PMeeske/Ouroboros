@@ -274,7 +274,7 @@ The agent would provide:
 
 ```python
 # ollama_client.py
-from typing import Optional, List, Dict, Any
+from typing import Optional, Any
 import logging
 import aiohttp
 import asyncio
