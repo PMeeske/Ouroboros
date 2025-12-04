@@ -1,3 +1,4 @@
+using System.Text;
 using LangChainPipeline.CLI;
 using LangChainPipeline.Tools.MeTTa;
 using MonadicPipeline.CLI;
@@ -200,5 +201,82 @@ public static class MeTTaCliSteps
             }
 
             return Task.FromResult(s);
+        };
+
+    /// <summary>
+    /// Applies self-critique to MeTTa-based reasoning output.
+    /// Works with MottoChat or MottoOllama outputs by wrapping them in critique cycles.
+    /// Usage: MottoOllama('msg=...') | MottoSelfCritique or MottoSelfCritique('2')
+    /// </summary>
+    [PipelineToken("MottoSelfCritique", "MeTTaCritique")]
+    public static Step<CliPipelineState, CliPipelineState> MottoSelfCritique(string? args = null)
+        => async s =>
+        {
+            // Parse iteration count from args, default to 1
+            int iterations = 1;
+            if (!string.IsNullOrWhiteSpace(args))
+            {
+                string parsed = ParseString(args);
+                if (int.TryParse(parsed, out int value) && value > 0)
+                {
+                    iterations = Math.Min(value, 5); // Cap at 5
+                }
+            }
+
+            // Use the current output or context as the initial draft
+            string initialContent = !string.IsNullOrWhiteSpace(s.Output) ? s.Output : s.Context;
+            
+            if (string.IsNullOrWhiteSpace(initialContent))
+            {
+                Console.WriteLine("[metta-critique] No content to critique. Run MottoChat or MottoOllama first.");
+                return s;
+            }
+
+            // Create a draft state from the MeTTa output
+            s.Branch = s.Branch.WithReasoning(new Draft(initialContent), "MeTTa initial output", new List<ToolExecution>());
+
+            // Now apply self-critique using the standard agent
+            LangChainPipeline.Agent.SelfCritiqueAgent agent = new(s.Llm, s.Tools, s.Embed);
+            
+            // We need to extract topic and query
+            string topic = !string.IsNullOrWhiteSpace(s.Topic) ? s.Topic : "MeTTa reasoning output";
+            string query = !string.IsNullOrWhiteSpace(s.Query) ? s.Query : topic;
+
+            Result<LangChainPipeline.Agent.SelfCritiqueResult, string> result = 
+                await agent.GenerateWithCritiqueAsync(s.Branch, topic, query, iterations, s.RetrievalK);
+
+            if (result.IsSuccess)
+            {
+                LangChainPipeline.Agent.SelfCritiqueResult critiqueResult = result.Value;
+                s.Branch = critiqueResult.Branch;
+                
+                // Format output to show the critique process
+                StringBuilder output = new();
+                output.AppendLine("\n=== MeTTa Self-Critique Result ===");
+                output.AppendLine($"Iterations: {critiqueResult.IterationsPerformed}");
+                output.AppendLine($"Confidence: {critiqueResult.Confidence}");
+                output.AppendLine("\n--- Original MeTTa Output ---");
+                output.AppendLine(critiqueResult.Draft);
+                output.AppendLine("\n--- Critique ---");
+                output.AppendLine(critiqueResult.Critique);
+                output.AppendLine("\n--- Improved Response ---");
+                output.AppendLine(critiqueResult.ImprovedResponse);
+                output.AppendLine("\n=========================");
+                
+                s.Output = output.ToString();
+                s.Context = critiqueResult.ImprovedResponse;
+                
+                if (s.Trace) 
+                {
+                    Console.WriteLine($"[metta-critique] Self-critique completed with {critiqueResult.IterationsPerformed} iteration(s), confidence: {critiqueResult.Confidence}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[metta-critique] Failed: {result.Error}");
+                s.Branch = s.Branch.WithIngestEvent($"metta-critique:error:{result.Error.Replace('|', ':')}", Array.Empty<string>());
+            }
+
+            return s;
         };
 }
