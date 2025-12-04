@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f0a1f"/>
+      <stop offset="100%" style="stop-color:#1a1033"/>
+    </linearGradient>
+    <linearGradient id="snake" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="50%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#a855f7"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  
+  <!-- Decorative grid lines -->
+  <g stroke="#6366f1" stroke-width="0.5" opacity="0.1">
+    <line x1="0" y1="160" x2="1280" y2="160"/>
+    <line x1="0" y1="320" x2="1280" y2="320"/>
+    <line x1="0" y1="480" x2="1280" y2="480"/>
+    <line x1="320" y1="0" x2="320" y2="640"/>
+    <line x1="640" y1="0" x2="640" y2="640"/>
+    <line x1="960" y1="0" x2="960" y2="640"/>
+  </g>
+  
+  <!-- Ouroboros icon (left side) -->
+  <g transform="translate(220, 320) scale(0.55)">
+    <!-- Outer glow -->
+    <circle cx="0" cy="0" r="280" fill="none" stroke="url(#snake)" stroke-width="3" opacity="0.2" filter="url(#glow)"/>
+    
+    <!-- Snake body -->
+    <path d="
+      M 0 -200
+      C 110 -200 200 -110 200 0
+      C 200 110 110 200 0 200
+      C -110 200 -200 110 -200 0
+      C -200 -86 -154 -160 -80 -188
+      L -90 -160
+      C -150 -136 -180 -74 -180 0
+      C -180 99 -99 180 0 180
+      C 99 180 180 99 180 0
+      C 180 -99 99 -180 0 -180
+      L 0 -200
+      Z
+    " fill="url(#snake)"/>
+    
+    <!-- Snake head -->
+    <ellipse cx="-45" cy="-194" rx="55" ry="35" fill="url(#snake)"/>
+    
+    <!-- Eye -->
+    <ellipse cx="-70" cy="-198" rx="10" ry="12" fill="#fef3c7"/>
+    <ellipse cx="-72" cy="-198" rx="5" ry="7" fill="#1e1b4b"/>
+    <circle cx="-74" cy="-200" r="2" fill="#fff"/>
+    
+    <!-- Tail in mouth -->
+    <path d="M -100 -190 Q -125 -175 -115 -155 L -85 -175 Z" fill="url(#snake)"/>
+    
+    <!-- Center infinity -->
+    <path d="M -55 0 C -55 -25 -25 -25 0 0 C 25 25 55 25 55 0 C 55 -25 25 -25 0 0 C -25 25 -55 25 -55 0 Z" 
+          fill="none" stroke="#c4b5fd" stroke-width="10" stroke-linecap="round" filter="url(#glow)"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="480" y="290" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="120" font-weight="bold" fill="#ffffff">Ouroboros</text>
+  
+  <!-- Tagline -->
+  <text x="480" y="370" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="32" fill="#a78bfa">Functional AI Pipeline System</text>
+  
+  <!-- Feature pills -->
+  <g font-family="system-ui, sans-serif" font-size="18">
+    <rect x="480" y="420" width="140" height="36" rx="18" fill="#6366f1" opacity="0.3"/>
+    <text x="550" y="444" text-anchor="middle" fill="#c4b5fd">Monadic</text>
+    
+    <rect x="640" y="420" width="140" height="36" rx="18" fill="#8b5cf6" opacity="0.3"/>
+    <text x="710" y="444" text-anchor="middle" fill="#c4b5fd">LangChain</text>
+    
+    <rect x="800" y="420" width="140" height="36" rx="18" fill="#a855f7" opacity="0.3"/>
+    <text x="870" y="444" text-anchor="middle" fill="#c4b5fd">Meta-AI</text>
+    
+    <rect x="960" y="420" width="140" height="36" rx="18" fill="#7c3aed" opacity="0.3"/>
+    <text x="1030" y="444" text-anchor="middle" fill="#c4b5fd">.NET 8</text>
+  </g>
+  
+  <!-- GitHub corner accent -->
+  <path d="M1280 0 L1200 0 L1280 80 Z" fill="#6366f1" opacity="0.3"/>
+</svg>
