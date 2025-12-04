@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the resilience mechanisms implemented across all GitHub Actions workflows in the MonadicPipeline project. These mechanisms ensure workflows handle transient failures gracefully, timeout appropriately, and don't block deployments due to non-critical failures.
+This document describes the resilience mechanisms implemented across all GitHub Actions workflows in the Ouroboros project. These mechanisms ensure workflows handle transient failures gracefully, timeout appropriately, and don't block deployments due to non-critical failures.
 
 ## Resilience Mechanisms
 

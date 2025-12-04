@@ -61,15 +61,15 @@ jobs:
         # Build all projects except tests (tests have TreatWarningsAsErrors=true which fails on NuGet vulnerability warnings)
         # Tests will be built during the test step with appropriate flags
         for project in \
-          src/MonadicPipeline.Agent/MonadicPipeline.Agent.csproj \
-          src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj \
-          src/MonadicPipeline.Core/MonadicPipeline.Core.csproj \
-          src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj \
-          src/MonadicPipeline.Examples/MonadicPipeline.Examples.csproj \
-          src/MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj \
-          src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj \
-          src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj \
-          src/MonadicPipeline.WebApi/MonadicPipeline.WebApi.csproj
+          src/Ouroboros.Agent/Ouroboros.Agent.csproj \
+          src/Ouroboros.CLI/Ouroboros.CLI.csproj \
+          src/Ouroboros.Core/Ouroboros.Core.csproj \
+          src/Ouroboros.Domain/Ouroboros.Domain.csproj \
+          src/Ouroboros.Examples/Ouroboros.Examples.csproj \
+          src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj \
+          src/Ouroboros.Providers/Ouroboros.Providers.csproj \
+          src/Ouroboros.Tools/Ouroboros.Tools.csproj \
+          src/Ouroboros.WebApi/Ouroboros.WebApi.csproj
         do
           dotnet build --configuration Release --no-restore "$project"
         done
@@ -92,7 +92,7 @@ jobs:
             --collect:"XPlat Code Coverage" \
             --results-directory ./TestResults \
             --logger "trx;LogFileName=test-results.trx" \
-            src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj
+            src/Ouroboros.Tests/Ouroboros.Tests.csproj
           EXIT_CODE=$?
           
           if [ $EXIT_CODE -ne 0 ]; then
@@ -117,7 +117,7 @@ jobs:
           -reports:"TestResults/*/coverage.cobertura.xml" \
           -targetdir:"CoverageReport" \
           -reporttypes:"Html;MarkdownSummaryGithub;Cobertura;Badges" \
-          -assemblyfilters:"+MonadicPipeline.*;+LangChainPipeline.*"
+          -assemblyfilters:"+Ouroboros.*;+LangChainPipeline.*"
 
     - name: Display coverage summary
       if: always()
@@ -217,7 +217,7 @@ jobs:
       with:
         files: CoverageReport/Cobertura.xml
         flags: unittests
-        name: codecov-monadicpipeline
+        name: codecov-Ouroboros
         fail_ci_if_error: false
         verbose: true
         # Add token if you have it configured as a secret
@@ -249,15 +249,15 @@ jobs:
 
     - name: Run benchmarks
       run: |
-        if [ -d "src/MonadicPipeline.Benchmarks" ]; then
-          cd src/MonadicPipeline.Benchmarks
+        if [ -d "src/Ouroboros.Benchmarks" ]; then
+          cd src/Ouroboros.Benchmarks
           dotnet run -c Release --framework net10.0 -- --exporters json --artifacts ../../../BenchmarkDotNet.Artifacts
-        elif [ -d "tests/MonadicPipeline.Benchmarks" ]; then
-          cd tests/MonadicPipeline.Benchmarks
+        elif [ -d "tests/Ouroboros.Benchmarks" ]; then
+          cd tests/Ouroboros.Benchmarks
           dotnet run -c Release --framework net10.0 -- --exporters json --artifacts ../../../BenchmarkDotNet.Artifacts
         else
           echo "Benchmark project not found, skipping..."
-          echo "Looked in: src/MonadicPipeline.Benchmarks and tests/MonadicPipeline.Benchmarks"
+          echo "Looked in: src/Ouroboros.Benchmarks and tests/Ouroboros.Benchmarks"
         fi
 
     - name: Upload benchmark results

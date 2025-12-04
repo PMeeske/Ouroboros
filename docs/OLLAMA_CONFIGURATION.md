@@ -160,7 +160,7 @@ To verify settings:
 4. **Close Other Apps**: When running large models, close browser tabs and other heavy apps
 5. **Use Appropriate Context**: Smaller context windows are faster but hold less conversation history
 
-## Integration with Your MonadicPipeline Project
+## Integration with Your Ouroboros Project
 
 Your `appsettings.json` files already point to:
 - **Development**: `http://localhost:11434`

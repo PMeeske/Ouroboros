@@ -2,13 +2,13 @@
 
 ## Summary
 
-Successfully implemented **Phase 2: Self-Model & Metacognition** for MonadicPipeline's self-improving agent architecture.
+Successfully implemented **Phase 2: Self-Model & Metacognition** for Ouroboros's self-improving agent architecture.
 
 ## Files Created (10 files, ~2,434 lines of code)
 
 ### Core Implementation (6 files)
 ```
-src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/
+src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/
 ├── ICapabilityRegistry.cs      (94 lines)   - Interface for capability self-model
 ├── CapabilityRegistry.cs       (263 lines)  - Agent self-awareness implementation
 ├── IGoalHierarchy.cs          (124 lines)  - Interface for goal management
@@ -20,13 +20,13 @@ src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/
 
 ### Tests (1 file)
 ```
-src/MonadicPipeline.Tests/Tests/
+src/Ouroboros.Tests/Tests/
 └── Phase2MetacognitionTests.cs  (564 lines)  - Comprehensive unit tests
 ```
 
 ### Examples (2 files)
 ```
-src/MonadicPipeline.Examples/Examples/
+src/Ouroboros.Examples/Examples/
 ├── Phase2MetacognitionExample.cs (503 lines) - Feature demonstrations
 └── Phase2IntegrationExample.cs   (433 lines) - Complete workflow example
 ```
@@ -196,7 +196,7 @@ foreach (var action in plan.Value.Actions)
 All tests passing ✅
 
 ```bash
-cd /home/runner/work/MonadicPipeline/MonadicPipeline
+cd /home/runner/work/Ouroboros/Ouroboros
 dotnet test --filter "FullyQualifiedName~Phase2"
 ```
 
@@ -219,13 +219,13 @@ dotnet test --filter "FullyQualifiedName~Phase2"
 ### Run Individual Feature Examples
 ```bash
 # Demonstrates each Phase 2 component separately
-dotnet run --project src/MonadicPipeline.Examples -- Phase2Metacognition
+dotnet run --project src/Ouroboros.Examples -- Phase2Metacognition
 ```
 
 ### Run Complete Integration Example
 ```bash
 # Shows end-to-end workflow: assess → decompose → execute → evaluate → improve
-dotnet run --project src/MonadicPipeline.Examples -- Phase2Integration
+dotnet run --project src/Ouroboros.Examples -- Phase2Integration
 ```
 
 ## Architecture Diagram

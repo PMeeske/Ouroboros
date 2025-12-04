@@ -1,4 +1,4 @@
-# Outputs for MonadicPipeline IONOS Infrastructure
+# Outputs for Ouroboros IONOS Infrastructure
 
 # Data Center Outputs
 output "datacenter_id" {

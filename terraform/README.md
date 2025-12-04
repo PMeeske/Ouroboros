@@ -1,6 +1,6 @@
-# MonadicPipeline Infrastructure as Code (Terraform)
+# Ouroboros Infrastructure as Code (Terraform)
 
-This directory contains Terraform configuration for provisioning and managing MonadicPipeline infrastructure on IONOS Cloud.
+This directory contains Terraform configuration for provisioning and managing Ouroboros infrastructure on IONOS Cloud.
 
 ## Overview
 
@@ -443,7 +443,7 @@ Best if already using Azure services.
 terraform {
   backend "azurerm" {
     resource_group_name  = "terraform-state"
-    storage_account_name = "monadicpipelinestate"
+    storage_account_name = "Ouroborosstate"
     container_name       = "tfstate"
     key                  = "ionos.terraform.tfstate"
   }
@@ -545,7 +545,7 @@ The infrastructure can be managed automatically via GitHub Actions. See `.github
 
 **Step 1: Navigate to Repository Secrets**
 
-Go to: `https://github.com/PMeeske/MonadicPipeline/settings/secrets/actions`
+Go to: `https://github.com/PMeeske/Ouroboros/settings/secrets/actions`
 
 Or navigate via: Settings → Secrets and variables → Actions → New repository secret
 
@@ -1267,8 +1267,8 @@ terraform plan -var-file=environments/production.tfvars
 
 1. **Recreate from Git**:
 ```bash
-git clone https://github.com/PMeeske/MonadicPipeline.git
-cd MonadicPipeline/terraform
+git clone https://github.com/PMeeske/Ouroboros.git
+cd Ouroboros/terraform
 ```
 
 2. **Initialize Terraform**:
@@ -1935,14 +1935,14 @@ helm install prometheus prometheus-community/kube-prometheus-stack
 
 - [IONOS Cloud API Documentation](https://api.ionos.com/docs/)
 - [IONOS Terraform Provider](https://registry.terraform.io/providers/ionos-cloud/ionoscloud/latest/docs)
-- [MonadicPipeline Deployment Guide](../docs/IONOS_DEPLOYMENT_GUIDE.md)
+- [Ouroboros Deployment Guide](../docs/IONOS_DEPLOYMENT_GUIDE.md)
 - [GitHub Actions Workflow](../.github/workflows/ionos-deploy.yml)
 
 ## Support
 
 For issues or questions:
 - **IONOS Cloud Support**: [https://www.ionos.com/help](https://www.ionos.com/help)
-- **Terraform Issues**: [GitHub Issues](https://github.com/PMeeske/MonadicPipeline/issues)
+- **Terraform Issues**: [GitHub Issues](https://github.com/PMeeske/Ouroboros/issues)
 - **Documentation**: See `/docs` directory
 
 ## Contributing

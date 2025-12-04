@@ -1,8 +1,8 @@
-# GitHub Copilot Instructions for MonadicPipeline
+# GitHub Copilot Instructions for Ouroboros
 
 ## Project Overview
 
-MonadicPipeline is a sophisticated **functional programming-based AI pipeline system** built on LangChain. The project implements category theory principles, monadic composition, and functional programming patterns to create type-safe, composable AI workflows.
+Ouroboros is a sophisticated **functional programming-based AI pipeline system** built on LangChain. The project implements category theory principles, monadic composition, and functional programming patterns to create type-safe, composable AI workflows.
 
 **Key Technologies**: C# 8.0+, LangChain, Category Theory, Functional Programming, Vector Databases
 

@@ -68,7 +68,7 @@ if ($mettaCmd) {
 # Navigate to CLI directory
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
-$cliDir = Join-Path $projectRoot "src\MonadicPipeline.CLI"
+$cliDir = Join-Path $projectRoot "src\Ouroboros.CLI"
 
 if (-not (Test-Path $cliDir)) {
     Write-Host "  ERROR CLI directory not found: $cliDir" -ForegroundColor Red

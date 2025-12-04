@@ -1,6 +1,6 @@
 # Epic: 🚀 Production-ready Release v1.0   <!-- Issue #1 -->
 
-This epic tracks every task required to ship the first production-ready release of **MonadicPipeline**.
+This epic tracks every task required to ship the first production-ready release of **Ouroboros**.
 
 ## 📋 Child Issues
 - [ ] #2 – Requirements & Scope Finalisation

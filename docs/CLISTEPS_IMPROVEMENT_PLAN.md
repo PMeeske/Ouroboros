@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document outlines the specific, actionable steps to improve the code quality of `src/MonadicPipeline.CLI/CliSteps.cs` based on the findings in `CLISTEPS_QUALITY_REPORT.md`.
+This document outlines the specific, actionable steps to improve the code quality of `src/Ouroboros.CLI/CliSteps.cs` based on the findings in `CLISTEPS_QUALITY_REPORT.md`.
 
 The improvements are organized into three phases with clear deliverables and success criteria.
 
@@ -41,7 +41,7 @@ The improvements are organized into three phases with clear deliverables and suc
    ```
 
 **Files to Create:**
-- `src/MonadicPipeline.CLI/Utilities/CliResultExtensions.cs`
+- `src/Ouroboros.CLI/Utilities/CliResultExtensions.cs`
 
 **Acceptance Criteria:**
 - Extension methods compile without errors
@@ -54,7 +54,7 @@ The improvements are organized into three phases with clear deliverables and suc
 **Objective:** Create typed configuration records for parameter parsing.
 
 **Tasks:**
-1. ⬜ Create `src/MonadicPipeline.CLI/Configuration/` directory
+1. ⬜ Create `src/Ouroboros.CLI/Configuration/` directory
 2. ⬜ Define configuration records:
 
 ```csharp
@@ -199,12 +199,12 @@ public static class StateKeys
 ```
 
 **Files to Create:**
-- `src/MonadicPipeline.CLI/Configuration/DirectoryIngestionConfig.cs`
-- `src/MonadicPipeline.CLI/Configuration/ZipIngestionConfig.cs`
-- `src/MonadicPipeline.CLI/Configuration/RagConfig.cs`
-- `src/MonadicPipeline.CLI/Configuration/MarkdownEnhancementConfig.cs`
-- `src/MonadicPipeline.CLI/Configuration/ModelSwitchConfig.cs`
-- `src/MonadicPipeline.CLI/Configuration/DefaultIngestionSettings.cs`
+- `src/Ouroboros.CLI/Configuration/DirectoryIngestionConfig.cs`
+- `src/Ouroboros.CLI/Configuration/ZipIngestionConfig.cs`
+- `src/Ouroboros.CLI/Configuration/RagConfig.cs`
+- `src/Ouroboros.CLI/Configuration/MarkdownEnhancementConfig.cs`
+- `src/Ouroboros.CLI/Configuration/ModelSwitchConfig.cs`
+- `src/Ouroboros.CLI/Configuration/DefaultIngestionSettings.cs`
 
 **Acceptance Criteria:**
 - All configuration types compile
@@ -376,7 +376,7 @@ public static class DirectoryIngestionConfigBuilder
 ```
 
 **Files to Create:**
-- `src/MonadicPipeline.CLI/Utilities/ConfigParser.cs`
+- `src/Ouroboros.CLI/Utilities/ConfigParser.cs`
 - Configuration builders in respective config files
 
 **Acceptance Criteria:**
@@ -595,10 +595,10 @@ public static Step<CliPipelineState, CliPipelineState> UseDir(string? args = nul
 ```
 
 **Files to Create:**
-- `src/MonadicPipeline.CLI/Services/DirectoryIngestionService.cs`
+- `src/Ouroboros.CLI/Services/DirectoryIngestionService.cs`
 
 **Files to Modify:**
-- `src/MonadicPipeline.CLI/CliSteps.cs` (UseDir method)
+- `src/Ouroboros.CLI/CliSteps.cs` (UseDir method)
 
 **Acceptance Criteria:**
 - UseDir compiles and passes existing tests

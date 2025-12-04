@@ -38,8 +38,8 @@ volumes = [
 environment = "dev"
 
 tags = {
-  Project     = "MonadicPipeline"
+  Project     = "Ouroboros"
   Environment = "Development"
   ManagedBy   = "Terraform"
-  Repository  = "PMeeske/MonadicPipeline"
+  Repository  = "PMeeske/Ouroboros"
 }

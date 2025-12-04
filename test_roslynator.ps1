@@ -1,4 +1,4 @@
-$project = "MonadicPipeline\src\MonadicPipeline.CLI\MonadicPipeline.CLI.csproj"
+$project = "Ouroboros\src\Ouroboros.CLI\Ouroboros.CLI.csproj"
 
 Write-Host "--- Test 1: List Tokens ---"
 dotnet run --project $project list

@@ -1,4 +1,4 @@
-# MonadicPipeline Deployment Scripts
+# Ouroboros Deployment Scripts
 
 This directory contains deployment scripts and configuration files for various deployment scenarios.
 
@@ -234,13 +234,13 @@ Comprehensive convenience script for setting up and managing Qdrant vector store
 ```
 
 **Commands:**
-- `setup` - Full setup: start Qdrant and configure MonadicPipeline
+- `setup` - Full setup: start Qdrant and configure Ouroboros
 - `start` - Start Qdrant container
 - `stop` - Stop Qdrant container
 - `restart` - Restart Qdrant container
 - `status` - Check Qdrant status and show info
 - `logs` - View Qdrant logs (follow mode)
-- `configure` - Configure MonadicPipeline to use Qdrant
+- `configure` - Configure Ouroboros to use Qdrant
 - `list` - List all collections
 - `delete-collection <name>` - Delete a specific collection
 - `clean` - Delete all Qdrant data (WARNING: destructive!)
@@ -558,7 +558,7 @@ See [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) for detailed solutions.
 ## Service Files
 
 ### `monadic-pipeline.service`
-Systemd service unit file for running MonadicPipeline as a Linux service.
+Systemd service unit file for running Ouroboros as a Linux service.
 
 **Installation:**
 ```bash
@@ -591,17 +591,17 @@ For Windows deployments, use the Windows Service wrapper:
 
 ```powershell
 # Publish application
-dotnet publish src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj -c Release -o C:\MonadicPipeline
+dotnet publish src/Ouroboros.CLI/Ouroboros.CLI.csproj -c Release -o C:\Ouroboros
 
 # Install as Windows Service using sc.exe
-sc.exe create MonadicPipeline binPath= "C:\MonadicPipeline\LangChainPipeline.exe" start= auto
-sc.exe start MonadicPipeline
+sc.exe create Ouroboros binPath= "C:\Ouroboros\LangChainPipeline.exe" start= auto
+sc.exe start Ouroboros
 ```
 
 Or use [NSSM (Non-Sucking Service Manager)](https://nssm.cc/):
 ```powershell
-nssm install MonadicPipeline "C:\MonadicPipeline\LangChainPipeline.exe"
-nssm start MonadicPipeline
+nssm install Ouroboros "C:\Ouroboros\LangChainPipeline.exe"
+nssm start Ouroboros
 ```
 
 ## Azure Deployment

@@ -1,6 +1,6 @@
 # Contributing to Copilot Development Loop
 
-Thank you for your interest in improving the MonadicPipeline Copilot Development Loop!
+Thank you for your interest in improving the Ouroboros Copilot Development Loop!
 
 ## 🎯 Overview
 
@@ -331,7 +331,7 @@ Good contributions to Copilot workflows should:
 
 ### Functional Programming Patterns
 
-- [MonadicPipeline Copilot Instructions](copilot-instructions.md)
+- [Ouroboros Copilot Instructions](copilot-instructions.md)
 - [Functional Programming in C#](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/concepts/linq/)
 
 ## 💬 Community
@@ -362,6 +362,6 @@ By contributing, you agree that your contributions will be licensed under the sa
 
 ---
 
-**Thank you for contributing to MonadicPipeline Copilot Development Loop!** 🚀
+**Thank you for contributing to Ouroboros Copilot Development Loop!** 🚀
 
 Your improvements help the entire development community write better code.

@@ -5,7 +5,7 @@ description: A specialist in native Android development (Kotlin) and cross-platf
 
 # Android & MAUI Expert Agent
 
-You are an **Android & MAUI Expert** specializing in native Android development with Kotlin/Jetpack Compose and cross-platform development with .NET MAUI for MonadicPipeline mobile clients.
+You are an **Android & MAUI Expert** specializing in native Android development with Kotlin/Jetpack Compose and cross-platform development with .NET MAUI for Ouroboros mobile clients.
 
 ## Core Expertise
 
@@ -143,7 +143,7 @@ public partial class PipelineViewModel : ObservableObject
 
 // XAML View
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             x:Class="MonadicPipeline.Mobile.Views.PipelinePage"
+             x:Class="Ouroboros.Mobile.Views.PipelinePage"
              Title="Pipelines">
     <Grid RowDefinitions="*,Auto">
         <!-- Pipeline list -->

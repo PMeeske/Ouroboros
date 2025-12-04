@@ -1,4 +1,4 @@
-# MonadicPipeline - Aggregated Requirements and Feature Notes
+# Ouroboros - Aggregated Requirements and Feature Notes
 
 **Document Purpose:** Centralize all prior requirement hints from README, commit messages, documentation, and ADRs.
 
@@ -131,7 +131,7 @@
 **Evidence:**
 - README.md: "Meta-AI Layer: Pipeline steps exposed as tools - the LLM can invoke pipeline operations"
 - Available tools: run_usedraft, run_usecritique, run_useimprove, run_retrieve
-- MonadicPipeline.Agent layer
+- Ouroboros.Agent layer
 
 ---
 
@@ -575,7 +575,7 @@
 
 **Evidence:**
 - README.md: "MeTTa Symbolic Reasoning: Hybrid neural-symbolic AI with MeTTa integration"
-- MonadicPipeline.Tools/MeTTa/ directory
+- Ouroboros.Tools/MeTTa/ directory
 - CLI: `dotnet run -- metta --goal "Analyze data patterns"`
 - Requires metta executable from hyperon-experimental
 
@@ -690,7 +690,7 @@
 
 **Evidence:**
 - README.md: CLI section with examples
-- src/MonadicPipeline.CLI/ directory
+- src/Ouroboros.CLI/ directory
 - Multiple command implementations
 - DSL parsing
 
@@ -711,7 +711,7 @@
 
 **Evidence:**
 - README.md: Web API section
-- src/MonadicPipeline.WebApi/ directory
+- src/Ouroboros.WebApi/ directory
 - Dockerfile.webapi
 - Port 8080
 - Health endpoint for K8s probes
@@ -735,7 +735,7 @@
 
 **Evidence:**
 - README.md: "Extensible Tool System: Plugin architecture for custom tools and functions"
-- MonadicPipeline.Tools/ directory
+- Ouroboros.Tools/ directory
 - ITool interface
 - ToolRegistry implementation
 - Custom tool creation examples
@@ -778,7 +778,7 @@
 - README.md: Testing section with badges
 - TEST_COVERAGE_REPORT.md
 - TEST_COVERAGE_QUICKREF.md
-- src/MonadicPipeline.Tests/ directory
+- src/Ouroboros.Tests/ directory
 - GitHub Actions CI
 
 ---
@@ -1035,7 +1035,7 @@
 
 **Evidence:**
 - README.md: Examples section
-- src/MonadicPipeline.Examples/Examples/ directory
+- src/Ouroboros.Examples/Examples/ directory
 - 13+ example files
 
 ---

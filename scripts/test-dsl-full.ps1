@@ -130,7 +130,7 @@ Write-Host "  Source: $testDataDir" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "----------------------------------------------------------------" -ForegroundColor DarkGray
 
-$cliDir = Join-Path $projectRoot "src\MonadicPipeline.CLI"
+$cliDir = Join-Path $projectRoot "src\Ouroboros.CLI"
 
 if (-not (Test-Path $cliDir)) {
     Write-Host "  ERROR CLI directory not found: $cliDir" -ForegroundColor Red

@@ -14,7 +14,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "🧪 Testing MonadicPipeline with Qdrant" -ForegroundColor Cyan
+Write-Host "🧪 Testing Ouroboros with Qdrant" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
 
 # Check Qdrant is running
@@ -31,7 +31,7 @@ try {
 # Navigate to CLI directory
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
-$cliDir = Join-Path $projectRoot "src\MonadicPipeline.CLI"
+$cliDir = Join-Path $projectRoot "src\Ouroboros.CLI"
 
 if (-not (Test-Path $cliDir)) {
     Write-Host "ERROR CLI directory not found: $cliDir" -ForegroundColor Red
@@ -70,7 +70,7 @@ try {
 # Test 1: Simple ask command (no pipeline, just to verify setup)
 Write-Host "`n3️⃣ Test 1: Simple question (verifying Ollama connectivity)..." -ForegroundColor Yellow
 try {
-    $result = dotnet run -- ask -q "Say 'Hello from MonadicPipeline!' in exactly 5 words" --model llama3 2>&1
+    $result = dotnet run -- ask -q "Say 'Hello from Ouroboros!' in exactly 5 words" --model llama3 2>&1
     Write-Host $result -ForegroundColor Gray
     Write-Host "OK Simple ask completed" -ForegroundColor Green
 } catch {
@@ -90,7 +90,7 @@ New-Item -ItemType Directory -Path $testDataDir | Out-Null
 $docs = @(
     "Qdrant is a vector database that enables semantic search and similarity matching.",
     "Vector databases store embeddings which are numerical representations of text.",
-    "MonadicPipeline uses functional programming patterns like monads and arrows.",
+    "Ouroboros uses functional programming patterns like monads and arrows.",
     "Docker containers provide isolated environments for running applications.",
     "The .NET runtime includes a powerful garbage collector for memory management."
 )

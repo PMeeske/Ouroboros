@@ -2,15 +2,15 @@
 
 ## Overview
 
-This document summarizes the complete implementation of **Phase 3: Emergent Intelligence** for the MonadicPipeline self-improving agent architecture.
+This document summarizes the complete implementation of **Phase 3: Emergent Intelligence** for the Ouroboros self-improving agent architecture.
 
 ## What Was Implemented
 
 ### Task 3.2: Transfer Learning System ✅
 
 **Files Created:**
-- `src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/ITransferLearner.cs`
-- `src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/TransferLearner.cs`
+- `src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/ITransferLearner.cs`
+- `src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/TransferLearner.cs`
 
 **Capabilities:**
 - Cross-domain skill adaptation using LLM
@@ -49,8 +49,8 @@ public interface ITransferLearner
 ### Task 3.3: Hypothesis Generation & Testing ✅
 
 **Files Created:**
-- `src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/IHypothesisEngine.cs`
-- `src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/HypothesisEngine.cs`
+- `src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/IHypothesisEngine.cs`
+- `src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/HypothesisEngine.cs`
 
 **Capabilities:**
 - Hypothesis generation from observations
@@ -103,8 +103,8 @@ public interface IHypothesisEngine
 ### Task 3.4: Curiosity-Driven Exploration ✅
 
 **Files Created:**
-- `src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/ICuriosityEngine.cs`
-- `src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/CuriosityEngine.cs`
+- `src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/ICuriosityEngine.cs`
+- `src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/CuriosityEngine.cs`
 
 **Capabilities:**
 - Novelty detection for plans

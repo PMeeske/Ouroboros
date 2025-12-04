@@ -160,7 +160,7 @@ var result = await epicOrchestrator.ExecuteSubIssueAsync(
 ```csharp
 // Requires GitHub token with repo permissions
 string githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? "your-token-here";
-var scopeLockTool = new GitHubScopeLockTool(githubToken, "PMeeske", "MonadicPipeline");
+var scopeLockTool = new GitHubScopeLockTool(githubToken, "PMeeske", "Ouroboros");
 
 var result = await epicOrchestrator.ExecuteSubIssueAsync(
     120,
@@ -491,7 +491,7 @@ async Task<Result<SubIssueAssignment, string>> ScopeLockingWorkflow(
 
 // Usage example for Issue #138
 var githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
-var scopeLockTool = new GitHubScopeLockTool(githubToken, "PMeeske", "MonadicPipeline");
+var scopeLockTool = new GitHubScopeLockTool(githubToken, "PMeeske", "Ouroboros");
 
 var result = await epicOrchestrator.ExecuteSubIssueAsync(
     120,
@@ -604,6 +604,6 @@ await Epic120Example.RunParallelSubIssuesAsync();
 ## See Also
 
 - [EpicBranchOrchestration.md](EpicBranchOrchestration.md) - API reference and detailed documentation
-- [DistributedOrchestrator.cs](../src/MonadicPipeline.Agent/Agent/MetaAI/DistributedOrchestrator.cs) - Multi-agent coordination
-- [PipelineBranch.cs](../src/MonadicPipeline.Pipeline/Pipeline/Branches/PipelineBranch.cs) - Immutable branch implementation
-- [Epic120Example.cs](../src/MonadicPipeline.Examples/Examples/Epic120Example.cs) - Complete working example
+- [DistributedOrchestrator.cs](../src/Ouroboros.Agent/Agent/MetaAI/DistributedOrchestrator.cs) - Multi-agent coordination
+- [PipelineBranch.cs](../src/Ouroboros.Pipeline/Pipeline/Branches/PipelineBranch.cs) - Immutable branch implementation
+- [Epic120Example.cs](../src/Ouroboros.Examples/Examples/Epic120Example.cs) - Complete working example

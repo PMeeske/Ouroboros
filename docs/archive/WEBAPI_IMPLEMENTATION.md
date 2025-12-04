@@ -2,13 +2,13 @@
 
 ## Overview
 
-This implementation adds a **Kubernetes-friendly ASP.NET Core Web API** as a remoting layer for MonadicPipeline, complementing the existing CLI application. Both CLI and Web API serve as remoting interfaces to the core pipeline functionality.
+This implementation adds a **Kubernetes-friendly ASP.NET Core Web API** as a remoting layer for Ouroboros, complementing the existing CLI application. Both CLI and Web API serve as remoting interfaces to the core pipeline functionality.
 
 ## What Was Added
 
-### 1. MonadicPipeline.WebApi Project
+### 1. Ouroboros.WebApi Project
 
-**Location:** `src/MonadicPipeline.WebApi/`
+**Location:** `src/Ouroboros.WebApi/`
 
 A new ASP.NET Core 8.0 Web API project with minimal APIs providing REST endpoints for pipeline operations.
 
@@ -57,7 +57,7 @@ A new ASP.NET Core 8.0 Web API project with minimal APIs providing REST endpoint
 
 ### 6. Documentation
 
-- **src/MonadicPipeline.WebApi/README.md** - Comprehensive Web API documentation
+- **src/Ouroboros.WebApi/README.md** - Comprehensive Web API documentation
 - **README.md** - Updated main README with Web API section
 - API examples and usage instructions
 
@@ -154,7 +154,7 @@ kubectl scale deployment monadic-pipeline-webapi --replicas=5 -n monadic-pipelin
 ### Using dotnet run
 
 ```bash
-cd src/MonadicPipeline.WebApi
+cd src/Ouroboros.WebApi
 dotnet run
 ```
 
@@ -193,21 +193,21 @@ Potential improvements for future iterations:
 ## Files Changed/Added
 
 ### New Files
-- `src/MonadicPipeline.WebApi/` - Entire Web API project
+- `src/Ouroboros.WebApi/` - Entire Web API project
 - `Dockerfile.webapi` - Docker build for Web API
 - `k8s/webapi-deployment.yaml` - Kubernetes manifests
-- `src/MonadicPipeline.WebApi/README.md` - API documentation
+- `src/Ouroboros.WebApi/README.md` - API documentation
 
 ### Modified Files
-- `MonadicPipeline.sln` - Added Web API project
+- `Ouroboros.sln` - Added Web API project
 - `docker-compose.yml` - Added Web API service
 - `README.md` - Added Web API documentation section
 
 ## Summary
 
-This implementation successfully adds a Kubernetes-friendly Web API remoting layer to MonadicPipeline. The Web API and CLI now serve as two complementary interfaces to the same core pipeline functionality:
+This implementation successfully adds a Kubernetes-friendly Web API remoting layer to Ouroboros. The Web API and CLI now serve as two complementary interfaces to the same core pipeline functionality:
 
 - **CLI** - For local development, scripting, and batch processing
 - **Web API** - For cloud deployment, web integration, and scalable production use
 
-Both follow the functional programming principles of the MonadicPipeline system while providing appropriate interfaces for their respective use cases.
+Both follow the functional programming principles of the Ouroboros system while providing appropriate interfaces for their respective use cases.

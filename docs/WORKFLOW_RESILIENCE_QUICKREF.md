@@ -2,7 +2,7 @@
 
 ## 🚀 Quick Start
 
-All MonadicPipeline workflows now have built-in resilience mechanisms. This guide helps you understand and maintain them.
+All Ouroboros workflows now have built-in resilience mechanisms. This guide helps you understand and maintain them.
 
 ## 📋 At a Glance
 

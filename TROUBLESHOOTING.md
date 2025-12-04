@@ -1,6 +1,6 @@
-# MonadicPipeline Troubleshooting Guide
+# Ouroboros Troubleshooting Guide
 
-This guide provides solutions to common issues encountered when deploying and running MonadicPipeline.
+This guide provides solutions to common issues encountered when deploying and running Ouroboros.
 
 ## Table of Contents
 
@@ -466,7 +466,7 @@ If you continue to experience issues:
 
 3. **Review the complete deployment guide:** [DEPLOYMENT.md](DEPLOYMENT.md)
 
-4. **Open an issue:** [GitHub Issues](https://github.com/PMeeske/MonadicPipeline/issues)
+4. **Open an issue:** [GitHub Issues](https://github.com/PMeeske/Ouroboros/issues)
 
 ## Related Documentation
 

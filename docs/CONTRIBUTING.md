@@ -1,6 +1,6 @@
-# Contributing to MonadicPipeline
+# Contributing to Ouroboros
 
-First off, thank you for considering contributing to MonadicPipeline! 🎉
+First off, thank you for considering contributing to Ouroboros! 🎉
 
 This document provides guidelines for contributing to the project. Following these guidelines helps communicate that you respect the time of the developers managing and developing this open source project.
 
@@ -63,8 +63,8 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/MonadicPipeline.git
-cd MonadicPipeline
+git clone https://github.com/YOUR_USERNAME/Ouroboros.git
+cd Ouroboros
 
 # Restore dependencies
 dotnet restore
@@ -76,7 +76,7 @@ dotnet build
 dotnet test
 
 # Run examples (optional)
-cd src/MonadicPipeline.Examples
+cd src/Ouroboros.Examples
 dotnet run
 ```
 
@@ -110,7 +110,7 @@ dotnet run
 
 ### Functional Programming Principles
 
-MonadicPipeline follows functional programming paradigms:
+Ouroboros follows functional programming paradigms:
 
 - **Pure Functions**: Prefer functions without side effects
 - **Immutability**: Use immutable data structures
@@ -293,9 +293,9 @@ We especially welcome contributions in:
 
 ## 💬 Questions?
 
-- Open a [Discussion](https://github.com/PMeeske/MonadicPipeline/discussions)
+- Open a [Discussion](https://github.com/PMeeske/Ouroboros/discussions)
 - Join our community chat (if available)
-- Check existing [Issues](https://github.com/PMeeske/MonadicPipeline/issues)
+- Check existing [Issues](https://github.com/PMeeske/Ouroboros/issues)
 
 ## 🙏 Recognition
 
@@ -304,4 +304,4 @@ Contributors will be recognized in:
 - Release notes
 - Project acknowledgments
 
-Thank you for contributing to MonadicPipeline! 🚀
+Thank you for contributing to Ouroboros! 🚀

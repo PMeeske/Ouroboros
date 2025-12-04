@@ -1,6 +1,6 @@
 # Infrastructure Dependencies: C# to Terraform
 
-This document provides a comprehensive mapping of logical and architectural dependencies between the C# application layer and Terraform infrastructure provisioning for MonadicPipeline.
+This document provides a comprehensive mapping of logical and architectural dependencies between the C# application layer and Terraform infrastructure provisioning for Ouroboros.
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@ This document provides a comprehensive mapping of logical and architectural depe
 
 ## Overview
 
-MonadicPipeline follows a **layered infrastructure approach** where:
+Ouroboros follows a **layered infrastructure approach** where:
 
 1. **Terraform** provisions base cloud infrastructure (IONOS)
 2. **Kubernetes** orchestrates container deployments
@@ -30,7 +30,7 @@ MonadicPipeline follows a **layered infrastructure approach** where:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    C# Application Layer                      │
-│  (MonadicPipeline.CLI, MonadicPipeline.WebApi)              │
+│  (Ouroboros.CLI, Ouroboros.WebApi)              │
 │  Configuration: appsettings.json + Environment Variables     │
 └──────────────────────┬──────────────────────────────────────┘
                        │
@@ -407,7 +407,7 @@ Kubernetes Node Capacity:
   ~3.5 cores, ~14GB RAM available (after system overhead)
   ↓
 Application Allocation:
-  - MonadicPipeline: 1 core, 2GB (2 replicas = 2 cores, 4GB)
+  - Ouroboros: 1 core, 2GB (2 replicas = 2 cores, 4GB)
   - Ollama: 2 cores, 8GB (model loading)
   - Qdrant: 0.5 cores, 2GB
   - Jaeger: 0.5 cores, 1GB

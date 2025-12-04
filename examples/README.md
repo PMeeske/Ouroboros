@@ -1,6 +1,6 @@
-# MonadicPipeline Examples
+# Ouroboros Examples
 
-This directory contains practical examples demonstrating various features of MonadicPipeline.
+This directory contains practical examples demonstrating various features of Ouroboros.
 
 ## Ollama Cloud Integration
 
@@ -26,7 +26,7 @@ nano examples/ollama-cloud-usage.sh
 # Change: export CHAT_API_KEY="your-ollama-cloud-api-key-here"
 
 # Run all examples
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 ../../examples/ollama-cloud-usage.sh
 ```
 
@@ -36,7 +36,7 @@ You can also run individual commands directly:
 
 ```bash
 # Navigate to CLI directory
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 
 # Set up authentication
 export CHAT_ENDPOINT="https://api.ollama.com"

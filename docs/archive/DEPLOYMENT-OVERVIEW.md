@@ -1,8 +1,8 @@
-# MonadicPipeline Deployment Infrastructure
+# Ouroboros Deployment Infrastructure
 
 ## Overview
 
-This document provides an overview of the complete deployment infrastructure added to MonadicPipeline. The system now supports multiple deployment scenarios from local development to production-grade Kubernetes deployments.
+This document provides an overview of the complete deployment infrastructure added to Ouroboros. The system now supports multiple deployment scenarios from local development to production-grade Kubernetes deployments.
 
 ## What Has Been Implemented
 
@@ -27,7 +27,7 @@ This document provides an overview of the complete deployment infrastructure add
 - `namespace.yaml` - Isolated namespace
 - `configmap.yaml` - Application configuration
 - `secrets.yaml` - Sensitive data management
-- `deployment.yaml` - MonadicPipeline deployment
+- `deployment.yaml` - Ouroboros deployment
 - `ollama.yaml` - LLM service deployment
 - `qdrant.yaml` - Vector database deployment
 - `jaeger.yaml` - Distributed tracing deployment
@@ -148,7 +148,7 @@ sudo systemctl start monadic-pipeline
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│              MonadicPipeline CLI                     │
+│              Ouroboros CLI                     │
 │         (Main Application Container/Pod)             │
 └─────────────────┬───────────────────────────────────┘
                   │

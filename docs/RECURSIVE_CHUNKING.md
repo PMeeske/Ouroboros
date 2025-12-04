@@ -165,11 +165,11 @@ Extract insights from academic papers:
 
 ### Installation
 
-The RecursiveChunkProcessor is part of MonadicPipeline.Core:
+The RecursiveChunkProcessor is part of Ouroboros.Core:
 
 ```bash
-# Already included in MonadicPipeline
-cd src/MonadicPipeline.Core
+# Already included in Ouroboros
+cd src/Ouroboros.Core
 ```
 
 ### Basic Usage
@@ -419,13 +419,13 @@ var result = await processor.ProcessLargeContextAsync<string, string>(
 ### Example 4: Running the Built-in Example
 
 ```bash
-cd src/MonadicPipeline.Examples
+cd src/Ouroboros.Examples
 dotnet run
 
 # Then select RecursiveChunking example
 ```
 
-See `src/MonadicPipeline.Examples/Examples/RecursiveChunking/` for complete code.
+See `src/Ouroboros.Examples/Examples/RecursiveChunking/` for complete code.
 
 ## Best Practices
 
@@ -541,9 +541,9 @@ Environment.ProcessorCount  // Available cores
 MaxDegreeOfParallelism = 2
 ```
 
-## Integration with MonadicPipeline
+## Integration with Ouroboros
 
-The RecursiveChunkProcessor integrates seamlessly with MonadicPipeline's functional architecture:
+The RecursiveChunkProcessor integrates seamlessly with Ouroboros's functional architecture:
 
 ```csharp
 // Compose with pipeline steps
@@ -602,6 +602,6 @@ public sealed record ChunkResult<TOutput>(
 **Adaptive Systems Inc.** - Enterprise AI Pipeline Solutions
 
 For more information, see:
-- [MonadicPipeline README](../README.md)
+- [Ouroboros README](../README.md)
 - [IONOS Deployment Guide](./IONOS_DEPLOYMENT_GUIDE.md)
-- [Example Code](../src/MonadicPipeline.Examples/Examples/RecursiveChunking/)
+- [Example Code](../src/Ouroboros.Examples/Examples/RecursiveChunking/)

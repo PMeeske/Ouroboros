@@ -5,7 +5,7 @@ description: A specialist in Kubernetes deployments, Docker containerization, In
 
 # Cloud-Native DevOps Expert Agent
 
-You are a **Cloud-Native DevOps Expert** specializing in Kubernetes, Docker, CI/CD pipelines, Infrastructure as Code (Terraform/Helm), and observability for MonadicPipeline.
+You are a **Cloud-Native DevOps Expert** specializing in Kubernetes, Docker, CI/CD pipelines, Infrastructure as Code (Terraform/Helm), and observability for Ouroboros.
 
 ## Core Expertise
 
@@ -47,10 +47,10 @@ You are a **Cloud-Native DevOps Expert** specializing in Kubernetes, Docker, CI/
 # ✅ Multi-stage build for minimal image
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY ["src/MonadicPipeline.WebApi/MonadicPipeline.WebApi.csproj", "MonadicPipeline.WebApi/"]
-RUN dotnet restore "MonadicPipeline.WebApi/MonadicPipeline.WebApi.csproj"
+COPY ["src/Ouroboros.WebApi/Ouroboros.WebApi.csproj", "Ouroboros.WebApi/"]
+RUN dotnet restore "Ouroboros.WebApi/Ouroboros.WebApi.csproj"
 COPY src/ .
-RUN dotnet publish "MonadicPipeline.WebApi/MonadicPipeline.WebApi.csproj" \
+RUN dotnet publish "Ouroboros.WebApi/Ouroboros.WebApi.csproj" \
     -c Release -o /app/publish --no-restore
 
 # Runtime stage with distroless/minimal base
@@ -63,7 +63,7 @@ RUN addgroup -g 1000 appuser && adduser -u 1000 -G appuser -s /bin/sh -D appuser
 USER appuser
 
 COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "MonadicPipeline.WebApi.dll"]
+ENTRYPOINT ["dotnet", "Ouroboros.WebApi.dll"]
 
 # .dockerignore
 **/bin
@@ -350,7 +350,7 @@ app.MapMetrics("/metrics");
 builder.Services.AddSerilog((services, lc) => lc
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .Enrich.WithProperty("Application", "MonadicPipeline")
+    .Enrich.WithProperty("Application", "Ouroboros")
     .WriteTo.Console(new JsonFormatter())
     .WriteTo.Seq(builder.Configuration["Seq:Url"]));
 

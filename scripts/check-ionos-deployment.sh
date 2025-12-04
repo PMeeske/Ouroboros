@@ -1,5 +1,5 @@
 #!/bin/bash
-# Diagnostic script to check IONOS deployment errors for MonadicPipeline Web API
+# Diagnostic script to check IONOS deployment errors for Ouroboros Web API
 # This script helps identify and troubleshoot deployment issues on IONOS Cloud
 #
 # Usage: ./check-ionos-deployment.sh [namespace]

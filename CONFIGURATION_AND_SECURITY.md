@@ -1,12 +1,12 @@
 # Configuration and Security Features
 
-This document describes the configuration management and security features implemented in MonadicPipeline.
+This document describes the configuration management and security features implemented in Ouroboros.
 
 ## Configuration Management
 
 ### Overview
 
-MonadicPipeline uses a flexible configuration system based on `Microsoft.Extensions.Configuration` that supports multiple configuration sources:
+Ouroboros uses a flexible configuration system based on `Microsoft.Extensions.Configuration` that supports multiple configuration sources:
 
 - **JSON files** (`appsettings.json`, `appsettings.{Environment}.json`)
 - **Environment variables** (with optional prefix)
@@ -121,7 +121,7 @@ var builder = new PipelineConfigurationBuilder()
 
 ### Overview
 
-MonadicPipeline uses Serilog for structured logging with support for:
+Ouroboros uses Serilog for structured logging with support for:
 
 - **Console output** with readable formatting
 - **File output** with rolling daily logs

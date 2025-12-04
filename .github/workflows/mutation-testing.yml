@@ -149,7 +149,7 @@ jobs:
           ML="${{ github.event.inputs.mutation_level || 'Standard' }}"
           echo "- Mutation Level: ${ML}" >> $GITHUB_STEP_SUMMARY
           echo "- Target Framework: net10.0" >> $GITHUB_STEP_SUMMARY
-          echo "- Test Project: MonadicPipeline.Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Test Project: Ouroboros.Tests" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Thresholds:**" >> $GITHUB_STEP_SUMMARY
           echo "- 🟢 High: ≥80%" >> $GITHUB_STEP_SUMMARY

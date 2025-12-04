@@ -128,8 +128,8 @@ This directory contains GitHub Actions workflows that implement the automatic de
 ## 🔍 Codebase Context Analysis
 
 ### Related Files
-- `src/MonadicPipeline.Core/Steps/Step.cs`
-- `src/MonadicPipeline.Tests/Core/StepTests.cs`
+- `src/Ouroboros.Core/Steps/Step.cs`
+- `src/Ouroboros.Tests/Core/StepTests.cs`
 
 ## 💡 Implementation Suggestions
 

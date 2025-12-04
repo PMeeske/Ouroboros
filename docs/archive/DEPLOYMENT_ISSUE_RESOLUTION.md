@@ -2,7 +2,7 @@
 
 ## Issue Description
 
-The Kubernetes deployment for MonadicPipeline Web API was failing with the following error:
+The Kubernetes deployment for Ouroboros Web API was failing with the following error:
 
 ```
 Failed to pull image "monadic-pipeline-webapi:latest": failed to pull and unpack image 

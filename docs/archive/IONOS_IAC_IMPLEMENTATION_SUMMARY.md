@@ -2,11 +2,11 @@
 
 ## Overview
 
-This document summarizes the complete Infrastructure as Code (IaC) implementation for MonadicPipeline on IONOS Cloud using Terraform.
+This document summarizes the complete Infrastructure as Code (IaC) implementation for Ouroboros on IONOS Cloud using Terraform.
 
 **Status**: ✅ Implementation Complete (v2.0)  
 **Date**: January 2025  
-**Issue**: [Complete IONOS Cloud Infrastructure as Code Implementation](https://github.com/PMeeske/MonadicPipeline/issues/XXX)
+**Issue**: [Complete IONOS Cloud Infrastructure as Code Implementation](https://github.com/PMeeske/Ouroboros/issues/XXX)
 
 ## Version 2.0 Updates (Latest)
 
@@ -454,7 +454,7 @@ See: [IONOS IaC Guide - Migration](docs/IONOS_IAC_GUIDE.md#migration-from-manual
 ## Support
 
 For issues or questions:
-- **GitHub Issues**: [PMeeske/MonadicPipeline/issues](https://github.com/PMeeske/MonadicPipeline/issues)
+- **GitHub Issues**: [PMeeske/Ouroboros/issues](https://github.com/PMeeske/Ouroboros/issues)
 - **Documentation**: See `docs/` directory
 - **IONOS Support**: [https://www.ionos.com/help](https://www.ionos.com/help)
 

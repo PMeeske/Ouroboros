@@ -1,5 +1,5 @@
 #!/bin/bash
-# Helper script to deploy MonadicPipeline to IONOS Cloud Kubernetes
+# Helper script to deploy Ouroboros to IONOS Cloud Kubernetes
 # This script automates deployment to IONOS Cloud with their container registry
 #
 # Prerequisites:
@@ -32,7 +32,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 K8S_DIR="$PROJECT_ROOT/k8s"
 
 echo "================================================"
-echo "MonadicPipeline IONOS Cloud Deployment"
+echo "Ouroboros IONOS Cloud Deployment"
 echo "================================================"
 echo ""
 echo "Registry: $REGISTRY_URL"
@@ -126,7 +126,7 @@ echo ""
 echo "Step 2: Building and pushing Docker images..."
 
 # Build CLI image
-echo "Building MonadicPipeline CLI image..."
+echo "Building Ouroboros CLI image..."
 if ! docker build -t "${REGISTRY_URL}/monadic-pipeline:latest" -f "$PROJECT_ROOT/Dockerfile" "$PROJECT_ROOT"; then
     echo "Error: Failed to build CLI image"
     exit 1
@@ -141,7 +141,7 @@ fi
 echo "✓ CLI image pushed"
 
 # Build WebAPI image
-echo "Building MonadicPipeline Web API image..."
+echo "Building Ouroboros Web API image..."
 if ! docker build -t "${REGISTRY_URL}/monadic-pipeline-webapi:latest" -f "$PROJECT_ROOT/Dockerfile.webapi" "$PROJECT_ROOT"; then
     echo "Error: Failed to build Web API image"
     exit 1
@@ -247,10 +247,10 @@ kubectl apply -f "$TEMP_DIR/qdrant.yaml"
 kubectl apply -f "$K8S_DIR/jaeger.yaml"
 
 # Deploy application
-echo "Deploying MonadicPipeline CLI..."
+echo "Deploying Ouroboros CLI..."
 kubectl apply -f "$TEMP_DIR/deployment.yaml"
 
-echo "Deploying MonadicPipeline Web API..."
+echo "Deploying Ouroboros Web API..."
 kubectl apply -f "$TEMP_DIR/webapi-deployment.yaml"
 
 echo ""

@@ -1,6 +1,6 @@
 # CliSteps Code Quality Analysis - Document Guide
 
-This directory contains a comprehensive code quality analysis for the `src/MonadicPipeline.CLI/CliSteps.cs` file.
+This directory contains a comprehensive code quality analysis for the `src/Ouroboros.CLI/CliSteps.cs` file.
 
 ## 📚 Document Overview
 
@@ -78,7 +78,7 @@ This document provides:
 
 ## 🎯 What Problem Does This Solve?
 
-The CliSteps.cs file provides critical functionality for the MonadicPipeline CLI, but has accumulated technical debt that conflicts with the project's functional programming philosophy. Specifically:
+The CliSteps.cs file provides critical functionality for the Ouroboros CLI, but has accumulated technical debt that conflicts with the project's functional programming philosophy. Specifically:
 
 ### Functional Programming Violations
 The file uses imperative error handling (try-catch) instead of the monadic Result<T> pattern used elsewhere in the codebase. This makes composition harder and reduces type safety.

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The MonadicPipeline reasoning system implements a sophisticated **iterative refinement architecture** that enables AI systems to progressively improve their outputs through multiple critique-and-improve cycles. This document explains the architectural design, implementation details, and the principles behind this approach.
+The Ouroboros reasoning system implements a sophisticated **iterative refinement architecture** that enables AI systems to progressively improve their outputs through multiple critique-and-improve cycles. This document explains the architectural design, implementation details, and the principles behind this approach.
 
 ## Problem Statement
 
@@ -394,6 +394,6 @@ The architecture is:
 - **Extensible**: Easy to add new reasoning states or refinement strategies
 
 For implementation details, see:
-- `src/MonadicPipeline.Pipeline/Pipeline/Reasoning/ReasoningArrows.cs`
-- `src/MonadicPipeline.Tests/Tests/RefinementLoopArchitectureTests.cs`
-- `src/MonadicPipeline.CLI/CliSteps.cs` (UseRefinementLoop)
+- `src/Ouroboros.Pipeline/Pipeline/Reasoning/ReasoningArrows.cs`
+- `src/Ouroboros.Tests/Tests/RefinementLoopArchitectureTests.cs`
+- `src/Ouroboros.CLI/CliSteps.cs` (UseRefinementLoop)

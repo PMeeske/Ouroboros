@@ -184,9 +184,9 @@ logs_qdrant() {
     fi
 }
 
-# Configure MonadicPipeline to use Qdrant
+# Configure Ouroboros to use Qdrant
 configure_pipeline() {
-    print_header "Configuring MonadicPipeline for Qdrant"
+    print_header "Configuring Ouroboros for Qdrant"
     
     # Check if .env exists
     if [ ! -f .env ]; then
@@ -290,7 +290,7 @@ delete_collection() {
 
 # Full setup (start + configure)
 full_setup() {
-    print_header "Full Qdrant Setup for MonadicPipeline"
+    print_header "Full Qdrant Setup for Ouroboros"
     
     start_qdrant
     echo ""
@@ -300,7 +300,7 @@ full_setup() {
     print_success "Setup complete!"
     print_info ""
     print_info "Next steps:"
-    print_info "  1. Run the application: dotnet run --project src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj"
+    print_info "  1. Run the application: dotnet run --project src/Ouroboros.CLI/Ouroboros.CLI.csproj"
     print_info "  2. Access Qdrant dashboard: ${QDRANT_CONNECTION_STRING}/dashboard"
     print_info "  3. Check status: ./scripts/qdrant-setup.sh status"
 }
@@ -336,13 +336,13 @@ Qdrant Vector Store Setup & Management Script
 Usage: ./scripts/qdrant-setup.sh [command]
 
 Commands:
-  setup                    Full setup: start Qdrant and configure MonadicPipeline
+  setup                    Full setup: start Qdrant and configure Ouroboros
   start                    Start Qdrant container
   stop                     Stop Qdrant container
   restart                  Restart Qdrant container
   status                   Check Qdrant status and show info
   logs                     View Qdrant logs (follow mode)
-  configure                Configure MonadicPipeline to use Qdrant
+  configure                Configure Ouroboros to use Qdrant
   list                     List all collections
   delete-collection <name> Delete a specific collection
   clean                    Delete all Qdrant data (WARNING: destructive!)

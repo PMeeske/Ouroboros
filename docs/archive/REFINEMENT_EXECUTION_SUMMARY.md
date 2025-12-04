@@ -69,11 +69,11 @@ All Tests:            224/224 passing ✅
 #### 1. Enable XML Docs on Remaining Projects (30 min)
 ```powershell
 # Update 5 remaining .csproj files:
-# - MonadicPipeline.CLI
-# - MonadicPipeline.WebApi
-# - MonadicPipeline.Tests
-# - MonadicPipeline.Examples
-# - MonadicPipeline.Benchmarks
+# - Ouroboros.CLI
+# - Ouroboros.WebApi
+# - Ouroboros.Tests
+# - Ouroboros.Examples
+# - Ouroboros.Benchmarks
 ```
 
 #### 2. Build and Review Analyzer Warnings (2-3 hours)
@@ -113,7 +113,7 @@ dotnet build
    - Achieve >80% coverage for CapabilityRegistry
 
 2. **Add integration test project** (2 hours)
-   - Create MonadicPipeline.IntegrationTests
+   - Create Ouroboros.IntegrationTests
    - Setup Ollama test fixtures
    - Write 5 end-to-end integration tests
 
@@ -201,12 +201,12 @@ CONTRIBUTING.md                       (Community guidelines)
 
 ### Modified Files (12)
 ```
-src/MonadicPipeline.Core/*.csproj     (Analyzers + XML docs)
-src/MonadicPipeline.Domain/*.csproj   (Analyzers + XML docs)
-src/MonadicPipeline.Pipeline/*.csproj (Analyzers + XML docs)
-src/MonadicPipeline.Tools/*.csproj    (Analyzers + XML docs)
-src/MonadicPipeline.Agent/*.csproj    (Analyzers + XML docs)
-src/MonadicPipeline.Providers/*.csproj (Analyzers + XML docs)
+src/Ouroboros.Core/*.csproj     (Analyzers + XML docs)
+src/Ouroboros.Domain/*.csproj   (Analyzers + XML docs)
+src/Ouroboros.Pipeline/*.csproj (Analyzers + XML docs)
+src/Ouroboros.Tools/*.csproj    (Analyzers + XML docs)
+src/Ouroboros.Agent/*.csproj    (Analyzers + XML docs)
+src/Ouroboros.Providers/*.csproj (Analyzers + XML docs)
 + 6 other project files
 ```
 

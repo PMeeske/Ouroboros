@@ -1,20 +1,20 @@
 # Streaming Engine Implementation Summary
 
 ## Overview
-Successfully implemented a complete streaming engine for MonadicPipeline using System.Reactive (Rx), enabling real-time data processing with live aggregations, windowing, and composable transformations.
+Successfully implemented a complete streaming engine for Ouroboros using System.Reactive (Rx), enabling real-time data processing with live aggregations, windowing, and composable transformations.
 
 ## Implementation Statistics
 
 ### Files Added
-- `src/MonadicPipeline.CLI/StreamingContext.cs` - Resource lifecycle management (98 lines)
-- `src/MonadicPipeline.CLI/StreamingCliSteps.cs` - 8 streaming operators (668 lines)
-- `src/MonadicPipeline.Tests/Tests/StreamingEngineTests.cs` - Comprehensive tests (486 lines)
-- `src/MonadicPipeline.Examples/Examples/StreamingPipelineExample.cs` - 8 examples (360 lines)
+- `src/Ouroboros.CLI/StreamingContext.cs` - Resource lifecycle management (98 lines)
+- `src/Ouroboros.CLI/StreamingCliSteps.cs` - 8 streaming operators (668 lines)
+- `src/Ouroboros.Tests/Tests/StreamingEngineTests.cs` - Comprehensive tests (486 lines)
+- `src/Ouroboros.Examples/Examples/StreamingPipelineExample.cs` - 8 examples (360 lines)
 - `docs/STREAMING.md` - Complete documentation (307 lines)
 
 ### Files Modified
-- `src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj` - Added 3 dependencies
-- `src/MonadicPipeline.CLI/CliPipelineState.cs` - Added streaming fields (4 lines)
+- `src/Ouroboros.CLI/Ouroboros.CLI.csproj` - Added 3 dependencies
+- `src/Ouroboros.CLI/CliPipelineState.cs` - Added streaming fields (4 lines)
 
 ### Total Changes
 - **5 new files** created
@@ -62,7 +62,7 @@ Successfully implemented a complete streaming engine for MonadicPipeline using S
 
 ```
 ┌──────────────────────────────────────┐
-│      MonadicPipeline System          │
+│      Ouroboros System          │
 ├──────────────────────────────────────┤
 │  Existing Pipeline Steps             │
 │  - UseDir, UseDraft, UseCritique...  │
@@ -159,10 +159,10 @@ Successfully implemented a complete streaming engine for MonadicPipeline using S
 ### Verification
 ```bash
 # Existing pipeline - works as before
-dotnet run --project src/MonadicPipeline.CLI -- pipeline -d "UseDir('root=src') | UseDraft | UseCritique"
+dotnet run --project src/Ouroboros.CLI -- pipeline -d "UseDir('root=src') | UseDraft | UseCritique"
 
 # New streaming pipeline - new functionality
-dotnet run --project src/MonadicPipeline.CLI -- pipeline -d "Stream('source=generated') | Window('5s') | Aggregate('count') | Sink('console')"
+dotnet run --project src/Ouroboros.CLI -- pipeline -d "Stream('source=generated') | Window('5s') | Aggregate('count') | Sink('console')"
 ```
 
 ## Build Status
@@ -203,7 +203,7 @@ state.Streaming?.Dispose();
 
 ### Example 2: DSL Pipeline
 ```bash
-dotnet run --project src/MonadicPipeline.CLI -- pipeline -d "Stream('source=generated|count=100') | Window('5s') | Aggregate('count,mean') | Sink('console')"
+dotnet run --project src/Ouroboros.CLI -- pipeline -d "Stream('source=generated|count=100') | Window('5s') | Aggregate('count,mean') | Sink('console')"
 ```
 
 ### Example 3: File Processing
@@ -234,7 +234,7 @@ Potential additions (not in scope for this PR):
 
 ## Conclusion
 
-This implementation successfully adds a complete, production-ready streaming engine to MonadicPipeline while maintaining 100% backward compatibility. The system is:
+This implementation successfully adds a complete, production-ready streaming engine to Ouroboros while maintaining 100% backward compatibility. The system is:
 
 ✅ Fully functional
 ✅ Well-tested
@@ -242,4 +242,4 @@ This implementation successfully adds a complete, production-ready streaming eng
 ✅ Backward compatible
 ✅ Production-ready
 
-The streaming engine seamlessly integrates with the existing monadic pipeline architecture, leveraging the same functional programming principles and composition patterns that make MonadicPipeline powerful.
+The streaming engine seamlessly integrates with the existing monadic pipeline architecture, leveraging the same functional programming principles and composition patterns that make Ouroboros powerful.

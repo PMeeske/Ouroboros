@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>LangChainPipeline</RootNamespace>
+    <AssemblyName>Ouroboros.Examples</AssemblyName>
+    <Product>Ouroboros Examples</Product>
+    <Description>Example applications and demonstrations for Ouroboros</Description>
+    <Copyright>Copyright © 2025</Copyright>
+    <Version>1.0.0</Version>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS1591;CS1570</WarningsNotAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <RunAnalyzersDuringLiveAnalysis>false</RunAnalyzersDuringLiveAnalysis>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ouroboros.Core\Ouroboros.Core.csproj" />
+    <ProjectReference Include="..\Ouroboros.Domain\Ouroboros.Domain.csproj" />
+    <ProjectReference Include="..\Ouroboros.Pipeline\Ouroboros.Pipeline.csproj" />
+    <ProjectReference Include="..\Ouroboros.Tools\Ouroboros.Tools.csproj" />
+    <ProjectReference Include="..\Ouroboros.Providers\Ouroboros.Providers.csproj" />
+    <ProjectReference Include="..\Ouroboros.Agent\Ouroboros.Agent.csproj" />
+    <ProjectReference Include="..\Ouroboros.CLI\Ouroboros.CLI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Override vulnerable transitive dependencies from project references -->
+    <PackageReference Include="Microsoft.Build.Tasks.Core" Version="17.14.28" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.14.28" />
+    
+    <PackageReference Include="LangChain" Version="0.17.0" />
+  </ItemGroup>
+
+  <!-- Temporarily exclude examples that depend on excluded/broken LangChain integrations -->
+  <ItemGroup>
+    <Compile Remove="Examples\LangChainConversationExample.cs" />
+    <Compile Remove="Examples\ProperLangChainIntegrationExamples.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
+    <PackageReference Include="Roslynator.Analyzers" Version="4.7.0" PrivateAssets="all" />
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="9.16.0.82469" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

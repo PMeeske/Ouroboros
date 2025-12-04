@@ -216,17 +216,17 @@ Examples:
 
 ## Files Added
 
-1. **src/MonadicPipeline.Agent/Agent/MetaAI/EpicBranchOrchestrator.cs** (325 lines)
+1. **src/Ouroboros.Agent/Agent/MetaAI/EpicBranchOrchestrator.cs** (325 lines)
    - Core orchestration logic
    - All interfaces and data models
    - Complete implementation
 
-2. **src/MonadicPipeline.Examples/Examples/Epic120Example.cs** (227 lines)
+2. **src/Ouroboros.Examples/Examples/Epic120Example.cs** (227 lines)
    - Complete working example
    - Two demo workflows
    - Progress reporting
 
-3. **src/MonadicPipeline.Tests/Tests/EpicBranchOrchestratorTests.cs** (498 lines)
+3. **src/Ouroboros.Tests/Tests/EpicBranchOrchestratorTests.cs** (498 lines)
    - 26 comprehensive unit tests
    - 100% test pass rate
    - Edge case coverage

@@ -1,6 +1,6 @@
 # Self-Reflective Agent Usage Examples
 
-This document provides examples of using the new self-reflective agent prompt system in MonadicPipeline.
+This document provides examples of using the new self-reflective agent prompt system in Ouroboros.
 
 ## Command-Line Interface (CLI)
 
@@ -8,13 +8,13 @@ This document provides examples of using the new self-reflective agent prompt sy
 
 ```bash
 # Run a pipeline with self-critique mode and 2 iterations
-dotnet run --project src/MonadicPipeline.CLI -- pipeline \
+dotnet run --project src/Ouroboros.CLI -- pipeline \
   --dsl "SetTopic('Explain monads') | UseSelfCritique" \
   --critique-iterations 2 \
   --trace
 
 # Use streaming self-critique for real-time output
-dotnet run --project src/MonadicPipeline.CLI -- pipeline \
+dotnet run --project src/Ouroboros.CLI -- pipeline \
   --dsl "SetTopic('Design patterns') | UseStreamingSelfCritique('3')" \
   --trace
 ```
@@ -23,7 +23,7 @@ dotnet run --project src/MonadicPipeline.CLI -- pipeline \
 
 ```bash
 # Apply self-critique to MeTTa reasoning output
-dotnet run --project src/MonadicPipeline.CLI -- pipeline \
+dotnet run --project src/Ouroboros.CLI -- pipeline \
   --dsl "MottoInit | MottoOllama('msg=Explain functional programming') | MottoSelfCritique('2')" \
   --trace
 ```

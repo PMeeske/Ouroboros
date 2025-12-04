@@ -1,11 +1,11 @@
-# MonadicPipeline
+# Ouroboros
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/PMeeske/MonadicPipeline)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/PMeeske/Ouroboros)
 [![.NET Version](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![LangChain](https://img.shields.io/badge/LangChain-0.17.0-purple)](https://www.nuget.org/packages/LangChain/)
 [![Coverage](https://img.shields.io/badge/coverage-8.4%25-yellow)](TEST_COVERAGE_REPORT.md)
-[![Tests](https://img.shields.io/badge/tests-304%20passing-brightgreen)](src/MonadicPipeline.Tests)
-[![Mutation Testing](https://github.com/PMeeske/MonadicPipeline/actions/workflows/mutation-testing.yml/badge.svg)](https://github.com/PMeeske/MonadicPipeline/actions/workflows/mutation-testing.yml)
+[![Tests](https://img.shields.io/badge/tests-304%20passing-brightgreen)](src/Ouroboros.Tests)
+[![Mutation Testing](https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml/badge.svg)](https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml)
 
 A **sophisticated functional programming-based AI pipeline system** built on LangChain, implementing category theory principles, monadic composition, and functional programming patterns to create type-safe, composable AI workflows.
 
@@ -45,7 +45,7 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
 
 ## 🏗️ Architecture
 
-MonadicPipeline follows a **Functional Pipeline Architecture** with monadic composition as its central organizing principle:
+Ouroboros follows a **Functional Pipeline Architecture** with monadic composition as its central organizing principle:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -100,8 +100,8 @@ Iteration N:  Critique(FinalSpec_{N-1}) → Improve → FinalSpec_N
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/PMeeske/MonadicPipeline.git
-   cd MonadicPipeline
+   git clone https://github.com/PMeeske/Ouroboros.git
+   cd Ouroboros
    ```
 
 2. **Restore dependencies:**
@@ -116,7 +116,7 @@ Iteration N:  Critique(FinalSpec_{N-1}) → Improve → FinalSpec_N
 
 4. **Run the guided setup (recommended for first-time users):**
    ```bash
-   cd src/MonadicPipeline.CLI
+   cd src/Ouroboros.CLI
    dotnet run -- setup --all
    ```
 
@@ -136,7 +136,7 @@ Iteration N:  Critique(FinalSpec_{N-1}) → Improve → FinalSpec_N
 
 5. **Try the examples:**
    ```bash
-   cd src/MonadicPipeline.Examples
+   cd src/Ouroboros.Examples
    dotnet run
    ```
 
@@ -144,11 +144,11 @@ Iteration N:  Critique(FinalSpec_{N-1}) → Improve → FinalSpec_N
 
 #### Command Line Interface
 
-The CLI provides several commands for interacting with the pipeline system. All commands should be run from the `src/MonadicPipeline.CLI` directory:
+The CLI provides several commands for interacting with the pipeline system. All commands should be run from the `src/Ouroboros.CLI` directory:
 
 ```bash
 # Navigate to CLI directory
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 
 # Ask a question
 dotnet run -- ask -q "What is functional programming?"
@@ -186,7 +186,7 @@ dotnet run -- metta --goal "Create a research plan" --plan-only
 
 #### Orchestrating Complex Tasks with Small Models
 
-MonadicPipeline supports **intelligent model orchestration** that allows you to efficiently handle complex tasks by combining multiple small, specialized models. This approach is more cost-effective and often faster than using a single large model.
+Ouroboros supports **intelligent model orchestration** that allows you to efficiently handle complex tasks by combining multiple small, specialized models. This approach is more cost-effective and often faster than using a single large model.
 
 **Key Features:**
 - **Automatic Model Selection**: The `--router auto` flag intelligently routes sub-tasks to specialized models
@@ -244,7 +244,7 @@ The Web API provides REST endpoints for the same pipeline functionality, ideal f
 
 ```bash
 # Navigate to Web API directory
-cd src/MonadicPipeline.WebApi
+cd src/Ouroboros.WebApi
 
 # Run locally
 dotnet run
@@ -279,11 +279,11 @@ curl -X POST http://localhost:8080/api/pipeline \
 curl http://localhost:8080/health
 ```
 
-See [Web API Documentation](src/MonadicPipeline.WebApi/README.md) for more details.
+See [Web API Documentation](src/Ouroboros.WebApi/README.md) for more details.
 
 #### Android App (Mobile CLI Interface)
 
-MonadicPipeline is now available as an Android app with a terminal-style CLI interface and integrated Ollama support.
+Ouroboros is now available as an Android app with a terminal-style CLI interface and integrated Ollama support.
 
 **Get the APK:**
 - **Download:** APK is automatically built by CI/CD - download from [GitHub Actions artifacts](../../actions/workflows/android-build.yml)
@@ -291,7 +291,7 @@ MonadicPipeline is now available as an Android app with a terminal-style CLI int
 
 ```bash
 # To build locally (requires: dotnet workload install maui-android)
-cd src/MonadicPipeline.Android
+cd src/Ouroboros.Android
 dotnet build -c Release -f net8.0-android
 
 # Install on connected device
@@ -313,7 +313,7 @@ dotnet build -c Release -f net8.0-android -t:Install
 4. Pull a small model on your server: `ollama pull tinyllama`
 5. Ask questions: `ask What is functional programming?`
 
-See [Android App Documentation](src/MonadicPipeline.Android/README.md) for complete instructions.
+See [Android App Documentation](src/Ouroboros.Android/README.md) for complete instructions.
 
 
 #### Smart Model Orchestrator
@@ -434,7 +434,7 @@ Configure remote AI endpoints via environment variables or CLI flags. All CLI co
 
 ```bash
 # Navigate to CLI directory
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 
 # Set environment variables (recommended)
 export CHAT_ENDPOINT="https://api.ollama.com"
@@ -485,7 +485,7 @@ var pipeline = Step.Pure<string>()
     .Map(FormatOutput);
 
 // Execute with error handling
-var result = await pipeline("Hello, MonadicPipeline!");
+var result = await pipeline("Hello, Ouroboros!");
 result.Match(
     success => Console.WriteLine($"Result: {success}"),
     error => Console.WriteLine($"Error: {error}")
@@ -496,7 +496,7 @@ result.Match(
 
 ### Monads
 
-MonadicPipeline uses monads for safe, composable operations:
+Ouroboros uses monads for safe, composable operations:
 - **`Result<T>`**: Represents operations that can succeed or fail
 - **`Option<T>`**: Represents potentially null values safely
 
@@ -526,35 +526,35 @@ var enhancedPipeline = Step.Pure<string>()
 
 ```
 src/
-├── MonadicPipeline.Core/        # Monadic abstractions and core functionality
+├── Ouroboros.Core/        # Monadic abstractions and core functionality
 │   ├── Conversation/            # Conversational pipeline builders
 │   ├── Kleisli/                 # Category theory implementation
 │   ├── Memory/                  # Memory management for conversations
 │   ├── Monads/                  # Option and Result monad implementations
 │   └── Steps/                   # Pipeline step abstractions
-├── MonadicPipeline.Domain/      # Domain models and business logic
+├── Ouroboros.Domain/      # Domain models and business logic
 │   ├── Events/                  # Event sourcing patterns
 │   ├── States/                  # State management
 │   └── Vectors/                 # Vector database abstractions
-├── MonadicPipeline.Pipeline/    # Pipeline implementation layers
+├── Ouroboros.Pipeline/    # Pipeline implementation layers
 │   ├── Branches/                # Branch management and persistence
 │   ├── Ingestion/               # Data ingestion pipelines
 │   ├── Reasoning/               # AI reasoning workflows
 │   └── Replay/                  # Execution replay functionality
-├── MonadicPipeline.Tools/       # Extensible tool system
+├── Ouroboros.Tools/       # Extensible tool system
 │   └── MeTTa/                   # MeTTa symbolic reasoning integration
-├── MonadicPipeline.Providers/   # External service providers
-├── MonadicPipeline.Agent/       # AI orchestration and meta-AI
-├── MonadicPipeline.CLI/         # Command-line interface
-├── MonadicPipeline.WebApi/      # REST API for containerized deployments
-├── MonadicPipeline.Android/     # Android app with terminal CLI interface
-├── MonadicPipeline.Examples/    # Comprehensive examples
-└── MonadicPipeline.Tests/       # Test suite
+├── Ouroboros.Providers/   # External service providers
+├── Ouroboros.Agent/       # AI orchestration and meta-AI
+├── Ouroboros.CLI/         # Command-line interface
+├── Ouroboros.WebApi/      # REST API for containerized deployments
+├── Ouroboros.Android/     # Android app with terminal CLI interface
+├── Ouroboros.Examples/    # Comprehensive examples
+└── Ouroboros.Tests/       # Test suite
 ```
 
 ## 🎯 Examples
 
-The `src/MonadicPipeline.Examples/Examples/` directory contains comprehensive demonstrations:
+The `src/Ouroboros.Examples/Examples/` directory contains comprehensive demonstrations:
 
 - **`MonadicExamples.cs`**: Core monadic operations
 - **`ConversationalKleisliExamples.cs`**: Memory-integrated conversations
@@ -569,7 +569,7 @@ The `src/MonadicPipeline.Examples/Examples/` directory contains comprehensive de
 
 Run all examples:
 ```bash
-cd src/MonadicPipeline.Examples
+cd src/Ouroboros.Examples
 dotnet run
 ```
 
@@ -595,17 +595,17 @@ await orchestrator.ExecuteSubIssueAsync(120, 121, workFunc);
 - 📘 [API Reference](docs/EpicBranchOrchestration.md) - Complete API documentation
 - 📗 [Integration Guide](docs/Epic120Integration.md) - Practical usage patterns
 - 📙 [Implementation Summary](docs/ImplementationSummary.md) - Architecture overview
-- 💻 [Example Code](src/MonadicPipeline.Examples/Examples/Epic120Example.cs) - Working example
+- 💻 [Example Code](src/Ouroboros.Examples/Examples/Epic120Example.cs) - Working example
 
 ## 🔗 Key Features Details
 
 ### LangChain Pipe Operators
 
-MonadicPipeline supports **LangChain's familiar pipe operator syntax** while maintaining functional programming guarantees:
+Ouroboros supports **LangChain's familiar pipe operator syntax** while maintaining functional programming guarantees:
 
 ```bash
 # Navigate to CLI directory
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 
 # CLI DSL usage - RAG pipeline
 dotnet run -- pipeline --dsl "SetQuery('What is AI?') | Retrieve | Template | LLM"
@@ -629,7 +629,7 @@ Pipeline steps are automatically registered as tools that the LLM can invoke:
 
 ```bash
 # Navigate to CLI directory
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 
 # The LLM can use pipeline tools to improve its own output
 dotnet run -- pipeline --dsl "SetPrompt('Explain functional programming') | UseDraft | UseCritique | UseImprove"
@@ -648,7 +648,7 @@ The refinement loop implements an **iterative refinement architecture** where ea
 
 ```bash
 # Navigate to CLI directory
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 
 # Run complete refinement workflow: Draft -> Critique -> Improve
 dotnet run -- pipeline -d "SetTopic('microservices architecture') | UseRefinementLoop('2')"
@@ -740,7 +740,7 @@ public class CustomTool : ITool
 
 #### Built-in Tools
 
-MonadicPipeline includes several built-in tools:
+Ouroboros includes several built-in tools:
 
 - **MathTool**: Arithmetic expression evaluation
 - **RetrievalTool**: Semantic search over ingested documents
@@ -754,7 +754,7 @@ See [SCOPE_LOCK_GUIDE.md](docs/SCOPE_LOCK_GUIDE.md) for detailed documentation o
 
 ### Testing
 
-MonadicPipeline has a comprehensive test suite with 224 passing tests covering core functionality, domain models, security, and performance.
+Ouroboros has a comprehensive test suite with 224 passing tests covering core functionality, domain models, security, and performance.
 
 #### Run Tests
 
@@ -769,7 +769,7 @@ dotnet test --filter "FullyQualifiedName~InputValidatorTests"
 dotnet test --verbosity detailed
 
 # Run CLI integration tests
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 dotnet run -- test --all
 ```
 
@@ -789,7 +789,7 @@ ollama pull llama3:8b
 ollama pull nomic-embed-text
 
 # Run integration tests manually
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 dotnet run -- ask -q "Test question" --model "llama3:8b"
 dotnet run -- pipeline --dsl "SetPrompt('test') | UseDraft" --model "llama3:8b"
 ```
@@ -798,7 +798,7 @@ dotnet run -- pipeline --dsl "SetPrompt('test') | UseDraft" --model "llama3:8b"
 
 [![Line Coverage](https://img.shields.io/badge/coverage-8.4%25-yellow)](TEST_COVERAGE_REPORT.md)
 [![Branch Coverage](https://img.shields.io/badge/branch--coverage-6.2%25-red)](TEST_COVERAGE_REPORT.md)
-[![Tests](https://img.shields.io/badge/tests-224%20passing-brightgreen)](src/MonadicPipeline.Tests)
+[![Tests](https://img.shields.io/badge/tests-224%20passing-brightgreen)](src/Ouroboros.Tests)
 
 **Current Coverage Summary:**
 - **Line Coverage:** 8.4% (1,134 of 13,465 lines)
@@ -851,7 +851,7 @@ Additional details and CI guidance are available in [TEST_MUTATION_GUIDE.md](TES
 
 ## 🔄 GitHub Copilot Development Loop
 
-MonadicPipeline features an **automatic development loop** powered by GitHub Copilot that provides:
+Ouroboros features an **automatic development loop** powered by GitHub Copilot that provides:
 
 ### 🤖 Automated Development Cycle ⭐ **NEW**
 
@@ -941,7 +941,7 @@ See [`.github/copilot-instructions.md`](.github/copilot-instructions.md) for det
 
 ## 🚀 Deployment
 
-MonadicPipeline supports multiple deployment options for various environments:
+Ouroboros supports multiple deployment options for various environments:
 
 ### Docker Deployment
 
@@ -1068,7 +1068,7 @@ For comprehensive deployment instructions including configuration management, mo
 
 ## 🏗️ Infrastructure & Dependencies
 
-MonadicPipeline has comprehensive infrastructure documentation covering the complete stack from C# application to Terraform provisioning:
+Ouroboros has comprehensive infrastructure documentation covering the complete stack from C# application to Terraform provisioning:
 
 ### Infrastructure Documentation
 
@@ -1222,4 +1222,4 @@ This project is open source. Please check the repository for license details.
 
 ---
 
-**MonadicPipeline by Adaptive Systems Inc.**: Where Category Theory Meets AI Pipeline Engineering 🚀
+**Ouroboros by Adaptive Systems Inc.**: Where Category Theory Meets AI Pipeline Engineering 🚀

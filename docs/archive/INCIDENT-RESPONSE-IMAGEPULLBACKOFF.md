@@ -253,7 +253,7 @@ kubectl delete pod test-pull
 For questions about this incident or deployment procedures, contact:
 - DevOps Team: devops@example.com
 - On-call Engineer: See PagerDuty schedule
-- Documentation: https://github.com/PMeeske/MonadicPipeline
+- Documentation: https://github.com/PMeeske/Ouroboros
 
 ---
 

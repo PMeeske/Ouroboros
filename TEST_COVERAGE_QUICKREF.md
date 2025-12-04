@@ -56,12 +56,12 @@ dotnet test --collect:"XPlat Code Coverage" --filter "FullyQualifiedName~InputVa
 
 | Assembly | Coverage |
 |----------|----------|
-| MonadicPipeline.Domain | 80.1% ✅ |
-| MonadicPipeline.Core | 34.2% ⚠️ |
-| MonadicPipeline.Pipeline | 15.5% ❌ |
-| MonadicPipeline.Tools | 2.8% ❌ |
-| MonadicPipeline.Providers | 2.2% ❌ |
-| MonadicPipeline.Agent | 0% ❌ |
+| Ouroboros.Domain | 80.1% ✅ |
+| Ouroboros.Core | 34.2% ⚠️ |
+| Ouroboros.Pipeline | 15.5% ❌ |
+| Ouroboros.Tools | 2.8% ❌ |
+| Ouroboros.Providers | 2.2% ❌ |
+| Ouroboros.Agent | 0% ❌ |
 | LangChainPipeline (CLI) | 0% ❌ |
 
 ---
@@ -125,7 +125,7 @@ dotnet test --collect:"XPlat Code Coverage" --filter "FullyQualifiedName~InputVa
 ## Priority Testing Areas
 
 ### Critical (0% Coverage)
-1. **MonadicPipeline.Agent** - 73 classes
+1. **Ouroboros.Agent** - 73 classes
 2. **LangChainPipeline CLI** - 18 classes
 3. **MeTTa Tools** - Integration tooling
 4. **Ollama Providers** - LLM adapters
@@ -151,7 +151,7 @@ dotnet test --collect:"XPlat Code Coverage" --filter "FullyQualifiedName~InputVa
 ### Local Development
 ```bash
 # Watch mode for TDD
-dotnet watch test --project src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj
+dotnet watch test --project src/Ouroboros.Tests/Ouroboros.Tests.csproj
 
 # Coverage during development
 ./scripts/run-coverage.sh  # Create this script if needed
@@ -205,7 +205,7 @@ reportgenerator \
 ### Coverage Not Generated
 ```bash
 # Ensure coverlet.collector is installed
-dotnet add src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj package coverlet.collector
+dotnet add src/Ouroboros.Tests/Ouroboros.Tests.csproj package coverlet.collector
 
 # Clean and rebuild
 dotnet clean

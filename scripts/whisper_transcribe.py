@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Local Whisper transcription wrapper for MonadicPipeline.
+Local Whisper transcription wrapper for Ouroboros.
 Provides a simple CLI interface for the OpenAI Whisper Python package.
 
 Usage:

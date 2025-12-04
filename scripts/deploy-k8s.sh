@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deployment script for MonadicPipeline on Kubernetes
+# Deployment script for Ouroboros on Kubernetes
 # Usage: ./deploy-k8s.sh [namespace]
 #
 # Note: This script builds Docker images locally and deploys them to Kubernetes.
@@ -24,7 +24,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 K8S_DIR="$PROJECT_ROOT/k8s"
 
 echo "================================================"
-echo "MonadicPipeline Kubernetes Deployment"
+echo "Ouroboros Kubernetes Deployment"
 echo "================================================"
 echo "Namespace: $NAMESPACE"
 echo "K8s manifests: $K8S_DIR"
@@ -134,10 +134,10 @@ kubectl apply -f "$K8S_DIR/qdrant.yaml"
 echo "Deploying Jaeger..."
 kubectl apply -f "$K8S_DIR/jaeger.yaml"
 
-echo "Deploying MonadicPipeline CLI..."
+echo "Deploying Ouroboros CLI..."
 kubectl apply -f "$K8S_DIR/deployment.yaml"
 
-echo "Deploying MonadicPipeline Web API..."
+echo "Deploying Ouroboros Web API..."
 kubectl apply -f "$K8S_DIR/webapi-deployment.yaml"
 
 echo ""

@@ -1,6 +1,6 @@
-# IONOS Cloud Deployment Guide for MonadicPipeline
+# IONOS Cloud Deployment Guide for Ouroboros
 
-This guide provides detailed instructions for deploying MonadicPipeline to IONOS Cloud Kubernetes infrastructure.
+This guide provides detailed instructions for deploying Ouroboros to IONOS Cloud Kubernetes infrastructure.
 
 ## Table of Contents
 
@@ -60,15 +60,15 @@ Before deploying to IONOS Cloud, ensure you have:
 
 5. **Git**: For cloning the repository
    ```bash
-   git clone https://github.com/PMeeske/MonadicPipeline.git
-   cd MonadicPipeline
+   git clone https://github.com/PMeeske/Ouroboros.git
+   cd Ouroboros
    ```
 
 ## IONOS Cloud Setup
 
 ### Option 1: Automated Setup with Infrastructure as Code (Recommended)
 
-**MonadicPipeline now supports fully automated infrastructure provisioning using Terraform!**
+**Ouroboros now supports fully automated infrastructure provisioning using Terraform!**
 
 This is the fastest and most reliable way to set up your infrastructure.
 
@@ -344,7 +344,7 @@ kubectl get pvc -n monadic-pipeline
 
 ## CI/CD with GitHub Actions
 
-MonadicPipeline includes a GitHub Actions workflow for automated deployment to IONOS Cloud. The workflow automatically builds, tests, and deploys your application whenever you push to the main branch.
+Ouroboros includes a GitHub Actions workflow for automated deployment to IONOS Cloud. The workflow automatically builds, tests, and deploys your application whenever you push to the main branch.
 
 ### Workflow Overview
 
@@ -798,8 +798,8 @@ For IONOS Cloud specific issues:
 - **Support Portal**: [cloud.ionos.com/support](https://cloud.ionos.com/support) - IONOS Cloud Support Portal
 - **Community Forum**: [community.ionos.com](https://community.ionos.com) - IONOS Cloud Community Forum
 
-For MonadicPipeline issues:
-- **GitHub Issues**: [github.com/PMeeske/MonadicPipeline/issues](https://github.com/PMeeske/MonadicPipeline/issues)
+For Ouroboros issues:
+- **GitHub Issues**: [github.com/PMeeske/Ouroboros/issues](https://github.com/PMeeske/Ouroboros/issues)
 - **Documentation**: See project README and other docs
 
 ---

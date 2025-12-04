@@ -26,7 +26,7 @@ The agent would provide:
 - Step signature using `Step<PipelineBranch, PipelineBranch>`
 - Proper use of `Result<T>` monad for validation errors
 - Integration with event sourcing
-- Example implementation following MonadicPipeline patterns
+- Example implementation following Ouroboros patterns
 - **✅ Complete test suite including:**
   - Unit tests for validation logic
   - Property-based tests for monadic laws
@@ -110,7 +110,7 @@ public async Task Orchestrator_Should_Select_Appropriate_Model(
 **Scenario:** You need to deploy the WebApi to Kubernetes with zero downtime.
 
 **Question to @cloud-devops-expert:**
-> "I need to deploy MonadicPipeline WebApi to Kubernetes with health checks, autoscaling, and zero-downtime updates. **Show me how to test the deployment configuration before applying it to production, including health check testing and rollback procedures.**"
+> "I need to deploy Ouroboros WebApi to Kubernetes with health checks, autoscaling, and zero-downtime updates. **Show me how to test the deployment configuration before applying it to production, including health check testing and rollback procedures.**"
 
 **Expected Guidance:**
 The agent would provide:
@@ -147,10 +147,10 @@ kubectl rollout status deployment/monadic-pipeline
 
 ## Example 4: Building an Android or MAUI App (WITH TESTS)
 
-**Scenario:** You need to create a mobile app that uses the MonadicPipeline API.
+**Scenario:** You need to create a mobile app that uses the Ouroboros API.
 
 **Question to @android-expert (for native Android):**
-> "I need to build an Android app with Kotlin that connects to the MonadicPipeline API. How should I structure the app using MVVM, Jetpack Compose, and Hilt for dependency injection? **Please include comprehensive tests for ViewModels, repositories, and UI components.**"
+> "I need to build an Android app with Kotlin that connects to the Ouroboros API. How should I structure the app using MVVM, Jetpack Compose, and Hilt for dependency injection? **Please include comprehensive tests for ViewModels, repositories, and UI components.**"
 
 **Expected Guidance:**
 The agent would provide:
@@ -198,7 +198,7 @@ fun pipelineList_displays_pipelines() {
 - Example implementation with proper error handling
 
 **Question to @android-expert (for cross-platform MAUI):**
-> "I need to build a cross-platform app with .NET MAUI (C#) that connects to the MonadicPipeline API and runs on Android, iOS, and Windows. How should I structure it using MVVM with CommunityToolkit?"
+> "I need to build a cross-platform app with .NET MAUI (C#) that connects to the Ouroboros API and runs on Android, iOS, and Windows. How should I structure it using MVVM with CommunityToolkit?"
 
 **Expected Guidance:**
 The agent would provide:
@@ -237,7 +237,7 @@ extraction feature, including metrics monitoring for skill extraction success ra
 **Scenario:** Your CI/CD pipeline takes 20 minutes to run and you want to optimize it.
 
 **Question to @github-actions-expert:**
-> "My GitHub Actions workflow for MonadicPipeline takes 20 minutes to build, test, and deploy. It runs on every PR and uses .NET 8. How can I optimize it to run in under 5 minutes?"
+> "My GitHub Actions workflow for Ouroboros takes 20 minutes to build, test, and deploy. It runs on every PR and uses .NET 8. How can I optimize it to run in under 5 minutes?"
 
 **Expected Guidance:**
 The agent would provide:
@@ -423,7 +423,7 @@ jobs:
 
 ## Verification Checklist
 
-- [ ] Agents understand MonadicPipeline architecture
+- [ ] Agents understand Ouroboros architecture
 - [ ] Functional Pipeline Expert provides monadic patterns
 - [ ] AI Orchestration Specialist knows Meta-AI architecture
 - [ ] Cloud DevOps Expert has Kubernetes expertise
@@ -442,7 +442,7 @@ After validating the agents:
 2. Gather feedback from team members
 3. Refine agent knowledge based on common questions
 4. Add more specialized agents if needed (e.g., Testing Expert, Security Specialist)
-5. Update agents when new features are added to MonadicPipeline
+5. Update agents when new features are added to Ouroboros
 
 ## 🔴 Testing Mandate Examples 🔴
 
@@ -566,7 +566,7 @@ Please provide tests and I'll review the complete solution.
 
 ### Test Execution Results
 \`\`\`
-Test run for MonadicPipeline.Tests.dll (.NET 10.0)
+Test run for Ouroboros.Tests.dll (.NET 10.0)
 Total tests: 859
      Passed: 859
      Failed: 0
@@ -594,6 +594,6 @@ If you encounter issues:
 
 ---
 
-**Remember:** These custom agents are tools to enhance productivity. They provide guidance based on best practices and MonadicPipeline's architecture, but always review and test their suggestions before implementing in production code.
+**Remember:** These custom agents are tools to enhance productivity. They provide guidance based on best practices and Ouroboros's architecture, but always review and test their suggestions before implementing in production code.
 
 **🔴 CRITICAL:** Every custom agent now enforces mandatory testing. If an agent provides code without tests or allows you to skip testing, report it as a bug immediately. Our agents are valuable professionals who take pride in their thoroughly tested work.

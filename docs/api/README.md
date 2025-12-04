@@ -19,7 +19,7 @@ https://api.ionos.com/cloudapi/v6
 - Official IONOS Cloud API Documentation: https://api.ionos.com/docs/
 - Swagger UI: Available at IONOS Cloud Console
 
-## Usage in MonadicPipeline
+## Usage in Ouroboros
 
 This API specification is referenced by:
 - `.github/workflows/terraform-infrastructure.yml` - Infrastructure provisioning

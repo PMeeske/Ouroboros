@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-Analyzed and fixed all GitHub Actions workflow errors in the MonadicPipeline repository. All 8 workflow files now pass validation with no critical errors.
+Analyzed and fixed all GitHub Actions workflow errors in the Ouroboros repository. All 8 workflow files now pass validation with no critical errors.
 
 ## Errors Fixed
 

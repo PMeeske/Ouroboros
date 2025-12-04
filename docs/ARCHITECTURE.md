@@ -1,4 +1,4 @@
-# MonadicPipeline Architecture
+# Ouroboros Architecture
 
 **Version**: 1.0
 **Last Updated**: October 5, 2025
@@ -19,7 +19,7 @@
 
 ## Executive Summary
 
-MonadicPipeline is a **functional programming-based AI pipeline system** that applies category theory principles to create type-safe, composable AI workflows. The architecture is built on three core pillars:
+Ouroboros is a **functional programming-based AI pipeline system** that applies category theory principles to create type-safe, composable AI workflows. The architecture is built on three core pillars:
 
 1. **Monadic Composition** - Safe, composable operations using Result<T> and Option<T> monads
 2. **Kleisli Arrows** - Mathematical composition of effects in monadic contexts
@@ -839,7 +839,7 @@ var pipeline = Step.Pure<string>()
 
 ## Conclusion
 
-MonadicPipeline's architecture provides a **solid functional foundation** for building type-safe, composable AI workflows. The system's design prioritizes:
+Ouroboros's architecture provides a **solid functional foundation** for building type-safe, composable AI workflows. The system's design prioritizes:
 
 - **Correctness**: Type safety and explicit error handling
 - **Composability**: Build complex from simple

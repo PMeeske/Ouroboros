@@ -2,7 +2,7 @@
 
 ## Summary
 
-This document describes the fixes applied to resolve breaking GitHub Actions workflows in the MonadicPipeline repository.
+This document describes the fixes applied to resolve breaking GitHub Actions workflows in the Ouroboros repository.
 
 ## Issues Fixed
 

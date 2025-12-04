@@ -2,7 +2,7 @@
 
 ## Overview
 
-MonadicPipeline implements a **self-improving agent architecture** based on Meta-AI v2 principles. The system automatically learns from successful executions, extracts reusable skills, manages memory with consolidation and forgetting, and routes tasks based on confidence levels.
+Ouroboros implements a **self-improving agent architecture** based on Meta-AI v2 principles. The system automatically learns from successful executions, extracts reusable skills, manages memory with consolidation and forgetting, and routes tasks based on confidence levels.
 
 ## Architecture Components
 
@@ -723,13 +723,13 @@ Memory operations are bounded:
 
 - **Documentation Index**: See [README.md](README.md) for complete documentation catalog
 - **Phase Implementations**: See [archive/](archive/) for detailed implementation summaries
-- **Phase 1 Example**: `src/MonadicPipeline.Examples/Examples/SelfImprovingAgentExample.cs`
-- **Phase 2 Example**: `src/MonadicPipeline.Examples/Examples/Phase2MetacognitionExample.cs`
-- **Phase 3 Example**: `src/MonadicPipeline.Examples/Examples/Phase3EmergentIntelligenceExample.cs`
-- **Phase 1 Tests**: `src/MonadicPipeline.Tests/Tests/SkillExtractionTests.cs`
-- **Phase 1 Tests**: `src/MonadicPipeline.Tests/Tests/PersistentMemoryStoreTests.cs`
-- **Phase 2 Tests**: `src/MonadicPipeline.Tests/Tests/Phase2MetacognitionTests.cs`
-- **Phase 3 Tests**: `src/MonadicPipeline.Tests/Tests/Phase3EmergentIntelligenceTests.cs`
+- **Phase 1 Example**: `src/Ouroboros.Examples/Examples/SelfImprovingAgentExample.cs`
+- **Phase 2 Example**: `src/Ouroboros.Examples/Examples/Phase2MetacognitionExample.cs`
+- **Phase 3 Example**: `src/Ouroboros.Examples/Examples/Phase3EmergentIntelligenceExample.cs`
+- **Phase 1 Tests**: `src/Ouroboros.Tests/Tests/SkillExtractionTests.cs`
+- **Phase 1 Tests**: `src/Ouroboros.Tests/Tests/PersistentMemoryStoreTests.cs`
+- **Phase 2 Tests**: `src/Ouroboros.Tests/Tests/Phase2MetacognitionTests.cs`
+- **Phase 3 Tests**: `src/Ouroboros.Tests/Tests/Phase3EmergentIntelligenceTests.cs`
 
 ## Contributing
 

@@ -1,6 +1,6 @@
 # Infrastructure Deployment Topology
 
-This document provides visual and detailed topological representations of the MonadicPipeline infrastructure across all deployment layers.
+This document provides visual and detailed topological representations of the Ouroboros infrastructure across all deployment layers.
 
 ## Table of Contents
 
@@ -278,7 +278,7 @@ Anti-affinity ensures:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│              MonadicPipeline Application                     │
+│              Ouroboros Application                     │
 ├──────────────────────────────────────────────────────────────┤
 │  ┌────────────────────────────────────────────────────┐      │
 │  │           PipelineConfiguration                    │      │

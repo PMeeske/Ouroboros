@@ -1,6 +1,6 @@
 # IONOS Infrastructure as Code (IaC) Implementation Guide
 
-This document provides a comprehensive guide to the Infrastructure as Code (IaC) implementation for MonadicPipeline on IONOS Cloud using Terraform.
+This document provides a comprehensive guide to the Infrastructure as Code (IaC) implementation for Ouroboros on IONOS Cloud using Terraform.
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@ This document provides a comprehensive guide to the Infrastructure as Code (IaC)
 
 ## Overview
 
-The MonadicPipeline infrastructure is now fully automated using Terraform and the IONOS Cloud provider. This enables:
+The Ouroboros infrastructure is now fully automated using Terraform and the IONOS Cloud provider. This enables:
 
 - **Zero manual infrastructure setup**: All resources provisioned via code
 - **Environment parity**: Consistent infrastructure across dev/staging/prod
@@ -626,6 +626,6 @@ When adding new infrastructure:
 ---
 
 **Last Updated**: January 2025  
-**Author**: MonadicPipeline Team  
+**Author**: Ouroboros Team  
 **Terraform Version**: >= 1.5.0  
 **IONOS Provider Version**: ~> 6.7.0

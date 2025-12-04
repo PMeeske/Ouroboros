@@ -43,7 +43,7 @@ using LangChainPipeline.Core.Monads;
 
 // Initialize the scope lock tool
 string githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
-var scopeLockTool = new GitHubScopeLockTool(githubToken, "PMeeske", "MonadicPipeline");
+var scopeLockTool = new GitHubScopeLockTool(githubToken, "PMeeske", "Ouroboros");
 
 // Initialize epic orchestrator
 var safetyGuard = new SafetyGuard(PermissionLevel.Isolated);
@@ -113,7 +113,7 @@ string githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
 var scopeLockTool = new GitHubScopeLockTool(
     githubToken,
     owner: "PMeeske",
-    repo: "MonadicPipeline"
+    repo: "Ouroboros"
 );
 
 // Lock scope for issue #2 with milestone v1.0
@@ -307,16 +307,16 @@ For integration testing with actual GitHub API:
 export GITHUB_TOKEN=your_token_here
 
 # Run the example
-dotnet run --project src/MonadicPipeline.Examples -- --example Issue138ScopeLock
+dotnet run --project src/Ouroboros.Examples -- --example Issue138ScopeLock
 ```
 
 ## See Also
 
 - [Epic120Integration.md](Epic120Integration.md) - Complete Epic #120 workflow
 - [EpicBranchOrchestration.md](EpicBranchOrchestration.md) - Epic orchestration system
-- [Issue138ScopeLockExample.cs](../src/MonadicPipeline.Examples/Examples/Issue138ScopeLockExample.cs) - Working code example
-- [GitHubScopeLockTool.cs](../src/MonadicPipeline.Tools/Tools/GitHubScopeLockTool.cs) - Implementation details
-- [GitHubScopeLockToolTests.cs](../src/MonadicPipeline.Tests/Tests/GitHubScopeLockToolTests.cs) - Test suite
+- [Issue138ScopeLockExample.cs](../src/Ouroboros.Examples/Examples/Issue138ScopeLockExample.cs) - Working code example
+- [GitHubScopeLockTool.cs](../src/Ouroboros.Tools/Tools/GitHubScopeLockTool.cs) - Implementation details
+- [GitHubScopeLockToolTests.cs](../src/Ouroboros.Tests/Tests/GitHubScopeLockToolTests.cs) - Test suite
 
 ## Contributing
 
@@ -330,4 +330,4 @@ To extend the scope locking mechanism:
 
 ## License
 
-This implementation is part of the MonadicPipeline project. See [LICENSE](../LICENSE) for details.
+This implementation is part of the Ouroboros project. See [LICENSE](../LICENSE) for details.

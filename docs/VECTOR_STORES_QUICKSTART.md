@@ -1,6 +1,6 @@
 # Quick Start: Using Qdrant Vector Store Locally
 
-This quick guide shows you how to use the Qdrant vector store in MonadicPipeline for local development.
+This quick guide shows you how to use the Qdrant vector store in Ouroboros for local development.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ This quick guide shows you how to use the Qdrant vector store in MonadicPipeline
 ### 1. Start Qdrant
 
 ```bash
-cd /path/to/MonadicPipeline
+cd /path/to/Ouroboros
 docker-compose up -d qdrant
 ```
 
@@ -22,7 +22,7 @@ curl http://localhost:6333/health
 # Should return: {"status":"ok"}
 ```
 
-### 2. Configure MonadicPipeline
+### 2. Configure Ouroboros
 
 Create or update `.env` file:
 
@@ -53,7 +53,7 @@ Or update `appsettings.Development.json`:
 ### 3. Run the Application
 
 ```bash
-dotnet run --project src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj
+dotnet run --project src/Ouroboros.CLI/Ouroboros.CLI.csproj
 ```
 
 ## What's Happening

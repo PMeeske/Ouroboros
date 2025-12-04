@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: 📚 Documentation
-    url: https://github.com/PMeeske/MonadicPipeline/blob/main/README.md
+    url: https://github.com/PMeeske/Ouroboros/blob/main/README.md
     about: Check our comprehensive documentation and guides
   - name: 💬 Discussions
-    url: https://github.com/PMeeske/MonadicPipeline/discussions
+    url: https://github.com/PMeeske/Ouroboros/discussions
     about: Ask questions and discuss ideas with the community

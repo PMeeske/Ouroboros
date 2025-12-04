@@ -2,15 +2,15 @@
 
 ## Overview
 
-This document summarizes the complete implementation of **Phase 2: Self-Model & Metacognition** for the MonadicPipeline self-improving agent architecture.
+This document summarizes the complete implementation of **Phase 2: Self-Model & Metacognition** for the Ouroboros self-improving agent architecture.
 
 ## What Was Implemented
 
 ### Task 2.1: Capability Registry ✅
 
 **Files Created:**
-- `src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/ICapabilityRegistry.cs`
-- `src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/CapabilityRegistry.cs`
+- `src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/ICapabilityRegistry.cs`
+- `src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/CapabilityRegistry.cs`
 
 **Capabilities:**
 - Agent self-model tracking what it can/cannot do
@@ -37,8 +37,8 @@ public sealed record AgentCapability(
 ### Task 2.2: Goal Hierarchy & Value Alignment ✅
 
 **Files Created:**
-- `src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/IGoalHierarchy.cs`
-- `src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/GoalHierarchy.cs`
+- `src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/IGoalHierarchy.cs`
+- `src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/GoalHierarchy.cs`
 
 **Capabilities:**
 - Hierarchical goal decomposition using LLM
@@ -72,8 +72,8 @@ public sealed record GoalConflict(
 ### Task 2.3: Self-Evaluation Framework ✅
 
 **Files Created:**
-- `src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/ISelfEvaluator.cs`
-- `src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/SelfEvaluator.cs`
+- `src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/ISelfEvaluator.cs`
+- `src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/SelfEvaluator.cs`
 
 **Capabilities:**
 - Comprehensive performance assessment across all capabilities
@@ -113,10 +113,10 @@ public sealed record ImprovementPlan(
 ### Integration & Infrastructure ✅
 
 **Files Created:**
-- `src/MonadicPipeline.Agent/Agent/MetaAI/SelfImprovement/Phase2OrchestratorBuilder.cs`
-- `src/MonadicPipeline.Tests/Tests/Phase2MetacognitionTests.cs`
-- `src/MonadicPipeline.Examples/Examples/Phase2MetacognitionExample.cs`
-- `src/MonadicPipeline.Examples/Examples/Phase2IntegrationExample.cs`
+- `src/Ouroboros.Agent/Agent/MetaAI/SelfImprovement/Phase2OrchestratorBuilder.cs`
+- `src/Ouroboros.Tests/Tests/Phase2MetacognitionTests.cs`
+- `src/Ouroboros.Examples/Examples/Phase2MetacognitionExample.cs`
+- `src/Ouroboros.Examples/Examples/Phase2IntegrationExample.cs`
 
 **Capabilities:**
 - Fluent builder for Phase 2 orchestrator setup
@@ -287,7 +287,7 @@ While Phase 2 is complete, potential enhancements include:
 
 ## Migration Guide
 
-For existing MonadicPipeline users:
+For existing Ouroboros users:
 
 ### Before (Phase 1 Only)
 ```csharp

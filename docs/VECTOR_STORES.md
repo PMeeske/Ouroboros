@@ -1,10 +1,10 @@
 # Vector Store Configuration Guide
 
-This guide explains how to configure and use different vector store implementations in MonadicPipeline.
+This guide explains how to configure and use different vector store implementations in Ouroboros.
 
 ## Overview
 
-MonadicPipeline supports multiple vector store backends for storing and retrieving document embeddings:
+Ouroboros supports multiple vector store backends for storing and retrieving document embeddings:
 
 - **InMemory** - Fast in-memory storage for development and testing
 - **Qdrant** - Production-ready vector database with persistence
@@ -56,7 +56,7 @@ This starts Qdrant on:
 - HTTP REST API: `http://localhost:6333`
 - gRPC API: `http://localhost:6334`
 
-**2. Configure MonadicPipeline:**
+**2. Configure Ouroboros:**
 
 Update your `.env` file or `appsettings.json`:
 
@@ -84,7 +84,7 @@ Or in `appsettings.json`:
 **3. Run your application:**
 
 ```bash
-dotnet run --project src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj
+dotnet run --project src/Ouroboros.CLI/Ouroboros.CLI.csproj
 ```
 
 ### Production Deployment

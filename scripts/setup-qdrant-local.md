@@ -6,7 +6,7 @@ Since Docker is not available on this system, you have several options:
 ## Option 1: Install Docker Desktop (Recommended)
 1. Download Docker Desktop from: https://www.docker.com/products/docker-desktop/
 2. Install and restart your computer
-3. Run: `docker compose up -d qdrant` from the MonadicPipeline directory
+3. Run: `docker compose up -d qdrant` from the Ouroboros directory
 4. Access Qdrant at: http://localhost:6333
 
 ## Option 2: Run Qdrant Binary (No Docker)

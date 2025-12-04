@@ -1,6 +1,6 @@
 # Streaming Pipeline Engine
 
-MonadicPipeline now includes a powerful streaming engine built on **System.Reactive** (Rx) for real-time data processing with live aggregations, windowing, and composable transformations.
+Ouroboros now includes a powerful streaming engine built on **System.Reactive** (Rx) for real-time data processing with live aggregations, windowing, and composable transformations.
 
 ## Features
 
@@ -19,7 +19,7 @@ MonadicPipeline now includes a powerful streaming engine built on **System.React
 ### DSL Example
 
 ```bash
-dotnet run --project src/MonadicPipeline.CLI -- pipeline -d "Stream('source=generated|count=100|interval=50') | Window('5s') | Aggregate('count,mean') | Sink('console')"
+dotnet run --project src/Ouroboros.CLI -- pipeline -d "Stream('source=generated|count=100|interval=50') | Window('5s') | Aggregate('count,mean') | Sink('console')"
 ```
 
 ### Programmatic Example
@@ -325,4 +325,4 @@ When adding new streaming operators:
 
 ## License
 
-Same as MonadicPipeline project license.
+Same as Ouroboros project license.

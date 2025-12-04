@@ -4,12 +4,12 @@ on:
   push:
     branches: [ main, develop, 'copilot/**' ]
     paths:
-      - 'src/MonadicPipeline.Android/**'
+      - 'src/Ouroboros.Android/**'
       - '.github/workflows/android-build.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
-      - 'src/MonadicPipeline.Android/**'
+      - 'src/Ouroboros.Android/**'
   workflow_dispatch:
 
 # Cancel in-progress builds for the same branch
@@ -32,7 +32,7 @@ jobs:
     - name: Check for Android project
       id: check
       run: |
-        if [ -d "src/MonadicPipeline.Android" ] && [ -f "src/MonadicPipeline.Android/MonadicPipeline.Android.csproj" ]; then
+        if [ -d "src/Ouroboros.Android" ] && [ -f "src/Ouroboros.Android/Ouroboros.Android.csproj" ]; then
           echo "exists=true" >> $GITHUB_OUTPUT
           echo "✓ Android project found"
         else
@@ -75,7 +75,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-android-${{ hashFiles('**/MonadicPipeline.Android.csproj') }}
+        key: ${{ runner.os }}-nuget-android-${{ hashFiles('**/Ouroboros.Android.csproj') }}
         restore-keys: |
           ${{ runner.os }}-nuget-android-
           ${{ runner.os }}-nuget-
@@ -89,12 +89,12 @@ jobs:
         command: |
           echo "Restoring core dependencies..."
           cd src
-          dotnet restore MonadicPipeline.Core/MonadicPipeline.Core.csproj
-          dotnet restore MonadicPipeline.Domain/MonadicPipeline.Domain.csproj
-          dotnet restore MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj
-          dotnet restore MonadicPipeline.Tools/MonadicPipeline.Tools.csproj
-          dotnet restore MonadicPipeline.Providers/MonadicPipeline.Providers.csproj
-          dotnet restore MonadicPipeline.Agent/MonadicPipeline.Agent.csproj
+          dotnet restore Ouroboros.Core/Ouroboros.Core.csproj
+          dotnet restore Ouroboros.Domain/Ouroboros.Domain.csproj
+          dotnet restore Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
+          dotnet restore Ouroboros.Tools/Ouroboros.Tools.csproj
+          dotnet restore Ouroboros.Providers/Ouroboros.Providers.csproj
+          dotnet restore Ouroboros.Agent/Ouroboros.Agent.csproj
 
     - name: Restore Android project dependencies
       uses: nick-fields/retry@v3
@@ -104,13 +104,13 @@ jobs:
         retry_wait_seconds: 30
         command: |
           echo "Restoring Android project dependencies..."
-          cd src/MonadicPipeline.Android
+          cd src/Ouroboros.Android
           dotnet restore --verbosity detailed
 
     - name: Build Android APK
       run: |
         echo "Building Android APK..."
-        cd src/MonadicPipeline.Android
+        cd src/Ouroboros.Android
         dotnet build -c Release -f net10.0-android --verbosity normal
       timeout-minutes: 20
 
@@ -118,17 +118,17 @@ jobs:
       if: always()
       run: |
         echo "Build output directory contents:"
-        find src/MonadicPipeline.Android/bin -type f 2>/dev/null || echo "No build output found"
+        find src/Ouroboros.Android/bin -type f 2>/dev/null || echo "No build output found"
 
     - name: Find and verify APK
       id: find-apk
       run: |
         echo "Searching for APK files..."
-        APK_PATH=$(find src/MonadicPipeline.Android/bin/Release/net10.0-android -name "*.apk" -type f 2>/dev/null | head -n 1)
+        APK_PATH=$(find src/Ouroboros.Android/bin/Release/net10.0-android -name "*.apk" -type f 2>/dev/null | head -n 1)
         if [ -z "$APK_PATH" ]; then
           echo "Error: No APK found!"
           echo "Listing all files in build directory:"
-          ls -R src/MonadicPipeline.Android/bin/ || echo "Build output directory not found"
+          ls -R src/Ouroboros.Android/bin/ || echo "Build output directory not found"
           exit 1
         fi
         echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
@@ -179,7 +179,7 @@ jobs:
         body: |
           Hello,
 
-          The Android APK has been successfully built for the MonadicPipeline app!
+          The Android APK has been successfully built for the Ouroboros app!
 
           📱 **Build Details:**
           - Repository: ${{ github.repository }}
@@ -249,6 +249,6 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "The Android project was not found in this repository." >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Expected location**: \`src/MonadicPipeline.Android/\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Expected location**: \`src/Ouroboros.Android/\`" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "This is normal if the Android app has not been created yet." >> $GITHUB_STEP_SUMMARY

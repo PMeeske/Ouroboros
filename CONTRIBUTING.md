@@ -1,6 +1,6 @@
-# Contributing to MonadicPipeline
+# Contributing to Ouroboros
 
-Thank you for your interest in contributing to MonadicPipeline! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to Ouroboros! This document provides guidelines and instructions for contributing to the project.
 
 ## 🚀 Quick Start
 
@@ -60,8 +60,8 @@ Use the [Feature Request template](.github/ISSUE_TEMPLATE/feature_request.yml) w
 
 ```bash
 # Clone the repository
-git clone https://github.com/PMeeske/MonadicPipeline.git
-cd MonadicPipeline
+git clone https://github.com/PMeeske/Ouroboros.git
+cd Ouroboros
 
 # Restore dependencies
 dotnet restore
@@ -80,15 +80,15 @@ dotnet test
 docker-compose up -d
 
 # Run the CLI
-dotnet run --project src/MonadicPipeline.CLI
+dotnet run --project src/Ouroboros.CLI
 
 # Run the Web API
-dotnet run --project src/MonadicPipeline.WebApi
+dotnet run --project src/Ouroboros.WebApi
 ```
 
 ## 🎨 Coding Standards
 
-MonadicPipeline follows functional programming principles and C# best practices:
+Ouroboros follows functional programming principles and C# best practices:
 
 ### Functional Programming Principles
 
@@ -174,7 +174,7 @@ public async Task Should_GenerateDraft_When_ValidInputProvided()
 
 ## 🎯 Production Release v1.0 Epic
 
-We're working towards a production-ready v1.0 release! See [Epic #1](https://github.com/PMeeske/MonadicPipeline/issues/1) for the complete roadmap:
+We're working towards a production-ready v1.0 release! See [Epic #1](https://github.com/PMeeske/Ouroboros/issues/1) for the complete roadmap:
 
 - Requirements & Scope Finalisation
 - Code Quality & Architecture Audit
@@ -227,15 +227,15 @@ docs(readme): update installation instructions
 
 ## 🏆 Recognition
 
-Contributors are recognized in our README.md and release notes. Thank you for helping make MonadicPipeline better!
+Contributors are recognized in our README.md and release notes. Thank you for helping make Ouroboros better!
 
 ## ❓ Questions?
 
 If you have questions about contributing, feel free to:
-- Open a [GitHub Discussion](https://github.com/PMeeske/MonadicPipeline/discussions)
+- Open a [GitHub Discussion](https://github.com/PMeeske/Ouroboros/discussions)
 - Reach out in an existing issue or PR
 - Check our [documentation](docs/README.md)
 
 ---
 
-**Part of Epic [#1](https://github.com/PMeeske/MonadicPipeline/issues/1) - Production-ready Release v1.0**
+**Part of Epic [#1](https://github.com/PMeeske/Ouroboros/issues/1) - Production-ready Release v1.0**

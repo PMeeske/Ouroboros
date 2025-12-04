@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the new external accessibility validation capabilities added to the MonadicPipeline Terraform infrastructure.
+This document describes the new external accessibility validation capabilities added to the Ouroboros Terraform infrastructure.
 
 ## What Was Added
 

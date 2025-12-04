@@ -1,6 +1,6 @@
-# MonadicPipeline Documentation
+# Ouroboros Documentation
 
-This directory contains comprehensive technical documentation for MonadicPipeline.
+This directory contains comprehensive technical documentation for Ouroboros.
 
 ## Quick Navigation
 

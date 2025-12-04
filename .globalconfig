@@ -1,4 +1,4 @@
-# MonadicPipeline Global Analyzer Configuration
+# Ouroboros Global Analyzer Configuration
 is_global = true
 
 # Suppress StyleCop rules that conflict with global usings and modern C# patterns

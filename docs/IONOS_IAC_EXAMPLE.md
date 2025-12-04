@@ -1,10 +1,10 @@
 # End-to-End Deployment Example with Terraform IaC
 
-This example demonstrates a complete end-to-end deployment of MonadicPipeline using Terraform Infrastructure as Code.
+This example demonstrates a complete end-to-end deployment of Ouroboros using Terraform Infrastructure as Code.
 
 ## Scenario
 
-Deploy MonadicPipeline to IONOS Cloud with:
+Deploy Ouroboros to IONOS Cloud with:
 - Production-grade infrastructure
 - Automated provisioning
 - Complete observability stack
@@ -36,8 +36,8 @@ curl -H "Authorization: Bearer $IONOS_TOKEN" https://api.ionos.com/cloudapi/v6/
 
 ```bash
 # Clone repository
-git clone https://github.com/PMeeske/MonadicPipeline.git
-cd MonadicPipeline
+git clone https://github.com/PMeeske/Ouroboros.git
+cd Ouroboros
 
 # Validate Terraform configuration
 ./scripts/validate-terraform.sh production
@@ -151,7 +151,7 @@ cd ..
 ### Step 8: Deploy Application (5 minutes)
 
 ```bash
-# Deploy MonadicPipeline to the cluster
+# Deploy Ouroboros to the cluster
 ./scripts/deploy-ionos.sh monadic-pipeline
 
 # The script will:
@@ -163,8 +163,8 @@ cd ..
 # 6. Deploy Ollama (LLM runtime)
 # 7. Deploy Qdrant (vector database)
 # 8. Deploy Jaeger (tracing)
-# 9. Deploy MonadicPipeline CLI
-# 10. Deploy MonadicPipeline Web API
+# 9. Deploy Ouroboros CLI
+# 10. Deploy Ouroboros Web API
 
 # Wait for deployments...
 # ✓ All components deployed successfully
@@ -244,9 +244,9 @@ Kubernetes Cluster (monadic-pipeline namespace)
 ├── Jaeger (Distributed Tracing)
 │   ├── Service: jaeger:16686 (UI)
 │   └── Service: jaeger:14268 (collector)
-├── MonadicPipeline CLI
+├── Ouroboros CLI
 │   └── Job: Batch processing
-└── MonadicPipeline Web API
+└── Ouroboros Web API
     ├── Service: monadic-pipeline-webapi:80
     ├── Deployment: 2 replicas
     └── Endpoints:

@@ -1,6 +1,6 @@
 # Mutation Testing Guide
 
-Stryker.NET provides mutation testing for MonadicPipeline to ensure that unit tests detect behavioral changes. This guide explains how to run and interpret mutation tests locally.
+Stryker.NET provides mutation testing for Ouroboros to ensure that unit tests detect behavioral changes. This guide explains how to run and interpret mutation tests locally.
 
 ## Prerequisites
 
@@ -52,8 +52,8 @@ Set `-OpenReport` when using PowerShell to automatically launch the latest HTML 
 
 Key configuration is stored in `stryker-config.json`:
 
-- `solution`: `MonadicPipeline.sln`
-- `project` / `testProject`: `src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj`
+- `solution`: `Ouroboros.sln`
+- `project` / `testProject`: `src/Ouroboros.Tests/Ouroboros.Tests.csproj`
 - `mutationLevel`: `Standard`
 - `coverageAnalysis`: `perTest`
 - `reporters`: `html`, `progress`, `cleartext`, `dashboard`

@@ -57,7 +57,7 @@ jobs:
       run: |
         # Build CLI project for integration tests
         dotnet build --configuration Release --no-restore \
-          src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj
+          src/Ouroboros.CLI/Ouroboros.CLI.csproj
       timeout-minutes: 15
 
     - name: Setup Ollama
@@ -113,7 +113,7 @@ jobs:
         retry_wait_seconds: 10
         command: |
           echo "=== Test 1: Basic Ollama Connectivity ==="
-          cd src/MonadicPipeline.CLI
+          cd src/Ouroboros.CLI
           
           # Basic ask command to verify Ollama works
           dotnet run --no-build --configuration Release -- ask \
@@ -131,7 +131,7 @@ jobs:
         retry_wait_seconds: 10
         command: |
           echo "=== Test 2: Pipeline DSL Execution ==="
-          cd src/MonadicPipeline.CLI
+          cd src/Ouroboros.CLI
           
           # Test pipeline DSL with draft step
           dotnet run --no-build --configuration Release -- pipeline \
@@ -149,7 +149,7 @@ jobs:
         retry_wait_seconds: 15
         command: |
           echo "=== Test 3: Reverse Engineering Pipeline (Memory-Efficient) ==="
-          cd src/MonadicPipeline.CLI
+          cd src/Ouroboros.CLI
           
           # Create a minimal test directory structure
           mkdir -p /tmp/test-project
@@ -174,7 +174,7 @@ jobs:
         retry_wait_seconds: 15
         command: |
           echo "=== Test 4: RAG with Embeddings ==="
-          cd src/MonadicPipeline.CLI
+          cd src/Ouroboros.CLI
           
           # Create test content for RAG
           mkdir -p /tmp/rag-test

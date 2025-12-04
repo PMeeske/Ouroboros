@@ -1,5 +1,5 @@
 #!/bin/bash
-# Helper script to deploy MonadicPipeline to Azure Kubernetes Service (AKS)
+# Helper script to deploy Ouroboros to Azure Kubernetes Service (AKS)
 # This script automates the process of building, pushing, and deploying to AKS
 #
 # Prerequisites:
@@ -35,7 +35,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 K8S_DIR="$PROJECT_ROOT/k8s"
 
 echo "================================================"
-echo "MonadicPipeline AKS Deployment"
+echo "Ouroboros AKS Deployment"
 echo "================================================"
 echo "Registry: $REGISTRY_URL"
 echo "Namespace: $NAMESPACE"
@@ -168,10 +168,10 @@ kubectl apply -f "$K8S_DIR/qdrant.yaml"
 kubectl apply -f "$K8S_DIR/jaeger.yaml"
 
 # Deploy application with updated image references
-echo "Deploying MonadicPipeline CLI..."
+echo "Deploying Ouroboros CLI..."
 kubectl apply -f "$TEMP_DIR/deployment.yaml"
 
-echo "Deploying MonadicPipeline Web API..."
+echo "Deploying Ouroboros Web API..."
 kubectl apply -f "$TEMP_DIR/webapi-deployment.yaml"
 
 echo ""

@@ -1,4 +1,4 @@
-# MonadicPipeline Test Coverage Report
+# Ouroboros Test Coverage Report
 
 **Generated:** October 5, 2025  
 **Coverage Date:** October 5, 2025  
@@ -36,12 +36,12 @@
 
 | Assembly | Line Coverage | Branch Coverage | Status |
 |----------|--------------|-----------------|--------|
-| **MonadicPipeline.Domain** | **80.1%** | **73.2%** | ✅ Excellent |
-| **MonadicPipeline.Core** | **34.2%** | **35.2%** | ⚠️ Fair |
-| **MonadicPipeline.Pipeline** | **15.5%** | **3.2%** | ❌ Low |
-| **MonadicPipeline.Tools** | **2.8%** | **0%** | ❌ Critical |
-| **MonadicPipeline.Providers** | **2.2%** | **1.4%** | ❌ Critical |
-| **MonadicPipeline.Agent** | **0%** | **0%** | ❌ Critical |
+| **Ouroboros.Domain** | **80.1%** | **73.2%** | ✅ Excellent |
+| **Ouroboros.Core** | **34.2%** | **35.2%** | ⚠️ Fair |
+| **Ouroboros.Pipeline** | **15.5%** | **3.2%** | ❌ Low |
+| **Ouroboros.Tools** | **2.8%** | **0%** | ❌ Critical |
+| **Ouroboros.Providers** | **2.2%** | **1.4%** | ❌ Critical |
+| **Ouroboros.Agent** | **0%** | **0%** | ❌ Critical |
 | **LangChainPipeline (CLI)** | **0%** | **0%** | ❌ Critical |
 
 ---
@@ -81,7 +81,7 @@
 
 ## Well-Tested Components (>80% Coverage)
 
-### MonadicPipeline.Domain (80.1% Line Coverage)
+### Ouroboros.Domain (80.1% Line Coverage)
 
 | Component | Line Coverage | Branch Coverage |
 |-----------|--------------|-----------------|
@@ -97,7 +97,7 @@
 | FinalSpec | 100% | - |
 | ReasoningState | 100% | - |
 
-### MonadicPipeline.Core - Security Components (100% Coverage)
+### Ouroboros.Core - Security Components (100% Coverage)
 
 | Component | Line Coverage | Branch Coverage |
 |-----------|--------------|-----------------|
@@ -106,7 +106,7 @@
 | ValidationOptions | 100% | - |
 | ValidationResult | 100% | - |
 
-### MonadicPipeline.Core - Performance Components (95-100% Coverage)
+### Ouroboros.Core - Performance Components (95-100% Coverage)
 
 | Component | Line Coverage | Branch Coverage |
 |-----------|--------------|-----------------|
@@ -116,7 +116,7 @@
 | PooledHelpers | 100% | - |
 | PooledObject<T> | 100% | 75% |
 
-### MonadicPipeline.Core - Diagnostics (95-100% Coverage)
+### Ouroboros.Core - Diagnostics (95-100% Coverage)
 
 | Component | Line Coverage | Branch Coverage |
 |-----------|--------------|-----------------|
@@ -126,14 +126,14 @@
 | MetricsExtensions | 100% | 75% |
 | TracingExtensions | 100% | 100% |
 
-### MonadicPipeline.Core - Processing (82.7% Coverage)
+### Ouroboros.Core - Processing (82.7% Coverage)
 
 | Component | Line Coverage | Branch Coverage |
 |-----------|--------------|-----------------|
 | RecursiveChunkProcessor | 82.7% | 80% |
 | ChunkResult<T> | 83.3% | - |
 
-### MonadicPipeline.Pipeline - Reasoning (60.9% Coverage)
+### Ouroboros.Pipeline - Reasoning (60.9% Coverage)
 
 | Component | Line Coverage | Branch Coverage |
 |-----------|--------------|-----------------|
@@ -146,7 +146,7 @@
 
 ### Critical Priority (0% Coverage - Core Functionality)
 
-#### MonadicPipeline.Agent (0% - 73 classes untested)
+#### Ouroboros.Agent (0% - 73 classes untested)
 - MetaAI system components (50+ classes)
 - Orchestration and planning
 - Agent management
@@ -162,7 +162,7 @@
 
 ### High Priority (Low Coverage - Important Infrastructure)
 
-#### MonadicPipeline.Tools (2.8% Coverage)
+#### Ouroboros.Tools (2.8% Coverage)
 - ToolRegistry (32.3% coverage)
 - ToolJson (85.7% coverage)
 - MeTTa integration tools (0%)
@@ -170,14 +170,14 @@
 - Retrieval tools (0%)
 - Schema generator (0%)
 
-#### MonadicPipeline.Providers (2.2% Coverage)
+#### Ouroboros.Providers (2.2% Coverage)
 - ToolAwareChatModel (26.1% coverage)
 - Ollama adapters (0%)
 - Multi-model routing (0%)
 - Embedding models (0%)
 - Service collection extensions (0%)
 
-#### MonadicPipeline.Pipeline (15.5% Coverage)
+#### Ouroboros.Pipeline (15.5% Coverage)
 - PipelineBranch (45.4% coverage)
 - PromptTemplate (20.4% coverage)
 - Ingestion system (0%)
@@ -186,7 +186,7 @@
 
 ### Medium Priority (Partial Coverage - Needs Improvement)
 
-#### MonadicPipeline.Core (34.2% Coverage)
+#### Ouroboros.Core (34.2% Coverage)
 - Result<T> and Result<T1,T2> monads (~30% coverage)
 - Configuration builders (0%)
 - LangChain integration (0%)
@@ -234,22 +234,22 @@
 - **Target:** 25% line coverage
 - **Focus Areas:**
   1. Implement tests for ToolRegistry (currently 32.3%)
-  2. Add tests for MonadicPipeline.Pipeline components
+  2. Add tests for Ouroboros.Pipeline components
   3. Activate stub test files (15 files with 0 tests)
   4. Core monad coverage (Result<T>, Option<T>)
 
 ### Medium-term Goals (Next Quarter)
 - **Target:** 50% line coverage
 - **Focus Areas:**
-  1. MonadicPipeline.Providers (LLM integrations)
-  2. MonadicPipeline.Tools (tool system)
+  1. Ouroboros.Providers (LLM integrations)
+  2. Ouroboros.Tools (tool system)
   3. CLI integration tests
   4. Pipeline branch operations
 
 ### Long-term Goals (Production Ready)
 - **Target:** 70%+ line coverage
 - **Focus Areas:**
-  1. MonadicPipeline.Agent (MetaAI system)
+  1. Ouroboros.Agent (MetaAI system)
   2. End-to-end integration tests
   3. Performance benchmarks
   4. Security testing
@@ -262,14 +262,14 @@
 
 ```bash
 # Clean previous results
-rm -rf src/MonadicPipeline.Tests/TestResults TestCoverageReport
+rm -rf src/Ouroboros.Tests/TestResults TestCoverageReport
 
 # Run tests with coverage
-dotnet test src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj --collect:"XPlat Code Coverage"
+dotnet test src/Ouroboros.Tests/Ouroboros.Tests.csproj --collect:"XPlat Code Coverage"
 
 # Generate HTML report
 reportgenerator \
-  -reports:"src/MonadicPipeline.Tests/TestResults/*/coverage.cobertura.xml" \
+  -reports:"src/Ouroboros.Tests/TestResults/*/coverage.cobertura.xml" \
   -targetdir:"TestCoverageReport" \
   -reporttypes:"Html;MarkdownSummaryGithub;TextSummary"
 
@@ -308,7 +308,7 @@ dotnet test --collect:"XPlat Code Coverage" --verbosity detailed
 
 ### Testing Strategy
 1. **Activate Stub Tests:** 15 test files exist but have 0 tests
-2. **Focus on High-Value Components:** Start with MonadicPipeline.Agent
+2. **Focus on High-Value Components:** Start with Ouroboros.Agent
 3. **Integration Testing:** Add end-to-end CLI tests
 4. **Provider Testing:** Mock external LLM calls for testing
 5. **Tool Testing:** Test tool registration and execution
@@ -393,7 +393,7 @@ Based on completed implementation work (see [docs/archive/](docs/archive/) for d
 
 ## Conclusion
 
-The MonadicPipeline project has **excellent test coverage for its core domain model** (80.1%) and **critical security components** (100%), demonstrating strong testing discipline in foundational areas. However, there are significant opportunities to improve coverage in the Agent system, CLI, Tools, and Provider layers.
+The Ouroboros project has **excellent test coverage for its core domain model** (80.1%) and **critical security components** (100%), demonstrating strong testing discipline in foundational areas. However, there are significant opportunities to improve coverage in the Agent system, CLI, Tools, and Provider layers.
 
 The presence of 15 stub test files indicates a conscious effort to establish testing infrastructure, suggesting that increasing coverage is a matter of implementation rather than tooling setup.
 

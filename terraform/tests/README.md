@@ -1,6 +1,6 @@
 # Terraform Tests
 
-This directory contains automated tests for the MonadicPipeline Terraform infrastructure.
+This directory contains automated tests for the Ouroboros Terraform infrastructure.
 
 ## Overview
 

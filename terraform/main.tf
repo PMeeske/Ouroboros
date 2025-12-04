@@ -1,5 +1,5 @@
-# MonadicPipeline Infrastructure as Code for IONOS Cloud
-# This file orchestrates all infrastructure resources for MonadicPipeline deployment
+# Ouroboros Infrastructure as Code for IONOS Cloud
+# This file orchestrates all infrastructure resources for Ouroboros deployment
 
 terraform {
   required_version = ">= 1.5.0"

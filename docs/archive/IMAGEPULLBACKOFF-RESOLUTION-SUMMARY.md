@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the changes made to address and prevent the ImagePullBackOff error that occurred on October 2, 2025, when deploying the MonadicPipeline Web API to Azure Kubernetes Service (AKS).
+This document summarizes the changes made to address and prevent the ImagePullBackOff error that occurred on October 2, 2025, when deploying the Ouroboros Web API to Azure Kubernetes Service (AKS).
 
 ## Problem Statement
 
@@ -251,7 +251,7 @@ All changes have been validated:
 ## Documentation Structure
 
 ```
-MonadicPipeline/
+Ouroboros/
 ├── INCIDENT-RESPONSE-IMAGEPULLBACKOFF.md  # Detailed incident analysis
 ├── IMAGEPULLBACKOFF-FIX.md                # Quick fix guide
 ├── IMAGEPULLBACKOFF-SOLUTION.md           # Solution implementation

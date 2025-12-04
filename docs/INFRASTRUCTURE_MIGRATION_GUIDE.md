@@ -14,7 +14,7 @@ This guide provides comprehensive procedures for safely migrating infrastructure
 
 ## Overview
 
-Infrastructure changes in MonadicPipeline span multiple layers:
+Infrastructure changes in Ouroboros span multiple layers:
 - **C# Application Layer**: Configuration, code, dependencies
 - **Kubernetes Layer**: Manifests, services, deployments
 - **Terraform Layer**: Cloud infrastructure, networking, storage
@@ -115,7 +115,7 @@ terraform state pull > backup-$(date +%Y%m%d-%H%M%S).tfstate
 export PIPELINE__LlmProvider__OllamaEndpoint="http://ollama-service:11434"
 
 # Run application
-dotnet run --project src/MonadicPipeline.CLI
+dotnet run --project src/Ouroboros.CLI
 ```
 
 4. **Deploy to Staging**
@@ -452,7 +452,7 @@ spec:
 4. **Update Application Code**
 
 ```csharp
-// src/MonadicPipeline.Core/Configuration/PipelineConfiguration.cs
+// src/Ouroboros.Core/Configuration/PipelineConfiguration.cs
 public class CacheConfiguration
 {
     public string Type { get; set; } = "InMemory";

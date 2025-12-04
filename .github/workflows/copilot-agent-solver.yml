@@ -33,7 +33,7 @@ jobs:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
           model: 'gemini-pro'
           prompt: |
-            Analyze this GitHub issue for a C# functional programming project (MonadicPipeline) using LangChain.
+            Analyze this GitHub issue for a C# functional programming project (Ouroboros) using LangChain.
             
             Issue Title: ${{ github.event.issue.title }}
             

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Successfully migrated the MonadicPipeline CI/CD workflow from Azure AKS to IONOS Cloud as the primary deployment target.
+Successfully migrated the Ouroboros CI/CD workflow from Azure AKS to IONOS Cloud as the primary deployment target.
 
 ## Changes Made
 

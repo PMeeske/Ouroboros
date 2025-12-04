@@ -1,6 +1,6 @@
 # Quick Fix: ImagePullBackOff on Cloud Kubernetes
 
-This guide provides a quick solution for the `ImagePullBackOff` error when deploying MonadicPipeline to cloud Kubernetes clusters (AKS, EKS, GKE).
+This guide provides a quick solution for the `ImagePullBackOff` error when deploying Ouroboros to cloud Kubernetes clusters (AKS, EKS, GKE).
 
 ## The Problem
 

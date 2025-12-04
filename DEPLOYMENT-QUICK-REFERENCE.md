@@ -1,4 +1,4 @@
-# MonadicPipeline Deployment - Quick Reference
+# Ouroboros Deployment - Quick Reference
 
 ## Quick Start Commands
 
@@ -6,7 +6,7 @@
 ```bash
 # Build and run
 dotnet build
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 dotnet run -- --help
 
 # With Ollama

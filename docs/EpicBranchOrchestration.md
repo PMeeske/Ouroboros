@@ -201,7 +201,7 @@ See `Epic120Example.cs` for a complete example demonstrating:
 
 ```bash
 # Run the example
-dotnet run --project src/MonadicPipeline.Examples -- epic120
+dotnet run --project src/Ouroboros.Examples -- epic120
 ```
 
 ## Branch Naming Convention

@@ -1,8 +1,8 @@
 #!/bin/bash
-# Example: Using Ollama Cloud with MonadicPipeline CLI
+# Example: Using Ollama Cloud with Ouroboros CLI
 #
 # This script demonstrates how to use Ollama Cloud authentication
-# with all MonadicPipeline CLI commands.
+# with all Ouroboros CLI commands.
 
 # ========================================
 # Configuration

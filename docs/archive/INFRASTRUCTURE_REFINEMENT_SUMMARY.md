@@ -1,6 +1,6 @@
 # Infrastructure Refinement Summary
 
-This document summarizes the comprehensive infrastructure refinement work completed for MonadicPipeline, providing complete documentation of dependencies between C# application, Kubernetes, and Terraform layers.
+This document summarizes the comprehensive infrastructure refinement work completed for Ouroboros, providing complete documentation of dependencies between C# application, Kubernetes, and Terraform layers.
 
 ## What Was Delivered
 
@@ -266,7 +266,7 @@ cat docs/INFRASTRUCTURE_DEPENDENCIES.md | grep -A 20 "Troubleshooting"
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  C# Application (MonadicPipeline)              │
+│  C# Application (Ouroboros)              │
 │  - Functional programming patterns              │
 │  - Monadic composition                          │
 │  - Configuration-driven                         │

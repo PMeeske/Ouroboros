@@ -2,7 +2,7 @@
 
 ## Overview
 
-The MonadicPipeline DSL Assistant provides GitHub Copilot-like intelligent code assistance for building pipelines using the CLI DSL, with full C# code creation, analysis, and refactoring capabilities powered by Roslyn and AI.
+The Ouroboros DSL Assistant provides GitHub Copilot-like intelligent code assistance for building pipelines using the CLI DSL, with full C# code creation, analysis, and refactoring capabilities powered by Roslyn and AI.
 
 ## Features
 
@@ -32,10 +32,10 @@ The MonadicPipeline DSL Assistant provides GitHub Copilot-like intelligent code 
 
 ## Installation
 
-The DSL Assistant is included in the MonadicPipeline.CLI project:
+The DSL Assistant is included in the Ouroboros.CLI project:
 
 ```bash
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 dotnet build
 ```
 
@@ -231,7 +231,7 @@ var extractResult = codeTool.ExtractMethod(code, startLine: 5, endLine: 8, newMe
 // Generate code from description
 var generateResult = await codeTool.GenerateCodeFromDescriptionAsync(
     description: "Create a Result<T> monad with Success and Failure methods",
-    codeContext: "MonadicPipeline functional programming project",
+    codeContext: "Ouroboros functional programming project",
     llm: llm);
 ```
 
@@ -356,7 +356,7 @@ Comprehensive simulation integration tests are included:
 
 ```bash
 # Run all tests
-cd src/MonadicPipeline.Tests
+cd src/Ouroboros.Tests
 dotnet test
 
 # Run specific feature
@@ -414,7 +414,7 @@ var analysis = await codeTool.AnalyzeCodeAsync(code);
 ### Context Awareness
 Provide rich context for better suggestions:
 ```csharp
-var context = "MonadicPipeline uses functional programming with Result<T> monads";
+var context = "Ouroboros uses functional programming with Result<T> monads";
 var code = await codeTool.GenerateCodeFromDescriptionAsync(description, context, llm);
 ```
 
@@ -469,7 +469,7 @@ See repository LICENSE file.
 
 ## Related Documentation
 
-- [MonadicPipeline README](../../README.md)
-- [CLI Documentation](../MonadicPipeline.CLI/README.md)
-- [Agent Architecture](../MonadicPipeline.Agent/README.md)
-- [Test Specifications](../MonadicPipeline.Tests/README.md)
+- [Ouroboros README](../../README.md)
+- [CLI Documentation](../Ouroboros.CLI/README.md)
+- [Agent Architecture](../Ouroboros.Agent/README.md)
+- [Test Specifications](../Ouroboros.Tests/README.md)

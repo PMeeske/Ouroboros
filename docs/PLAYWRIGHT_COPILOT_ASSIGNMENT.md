@@ -203,7 +203,7 @@ node assign-copilot-via-ui.js <owner> <repo> <issue-number> [copilot-username]
 **Example:**
 ```bash
 export GITHUB_TOKEN="ghp_..."
-node assign-copilot-via-ui.js PMeeske MonadicPipeline 123 copilot
+node assign-copilot-via-ui.js PMeeske Ouroboros 123 copilot
 ```
 
 ### Debug Mode
@@ -384,4 +384,4 @@ Tests validate:
 
 ---
 
-**MonadicPipeline**: Visual automation with Playwright 🎭
+**Ouroboros**: Visual automation with Playwright 🎭

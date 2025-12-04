@@ -1,8 +1,8 @@
 {
   "stryker-config": {
-    "solution": "MonadicPipeline.sln",
+    "solution": "Ouroboros.sln",
     "test-projects": [
-      "src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj"
+      "src/Ouroboros.Tests/Ouroboros.Tests.csproj"
     ],
     "target-framework": "net8.0",
     "coverage-analysis": "perTest",
@@ -23,7 +23,7 @@
       "!**/obj/**",
       "!**/*.g.cs",
       "!**/*.Designer.cs",
-      "!src/MonadicPipeline.Tests/**"
+      "!src/Ouroboros.Tests/**"
     ],
     "ignore-methods": [
       "ToString",

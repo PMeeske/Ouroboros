@@ -8,7 +8,7 @@ run "integration_dev_environment" {
     # Datacenter
     datacenter_name        = "monadic-pipeline-dev"
     location               = "de/fra"
-    datacenter_description = "Development environment for MonadicPipeline"
+    datacenter_description = "Development environment for Ouroboros"
 
     # Kubernetes
     cluster_name      = "monadic-k8s-dev"
@@ -80,7 +80,7 @@ run "integration_production_environment" {
     # Datacenter
     datacenter_name        = "monadic-pipeline-prod"
     location               = "de/fra"
-    datacenter_description = "Production environment for MonadicPipeline"
+    datacenter_description = "Production environment for Ouroboros"
 
     # Kubernetes
     cluster_name      = "monadic-k8s-prod"

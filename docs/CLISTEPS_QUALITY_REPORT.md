@@ -1,13 +1,13 @@
 # CliSteps.cs Code Quality Analysis Report
 
 **Date:** 2025-11-10  
-**File:** `src/MonadicPipeline.CLI/CliSteps.cs`  
+**File:** `src/Ouroboros.CLI/CliSteps.cs`  
 **Size:** 2,108 lines of code  
 **Methods:** 53 public/private methods  
 
 ## Executive Summary
 
-The `CliSteps.cs` file serves as the discoverable CLI pipeline steps system, providing 30+ pipeline tokens for the MonadicPipeline framework. While functionally complete and feature-rich, the file exhibits several anti-patterns that conflict with the project's core functional programming principles and monadic composition philosophy.
+The `CliSteps.cs` file serves as the discoverable CLI pipeline steps system, providing 30+ pipeline tokens for the Ouroboros framework. While functionally complete and feature-rich, the file exhibits several anti-patterns that conflict with the project's core functional programming principles and monadic composition philosophy.
 
 **Overall Assessment:** 🟡 Moderate Quality (6/10)
 
@@ -779,7 +779,7 @@ After refactoring, the following test coverage should be achieved:
 
 ## Conclusion
 
-The `CliSteps.cs` file provides excellent functionality but suffers from technical debt that conflicts with MonadicPipeline's functional programming philosophy. The primary issues are:
+The `CliSteps.cs` file provides excellent functionality but suffers from technical debt that conflicts with Ouroboros's functional programming philosophy. The primary issues are:
 
 1. **Imperative error handling** instead of monadic Result<T>
 2. **Significant code duplication** in parsing and ingestion

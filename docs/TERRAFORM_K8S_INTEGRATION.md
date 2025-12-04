@@ -1,6 +1,6 @@
 # Terraform to Kubernetes Integration Guide
 
-This guide provides detailed instructions for integrating Terraform-provisioned infrastructure with Kubernetes deployments for MonadicPipeline.
+This guide provides detailed instructions for integrating Terraform-provisioned infrastructure with Kubernetes deployments for Ouroboros.
 
 ## Table of Contents
 

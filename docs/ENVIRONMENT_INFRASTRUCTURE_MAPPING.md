@@ -65,7 +65,7 @@ docker-compose -f docker-compose.dev.yml up -d
 
 # Run application
 export ASPNETCORE_ENVIRONMENT=Development
-dotnet run --project src/MonadicPipeline.CLI
+dotnet run --project src/Ouroboros.CLI
 
 # Or use the CLI in container
 docker exec -it monadic-pipeline dotnet LangChainPipeline.dll ask -q "Test"
@@ -206,7 +206,7 @@ resources:
 ```
 
 **Application Deployment**:
-- MonadicPipeline: 1 replica (staging has less traffic)
+- Ouroboros: 1 replica (staging has less traffic)
 - Ollama: 1 replica (2 cores, 6GB)
 - Qdrant: 1 replica (0.5 cores, 2GB)
 - Jaeger: 1 replica (0.5 cores, 1GB)
@@ -397,8 +397,8 @@ resources:
 ```
 
 **Total Production Allocation**:
-- MonadicPipeline: 2 replicas (2 cores, 4GB)
-- MonadicPipeline WebAPI: 2 replicas (2 cores, 4GB)
+- Ouroboros: 2 replicas (2 cores, 4GB)
+- Ouroboros WebAPI: 2 replicas (2 cores, 4GB)
 - Ollama: 1 replica (2 cores, 8GB)
 - Qdrant: 1 replica (1 core, 2GB)
 - Jaeger: 1 replica (0.5 cores, 1GB)

@@ -4,7 +4,7 @@ version: '3.8'
 # Includes development tools and debugging capabilities
 
 services:
-  # MonadicPipeline CLI Application (Development)
+  # Ouroboros CLI Application (Development)
   monadic-pipeline-dev:
     build:
       context: .
@@ -29,7 +29,7 @@ services:
       - pipeline-network
     stdin_open: true
     tty: true
-    command: ["dotnet", "run", "--project", "/src/src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj", "--", "--help"]
+    command: ["dotnet", "run", "--project", "/src/src/Ouroboros.CLI/Ouroboros.CLI.csproj", "--", "--help"]
 
   # Ollama LLM Service
   ollama:

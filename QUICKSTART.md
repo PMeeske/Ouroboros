@@ -1,6 +1,6 @@
-# MonadicPipeline Quick Start Guide
+# Ouroboros Quick Start Guide
 
-Get up and running with MonadicPipeline in 5 minutes!
+Get up and running with Ouroboros in 5 minutes!
 
 ## Prerequisites
 
@@ -20,9 +20,9 @@ Get up and running with MonadicPipeline in 5 minutes!
 
 2. **Build and run:**
    ```bash
-   cd MonadicPipeline
+   cd Ouroboros
    dotnet build
-   cd src/MonadicPipeline.CLI
+   cd src/Ouroboros.CLI
    dotnet run -- ask -q "What is functional programming?"
    ```
 
@@ -31,7 +31,7 @@ Get up and running with MonadicPipeline in 5 minutes!
 The tests include mock implementations, so you can explore the codebase without Ollama:
 
 ```bash
-cd MonadicPipeline
+cd Ouroboros
 dotnet test --filter "FullyQualifiedName!~Features"
 ```
 
@@ -40,7 +40,7 @@ dotnet test --filter "FullyQualifiedName!~Features"
 ### CLI Commands
 
 ```bash
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 
 # Ask a question
 dotnet run -- ask -q "Explain monads"
@@ -52,14 +52,14 @@ dotnet run -- pipeline -d "SetTopic('AI') | UseDraft | UseCritique"
 dotnet run -- list
 
 # Run examples
-cd ../MonadicPipeline.Examples
+cd ../Ouroboros.Examples
 dotnet run
 ```
 
 ### Web API
 
 ```bash
-cd src/MonadicPipeline.WebApi
+cd src/Ouroboros.WebApi
 dotnet run
 
 # API available at http://localhost:8080
@@ -133,12 +133,12 @@ Key settings:
 ## Next Steps
 
 1. **Read the Architecture Docs**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-2. **Explore Examples**: [src/MonadicPipeline.Examples](src/MonadicPipeline.Examples)
-3. **Try the Web API**: [src/MonadicPipeline.WebApi/README.md](src/MonadicPipeline.WebApi/README.md)
+2. **Explore Examples**: [src/Ouroboros.Examples](src/Ouroboros.Examples)
+3. **Try the Web API**: [src/Ouroboros.WebApi/README.md](src/Ouroboros.WebApi/README.md)
 4. **Deploy to K8s**: [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ## Support
 
 - 📖 **Full Documentation**: [README.md](README.md)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/PMeeske/MonadicPipeline/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/PMeeske/MonadicPipeline/discussions)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/PMeeske/Ouroboros/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/PMeeske/Ouroboros/discussions)

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Pre-deployment validation script for MonadicPipeline
+# Pre-deployment validation script for Ouroboros
 # This script checks if you're deploying to the right type of cluster
 # with the right manifests to prevent ImagePullBackOff errors
 #
@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 echo "================================================"
-echo "MonadicPipeline Deployment Validation"
+echo "Ouroboros Deployment Validation"
 echo "================================================"
 echo ""
 

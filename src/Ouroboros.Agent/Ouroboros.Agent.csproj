@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>LangChainPipeline</RootNamespace>
+    <AssemblyName>Ouroboros.Agent</AssemblyName>
+    <Product>Ouroboros Agent</Product>
+    <Description>AI orchestration and Meta-AI layer for Ouroboros</Description>
+    <Copyright>Copyright © 2025</Copyright>
+    <Version>1.0.0</Version>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS1591;CS1570;CS1572;CS1573</WarningsNotAsErrors>
+
+    <!-- Code Quality & Documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <RunAnalyzersDuringLiveAnalysis>false</RunAnalyzersDuringLiveAnalysis>
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ouroboros.Core\Ouroboros.Core.csproj" />
+    <ProjectReference Include="..\Ouroboros.Domain\Ouroboros.Domain.csproj" />
+    <ProjectReference Include="..\Ouroboros.Pipeline\Ouroboros.Pipeline.csproj" />
+    <ProjectReference Include="..\Ouroboros.Tools\Ouroboros.Tools.csproj" />
+    <ProjectReference Include="..\Ouroboros.Providers\Ouroboros.Providers.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Static Analysis -->
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Roslynator.Analyzers" Version="4.7.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+
+    <!-- Dependencies -->
+    <PackageReference Include="LangChain" Version="0.17.0" />
+  </ItemGroup>
+
+</Project>

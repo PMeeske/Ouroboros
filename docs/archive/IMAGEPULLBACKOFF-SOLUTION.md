@@ -2,7 +2,7 @@
 
 ## Issue Overview
 
-**Problem:** The MonadicPipeline Web API was failing to deploy on Azure Kubernetes Service (AKS) with `ImagePullBackOff` errors.
+**Problem:** The Ouroboros Web API was failing to deploy on Azure Kubernetes Service (AKS) with `ImagePullBackOff` errors.
 
 **Kubernetes Event:**
 ```
@@ -289,7 +289,7 @@ For users wanting to test this solution:
 
 This implementation provides a comprehensive solution to the ImagePullBackOff issue on cloud Kubernetes clusters. The automated scripts eliminate manual steps, reduce errors, and provide clear guidance for each cloud platform. The documentation ensures users can quickly resolve issues and understand the differences between local and cloud deployments.
 
-**Key Achievement:** A one-line command now deploys MonadicPipeline to AKS, eliminating the ImagePullBackOff error that was reported in the issue.
+**Key Achievement:** A one-line command now deploys Ouroboros to AKS, eliminating the ImagePullBackOff error that was reported in the issue.
 
 ## Related Documentation
 

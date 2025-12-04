@@ -1,10 +1,10 @@
 # Ollama Cloud Integration Guide
 
-This guide explains how to use MonadicPipeline with Ollama Cloud, a remote hosted Ollama service that provides API access to various LLM models with client authentication.
+This guide explains how to use Ouroboros with Ollama Cloud, a remote hosted Ollama service that provides API access to various LLM models with client authentication.
 
 ## Overview
 
-MonadicPipeline supports three types of remote LLM endpoints:
+Ouroboros supports three types of remote LLM endpoints:
 
 1. **Ollama Cloud** - Native Ollama API format (recommended for Ollama Cloud)
 2. **OpenAI-Compatible** - Standard OpenAI API format
@@ -23,7 +23,7 @@ export CHAT_API_KEY="your-ollama-cloud-api-key"
 export CHAT_ENDPOINT_TYPE="ollama-cloud"  # or "auto" for auto-detection
 
 # Now run any CLI command
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 
 # Ask a question
 dotnet run -- ask -q "What is functional programming?"
@@ -43,7 +43,7 @@ dotnet run -- pipeline -d "SetTopic('AI') | UseDraft | UseCritique"
 You can also provide credentials directly via CLI flags (overrides environment variables):
 
 ```bash
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 
 # Ask command
 dotnet run -- ask -q "Hello from Ollama Cloud" \
@@ -218,7 +218,7 @@ API Request with Authentication
 
 ### Fallback Behavior
 
-MonadicPipeline implements graceful fallback:
+Ouroboros implements graceful fallback:
 
 1. **Remote Endpoint Available** → Uses Ollama Cloud
 2. **Remote Endpoint Unavailable** → Returns fallback response with context
@@ -307,11 +307,11 @@ To test your Ollama Cloud integration:
 
 ```bash
 # Run integration tests
-cd src/MonadicPipeline.Tests
+cd src/Ouroboros.Tests
 dotnet test --filter "FullyQualifiedName~OllamaCloud"
 
 # Test a simple query
-cd ../MonadicPipeline.CLI
+cd ../Ouroboros.CLI
 export CHAT_ENDPOINT="https://api.ollama.com"
 export CHAT_API_KEY="your-key"
 dotnet run -- ask -q "Hello, world!"
@@ -336,13 +336,13 @@ dotnet run -- ask -q "Hello, world!"
 
 ## Additional Resources
 
-- [MonadicPipeline README](../README.md) - Main documentation
+- [Ouroboros README](../README.md) - Main documentation
 - [Architecture Guide](ARCHITECTURE.md) - System architecture
-- [API Documentation](../src/MonadicPipeline.Providers/Providers/Adapters.cs) - Implementation details
+- [API Documentation](../src/Ouroboros.Providers/Providers/Adapters.cs) - Implementation details
 
 ## Support
 
 For issues or questions:
-1. Check existing [GitHub Issues](https://github.com/PMeeske/MonadicPipeline/issues)
-2. Review integration tests in `src/MonadicPipeline.Tests/Tests/OllamaCloudIntegrationTests.cs`
+1. Check existing [GitHub Issues](https://github.com/PMeeske/Ouroboros/issues)
+2. Review integration tests in `src/Ouroboros.Tests/Tests/OllamaCloudIntegrationTests.cs`
 3. Open a new issue with detailed error messages and configuration

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the implementation of comprehensive Terraform tests for the MonadicPipeline infrastructure.
+This document summarizes the implementation of comprehensive Terraform tests for the Ouroboros infrastructure.
 
 ## What Was Added
 

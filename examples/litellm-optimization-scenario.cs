@@ -1,5 +1,5 @@
-// <copyright file="litellm-optimization-scenario.cs" company="MonadicPipeline">
-// Copyright (c) MonadicPipeline. All rights reserved.
+// <copyright file="litellm-optimization-scenario.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
@@ -63,7 +63,7 @@ public static class LiteLLMOptimizationScenario
     /// </summary>
     public static async Task<int> Main(string[] args)
     {
-        Console.WriteLine("=== MonadicPipeline: LiteLLM Optimization Scenario ===\n");
+        Console.WriteLine("=== Ouroboros: LiteLLM Optimization Scenario ===\n");
 
         // Parse CLI arguments
         var options = ParseArguments(args);

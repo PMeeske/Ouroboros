@@ -236,8 +236,8 @@ terraform apply -var-file=environments/production.tfvars
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/PMeeske/MonadicPipeline.git
-cd MonadicPipeline/terraform
+git clone https://github.com/PMeeske/Ouroboros.git
+cd Ouroboros/terraform
 
 # 2. Initialize Terraform
 terraform init

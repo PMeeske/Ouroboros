@@ -2,7 +2,7 @@
 
 ## 🚀 Get Started in 2 Minutes
 
-The MonadicPipeline repository has **automated AI-assisted development workflows** that help you write better code faster.
+The Ouroboros repository has **automated AI-assisted development workflows** that help you write better code faster.
 
 ## 📋 What You Get
 
@@ -142,8 +142,8 @@ The project uses functional programming principles:
 ### Key References
 
 - [Copilot Instructions](copilot-instructions.md) - Project-specific guidelines
-- [Functional Reasoning Examples](../src/MonadicPipeline.Examples/Examples/FunctionalReasoningExamples.cs)
-- [Monadic Examples](../src/MonadicPipeline.Examples/Examples/MonadicExamples.cs)
+- [Functional Reasoning Examples](../src/Ouroboros.Examples/Examples/FunctionalReasoningExamples.cs)
+- [Monadic Examples](../src/Ouroboros.Examples/Examples/MonadicExamples.cs)
 
 ## ❓ FAQ
 

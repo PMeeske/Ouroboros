@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run test coverage analysis for MonadicPipeline
+# Run test coverage analysis for Ouroboros
 # Usage: ./scripts/run-coverage.sh [options]
 #   --no-clean    Skip cleaning previous results
 #   --no-open     Don't open the report in browser
@@ -42,13 +42,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-echo -e "${GREEN}=== MonadicPipeline Test Coverage Analysis ===${NC}"
+echo -e "${GREEN}=== Ouroboros Test Coverage Analysis ===${NC}"
 echo ""
 
 # Clean previous results if requested
 if [ "$CLEAN" = true ]; then
   echo -e "${YELLOW}Cleaning previous results...${NC}"
-  rm -rf src/MonadicPipeline.Tests/TestResults TestCoverageReport
+  rm -rf src/Ouroboros.Tests/TestResults TestCoverageReport
 fi
 
 # Check if reportgenerator is installed
@@ -60,13 +60,13 @@ fi
 # Run tests with coverage
 echo -e "${GREEN}Running tests with code coverage...${NC}"
 dotnet test \
-  src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj \
+  src/Ouroboros.Tests/Ouroboros.Tests.csproj \
   --collect:"XPlat Code Coverage" \
   --verbosity quiet \
   --nologo
 
 # Check if coverage file was generated
-COVERAGE_FILE=$(find src/MonadicPipeline.Tests/TestResults -name "coverage.cobertura.xml" 2>/dev/null | head -1)
+COVERAGE_FILE=$(find src/Ouroboros.Tests/TestResults -name "coverage.cobertura.xml" 2>/dev/null | head -1)
 
 if [ -z "$COVERAGE_FILE" ]; then
   echo -e "${RED}Error: Coverage file not generated${NC}"
@@ -79,10 +79,10 @@ echo ""
 # Generate report
 echo -e "${GREEN}Generating coverage report...${NC}"
 reportgenerator \
-  -reports:"src/MonadicPipeline.Tests/TestResults/*/coverage.cobertura.xml" \
+  -reports:"src/Ouroboros.Tests/TestResults/*/coverage.cobertura.xml" \
   -targetdir:"TestCoverageReport" \
   -reporttypes:"$REPORT_TYPES" \
-  -assemblyfilters:"+MonadicPipeline.*;+LangChainPipeline.*"
+  -assemblyfilters:"+Ouroboros.*;+LangChainPipeline.*"
 
 echo ""
 echo -e "${GREEN}=== Coverage Summary ===${NC}"

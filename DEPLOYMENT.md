@@ -1,6 +1,6 @@
-# MonadicPipeline Deployment Guide
+# Ouroboros Deployment Guide
 
-This guide provides comprehensive instructions for deploying MonadicPipeline in various environments using Docker, Docker Compose, and Kubernetes.
+This guide provides comprehensive instructions for deploying Ouroboros in various environments using Docker, Docker Compose, and Kubernetes.
 
 ## Table of Contents
 
@@ -16,7 +16,7 @@ This guide provides comprehensive instructions for deploying MonadicPipeline in 
 
 ## Overview
 
-MonadicPipeline can be deployed in multiple ways:
+Ouroboros can be deployed in multiple ways:
 
 - **Docker**: Single container deployment
 - **Docker Compose**: Multi-container local/development deployment
@@ -24,7 +24,7 @@ MonadicPipeline can be deployed in multiple ways:
 
 The deployment includes the following components:
 
-- **MonadicPipeline CLI**: The main application
+- **Ouroboros CLI**: The main application
 - **Ollama**: LLM service for model inference
 - **Qdrant**: Vector database for embeddings storage
 - **Jaeger**: Distributed tracing (optional)
@@ -71,7 +71,7 @@ docker run -d \
   -v ollama-data:/root/.ollama \
   ollama/ollama:latest
 
-# Run MonadicPipeline
+# Run Ouroboros
 docker run -it --rm \
   --network pipeline-network \
   -e PIPELINE__LlmProvider__OllamaEndpoint=http://ollama:11434 \
@@ -362,10 +362,10 @@ kubectl apply -f k8s/qdrant.yaml
 # Deploy Jaeger (optional)
 kubectl apply -f k8s/jaeger.yaml
 
-# Deploy MonadicPipeline CLI
+# Deploy Ouroboros CLI
 kubectl apply -f k8s/deployment.yaml
 
-# Deploy MonadicPipeline Web API
+# Deploy Ouroboros Web API
 kubectl apply -f k8s/webapi-deployment.yaml
 ```
 
@@ -424,7 +424,7 @@ kubectl exec -it deployment/monadic-pipeline -n monadic-pipeline -- \
 ### Scaling
 
 ```bash
-# Scale MonadicPipeline deployment
+# Scale Ouroboros deployment
 kubectl scale deployment/monadic-pipeline --replicas=3 -n monadic-pipeline
 
 # Autoscaling (requires metrics server)
@@ -661,7 +661,7 @@ spec:
 
 For issues and questions:
 
-- GitHub Issues: https://github.com/PMeeske/MonadicPipeline/issues
+- GitHub Issues: https://github.com/PMeeske/Ouroboros/issues
 - Documentation: See project README and guides
 
 ---

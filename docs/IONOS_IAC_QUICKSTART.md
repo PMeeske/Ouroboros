@@ -1,6 +1,6 @@
 # IONOS Infrastructure as Code - Quick Start Guide
 
-Get your MonadicPipeline infrastructure up and running in 5 minutes!
+Get your Ouroboros infrastructure up and running in 5 minutes!
 
 ## Prerequisites (1 minute)
 
@@ -87,7 +87,7 @@ Your infrastructure includes:
 # Step 1: Configure kubectl
 export KUBECONFIG=./terraform/kubeconfig-dev.yaml
 
-# Step 2: Deploy MonadicPipeline
+# Step 2: Deploy Ouroboros
 ./scripts/deploy-ionos.sh monadic-pipeline
 
 # Step 3: Check deployment
@@ -210,7 +210,7 @@ See [Migration Guide](IONOS_IAC_GUIDE.md#migration-from-manual-setup) for detail
 - **Full Guide**: [IONOS IaC Guide](IONOS_IAC_GUIDE.md)
 - **Terraform Docs**: [terraform/README.md](../terraform/README.md)
 - **IONOS Support**: [https://www.ionos.com/help](https://www.ionos.com/help)
-- **Issues**: [GitHub Issues](https://github.com/PMeeske/MonadicPipeline/issues)
+- **Issues**: [GitHub Issues](https://github.com/PMeeske/Ouroboros/issues)
 
 ## Environment Comparison
 

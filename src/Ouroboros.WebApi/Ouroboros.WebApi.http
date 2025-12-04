@@ -1,0 +1,6 @@
+@Ouroboros.WebApi_HostAddress = http://localhost:5015
+
+GET {{Ouroboros.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

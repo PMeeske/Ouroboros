@@ -4,7 +4,7 @@ This document describes how to test the GitHub Actions workflows in this reposit
 
 ## Overview
 
-The MonadicPipeline repository contains several GitHub Actions workflows for:
+The Ouroboros repository contains several GitHub Actions workflows for:
 - **dotnet-coverage.yml**: .NET test coverage analysis
 - **mutation-testing.yml**: Mutation testing with Stryker
 - **ollama-integration-test.yml**: Integration tests with Ollama LLM
@@ -64,22 +64,22 @@ dotnet restore
 
 # Build main projects (excluding tests due to NuGet vulnerability warning)
 for project in \
-  src/MonadicPipeline.Agent/MonadicPipeline.Agent.csproj \
-  src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj \
-  src/MonadicPipeline.Core/MonadicPipeline.Core.csproj \
-  src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj \
-  src/MonadicPipeline.Examples/MonadicPipeline.Examples.csproj \
-  src/MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj \
-  src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj \
-  src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj \
-  src/MonadicPipeline.WebApi/MonadicPipeline.WebApi.csproj
+  src/Ouroboros.Agent/Ouroboros.Agent.csproj \
+  src/Ouroboros.CLI/Ouroboros.CLI.csproj \
+  src/Ouroboros.Core/Ouroboros.Core.csproj \
+  src/Ouroboros.Domain/Ouroboros.Domain.csproj \
+  src/Ouroboros.Examples/Ouroboros.Examples.csproj \
+  src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj \
+  src/Ouroboros.Providers/Ouroboros.Providers.csproj \
+  src/Ouroboros.Tools/Ouroboros.Tools.csproj \
+  src/Ouroboros.WebApi/Ouroboros.WebApi.csproj
 do
   dotnet build --configuration Release --no-restore "$project"
 done
 
 # Test projects
 dotnet test --configuration Release \
-  src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj
+  src/Ouroboros.Tests/Ouroboros.Tests.csproj
 ```
 
 ### 3. Workflow-Specific Testing
@@ -97,7 +97,7 @@ dotnet test --configuration Release \
 #### Testing android-build.yml
 ```bash
 # Check if Android project exists
-ls -la src/MonadicPipeline.Android/
+ls -la src/Ouroboros.Android/
 
 # Trigger via push to develop branch or workflow_dispatch
 ```
@@ -127,7 +127,7 @@ ollama pull llama3:8b
 ollama pull nomic-embed-text
 
 # Build and run CLI
-cd src/MonadicPipeline.CLI
+cd src/Ouroboros.CLI
 dotnet run -- ask -q "What is 2+2?" --model "llama3:8b"
 ```
 
@@ -135,7 +135,7 @@ dotnet run -- ask -q "What is 2+2?" --model "llama3:8b"
 
 ### Issue 1: NuGet Vulnerability Warning (NU1903)
 
-**Problem**: The test project (`MonadicPipeline.Tests.csproj`) has `TreatWarningsAsErrors=true` and fails on NuGet vulnerability warning NU1903 for `Microsoft.Build.Tasks.Core` 17.7.2.
+**Problem**: The test project (`Ouroboros.Tests.csproj`) has `TreatWarningsAsErrors=true` and fails on NuGet vulnerability warning NU1903 for `Microsoft.Build.Tasks.Core` 17.7.2.
 
 **Cause**: This is a transitive dependency vulnerability that will be fixed when LangChain or other dependencies update.
 
@@ -146,7 +146,7 @@ dotnet run -- ask -q "What is 2+2?" --model "llama3:8b"
 
 **Local Workaround**:
 ```bash
-# Temporarily disable TreatWarningsAsErrors in MonadicPipeline.Tests.csproj
+# Temporarily disable TreatWarningsAsErrors in Ouroboros.Tests.csproj
 # Or wait for package updates to resolve the vulnerability
 ```
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Local deployment script for MonadicPipeline
+# Local deployment script for Ouroboros
 # Publishes the application as a self-contained executable
 # Usage: ./deploy-local.sh [output-dir]
 
@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 echo "================================================"
-echo "MonadicPipeline Local Deployment"
+echo "Ouroboros Local Deployment"
 echo "================================================"
 echo "Output Directory: $OUTPUT_DIR"
 echo ""
@@ -25,7 +25,7 @@ fi
 
 # Publish as self-contained
 echo "Step 1: Publishing application..."
-dotnet publish src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj \
+dotnet publish src/Ouroboros.CLI/Ouroboros.CLI.csproj \
     -c Release \
     -o "$OUTPUT_DIR" \
     --self-contained false \

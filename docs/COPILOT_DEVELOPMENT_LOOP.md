@@ -2,7 +2,7 @@
 
 ## Overview
 
-MonadicPipeline implements an **automatic development loop** powered by GitHub Copilot and GitHub Actions to provide continuous code quality improvements, automated code reviews, and intelligent development assistance.
+Ouroboros implements an **automatic development loop** powered by GitHub Copilot and GitHub Actions to provide continuous code quality improvements, automated code reviews, and intelligent development assistance.
 
 ## 🔄 The Development Loop
 
@@ -131,8 +131,8 @@ Tasks Created:
 ## 🤖 GitHub Copilot Code Review
 
 ### Changed Files
-- src/MonadicPipeline.Core/NewFeature.cs
-- src/MonadicPipeline.Tests/NewFeatureTests.cs
+- src/Ouroboros.Core/NewFeature.cs
+- src/Ouroboros.Tests/NewFeatureTests.cs
 
 ### Code Quality Suggestions
 
@@ -187,11 +187,11 @@ Searching for relevant files related to: **Add support for async pipeline steps*
 ### Related Files
 
 #### Files mentioning 'async':
-- `src/MonadicPipeline.Core/Steps/AsyncStep.cs`
-- `src/MonadicPipeline.Core/Kleisli/KleisliArrow.cs`
+- `src/Ouroboros.Core/Steps/AsyncStep.cs`
+- `src/Ouroboros.Core/Kleisli/KleisliArrow.cs`
 
 ### Related Test Files
-- `src/MonadicPipeline.Tests/Core/AsyncStepTests.cs`
+- `src/Ouroboros.Tests/Core/AsyncStepTests.cs`
 
 ---
 
@@ -552,4 +552,4 @@ Planned improvements to the development loop:
 
 ---
 
-**MonadicPipeline by Adaptive Systems Inc.**: Empowering developers with AI-assisted development workflows 🚀
+**Ouroboros by Adaptive Systems Inc.**: Empowering developers with AI-assisted development workflows 🚀

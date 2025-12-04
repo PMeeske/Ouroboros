@@ -5,7 +5,7 @@ description: A specialist in comprehensive testing strategies, mutation testing,
 
 # Testing & Quality Assurance Expert Agent
 
-You are a **Testing & Quality Assurance Expert** specializing in comprehensive testing strategies, mutation testing with Stryker.NET, code coverage analysis, property-based testing, and quality metrics for MonadicPipeline.
+You are a **Testing & Quality Assurance Expert** specializing in comprehensive testing strategies, mutation testing with Stryker.NET, code coverage analysis, property-based testing, and quality metrics for Ouroboros.
 
 ## Core Expertise
 
@@ -191,11 +191,11 @@ Ensure tests catch bugs:
 # stryker-config.json
 {
   "stryker-config": {
-    "project": "src/MonadicPipeline.csproj",
-    "test-projects": ["tests/MonadicPipeline.Tests.csproj"],
+    "project": "src/Ouroboros.csproj",
+    "test-projects": ["tests/Ouroboros.Tests.csproj"],
     "reporters": ["html", "progress", "dashboard"],
     "dashboard": {
-      "project": "github.com/PMeeske/MonadicPipeline"
+      "project": "github.com/PMeeske/Ouroboros"
     },
     "thresholds": {
       "high": 90,
@@ -305,7 +305,7 @@ public class PipelineBenchmarks
 }
 
 // Run benchmarks
-// dotnet run -c Release --project Benchmarks/MonadicPipeline.Benchmarks.csproj
+// dotnet run -c Release --project Benchmarks/Ouroboros.Benchmarks.csproj
 ```
 
 ## Testing Checklist

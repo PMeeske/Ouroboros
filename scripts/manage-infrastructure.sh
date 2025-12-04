@@ -88,7 +88,7 @@ check_prerequisites() {
 
 show_usage() {
     cat << EOF
-MonadicPipeline Infrastructure Management Script
+Ouroboros Infrastructure Management Script
 
 Usage: $0 [command] [environment]
 

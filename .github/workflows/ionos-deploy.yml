@@ -126,15 +126,15 @@ jobs:
         run: |
           # Build all projects except tests first
           for project in \
-            src/MonadicPipeline.Agent/MonadicPipeline.Agent.csproj \
-            src/MonadicPipeline.CLI/MonadicPipeline.CLI.csproj \
-            src/MonadicPipeline.Core/MonadicPipeline.Core.csproj \
-            src/MonadicPipeline.Domain/MonadicPipeline.Domain.csproj \
-            src/MonadicPipeline.Examples/MonadicPipeline.Examples.csproj \
-            src/MonadicPipeline.Pipeline/MonadicPipeline.Pipeline.csproj \
-            src/MonadicPipeline.Providers/MonadicPipeline.Providers.csproj \
-            src/MonadicPipeline.Tools/MonadicPipeline.Tools.csproj \
-            src/MonadicPipeline.WebApi/MonadicPipeline.WebApi.csproj
+            src/Ouroboros.Agent/Ouroboros.Agent.csproj \
+            src/Ouroboros.CLI/Ouroboros.CLI.csproj \
+            src/Ouroboros.Core/Ouroboros.Core.csproj \
+            src/Ouroboros.Domain/Ouroboros.Domain.csproj \
+            src/Ouroboros.Examples/Ouroboros.Examples.csproj \
+            src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj \
+            src/Ouroboros.Providers/Ouroboros.Providers.csproj \
+            src/Ouroboros.Tools/Ouroboros.Tools.csproj \
+            src/Ouroboros.WebApi/Ouroboros.WebApi.csproj
           do
             dotnet build --no-restore --configuration Release "$project"
           done
@@ -147,7 +147,7 @@ jobs:
           # We check the actual exit code to ensure real test failures are caught
           dotnet test --configuration Release --verbosity normal \
             --logger "trx;LogFileName=test-results.trx" \
-            src/MonadicPipeline.Tests/MonadicPipeline.Tests.csproj
+            src/Ouroboros.Tests/Ouroboros.Tests.csproj
           EXIT_CODE=$?
           
           if [ $EXIT_CODE -ne 0 ]; then

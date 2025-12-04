@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation adds a fully automated development cycle to the MonadicPipeline project, building on top of the existing GitHub Copilot workflows. The system now automatically generates improvement tasks, assigns them to @copilot, and manages the entire development workflow with minimal human intervention.
+This implementation adds a fully automated development cycle to the Ouroboros project, building on top of the existing GitHub Copilot workflows. The system now automatically generates improvement tasks, assigns them to @copilot, and manages the entire development workflow with minimal human intervention.
 
 ## What Was Implemented
 

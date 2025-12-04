@@ -7,7 +7,7 @@
 
 ## Overview
 
-This document outlines the comprehensive plan for implementing missing enterprise-grade features in MonadicPipeline v1.0. Each feature will be implemented in a separate PR for focused review and incremental delivery.
+This document outlines the comprehensive plan for implementing missing enterprise-grade features in Ouroboros v1.0. Each feature will be implemented in a separate PR for focused review and incremental delivery.
 
 ## Summary of Missing Enterprise Features
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Helper script to deploy MonadicPipeline to cloud Kubernetes (EKS, GKE, or any registry)
+# Helper script to deploy Ouroboros to cloud Kubernetes (EKS, GKE, or any registry)
 # This script helps you deploy to cloud Kubernetes with custom registry
 #
 # Prerequisites:
@@ -39,7 +39,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 K8S_DIR="$PROJECT_ROOT/k8s"
 
 echo "================================================"
-echo "MonadicPipeline Cloud Kubernetes Deployment"
+echo "Ouroboros Cloud Kubernetes Deployment"
 echo "================================================"
 echo "Registry: $REGISTRY_URL"
 echo "Namespace: $NAMESPACE"
@@ -206,10 +206,10 @@ kubectl apply -f "$K8S_DIR/qdrant.yaml"
 kubectl apply -f "$K8S_DIR/jaeger.yaml"
 
 # Deploy application
-echo "Deploying MonadicPipeline CLI..."
+echo "Deploying Ouroboros CLI..."
 kubectl apply -f "$TEMP_DIR/deployment.yaml"
 
-echo "Deploying MonadicPipeline Web API..."
+echo "Deploying Ouroboros Web API..."
 kubectl apply -f "$TEMP_DIR/webapi-deployment.yaml"
 
 echo ""

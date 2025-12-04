@@ -1,8 +1,8 @@
-# MonadicPipeline - Architectural Layer Diagram
+# Ouroboros - Architectural Layer Diagram
 
 ## System Overview
 
-MonadicPipeline is a sophisticated functional programming-based AI pipeline system built on LangChain, implementing category theory principles, monadic composition, and functional programming patterns.
+Ouroboros is a sophisticated functional programming-based AI pipeline system built on LangChain, implementing category theory principles, monadic composition, and functional programming patterns.
 
 ## Layered Architecture Diagram
 
@@ -37,7 +37,7 @@ MonadicPipeline is a sophisticated functional programming-based AI pipeline syst
                                         │
 ┌───────────────────────────────────────┼────────────────────────────────────────┐
 │                         PIPELINE LAYER                                          │
-│                    (MonadicPipeline.Pipeline)                                   │
+│                    (Ouroboros.Pipeline)                                   │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐            │
 │  │  Reasoning       │  │  Ingestion       │  │  Branches        │            │
 │  │  ──────────      │  │  ──────────      │  │  ──────────      │            │
@@ -59,7 +59,7 @@ MonadicPipeline is a sophisticated functional programming-based AI pipeline syst
                                     │
 ┌───────────────────────────────────┼────────────────────────────────────────────┐
 │                          DOMAIN LAYER                                           │
-│                     (MonadicPipeline.Domain)                                    │
+│                     (Ouroboros.Domain)                                    │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐            │
 │  │  Events          │  │  States          │  │  Vectors         │            │
 │  │  ──────────      │  │  ──────────      │  │  ──────────      │            │
@@ -75,7 +75,7 @@ MonadicPipeline is a sophisticated functional programming-based AI pipeline syst
                                     │
 ┌───────────────────────────────────┼────────────────────────────────────────────┐
 │                           CORE LAYER                                            │
-│                      (MonadicPipeline.Core)                                     │
+│                      (Ouroboros.Core)                                     │
 │  ┌─────────────────────────────────────────────────────────────────────────┐  │
 │  │              Functional Programming Foundation                           │  │
 │  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐           │  │
@@ -111,7 +111,7 @@ MonadicPipeline is a sophisticated functional programming-based AI pipeline syst
                                     │
 ┌───────────────────────────────────┼────────────────────────────────────────────┐
 │                      INTEGRATION LAYER                                          │
-│                 (MonadicPipeline.Tools & Providers)                             │
+│                 (Ouroboros.Tools & Providers)                             │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐            │
 │  │  Tools           │  │  Providers       │  │  Memory          │            │
 │  │  ──────────      │  │  ──────────      │  │  ──────────      │            │
@@ -226,7 +226,7 @@ Query
 
 ## Component Responsibilities
 
-### Core Layer (`MonadicPipeline.Core`)
+### Core Layer (`Ouroboros.Core`)
 - **Primary Responsibility**: Functional programming foundation and abstractions
 - **Key Components**:
   - `Result<T>` and `Option<T>` monads
@@ -235,7 +235,7 @@ Query
   - Processing utilities (RecursiveChunkProcessor)
   - Security and validation
 
-### Domain Layer (`MonadicPipeline.Domain`)
+### Domain Layer (`Ouroboros.Domain`)
 - **Primary Responsibility**: Business logic and domain models
 - **Key Components**:
   - Event definitions (ReasoningStep, ToolExecution)
@@ -243,7 +243,7 @@ Query
   - Vector store abstractions
   - Immutable domain entities
 
-### Pipeline Layer (`MonadicPipeline.Pipeline`)
+### Pipeline Layer (`Ouroboros.Pipeline`)
 - **Primary Responsibility**: AI workflow orchestration
 - **Key Components**:
   - Reasoning workflows (Draft → Critique → Improve)
@@ -251,7 +251,7 @@ Query
   - Branch management and execution context
   - Replay engine for audit and analysis
 
-### Integration Layer (`MonadicPipeline.Tools` & `MonadicPipeline.Providers`)
+### Integration Layer (`Ouroboros.Tools` & `Ouroboros.Providers`)
 - **Primary Responsibility**: External service integration
 - **Key Components**:
   - Tool system (Math, Retrieval, GitHub, MeTTa)
@@ -259,7 +259,7 @@ Query
   - Memory management strategies
   - Hosting and dependency injection
 
-### Orchestration Layer (`MonadicPipeline.Agent`)
+### Orchestration Layer (`Ouroboros.Agent`)
 - **Primary Responsibility**: Intelligent agent coordination
 - **Key Components**:
   - Meta-AI v2 (Planner/Executor/Verifier)
@@ -455,7 +455,7 @@ Extend `IConversationMemory` for specialized memory management.
 
 ## References
 
-- [Repository](https://github.com/PMeeske/MonadicPipeline)
+- [Repository](https://github.com/PMeeske/Ouroboros)
 - [README](../README.md)
 - [Deployment Guide](../DEPLOYMENT.md)
 - [Infrastructure Dependencies](INFRASTRUCTURE_DEPENDENCIES.md)
@@ -463,4 +463,4 @@ Extend `IConversationMemory` for specialized memory management.
 
 ---
 
-**MonadicPipeline by Adaptive Systems Inc.**: Where Category Theory Meets AI Pipeline Engineering 🚀
+**Ouroboros by Adaptive Systems Inc.**: Where Category Theory Meets AI Pipeline Engineering 🚀

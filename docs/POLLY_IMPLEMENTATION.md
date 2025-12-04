@@ -11,7 +11,7 @@ This document describes the implementation of Polly retry policies with exponent
 - **Polly**: 8.5.0
 - **Polly.Extensions.Http**: 3.0.0
 
-Added to `MonadicPipeline.Providers.csproj`.
+Added to `Ouroboros.Providers.csproj`.
 
 ### Retry Policy Configuration
 

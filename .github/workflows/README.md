@@ -1,6 +1,6 @@
 # GitHub Actions Workflows
 
-This directory contains GitHub Actions workflows for automated CI/CD of MonadicPipeline.
+This directory contains GitHub Actions workflows for automated CI/CD of Ouroboros.
 
 ## 🤖 Copilot Development Loop Workflows
 
@@ -52,7 +52,7 @@ End-to-end integration tests with Ollama to validate the reverse engineering pip
 
 **Status**: ✅ Active (Primary deployment target)
 
-Automatically builds, tests, and deploys MonadicPipeline to IONOS Cloud Kubernetes infrastructure.
+Automatically builds, tests, and deploys Ouroboros to IONOS Cloud Kubernetes infrastructure.
 
 **Triggers**:
 - Push to `main` branch

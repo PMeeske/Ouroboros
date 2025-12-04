@@ -1,4 +1,4 @@
-# Variable definitions for MonadicPipeline IONOS Infrastructure
+# Variable definitions for Ouroboros IONOS Infrastructure
 
 # Data Center Configuration
 variable "datacenter_name" {
@@ -16,7 +16,7 @@ variable "location" {
 variable "datacenter_description" {
   description = "Description of the data center"
   type        = string
-  default     = "MonadicPipeline infrastructure data center"
+  default     = "Ouroboros infrastructure data center"
 }
 
 # Kubernetes Cluster Configuration
@@ -190,8 +190,8 @@ variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
   default = {
-    Project    = "MonadicPipeline"
+    Project    = "Ouroboros"
     ManagedBy  = "Terraform"
-    Repository = "PMeeske/MonadicPipeline"
+    Repository = "PMeeske/Ouroboros"
   }
 }

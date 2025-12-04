@@ -1,6 +1,6 @@
 # GitHub Copilot Custom Agents
 
-This directory contains specialized GitHub Copilot custom agents designed to assist with different aspects of the MonadicPipeline project. Each agent has deep domain expertise and provides context-aware guidance.
+This directory contains specialized GitHub Copilot custom agents designed to assist with different aspects of the Ouroboros project. Each agent has deep domain expertise and provides context-aware guidance.
 
 ## 🔴 MANDATORY TESTING POLICY 🔴
 
@@ -495,7 +495,7 @@ This agent specializes in:
 
 1. **Containerization:**
    ```
-   @cloud-devops-expert What's the best way to containerize the MonadicPipeline
+   @cloud-devops-expert What's the best way to containerize the Ouroboros
    WebApi with multi-stage builds and security best practices?
    ```
 
@@ -645,7 +645,7 @@ When adding new agents:
 ## Agent Update Policy
 
 Custom agents should be updated when:
-- New major features are added to MonadicPipeline
+- New major features are added to Ouroboros
 - Architecture patterns change
 - New best practices emerge
 - Common questions are identified
@@ -664,7 +664,7 @@ If you find issues with agent responses or have suggestions for improvements:
 
 **Version:** 3.0.0 - MANDATORY TESTING ENFORCED
 
-**Maintained by:** MonadicPipeline Team
+**Maintained by:** Ouroboros Team
 
 ## 🔴 Final Reminder 🔴
 
@@ -673,6 +673,6 @@ If you find issues with agent responses or have suggestions for improvements:
 - Understands that untested code is incomplete code
 - Never compromises on quality for speed
 - Documents testing evidence in every PR
-- Helps maintain the high standards of the MonadicPipeline project
+- Helps maintain the high standards of the Ouroboros project
 
 **If you encounter an agent that suggests untested code or allows you to skip testing, report it immediately as a bug.**

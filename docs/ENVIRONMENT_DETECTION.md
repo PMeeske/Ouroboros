@@ -1,6 +1,6 @@
 # Environment Detection
 
-The `EnvironmentDetector` utility class provides a centralized way to detect the runtime environment of the MonadicPipeline application.
+The `EnvironmentDetector` utility class provides a centralized way to detect the runtime environment of the Ouroboros application.
 
 ## Purpose
 
@@ -158,7 +158,7 @@ The Web API root endpoint exposes environment information:
 curl http://localhost:5015/
 
 {
-  "service": "MonadicPipeline Web API",
+  "service": "Ouroboros Web API",
   "version": "1.0.0",
   "status": "running",
   "environment": {

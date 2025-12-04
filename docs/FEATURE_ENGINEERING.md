@@ -1,6 +1,6 @@
 # Feature Engineering Infrastructure
 
-This document describes the C# code vectorization and streaming deduplication features added to MonadicPipeline.
+This document describes the C# code vectorization and streaming deduplication features added to Ouroboros.
 
 ## Overview
 
@@ -300,9 +300,9 @@ Console.WriteLine($"Found {uniqueVectors.Count} unique code patterns out of {cod
 - Larger cache = better duplicate detection, more memory
 - Smaller cache = less memory, may miss older duplicates
 
-## Integration with MonadicPipeline
+## Integration with Ouroboros
 
-These components follow MonadicPipeline's functional programming principles:
+These components follow Ouroboros's functional programming principles:
 
 ```csharp
 using LangChainPipeline.Core.Kleisli;
@@ -327,7 +327,7 @@ var pipeline = VectorizeStep(vectorizer)
 
 ## Examples
 
-See `src/MonadicPipeline.Examples/Examples/FeatureEngineeringExamples.cs` for comprehensive examples including:
+See `src/Ouroboros.Examples/Examples/FeatureEngineeringExamples.cs` for comprehensive examples including:
 
 1. Basic code vectorization
 2. Batch vectorization
@@ -340,7 +340,7 @@ See `src/MonadicPipeline.Examples/Examples/FeatureEngineeringExamples.cs` for co
 Run the examples:
 
 ```bash
-dotnet run --project src/MonadicPipeline.Examples
+dotnet run --project src/Ouroboros.Examples
 ```
 
 ## Architecture

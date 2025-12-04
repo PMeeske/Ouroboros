@@ -136,7 +136,7 @@ output "infrastructure_ready" {
 
 ## Dependencies
 
-- C# Application: MonadicPipeline (appsettings.Production.json)
+- C# Application: Ouroboros (appsettings.Production.json)
 - Kubernetes: Deployment manifests (deployment.cloud.yaml)
 - Terraform: Main infrastructure variables
 

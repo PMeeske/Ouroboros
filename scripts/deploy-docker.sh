@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deployment script for MonadicPipeline using Docker Compose
+# Deployment script for Ouroboros using Docker Compose
 # Usage: ./deploy-docker.sh [environment]
 
 set -e
@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 echo "================================================"
-echo "MonadicPipeline Docker Deployment"
+echo "Ouroboros Docker Deployment"
 echo "================================================"
 echo "Environment: $ENVIRONMENT"
 echo "Project Root: $PROJECT_ROOT"
@@ -85,7 +85,7 @@ echo "Deployment Complete!"
 echo "================================================"
 echo ""
 echo "Services running:"
-echo "  - MonadicPipeline CLI: docker exec -it monadic-pipeline dotnet LangChainPipeline.dll --help"
+echo "  - Ouroboros CLI: docker exec -it monadic-pipeline dotnet LangChainPipeline.dll --help"
 echo "  - Ollama: http://localhost:11434"
 echo "  - Qdrant: http://localhost:6333"
 echo "  - Jaeger UI: http://localhost:16686"

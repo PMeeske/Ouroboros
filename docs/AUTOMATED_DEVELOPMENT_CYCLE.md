@@ -450,4 +450,4 @@ For detailed information about the Playwright integration, see:
 
 ---
 
-**MonadicPipeline**: Continuous improvement through automation 🚀
+**Ouroboros**: Continuous improvement through automation 🚀
