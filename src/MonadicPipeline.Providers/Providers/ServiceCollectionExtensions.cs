@@ -7,6 +7,8 @@ namespace LangChainPipeline.Providers;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Core.Configuration;
 using LangChainPipeline.Domain.Vectors;
+using LangChainPipeline.Providers.SpeechToText;
+using LangChainPipeline.Providers.TextToSpeech;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -161,5 +163,124 @@ public static class ServiceCollectionExtensions
         };
 
         return services.AddVectorStore(config);
+    }
+
+    /// <summary>
+    /// Register OpenAI Whisper speech-to-text service.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="apiKey">OpenAI API key. If null, reads from OPENAI_API_KEY environment variable.</param>
+    /// <param name="model">Whisper model to use (default: whisper-1).</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddWhisperSpeechToText(
+        this IServiceCollection services,
+        string? apiKey = null,
+        string model = "whisper-1")
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddSingleton<ISpeechToTextService>(sp =>
+        {
+            var key = apiKey ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+                ?? throw new InvalidOperationException("OpenAI API key required. Set OPENAI_API_KEY or pass apiKey parameter.");
+            return new WhisperSpeechToTextService(key, model: model);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Register local Whisper speech-to-text service.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="modelSize">Model size: tiny, base, small, medium, large.</param>
+    /// <param name="whisperPath">Optional path to whisper executable.</param>
+    /// <param name="modelPath">Optional path to model file.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddLocalWhisperSpeechToText(
+        this IServiceCollection services,
+        string modelSize = "base",
+        string? whisperPath = null,
+        string? modelPath = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddSingleton<ISpeechToTextService>(sp =>
+            new LocalWhisperService(whisperPath, modelPath, modelSize));
+
+        return services;
+    }
+
+    /// <summary>
+    /// Register a custom speech-to-text service.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="service">The speech-to-text service instance.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddSpeechToText(
+        this IServiceCollection services,
+        ISpeechToTextService service)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(service);
+
+        services.AddSingleton(service);
+        return services;
+    }
+
+    /// <summary>
+    /// Register OpenAI text-to-speech service.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="apiKey">OpenAI API key. If null, reads from OPENAI_API_KEY environment variable.</param>
+    /// <param name="model">TTS model to use: "tts-1" (faster) or "tts-1-hd" (higher quality).</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddOpenAiTextToSpeech(
+        this IServiceCollection services,
+        string? apiKey = null,
+        string model = "tts-1")
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddSingleton<ITextToSpeechService>(sp =>
+        {
+            string key = apiKey ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+                ?? throw new InvalidOperationException("OpenAI API key required. Set OPENAI_API_KEY or pass apiKey parameter.");
+            return new OpenAiTextToSpeechService(key, model: model);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Register a custom text-to-speech service.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="service">The text-to-speech service instance.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddTextToSpeech(
+        this IServiceCollection services,
+        ITextToSpeechService service)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(service);
+
+        services.AddSingleton(service);
+        return services;
+    }
+
+    /// <summary>
+    /// Register both speech-to-text and text-to-speech services for bidirectional audio support.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="apiKey">OpenAI API key. If null, reads from OPENAI_API_KEY environment variable.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddBidirectionalSpeech(
+        this IServiceCollection services,
+        string? apiKey = null)
+    {
+        return services
+            .AddWhisperSpeechToText(apiKey)
+            .AddOpenAiTextToSpeech(apiKey);
     }
 }
