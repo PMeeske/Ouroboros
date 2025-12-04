@@ -22,6 +22,36 @@ public static class DefaultIngestionSettings
     
     /// <summary>Default document separator for combining contexts.</summary>
     public const string DocumentSeparator = "\n---\n";
+    
+    /// <summary>Default maximum lines to read from CSV files.</summary>
+    public const int CsvMaxLines = 50;
+    
+    /// <summary>Default maximum bytes to preview from binary files (128 KB).</summary>
+    public const int BinaryMaxBytes = 128 * 1024;
+    
+    /// <summary>Default batch size for streaming operations.</summary>
+    public const int StreamingBatchSize = 8;
+    
+    /// <summary>Reduced CSV line limit for streaming operations.</summary>
+    public const int StreamingCsvMaxLines = 20;
+    
+    /// <summary>Reduced binary preview size for streaming operations (32 KB).</summary>
+    public const int StreamingBinaryMaxBytes = 32 * 1024;
+}
+
+/// <summary>
+/// Default settings for RAG operations.
+/// </summary>
+public static class RagDefaults
+{
+    /// <summary>Default group size for divide-and-conquer RAG.</summary>
+    public const int GroupSize = 6;
+    
+    /// <summary>Default number of sub-questions for decompose-and-aggregate RAG.</summary>
+    public const int SubQuestions = 4;
+    
+    /// <summary>Default number of documents per sub-question.</summary>
+    public const int DocumentsPerSubQuestion = 6;
 }
 
 /// <summary>

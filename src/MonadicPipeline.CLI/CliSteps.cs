@@ -1119,7 +1119,7 @@ public static class CliSteps
         => s =>
         {
             string raw = ParseString(args);
-            string separator = "\n---\n";
+            string separator = DefaultIngestionSettings.DocumentSeparator;
             string prefix = string.Empty;
             string suffix = string.Empty;
             int take = s.Retrieved.Count;
@@ -1357,10 +1357,10 @@ public static class CliSteps
         => async s =>
         {
             // Defaults and args
-            int subs = 4;
-            int per = 6;
+            int subs = RagDefaults.SubQuestions;
+            int per = RagDefaults.DocumentsPerSubQuestion;
             int k = Math.Max(4, s.RetrievalK);
-            string sep = "\n---\n";
+            string sep = DefaultIngestionSettings.DocumentSeparator;
             bool stream = false;
             string? decomposeTpl = null;
             string? subTpl = null;
