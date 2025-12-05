@@ -94,8 +94,7 @@ public static class ChatConfig
             {
                 endpointType = ChatEndpointType.LiteLLM;
             }
-            else if (endpoint.Contains("models.inference.ai.azure.com", StringComparison.OrdinalIgnoreCase) ||
-                     endpoint.Contains("github", StringComparison.OrdinalIgnoreCase))
+            else if (endpoint.Contains("models.inference.ai.azure.com", StringComparison.OrdinalIgnoreCase))
             {
                 endpointType = ChatEndpointType.GitHubModels;
             }

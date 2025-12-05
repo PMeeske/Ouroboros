@@ -56,6 +56,8 @@ public sealed class GitHubModelsChatModel : IStreamingChatModel
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                 onRetry: (outcome, timespan, retryCount, context) =>
                 {
+                    // Log retry attempts - using Console for consistency with other providers in this codebase
+                    // TODO: Consider migrating to ILogger across all providers
                     Console.WriteLine($"[GitHubModelsChatModel] Retry {retryCount} after {timespan.TotalSeconds}s due to {outcome.Result?.StatusCode}");
                 });
     }
@@ -136,9 +138,20 @@ public sealed class GitHubModelsChatModel : IStreamingChatModel
                 }
             }
         }
-        catch
+        catch (HttpRequestException httpEx)
         {
-            // GitHub Models endpoint not reachable → fall back to indicating failure.
+            // Network errors - log for debugging but provide fallback
+            Console.WriteLine($"[GitHubModelsChatModel] HTTP error: {httpEx.Message}");
+        }
+        catch (TaskCanceledException)
+        {
+            // Timeout - log for debugging but provide fallback
+            Console.WriteLine("[GitHubModelsChatModel] Request timed out");
+        }
+        catch (Exception ex)
+        {
+            // Unexpected errors - log for debugging but provide fallback
+            Console.WriteLine($"[GitHubModelsChatModel] Unexpected error: {ex.GetType().Name} - {ex.Message}");
         }
 
         return $"[github-models-fallback:{_model}] {prompt}";
