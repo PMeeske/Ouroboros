@@ -60,6 +60,6 @@ public abstract class BaseModelOptions
     [Option("api-key", Required = false, HelpText = "API key for remote endpoint")]
     public string? ApiKey { get; set; }
 
-    [Option("endpoint-type", Required = false, Default = "auto", HelpText = "Endpoint type: auto, ollama-cloud, openai, litellm")]
+    [Option("endpoint-type", Required = false, Default = "auto", HelpText = "Endpoint type: auto, ollama-cloud, openai, litellm, github-models")]
     public string EndpointType { get; set; } = "auto";
 }

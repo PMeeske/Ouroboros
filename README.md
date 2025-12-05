@@ -434,7 +434,7 @@ var result = await processor.ProcessLargeContextAsync<string, string>(
 See [RecursiveChunking Documentation](docs/RECURSIVE_CHUNKING.md) for detailed guide and examples.
 
 
-#### Using Remote Endpoints (Ollama Cloud, OpenAI)
+#### Using Remote Endpoints (Ollama Cloud, OpenAI, GitHub Models, LiteLLM)
 
 Configure remote AI endpoints via environment variables or CLI flags. All CLI commands (ask, pipeline, orchestrator, metta) support remote endpoints with authentication:
 
@@ -445,7 +445,12 @@ cd src/Ouroboros.CLI
 # Set environment variables (recommended)
 export CHAT_ENDPOINT="https://api.ollama.com"
 export CHAT_API_KEY="your-api-key"
-export CHAT_ENDPOINT_TYPE="ollama-cloud"  # or "auto", "openai"
+export CHAT_ENDPOINT_TYPE="ollama-cloud"  # or "auto", "openai", "github-models", "litellm"
+
+# GitHub Models example
+export GITHUB_TOKEN="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+export CHAT_ENDPOINT="https://models.inference.ai.azure.com"
+export CHAT_ENDPOINT_TYPE="github-models"
 
 # Now run any command
 dotnet run -- ask -q "Hello"
@@ -457,9 +462,16 @@ dotnet run -- ask -q "Hello" \
   --endpoint "https://api.ollama.com" \
   --api-key "your-key" \
   --endpoint-type "ollama-cloud"
+  
+# GitHub Models with specific model
+dotnet run -- ask -q "Explain functional programming" \
+  --endpoint-type github-models \
+  --model gpt-4o
 ```
 
-📚 **See the [Ollama Cloud Integration Guide](docs/OLLAMA_CLOUD_INTEGRATION.md) for comprehensive documentation, examples, and troubleshooting.**
+📚 **Provider Documentation:**
+- [Ollama Cloud Integration Guide](docs/OLLAMA_CLOUD_INTEGRATION.md)
+- [GitHub Models Integration Guide](docs/GITHUB_MODELS_INTEGRATION.md) - **NEW!** Access GPT-4o, Claude 3.5 Sonnet, Llama 3.1, and more
 
 #### Programmatic Usage - Convenience Layer
 

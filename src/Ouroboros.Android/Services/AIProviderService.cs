@@ -48,7 +48,12 @@ public enum AIProvider
     /// <summary>
     /// Azure OpenAI Service
     /// </summary>
-    AzureOpenAI
+    AzureOpenAI,
+
+    /// <summary>
+    /// GitHub Models (GPT-4o, o1-preview, Claude, Llama, Mistral, etc.)
+    /// </summary>
+    GitHubModels
 }
 
 /// <summary>
@@ -183,6 +188,12 @@ public class AIProviderConfig
                 DefaultModel = "gpt-35-turbo",
                 Region = "eastus"
             },
+            AIProvider.GitHubModels => new AIProviderConfig
+            {
+                Provider = AIProvider.GitHubModels,
+                Endpoint = "https://models.inference.ai.azure.com",
+                DefaultModel = "gpt-4o"
+            },
             _ => throw new ArgumentException($"Unknown provider: {provider}")
         };
     }
@@ -203,6 +214,7 @@ public class AIProviderConfig
             AIProvider.Mistral => "Mistral AI",
             AIProvider.HuggingFace => "Hugging Face",
             AIProvider.AzureOpenAI => "Azure OpenAI",
+            AIProvider.GitHubModels => "GitHub Models",
             _ => Provider.ToString()
         };
     }
@@ -220,6 +232,11 @@ public class AIProviderConfig
         if (Provider != AIProvider.Ollama && string.IsNullOrWhiteSpace(ApiKey))
         {
             return (false, "API key is required for this provider");
+        }
+
+        if (Provider == AIProvider.GitHubModels && string.IsNullOrWhiteSpace(ApiKey))
+        {
+            return (false, "GitHub Personal Access Token is required for GitHub Models");
         }
 
         if (Provider == AIProvider.AzureOpenAI && string.IsNullOrWhiteSpace(DeploymentName))

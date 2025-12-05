@@ -383,18 +383,18 @@ public sealed class OllamaCloudChatModel : IStreamingChatModel
 }
 
 /// <summary>
-/// HTTP client for LiteLLM proxy endpoints that support OpenAI-compatible chat completions API.
-/// Uses standard /v1/chat/completions endpoint with messages format.
-/// Includes Polly exponential backoff retry policy to handle rate limiting.
+/// Base class for OpenAI-compatible chat models that use /v1/chat/completions endpoint.
+/// Provides shared implementation for request/response handling and streaming.
 /// </summary>
-public sealed class LiteLLMChatModel : IStreamingChatModel
+public abstract class OpenAiCompatibleChatModelBase : IStreamingChatModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
     private readonly ChatRuntimeSettings _settings;
     private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
+    private readonly string _providerName;
 
-    public LiteLLMChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null)
+    protected OpenAiCompatibleChatModelBase(string endpoint, string apiKey, string model, string providerName, ChatRuntimeSettings? settings = null)
     {
         if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
         if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
@@ -406,6 +406,7 @@ public sealed class LiteLLMChatModel : IStreamingChatModel
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;
         _settings = settings ?? new ChatRuntimeSettings();
+        _providerName = providerName;
         
         // Create Polly retry policy with exponential backoff for rate limiting (429) and server errors (5xx)
         _retryPolicy = Policy
@@ -417,7 +418,7 @@ public sealed class LiteLLMChatModel : IStreamingChatModel
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                 onRetry: (outcome, timespan, retryCount, context) =>
                 {
-                    Console.WriteLine($"[LiteLLMChatModel] Retry {retryCount} after {timespan.TotalSeconds}s due to {outcome.Result?.StatusCode}");
+                    Console.WriteLine($"[{_providerName}] Retry {retryCount} after {timespan.TotalSeconds}s due to {outcome.Result?.StatusCode}");
                 });
     }
 
@@ -477,16 +478,10 @@ public sealed class LiteLLMChatModel : IStreamingChatModel
         }
         catch
         {
-            // Remote LiteLLM endpoint not reachable → fall back to indicating failure.
+            // Remote endpoint not reachable → fall back to indicating failure.
         }
 
-        return $"[litellm-fallback:{_model}] {prompt}";
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        _client?.Dispose();
+        return GetFallbackMessage(prompt);
     }
 
     /// <inheritdoc/>
@@ -575,6 +570,33 @@ public sealed class LiteLLMChatModel : IStreamingChatModel
                 observer.OnError(ex);
             }
         });
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _client?.Dispose();
+    }
+
+    /// <summary>
+    /// Gets the fallback message to return when the API call fails.
+    /// </summary>
+    protected virtual string GetFallbackMessage(string prompt)
+    {
+        return $"[{_providerName.ToLowerInvariant()}-fallback:{_model}] {prompt}";
+    }
+}
+
+/// <summary>
+/// HTTP client for LiteLLM proxy endpoints that support OpenAI-compatible chat completions API.
+/// Uses standard /v1/chat/completions endpoint with messages format.
+/// Includes Polly exponential backoff retry policy to handle rate limiting.
+/// </summary>
+public sealed class LiteLLMChatModel : OpenAiCompatibleChatModelBase
+{
+    public LiteLLMChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null)
+        : base(endpoint, apiKey, model, "LiteLLMChatModel", settings)
+    {
     }
 }
 

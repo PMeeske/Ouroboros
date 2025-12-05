@@ -42,6 +42,7 @@
     </PackageReference>
 
     <!-- Dependencies -->
+    <PackageReference Include="Azure.AI.Inference" Version="1.0.0-beta.5" />
     <PackageReference Include="LangChain" Version="0.17.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageReference Include="Polly" Version="8.5.0" />
