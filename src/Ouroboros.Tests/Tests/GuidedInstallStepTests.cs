@@ -1,6 +1,6 @@
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.CLI;
+using Ouroboros.Application;
 
 namespace LangChainPipeline.Tests;
 

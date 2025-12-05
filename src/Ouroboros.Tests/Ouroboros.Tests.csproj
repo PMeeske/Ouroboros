@@ -28,7 +28,7 @@
     <ProjectReference Include="..\Ouroboros.Tools\Ouroboros.Tools.csproj" />
     <ProjectReference Include="..\Ouroboros.Providers\Ouroboros.Providers.csproj" />
     <ProjectReference Include="..\Ouroboros.Agent\Ouroboros.Agent.csproj" />
-    <ProjectReference Include="..\Ouroboros.CLI\Ouroboros.CLI.csproj" />
+    <ProjectReference Include="..\Ouroboros.Application\Ouroboros.Application.csproj" />
   </ItemGroup>
 
   <!-- Exclude legacy xUnit tests in Tests folder now covered by SpecFlow -->

@@ -7,7 +7,7 @@ namespace LangChainPipeline.Tests;
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.CLI;
+using Ouroboros.Application;
 using LangChainPipeline.Providers;
 
 /// <summary>

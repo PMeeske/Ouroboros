@@ -6,7 +6,8 @@ namespace LangChainPipeline.Tests;
 
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.CLI;
+using Ouroboros.Application;
+using Ouroboros.Application.Tools;
 
 /// <summary>
 /// Tests for meta-AI capabilities where the pipeline can reason about and modify its own execution.

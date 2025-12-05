@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tools.MeTTa;
+namespace Ouroboros.Tools.MeTTa;
 
 /// <summary>
 /// Extension methods for integrating MeTTa tools with ToolRegistry.

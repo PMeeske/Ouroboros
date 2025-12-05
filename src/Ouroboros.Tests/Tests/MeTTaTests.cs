@@ -4,7 +4,7 @@
 
 namespace LangChainPipeline.Tests;
 
-using LangChainPipeline.Tools.MeTTa;
+using Ouroboros.Tools.MeTTa;
 
 /// <summary>
 /// Tests for MeTTa symbolic reasoning integration.

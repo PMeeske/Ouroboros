@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tools;
+namespace Ouroboros.Tools;
 
 /// <summary>
 /// Defines the contract for tools that can be invoked within the pipeline system.

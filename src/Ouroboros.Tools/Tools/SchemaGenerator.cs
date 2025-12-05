@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tools;
+namespace Ouroboros.Tools;
 
 using System.Reflection;
 using System.Text.Json.Serialization;

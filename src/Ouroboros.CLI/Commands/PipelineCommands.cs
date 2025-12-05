@@ -10,9 +10,9 @@ using LangChainPipeline.Options;
 using LangChainPipeline.Providers.SpeechToText;
 using LangChainPipeline.Providers.TextToSpeech;
 using Microsoft.Extensions.Hosting;
-using LangChainPipeline.Tools.MeTTa;
+using Ouroboros.Application.Tools;
 using Ouroboros.CLI;
-using Ouroboros.CLI.Services;
+using Ouroboros.Application.Services;
 using IEmbeddingModel = LangChainPipeline.Domain.IEmbeddingModel;
 
 namespace Ouroboros.CLI.Commands;

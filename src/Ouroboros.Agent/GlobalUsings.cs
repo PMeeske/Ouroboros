@@ -17,4 +17,5 @@ global using LangChainPipeline.Pipeline.Branches;
 global using LangChainPipeline.Pipeline.Reasoning;
 global using LangChainPipeline.Providers;
 // Tools and providers
-global using LangChainPipeline.Tools;
+global using Ouroboros.Tools;
+global using Ouroboros.Tools.MeTTa;

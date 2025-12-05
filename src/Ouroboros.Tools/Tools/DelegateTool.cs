@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tools;
+namespace Ouroboros.Tools;
 
 /// <summary>
 /// A tool implementation that wraps delegate functions for easy tool creation.

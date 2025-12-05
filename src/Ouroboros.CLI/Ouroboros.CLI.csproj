@@ -6,8 +6,8 @@
     <LangVersion>14.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>LangChainPipeline</RootNamespace>
-    <AssemblyName>LangChainPipeline</AssemblyName>
+    <RootNamespace>Ouroboros.CLI</RootNamespace>
+    <AssemblyName>Ouroboros.CLI</AssemblyName>
     <Product>LangChain Pipeline System</Product>
     <Description>Command-line interface for Ouroboros</Description>
     <Copyright>Copyright © 2025</Copyright>
@@ -22,6 +22,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Ouroboros.Application\Ouroboros.Application.csproj" />
     <ProjectReference Include="..\Ouroboros.Core\Ouroboros.Core.csproj" />
     <ProjectReference Include="..\Ouroboros.Domain\Ouroboros.Domain.csproj" />
     <ProjectReference Include="..\Ouroboros.Pipeline\Ouroboros.Pipeline.csproj" />

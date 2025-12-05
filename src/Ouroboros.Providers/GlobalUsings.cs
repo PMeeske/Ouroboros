@@ -13,4 +13,4 @@ global using LangChainPipeline.Domain;
 // Providers
 global using LangChainPipeline.Providers;
 // Tools
-global using LangChainPipeline.Tools;
+global using Ouroboros.Tools;

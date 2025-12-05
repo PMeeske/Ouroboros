@@ -17,4 +17,4 @@ global using LangChainPipeline.Domain.Vectors;
 global using LangChainPipeline.Pipeline.Branches;
 global using LangChainPipeline.Providers;
 // Tools and providers
-global using LangChainPipeline.Tools;
+global using Ouroboros.Tools;

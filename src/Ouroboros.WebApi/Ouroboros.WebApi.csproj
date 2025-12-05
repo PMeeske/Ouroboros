@@ -5,8 +5,8 @@
     <LangVersion>14.0</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>LangChainPipeline.WebApi</RootNamespace>
-    <AssemblyName>LangChainPipeline.WebApi</AssemblyName>
+    <RootNamespace>Ouroboros.WebApi</RootNamespace>
+    <AssemblyName>Ouroboros.WebApi</AssemblyName>
     <Product>Ouroboros Web API</Product>
     <Description>ASP.NET Core Web API for Ouroboros - Kubernetes-friendly remoting layer</Description>
     <Copyright>Copyright © 2025</Copyright>
@@ -27,7 +27,7 @@
     <ProjectReference Include="..\Ouroboros.Tools\Ouroboros.Tools.csproj" />
     <ProjectReference Include="..\Ouroboros.Providers\Ouroboros.Providers.csproj" />
     <ProjectReference Include="..\Ouroboros.Agent\Ouroboros.Agent.csproj" />
-    <ProjectReference Include="..\Ouroboros.CLI\Ouroboros.CLI.csproj" />
+    <ProjectReference Include="..\Ouroboros.Application\Ouroboros.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

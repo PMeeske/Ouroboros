@@ -6,7 +6,9 @@ namespace LangChainPipeline.Examples;
 
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.CLI;
+using Ouroboros.Application;
+using Ouroboros.Application.Tools;
+using Ouroboros.Tools;
 
 /// <summary>
 /// Demonstrates meta-AI capabilities where the pipeline can think about its own thinking.

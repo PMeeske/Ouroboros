@@ -8,7 +8,7 @@ using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Diagnostics;
 using LangChainPipeline.Options;
 using LangChainPipeline.Providers;
-using Ouroboros.CLI.Services;
+using Ouroboros.Application.Services;
 
 namespace Ouroboros.CLI.Commands;
 

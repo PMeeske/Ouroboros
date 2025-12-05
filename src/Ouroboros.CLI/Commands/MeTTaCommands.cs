@@ -7,7 +7,7 @@ using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Diagnostics;
 using LangChainPipeline.Options;
 using LangChainPipeline.Providers;
-using Ouroboros.CLI.Services;
+using Ouroboros.Application.Services;
 using IEmbeddingModel = LangChainPipeline.Domain.IEmbeddingModel;
 
 namespace Ouroboros.CLI.Commands;

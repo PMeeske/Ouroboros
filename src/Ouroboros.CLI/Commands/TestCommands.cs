@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LangChainPipeline.Options;
-using LangChainPipeline.Tools.MeTTa;
+using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.CLI.Commands;
 

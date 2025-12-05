@@ -7,7 +7,7 @@ using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Diagnostics;
 using LangChainPipeline.Options;
 using Ouroboros.CLI;
-using Ouroboros.CLI.Services;
+using Ouroboros.Application.Services;
 using IEmbeddingModel = LangChainPipeline.Domain.IEmbeddingModel;
 
 namespace Ouroboros.CLI.Commands;
@@ -80,7 +80,7 @@ public static class AskCommands
                 }
                 if (tools.Get("search") is null && embedModel is not null)
                 {
-                    tools = tools.WithTool(new LangChainPipeline.Tools.RetrievalTool(ragStore, embedModel));
+                    tools = tools.WithTool(new Ouroboros.Tools.RetrievalTool(ragStore, embedModel));
                 }
             }
 

@@ -7,7 +7,9 @@ namespace LangChainPipeline.Examples;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
-using LangChainPipeline.CLI;
+using Ouroboros.Application;
+using Ouroboros.Application.Tools;
+using Ouroboros.Tools;
 
 /// <summary>
 /// Demonstrates the AI orchestrator capabilities for intelligent model and tool selection.

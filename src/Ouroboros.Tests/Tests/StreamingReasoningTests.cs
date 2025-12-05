@@ -1,5 +1,5 @@
 using System.Reactive.Linq;
-using LangChainPipeline.CLI;
+using Ouroboros.Application;
 
 namespace LangChainPipeline.Tests;
 

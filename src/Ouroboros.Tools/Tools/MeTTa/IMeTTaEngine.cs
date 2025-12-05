@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tools.MeTTa;
+namespace Ouroboros.Tools.MeTTa;
 
 /// <summary>
 /// Represents a MeTTa symbolic reasoning engine that can execute queries,
