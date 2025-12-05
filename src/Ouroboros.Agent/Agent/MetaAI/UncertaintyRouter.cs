@@ -5,6 +5,7 @@
 // ==========================================================
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace LangChainPipeline.Agent.MetaAI;
 
@@ -33,58 +34,89 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
         Dictionary<string, object>? context = null,
         CancellationToken ct = default)
     {
+        using var activity = OrchestrationTracing.StartRouting(task);
+        var stopwatch = Stopwatch.StartNew();
+
         if (string.IsNullOrWhiteSpace(task))
+        {
+            stopwatch.Stop();
+            OrchestrationTracing.CompleteRouting(activity, "error", 0, false, stopwatch.Elapsed, success: false);
             return Result<RoutingDecision, string>.Failure("Task cannot be empty");
+        }
 
-        try
-        {
-            // Use orchestrator to determine best route
-            Result<OrchestratorDecision, string> orchestratorDecision = await _orchestrator.SelectModelAsync(task, context, ct);
+        // Use orchestrator to determine best route and compose decision monadically
+        Result<OrchestratorDecision, string> orchestratorDecision = await _orchestrator.SelectModelAsync(task, context, ct);
 
-            return orchestratorDecision.Match(
-                decision =>
-                {
-                    double confidence = decision.ConfidenceScore;
+        return orchestratorDecision.Match(
+            decision =>
+            {
+                var result = BuildRoutingDecision(decision, task, context);
+                stopwatch.Stop();
 
-                    // If confidence is below threshold, apply fallback strategy
-                    if (confidence < MinimumConfidenceThreshold)
+                result.Match(
+                    routingDecision =>
                     {
-                        FallbackStrategy fallback = DetermineFallback(task, confidence);
-                        Dictionary<string, object> metadata = new Dictionary<string, object>
-                        {
-                            ["original_route"] = decision.ModelName,
-                            ["fallback_strategy"] = fallback.ToString(),
-                            ["original_confidence"] = confidence
-                        };
+                        bool usedFallback = routingDecision.Metadata.ContainsKey("fallback_strategy");
+                        OrchestrationTracing.CompleteRouting(
+                            activity,
+                            usedFallback ? "fallback" : "direct",
+                            routingDecision.Confidence,
+                            usedFallback,
+                            stopwatch.Elapsed);
+                        return routingDecision;
+                    },
+                    _ => default!);
 
-                        RoutingDecision routingDecision = new RoutingDecision(
-                            ApplyFallbackRoute(decision.ModelName, fallback),
-                            $"Low confidence ({confidence:P0}), using {fallback}",
-                            confidence,
-                            metadata);
+                return result;
+            },
+            error =>
+            {
+                stopwatch.Stop();
+                OrchestrationTracing.CompleteRouting(activity, "error", 0, false, stopwatch.Elapsed, success: false);
+                return Result<RoutingDecision, string>.Failure(error);
+            });
+    }
 
-                        return Result<RoutingDecision, string>.Success(routingDecision);
-                    }
+    private Result<RoutingDecision, string> BuildRoutingDecision(
+        OrchestratorDecision decision,
+        string task,
+        Dictionary<string, object>? context)
+    {
+        double confidence = decision.ConfidenceScore;
 
-                    // High confidence - use direct route
-                    RoutingDecision directDecision = new RoutingDecision(
-                        decision.ModelName,
-                        decision.Reason,
-                        confidence,
-                        new Dictionary<string, object>
-                        {
-                            ["strategy"] = "direct",
-                            ["use_case"] = context?.GetValueOrDefault("use_case", "unknown")?.ToString() ?? "unknown"
-                        });
-
-                    return Result<RoutingDecision, string>.Success(directDecision);
-                },
-                error => Result<RoutingDecision, string>.Failure(error));
-        }
-        catch (Exception ex)
+        if (confidence < MinimumConfidenceThreshold)
         {
-            return Result<RoutingDecision, string>.Failure($"Routing failed: {ex.Message}");
+            FallbackStrategy fallback = DetermineFallback(task, confidence);
+            Dictionary<string, object> metadata = new Dictionary<string, object>
+            {
+                ["original_route"] = decision.ModelName,
+                ["fallback_strategy"] = fallback.ToString(),
+                ["original_confidence"] = confidence,
+                ["threshold"] = MinimumConfidenceThreshold
+            };
+
+            RoutingDecision routingDecision = new RoutingDecision(
+                ApplyFallbackRoute(decision.ModelName, fallback),
+                $"Low confidence ({confidence:P0}), using {fallback}",
+                confidence,
+                metadata);
+
+            return Result<RoutingDecision, string>.Success(routingDecision);
         }
+
+        // High confidence - use direct route
+        RoutingDecision directDecision = new RoutingDecision(
+            decision.ModelName,
+            decision.Reason,
+            confidence,
+            new Dictionary<string, object>
+            {
+                ["strategy"] = "direct",
+                ["use_case"] = context?.GetValueOrDefault("use_case", "unknown")?.ToString() ?? "unknown",
+                ["threshold"] = MinimumConfidenceThreshold
+            });
+
+        return Result<RoutingDecision, string>.Success(directDecision);
     }
 
     /// <summary>

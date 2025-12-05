@@ -1,6 +1,7 @@
 namespace LangChainPipeline.Specs.Steps;
 
 [Binding]
+[Scope(Feature = "Tool-Aware Chat Model")]
 public class ToolAwareChatModelSteps
 {
     private ToolRegistry? _registry;

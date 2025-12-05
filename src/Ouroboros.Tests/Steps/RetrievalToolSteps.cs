@@ -3,6 +3,7 @@ using LangChain.Databases;
 namespace LangChainPipeline.Specs.Steps;
 
 [Binding]
+[Scope(Feature = "Retrieval Tool")]
 public class RetrievalToolSteps
 {
     private TrackedVectorStore? _store;

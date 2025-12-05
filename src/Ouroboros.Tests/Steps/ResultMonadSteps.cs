@@ -1,6 +1,7 @@
 namespace LangChainPipeline.Specs.Steps;
 
 [Binding]
+[Scope(Feature = "Result Monad")]
 public class ResultMonadSteps
 {
     private Result<int, string>? _intResult;

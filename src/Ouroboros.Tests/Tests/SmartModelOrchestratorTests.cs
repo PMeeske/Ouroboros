@@ -530,4 +530,105 @@ public sealed class SmartModelOrchestratorTests
         metrics.Should().BeAssignableTo<IReadOnlyDictionary<string, PerformanceMetrics>>();
         metrics.Should().ContainKey("test-model");
     }
+
+    /// <summary>
+    /// Tests that cost-aware scoring favors lower cost models for cost-sensitive use cases.
+    /// </summary>
+    [Fact]
+    public async Task SelectModelAsync_WithCostSensitiveUseCase_ShouldPreferLowerCostModel()
+    {
+        // Arrange
+        var tools = ToolRegistry.CreateDefault();
+        var orchestrator = new SmartModelOrchestrator(tools);
+
+        var cheapModel = new MockChatModel("cheap");
+        var expensiveModel = new MockChatModel("expensive");
+
+        // Register a cheap general model and an expensive general model
+        orchestrator.RegisterModel(
+            new ModelCapability(
+                "cheap-general",
+                new[] { "general", "conversation" },
+                4096, AverageCost: 0.5, AverageLatencyMs: 800, Type: ModelType.General),
+            cheapModel);
+
+        orchestrator.RegisterModel(
+            new ModelCapability(
+                "expensive-general",
+                new[] { "general", "conversation" },
+                8192, AverageCost: 5.0, AverageLatencyMs: 600, Type: ModelType.General),
+            expensiveModel);
+
+        // Act - general conversation has higher CostWeight
+        var result = await orchestrator.SelectModelAsync("Hello, how are you?");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        // Both models are general type, but cheap model should be preferred due to cost scoring
+        result.Value.ModelName.Should().Be("cheap-general");
+    }
+
+    /// <summary>
+    /// Tests that cost-aware scoring normalizes costs across models correctly.
+    /// </summary>
+    [Fact]
+    public async Task SelectModelAsync_WithVariedCosts_ShouldNormalizeCostScoring()
+    {
+        // Arrange
+        var tools = ToolRegistry.CreateDefault();
+        var orchestrator = new SmartModelOrchestrator(tools);
+
+        var lowCost = new MockChatModel("low");
+        var midCost = new MockChatModel("mid");
+        var highCost = new MockChatModel("high");
+
+        orchestrator.RegisterModel(
+            new ModelCapability("low-cost", new[] { "general" }, 4096, AverageCost: 1.0, AverageLatencyMs: 1000, Type: ModelType.General),
+            lowCost);
+
+        orchestrator.RegisterModel(
+            new ModelCapability("mid-cost", new[] { "general" }, 4096, AverageCost: 3.0, AverageLatencyMs: 800, Type: ModelType.General),
+            midCost);
+
+        orchestrator.RegisterModel(
+            new ModelCapability("high-cost", new[] { "general" }, 4096, AverageCost: 5.0, AverageLatencyMs: 600, Type: ModelType.General),
+            highCost);
+
+        // Act
+        var result = await orchestrator.SelectModelAsync("General question");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        // Low cost model should score highest due to cost normalization
+        result.Value.ModelName.Should().Be("low-cost");
+    }
+
+    /// <summary>
+    /// Tests that type match still dominates over cost for specialized use cases.
+    /// </summary>
+    [Fact]
+    public async Task SelectModelAsync_WithSpecializedUseCase_TypeMatchDominatesCost()
+    {
+        // Arrange
+        var tools = ToolRegistry.CreateDefault();
+        var orchestrator = new SmartModelOrchestrator(tools);
+
+        var cheapGeneral = new MockChatModel("cheap-general");
+        var expensiveCode = new MockChatModel("expensive-code");
+
+        orchestrator.RegisterModel(
+            new ModelCapability("cheap-general", new[] { "general" }, 4096, AverageCost: 0.5, AverageLatencyMs: 800, Type: ModelType.General),
+            cheapGeneral);
+
+        orchestrator.RegisterModel(
+            new ModelCapability("expensive-code", new[] { "code", "programming" }, 8192, AverageCost: 3.0, AverageLatencyMs: 1000, Type: ModelType.Code),
+            expensiveCode);
+
+        // Act - code generation use case should prefer code model despite higher cost
+        var result = await orchestrator.SelectModelAsync("Implement a binary search function");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ModelName.Should().Be("expensive-code");
+    }
 }

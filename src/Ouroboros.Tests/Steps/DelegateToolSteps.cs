@@ -1,6 +1,7 @@
 namespace LangChainPipeline.Specs.Steps;
 
 [Binding]
+[Scope(Feature = "Delegate Tool")]
 public class DelegateToolSteps
 {
     private DelegateTool? _tool;

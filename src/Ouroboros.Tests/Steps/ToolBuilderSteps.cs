@@ -1,6 +1,7 @@
 namespace LangChainPipeline.Specs.Steps;
 
 [Binding]
+[Scope(Feature = "Tool Builder")]
 public class ToolBuilderSteps
 {
     private ITool? _tool;

@@ -560,4 +560,72 @@ public sealed class HierarchicalPlannerTests
     }
 
     #endregion
+
+    #region Input Validation Tests
+
+    /// <summary>
+    /// Tests that CreateHierarchicalPlanAsync fails for empty goal.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task CreateHierarchicalPlanAsync_WithEmptyGoal_ShouldReturnFailure(string? goal)
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        // Act
+        var result = await planner.CreateHierarchicalPlanAsync(goal!);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("Goal cannot be empty");
+    }
+
+    /// <summary>
+    /// Tests that CreateHierarchicalPlanAsync fails for invalid MaxDepth.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(-5)]
+    public async Task CreateHierarchicalPlanAsync_WithInvalidMaxDepth_ShouldReturnFailure(int maxDepth)
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+        var config = new HierarchicalPlanningConfig(MaxDepth: maxDepth);
+
+        // Act
+        var result = await planner.CreateHierarchicalPlanAsync("Valid goal", config: config);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("MaxDepth must be at least 1");
+    }
+
+    /// <summary>
+    /// Tests that ExecuteHierarchicalAsync throws for null plan.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteHierarchicalAsync_WithNullPlan_ShouldThrowArgumentNullException()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        // Act
+        Func<Task> act = async () => await planner.ExecuteHierarchicalAsync(null!);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentNullException>()
+            .WithParameterName("plan");
+    }
+
+    #endregion
 }

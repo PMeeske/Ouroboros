@@ -529,4 +529,106 @@ public sealed class UncertaintyRouterTests
     }
 
     #endregion
+
+    #region Routing Metadata Tests
+
+    /// <summary>
+    /// Tests that routing decision includes threshold metadata for direct routing.
+    /// </summary>
+    [Fact]
+    public async Task RouteAsync_WithHighConfidence_ShouldIncludeThresholdInMetadata()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestratorWithConfidence(0.9);
+        var router = new UncertaintyRouter(orchestrator, 0.7);
+
+        // Act
+        var result = await router.RouteAsync("Test task");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Metadata.Should().ContainKey("threshold");
+        result.Value.Metadata["threshold"].Should().Be(0.7);
+        result.Value.Metadata.Should().ContainKey("strategy");
+        result.Value.Metadata["strategy"].Should().Be("direct");
+    }
+
+    /// <summary>
+    /// Tests that routing decision includes threshold and fallback info for low confidence.
+    /// </summary>
+    [Fact]
+    public async Task RouteAsync_WithLowConfidence_ShouldIncludeFallbackMetadata()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestratorWithConfidence(0.4);
+        var router = new UncertaintyRouter(orchestrator, 0.7);
+
+        // Act
+        var result = await router.RouteAsync("Test task");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Metadata.Should().ContainKey("threshold");
+        result.Value.Metadata["threshold"].Should().Be(0.7);
+        result.Value.Metadata.Should().ContainKey("original_route");
+        result.Value.Metadata.Should().ContainKey("fallback_strategy");
+        result.Value.Metadata.Should().ContainKey("original_confidence");
+        ((double)result.Value.Metadata["original_confidence"]).Should().Be(0.4);
+    }
+
+    /// <summary>
+    /// Tests that RouteAsync propagates orchestrator failure without exception.
+    /// </summary>
+    [Fact]
+    public async Task RouteAsync_WithOrchestratorFailure_ShouldReturnFailureMonadically()
+    {
+        // Arrange
+        var orchestrator = new FailingMockOrchestrator();
+        var router = new UncertaintyRouter(orchestrator);
+
+        // Act
+        var result = await router.RouteAsync("Test task");
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("Orchestrator error");
+    }
+
+    private static IModelOrchestrator CreateMockOrchestratorWithConfidence(double confidence)
+    {
+        return new ConfigurableConfidenceMockOrchestrator(confidence);
+    }
+
+    private sealed class ConfigurableConfidenceMockOrchestrator : IModelOrchestrator
+    {
+        private readonly double _confidence;
+
+        public ConfigurableConfidenceMockOrchestrator(double confidence) => _confidence = confidence;
+
+        public Task<Result<OrchestratorDecision, string>> SelectModelAsync(
+            string prompt,
+            Dictionary<string, object>? context = null,
+            CancellationToken ct = default)
+        {
+            var model = new MockChatModel("test");
+            var tools = ToolRegistry.CreateDefault();
+            var decision = new OrchestratorDecision(
+                model,
+                "test-model",
+                "Test reason",
+                tools,
+                _confidence);
+            return Task.FromResult(Result<OrchestratorDecision, string>.Success(decision));
+        }
+
+        public UseCase ClassifyUseCase(string prompt) =>
+            new UseCase(UseCaseType.Conversation, 1, new[] { "general" }, 0.5, 0.5);
+
+        public void RegisterModel(ModelCapability capability) { }
+        public void RecordMetric(string resourceName, double latencyMs, bool success) { }
+        public IReadOnlyDictionary<string, PerformanceMetrics> GetMetrics() =>
+            new Dictionary<string, PerformanceMetrics>();
+    }
+
+    #endregion
 }

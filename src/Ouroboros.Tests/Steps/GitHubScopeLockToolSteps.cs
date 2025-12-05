@@ -1,6 +1,7 @@
 namespace LangChainPipeline.Specs.Steps;
 
 [Binding]
+[Scope(Feature = "GitHub Scope Lock Tool")]
 public class GitHubScopeLockToolSteps
 {
     private string? _token;

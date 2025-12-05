@@ -72,13 +72,34 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
     {
         config ??= new HierarchicalPlanningConfig();
 
+        using var activity = OrchestrationTracing.StartPlanCreation(goal, config.MaxDepth);
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        if (string.IsNullOrWhiteSpace(goal))
+        {
+            stopwatch.Stop();
+            OrchestrationTracing.CompletePlanCreation(activity, 0, 0, stopwatch.Elapsed, success: false);
+            return Result<HierarchicalPlan, string>.Failure("Goal cannot be empty");
+        }
+
+        if (config.MaxDepth < 1)
+        {
+            stopwatch.Stop();
+            OrchestrationTracing.CompletePlanCreation(activity, 0, 0, stopwatch.Elapsed, success: false);
+            return Result<HierarchicalPlan, string>.Failure("MaxDepth must be at least 1");
+        }
+
+        Dictionary<string, object> safeContext = context ?? new Dictionary<string, object>();
+
         try
         {
             // Create top-level plan
-            Result<Plan, string> topLevelResult = await _orchestrator.PlanAsync(goal, context, ct);
+            Result<Plan, string> topLevelResult = await _orchestrator.PlanAsync(goal, safeContext, ct);
 
             if (!topLevelResult.IsSuccess)
             {
+                stopwatch.Stop();
+                OrchestrationTracing.CompletePlanCreation(activity, 0, 0, stopwatch.Elapsed, success: false);
                 return Result<HierarchicalPlan, string>.Failure(topLevelResult.Error);
             }
 
@@ -91,7 +112,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
                 await DecomposeStepsAsync(
                     topLevelPlan.Steps,
                     subPlans,
-                    context,
+                    safeContext,
                     config,
                     currentDepth: 1,
                     ct);
@@ -104,10 +125,16 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
                 MaxDepth: config.MaxDepth,
                 CreatedAt: DateTime.UtcNow);
 
+            stopwatch.Stop();
+            int totalSteps = topLevelPlan.Steps.Count + subPlans.Values.Sum(p => p.Steps.Count);
+            OrchestrationTracing.CompletePlanCreation(activity, totalSteps, subPlans.Count > 0 ? 2 : 1, stopwatch.Elapsed);
+
             return Result<HierarchicalPlan, string>.Success(hierarchicalPlan);
         }
         catch (Exception ex)
         {
+            stopwatch.Stop();
+            OrchestrationTracing.CompletePlanCreation(activity, 0, 0, stopwatch.Elapsed, success: false);
             return Result<HierarchicalPlan, string>.Failure($"Hierarchical planning failed: {ex.Message}");
         }
     }
@@ -119,17 +146,41 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
         HierarchicalPlan plan,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(plan);
+
+        int totalSteps = plan.TopLevelPlan.Steps.Count + plan.SubPlans.Values.Sum(p => p.Steps.Count);
+        using var activity = OrchestrationTracing.StartPlanExecution(Guid.NewGuid(), totalSteps);
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
         try
         {
+            ct.ThrowIfCancellationRequested();
+
             // Execute top-level plan, replacing complex steps with sub-plan execution
             Plan expandedPlan = await ExpandPlanAsync(plan, ct);
 
             Result<ExecutionResult, string> executionResult = await _orchestrator.ExecuteAsync(expandedPlan, ct);
 
+            stopwatch.Stop();
+            executionResult.Match(
+                result =>
+                {
+                    int completed = result.StepResults.Count(r => r.Success);
+                    int failed = result.StepResults.Count(r => !r.Success);
+                    OrchestrationTracing.CompletePlanExecution(activity, completed, failed, stopwatch.Elapsed, result.Success);
+                },
+                _ =>
+                {
+                    OrchestrationTracing.CompletePlanExecution(activity, 0, 0, stopwatch.Elapsed, success: false);
+                });
+
             return executionResult;
         }
         catch (Exception ex)
         {
+            stopwatch.Stop();
+            OrchestrationTracing.CompletePlanExecution(activity, 0, 0, stopwatch.Elapsed, success: false);
+            OrchestrationTracing.RecordError(activity, "execute_plan", ex);
             return Result<ExecutionResult, string>.Failure($"Hierarchical execution failed: {ex.Message}");
         }
     }
@@ -142,17 +193,21 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
         int currentDepth,
         CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
+
         if (currentDepth >= config.MaxDepth)
             return;
 
         foreach (PlanStep step in steps)
         {
+            ct.ThrowIfCancellationRequested();
+
             // Check if step is complex enough to decompose
             if (IsComplexStep(step, config))
             {
                 string subGoal = $"Execute: {step.Action} with {System.Text.Json.JsonSerializer.Serialize(step.Parameters)}";
 
-                Result<Plan, string> subPlanResult = await _orchestrator.PlanAsync(subGoal, context, ct);
+                Result<Plan, string> subPlanResult = await _orchestrator.PlanAsync(subGoal, context ?? new Dictionary<string, object>(), ct);
 
                 if (subPlanResult.IsSuccess)
                 {

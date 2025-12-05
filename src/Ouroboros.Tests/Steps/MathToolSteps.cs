@@ -1,6 +1,7 @@
 namespace LangChainPipeline.Specs.Steps;
 
 [Binding]
+[Scope(Feature = "Math Tool")]
 public class MathToolSteps
 {
     private MathTool? _tool;
