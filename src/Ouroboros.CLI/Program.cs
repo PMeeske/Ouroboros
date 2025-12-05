@@ -735,16 +735,15 @@ IMPORTANT RULES:
     {
         try
         {
-            // Use faster rate (3) for responsive voice interaction
-            // Volume at 100%, SSML disabled for speed
+            // Natural speech: moderate rate with enhanced prosody for fluency
             localTts = new LocalWindowsTtsService(
                 voiceName: null,  // Auto-select best available voice
-                rate: 3,          // Faster for responsiveness
+                rate: 1,          // Moderate rate for natural flow
                 volume: 100,      // Full volume
-                useEnhancedProsody: false  // Disable SSML for speed
+                useEnhancedProsody: true  // Enable SSML for natural prosody
             );
             ttsService = localTts;
-            Console.WriteLine("  [OK] TTS initialized (Windows SAPI - fast mode, local/offline)");
+            Console.WriteLine("  [OK] TTS initialized (Windows SAPI - fluent mode, local/offline)");
         }
         catch (Exception ex)
         {
@@ -1001,33 +1000,46 @@ IMPORTANT RULES:
             // Split into words for reactive streaming
             var words = sanitized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             
-            // Use Rx to stream words while TTS speaks in parallel
+            // Use Rx to stream semantic chunks while TTS speaks in parallel
             if (localTts != null)
             {
                 try
                 {
-                    // Create observable stream of words with timing
+                    // Create observable stream with semantic chunking
                     var wordStream = System.Reactive.Linq.Observable.Create<string>(async (observer, ct) =>
                     {
-                        // Buffer words into speakable chunks (3-5 words per chunk for natural speech)
-                        const int chunkSize = 1;
-                        var chunks = new List<string>();
+                        // Split by semantic boundaries: sentences, clauses, and natural pauses
+                        // Pattern: split on . ! ? ; : , — – and keep delimiters
+                        var semanticPattern = new System.Text.RegularExpressions.Regex(
+                            @"(?<=[.!?])\s+|(?<=[;:,—–])\s+|(?<=\band\b|\bor\b|\bbut\b|\bso\b|\bthen\b)\s+",
+                            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                         
-                        for (int i = 0; i < words.Length; i += chunkSize)
+                        var chunks = semanticPattern.Split(sanitized)
+                            .Where(c => !string.IsNullOrWhiteSpace(c))
+                            .ToList();
+                        
+                        // If no natural breaks, fall back to ~8 word chunks
+                        if (chunks.Count <= 1 && words.Length > 8)
                         {
-                            var chunk = string.Join(" ", words.Skip(i).Take(chunkSize));
-                            chunks.Add(chunk);
+                            chunks.Clear();
+                            for (int i = 0; i < words.Length; i += 8)
+                            {
+                                chunks.Add(string.Join(" ", words.Skip(i).Take(8)));
+                            }
                         }
                         
                         foreach (var chunk in chunks)
                         {
                             if (ct.IsCancellationRequested) break;
                             
-                            // Emit words one by one for display while speaking chunk
-                            var chunkWords = chunk.Split(' ');
-                            var speakTask = localTts.SpeakDirectAsync(chunk);
+                            var trimmedChunk = chunk.Trim();
+                            if (string.IsNullOrEmpty(trimmedChunk)) continue;
                             
-                            // Stream words to console with slight delay for visual effect
+                            // Emit all words immediately for display, speak the full chunk
+                            var chunkWords = trimmedChunk.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                            var speakTask = localTts.SpeakDirectAsync(trimmedChunk);
+                            
+                            // Display all words in chunk at once
                             foreach (var word in chunkWords)
                             {
                                 observer.OnNext(word);
