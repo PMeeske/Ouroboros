@@ -326,6 +326,43 @@ This agent specializes in:
 - ✅ **Specification compliance** - requirements are sacred
 - ✅ **Production-ready from day one** - logging, monitoring, security, resilience
 - ✅ **Professional pride** - code represents your reputation
+
+### 12. Python Review Expert (`python-review-expert.md`)
+
+**Expertise:** Python Code Review, Type Safety, Testing, Modern Python Patterns
+
+This agent specializes in:
+- Modern Python features (3.10+): pattern matching, type unions, dataclasses
+- Type hints and static type checking (mypy, pyright)
+- Testing with pytest: fixtures, parametrization, async tests, property-based testing
+- Code quality: PEP 8, Black/Ruff formatting, pylint analysis
+- Async/await patterns: asyncio, async context managers, async iterators
+- Error handling: custom exceptions, context managers, proper logging
+- Best practices: SOLID principles, dependency injection, resource management
+
+**Use this agent when:**
+- Reviewing Python code for quality and correctness
+- Ensuring proper type hints and type safety
+- Writing comprehensive pytest test suites
+- Implementing async/await patterns correctly
+- Setting up Python code quality tools (mypy, ruff, black)
+- Following Python best practices and conventions
+- Integrating Python components with the Ouroboros system
+
+**Example invocation:**
+```
+@python-review-expert Review my Ollama client code for type safety and async patterns.
+@python-review-expert How do I write comprehensive pytest tests for this async function?
+@python-review-expert What's the best way to structure error handling in this Python module?
+```
+
+**Key Characteristics:**
+- ✅ **Type hints everywhere** - full type coverage with mypy validation
+- ✅ **Comprehensive pytest tests** - ≥85% coverage, async tests, property-based tests
+- ✅ **Modern Python** - leverages Python 3.10+ features
+- ✅ **Code quality** - formatted with Black/Ruff, linted with Ruff/Pylint
+- ✅ **Proper async** - correct async/await patterns, context managers
+- ✅ **Error handling** - custom exceptions, no bare excepts, proper logging
 ## How to Use Custom Agents
 
 ### In GitHub Copilot Chat
@@ -361,6 +398,7 @@ This agent specializes in:
    - Database and persistence questions → `@database-persistence-expert`
    - Security and compliance questions → `@security-compliance-expert`
    - Production-ready development, specification compliance → `@dotnet-senior-developer-agent`
+   - Python code review, testing, type safety → `@python-review-expert`
 
 2. **Provide Context:**
    - Include relevant code snippets
@@ -387,49 +425,51 @@ This agent specializes in:
 
 ## Agent Capabilities Matrix
 
-| Capability | Functional | AI Orch | DevOps | GH Actions | Android | Testing | C#/.NET | API | Database | Security | Sr Dev |
-|------------|------------|---------|--------|------------|---------|---------|---------|-----|----------|----------|--------|
-| Monadic Composition | ✅ | ⚠️ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ⚠️ | ❌ | ✅ |
-| Event Sourcing | ✅ | ⚠️ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ✅ | ❌ | ✅ |
-| LangChain Integration | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ⚠️ |
-| Model Orchestration | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ |
-| Self-Improving Agents | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Kubernetes | ❌ | ❌ | ✅ | ⚠️ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ |
-| CI/CD Pipelines | ❌ | ❌ | ✅ | ✅ | ⚠️ | ✅ | ⚠️ | ❌ | ❌ | ⚠️ | ✅ |
-| GitHub Actions | ❌ | ❌ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ |
-| Workflow Optimization | ❌ | ❌ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ⚠️ |
-| Reusable Workflows | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Matrix Strategies | ❌ | ❌ | ❌ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Infrastructure as Code | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ |
-| Observability | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ |
-| Unit Testing | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ | ✅ |
-| Integration Testing | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
-| Mutation Testing | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ❌ | ❌ | ✅ |
-| Code Coverage | ⚠️ | ❌ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
-| C# Language Features | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Async/Await Patterns | ✅ | ⚠️ | ❌ | ❌ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
-| Memory Optimization | ⚠️ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ | ✅ |
-| Dependency Injection | ⚠️ | ⚠️ | ⚠️ | ❌ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| RESTful API Design | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ | ⚠️ | ✅ |
-| OpenAPI/Swagger | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ❌ | ❌ | ⚠️ |
-| API Versioning | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ⚠️ |
-| Vector Databases | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ✅ | ❌ | ⚠️ |
-| Qdrant | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| CQRS | ⚠️ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ |
-| Repository Pattern | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ❌ | ✅ | ❌ | ✅ |
-| Caching Strategies | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ❌ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ |
-| Authentication | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ | ✅ |
-| Authorization | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ | ✅ |
-| Secrets Management | ❌ | ❌ | ✅ | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Input Validation | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ |
-| Audit Logging | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ | ✅ |
-| OWASP Top 10 | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ✅ | ✅ |
-| Mobile Development | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Error Handling | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
-| Production Readiness | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Specification Compliance | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ |
-| Code Quality Standards | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
-| No Shortcuts Allowed | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ |
+| Capability | Functional | AI Orch | DevOps | GH Actions | Android | Testing | C#/.NET | API | Database | Security | Sr Dev | Python |
+|------------|------------|---------|--------|------------|---------|---------|---------|-----|----------|----------|--------|--------|
+| Monadic Composition | ✅ | ⚠️ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ⚠️ | ❌ | ✅ | ⚠️ |
+| Event Sourcing | ✅ | ⚠️ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ✅ | ❌ | ✅ | ❌ |
+| LangChain Integration | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ |
+| Model Orchestration | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ |
+| Self-Improving Agents | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Kubernetes | ❌ | ❌ | ✅ | ⚠️ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ❌ |
+| CI/CD Pipelines | ❌ | ❌ | ✅ | ✅ | ⚠️ | ✅ | ⚠️ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ |
+| GitHub Actions | ❌ | ❌ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ❌ |
+| Workflow Optimization | ❌ | ❌ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
+| Reusable Workflows | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Matrix Strategies | ❌ | ❌ | ❌ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Infrastructure as Code | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ❌ |
+| Observability | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ⚠️ |
+| Unit Testing | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ |
+| Integration Testing | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ |
+| Mutation Testing | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ❌ | ❌ | ✅ | ⚠️ |
+| Code Coverage | ⚠️ | ❌ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| C# Language Features | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Python Language Features | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ❌ | ✅ |
+| Type Hints/Safety | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ❌ | ⚠️ | ✅ | ✅ |
+| Async/Await Patterns | ✅ | ⚠️ | ❌ | ❌ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ |
+| Memory Optimization | ⚠️ | ❌ | ❌ | ❌ | ✅ | ⚠️ | ✅ | ❌ | ⚠️ | ❌ | ✅ | ⚠️ |
+| Dependency Injection | ⚠️ | ⚠️ | ⚠️ | ❌ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ |
+| RESTful API Design | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ | ⚠️ | ✅ | ⚠️ |
+| OpenAPI/Swagger | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ❌ | ❌ | ⚠️ | ❌ |
+| API Versioning | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ⚠️ | ❌ |
+| Vector Databases | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ✅ | ❌ | ⚠️ | ⚠️ |
+| Qdrant | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| CQRS | ⚠️ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ | ❌ |
+| Repository Pattern | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ❌ | ✅ | ❌ | ✅ | ⚠️ |
+| Caching Strategies | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ❌ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ | ⚠️ |
+| Authentication | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ |
+| Authorization | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ |
+| Secrets Management | ❌ | ❌ | ✅ | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ⚠️ |
+| Input Validation | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ | ✅ |
+| Audit Logging | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ⚠️ | ✅ | ✅ | ✅ | ⚠️ |
+| OWASP Top 10 | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ✅ | ✅ | ⚠️ |
+| Mobile Development | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Error Handling | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ |
+| Production Readiness | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Specification Compliance | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ | ✅ |
+| Code Quality Standards | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ | ✅ |
+| No Shortcuts Allowed | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ |
 
 **Legend:**
 - ✅ Expert: Deep expertise, primary responsibility
@@ -448,6 +488,7 @@ This agent specializes in:
 - Database = Database & Persistence Expert
 - Security = Security & Compliance Expert
 - Sr Dev = .NET Senior Developer Customer Agent
+- Python = Python Review Expert
 
 ## Common Workflows
 
