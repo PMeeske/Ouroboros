@@ -1,4 +1,4 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+ï»¿#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==============================
 // Minimal CLI entry (top-level)
 // ==============================
@@ -143,7 +143,7 @@ static async Task RunAssistAsync(AssistOptions o)
         ToolAwareChatModel llm = new ToolAwareChatModel(chatModel, tools);
         DslAssistant assistant = new DslAssistant(llm, tools);
 
-        Console.WriteLine($"Ô£ô Assistant initialized\n");
+        Console.WriteLine($"[OK] Assistant initialized\n");
 
         // Execute based on mode
         switch (o.Mode.ToLowerInvariant())
@@ -226,7 +226,7 @@ static async Task RunAssistAsync(AssistOptions o)
                 break;
         }
 
-        Console.WriteLine("\nÔ£ô Assistant execution completed");
+        Console.WriteLine("\n[OK] Assistant execution completed");
     }
     catch (Exception ex)
     {
@@ -304,7 +304,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
         foreach (var skill in predefinedSkills)
             registry.RegisterSkill(skill);
         
-        Console.WriteLine($"  Ô£ô Registered {predefinedSkills.Length} predefined skills");
+        Console.WriteLine($"  [OK] Registered {predefinedSkills.Length} predefined skills");
     }
     Console.WriteLine();
 
@@ -335,7 +335,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
 
     if (o.Tokens)
     {
-        Console.WriteLine("­ƒÅÀ´©Å AUTO-GENERATED DSL TOKENS:\n");
+        Console.WriteLine("[#] AUTO-GENERATED DSL TOKENS:\n");
         Console.WriteLine("  Built-in: SetPrompt, UseDraft, UseCritique, UseRevise, UseOutput\n");
         Console.WriteLine("  Skill-based (from research patterns):");
         foreach (var skill in registry.GetAllSkills())
@@ -488,7 +488,7 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
             case "exit":
             case "quit":
             case "q":
-                Console.WriteLine("\n  ­[+]ï Goodbye!\n");
+                Console.WriteLine("\n  [+] Goodbye!\n");
                 return;
 
             case "help":
@@ -498,7 +498,7 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
 
             case "list":
             case "ls":
-                Console.WriteLine("\n  ­[i] Skills:");
+                Console.WriteLine("\n  [i] Skills:");
                 foreach (var skill in registry.GetAllSkills())
                 {
                     Console.WriteLine($"     - {skill.Name,-28} ({skill.SuccessRate:P0}) - {skill.Description}");
@@ -508,7 +508,7 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
 
             case "tokens":
             case "t":
-                Console.WriteLine("\n  ­ƒÅÀ´©Å DSL Tokens:");
+                Console.WriteLine("\n  [#] DSL Tokens:");
                 Console.WriteLine("     Built-in: SetPrompt, UseDraft, UseCritique, UseRevise, UseOutput");
                 Console.WriteLine("     Skills:");
                 foreach (var skill in registry.GetAllSkills())
@@ -525,7 +525,7 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
                     Console.WriteLine("  [!] Usage: fetch <query>\n");
                     break;
                 }
-                Console.WriteLine($"\n  ­[>] Fetching research on: \"{arg}\"...");
+                Console.WriteLine($"\n  [>] Fetching research on: \"{arg}\"...");
                 try
                 {
                     string url = $"http://export.arxiv.org/api/query?search_query=all:{Uri.EscapeDataString(arg)}&start=0&max_results=5";
@@ -534,7 +534,7 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
                     System.Xml.Linq.XNamespace atom = "http://www.w3.org/2005/Atom";
                     var entries = doc.Descendants(atom + "entry").Take(5).ToList();
 
-                    Console.WriteLine($"  ­[i] Found {entries.Count} papers");
+                    Console.WriteLine($"  [i] Found {entries.Count} papers");
 
                     string skillName = string.Join("", arg.Split(' ').Select(w =>
                         w.Length > 0 ? char.ToUpperInvariant(w[0]) + (w.Length > 1 ? w[1..].ToLowerInvariant() : "") : "")) + "Analysis";
@@ -552,7 +552,7 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
                         0.75, 0, DateTime.UtcNow, DateTime.UtcNow
                     );
                     registry.RegisterSkill(newSkill);
-                    Console.WriteLine($"  Ô£à New skill: UseSkill_{skillName}\n");
+                    Console.WriteLine($"  [OK] New skill: UseSkill_{skillName}\n");
                 }
                 catch (Exception ex)
                 {
@@ -576,10 +576,10 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
 
                 if (matches.Count > 0)
                 {
-                    Console.WriteLine($"\n  ­[+]í Matching skills for \"{arg}\":");
+                    Console.WriteLine($"\n  [+] Matching skills for \"{arg}\":");
                     foreach (var skill in matches)
                     {
-                        Console.WriteLine($"     ­[>]» UseSkill_{skill.Name} ({skill.SuccessRate:P0})");
+                        Console.WriteLine($"     [>] UseSkill_{skill.Name} ({skill.SuccessRate:P0})");
                     }
                     Console.WriteLine();
                 }
@@ -606,9 +606,9 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
                     {
                         Console.Write($"     -> {step.Action}...");
                         await Task.Delay(200);
-                        Console.WriteLine(" Ô£ô");
+                        Console.WriteLine(" [OK]");
                     }
-                    Console.WriteLine($"  Ô£à {skillToRun.Name} complete\n");
+                    Console.WriteLine($"  [OK] {skillToRun.Name} complete\n");
                 }
                 else
                 {
@@ -658,7 +658,7 @@ static async Task RunVoicePersonaMode(ISkillRegistry registry, Func<string, stri
     // Get ALL dynamically discovered pipeline tokens
     var pipelineContext = SkillCliSteps.BuildPipelineContext();
     var allTokens = SkillCliSteps.GetAllPipelineTokens();
-    Console.WriteLine($"  Ôä¦´©Å Discovered {allTokens.Values.Distinct().Count()} pipeline tokens at runtime");
+    Console.WriteLine($"  [#] Discovered {allTokens.Values.Distinct().Count()} pipeline tokens at runtime");
 
     // System prompt for the LLM - aware of the FULL pipeline architecture
     string systemPrompt = $@"You are {personaName}, a {persona.Style.ToLowerInvariant()} AI research assistant running on the Ouroboros pipeline.
@@ -691,18 +691,18 @@ IMPORTANT RULES:
 5. Keep spoken responses under 2 sentences (they will be read aloud)
 6. You know ALL the pipeline tokens listed above - use them creatively";
 
-    Console.WriteLine("\nÔöîÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÉ");
-    Console.WriteLine($"Ôöé  ­[>]Ö´©Å VOICE PERSONA MODE - {personaName.ToUpperInvariant(),-15}                              Ôöé");
-    Console.WriteLine("Ôö£ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöñ");
-    Console.WriteLine($"Ôöé  Personality: {persona.Style,-56} Ôöé");
-    Console.WriteLine("Ôöé                                                                          Ôöé");
-    Console.WriteLine("Ôöé  Voice Commands:                                                         Ôöé");
-    Console.WriteLine("Ôöé    \"list skills\" / \"what skills\"   - List available skills               Ôöé");
-    Console.WriteLine("Ôöé    \"learn about X\"                 - Fetch research on topic X           Ôöé");
-    Console.WriteLine("Ôöé    \"suggest for X\"                 - Find matching skills                Ôöé");
-    Console.WriteLine("Ôöé    \"run X\" / \"execute X\"           - Execute a skill                     Ôöé");
-    Console.WriteLine("Ôöé    \"goodbye\" / \"exit\"              - Exit voice mode                     Ôöé");
-    Console.WriteLine("ÔööÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÿ\n");
+    Console.WriteLine("\n+------------------------------------------------------------------------+");
+    Console.WriteLine($"|  [>] VOICE PERSONA MODE - {personaName.ToUpperInvariant(),-15}                              |");
+    Console.WriteLine("+------------------------------------------------------------------------+");
+    Console.WriteLine($"|  Personality: {persona.Style,-56} |");
+    Console.WriteLine("|                                                                        |");
+    Console.WriteLine("|  Voice Commands:                                                       |");
+    Console.WriteLine("|    \"list skills\" / \"what skills\"   - List available skills             |");
+    Console.WriteLine("|    \"learn about X\"                 - Fetch research on topic X         |");
+    Console.WriteLine("|    \"suggest for X\"                 - Find matching skills              |");
+    Console.WriteLine("|    \"run X\" / \"execute X\"           - Execute a skill                   |");
+    Console.WriteLine("|    \"goodbye\" / \"exit\"              - Exit voice mode                   |");
+    Console.WriteLine("+------------------------------------------------------------------------+\n");
 
     // Check for TTS/STT availability
     string? openAiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
@@ -744,7 +744,7 @@ IMPORTANT RULES:
                 useEnhancedProsody: false  // Disable SSML for speed
             );
             ttsService = localTts;
-            Console.WriteLine("  Ô£ô TTS initialized (Windows SAPI - fast mode, local/offline)");
+            Console.WriteLine("  [OK] TTS initialized (Windows SAPI - fast mode, local/offline)");
         }
         catch (Exception ex)
         {
@@ -758,7 +758,7 @@ IMPORTANT RULES:
         try
         {
             ttsService = new OpenAiTextToSpeechService(openAiKey!);
-            Console.WriteLine($"  Ô£ô TTS initialized (OpenAI - voice: {persona.Voice})");
+            Console.WriteLine($"  [OK] TTS initialized (OpenAI - voice: {persona.Voice})");
         }
         catch (Exception ex)
         {
@@ -776,12 +776,12 @@ IMPORTANT RULES:
             if (await localWhisper.IsAvailableAsync())
             {
                 sttService = localWhisper;
-                Console.WriteLine("  Ô£ô STT initialized (local Whisper)");
+                Console.WriteLine("  [OK] STT initialized (local Whisper)");
             }
             else if (!string.IsNullOrEmpty(openAiKey))
             {
                 sttService = new WhisperSpeechToTextService(openAiKey);
-                Console.WriteLine("  Ô£ô STT initialized (OpenAI Whisper API)");
+                Console.WriteLine("  [OK] STT initialized (OpenAI Whisper API)");
             }
         }
         catch (Exception ex)
@@ -810,7 +810,7 @@ IMPORTANT RULES:
         string testResponse = await chatModel.GenerateTextAsync("Respond with just: READY");
         if (!string.IsNullOrWhiteSpace(testResponse) && !testResponse.Contains("-fallback:"))
         {
-            Console.WriteLine($"  Ô£ô LLM initialized ({modelName} via {endpoint})");
+            Console.WriteLine($"  [OK] LLM initialized ({modelName} via {endpoint})");
         }
         else
         {
@@ -861,7 +861,7 @@ IMPORTANT RULES:
             var lastPart = partial.Split('|').Last().Trim();
             if (string.IsNullOrEmpty(lastPart))
             {
-                Console.WriteLine("\n  ­[+]í Available pipeline steps:");
+                Console.WriteLine("\n  [+] Available pipeline steps:");
                 var samples = tokenNames.Take(15).ToList();
                 Console.WriteLine($"     {string.Join(", ", samples)}...");
                 Console.WriteLine("     Type part of a step name for suggestions");
@@ -872,7 +872,7 @@ IMPORTANT RULES:
             var matches = tokenNames.Where(t => t.StartsWith(lastPart, StringComparison.OrdinalIgnoreCase)).Take(8).ToList();
             if (matches.Count > 0)
             {
-                Console.WriteLine($"\n  ­[+]í Matching tokens: {string.Join(", ", matches)}");
+                Console.WriteLine($"\n  [+] Matching tokens: {string.Join(", ", matches)}");
             }
             return;
         }
@@ -881,7 +881,7 @@ IMPORTANT RULES:
         var cmdMatches = commandHelp.Where(kv => kv.Key.StartsWith(partialLower)).ToList();
         if (cmdMatches.Count > 0 && cmdMatches.Count <= 5)
         {
-            Console.WriteLine("\n  ­[+]í Commands:");
+            Console.WriteLine("\n  [+] Commands:");
             foreach (var (cmd, (syntax, desc, _)) in cmdMatches)
             {
                 Console.WriteLine($"     {syntax,-30} - {desc}");
@@ -894,7 +894,7 @@ IMPORTANT RULES:
             var tkMatches = tokenNames.Where(t => t.StartsWith(partial, StringComparison.OrdinalIgnoreCase)).Take(8).ToList();
             if (tkMatches.Count > 0)
             {
-                Console.WriteLine($"  ­[+]í Pipeline tokens: {string.Join(", ", tkMatches)}");
+                Console.WriteLine($"  [+] Pipeline tokens: {string.Join(", ", tkMatches)}");
             }
         }
     }
@@ -902,7 +902,7 @@ IMPORTANT RULES:
     // Execute a DSL pipeline string
     async Task<string> ExecutePipelineAsync(string pipeline)
     {
-        Console.WriteLine($"\n  ÔÜí Executing pipeline: {pipeline}");
+        Console.WriteLine($"\n  [>] Executing pipeline: {pipeline}");
 
         try
         {
@@ -969,7 +969,7 @@ IMPORTANT RULES:
                 }
             }
 
-            Console.WriteLine("  Ô£à Pipeline complete");
+            Console.WriteLine("  [OK] Pipeline complete");
             return state.Output ?? state.Context ?? "Pipeline executed successfully";
         }
         catch (Exception ex)
@@ -987,7 +987,7 @@ IMPORTANT RULES:
         
         try
         {
-            Console.Write($"  ­ƒöè {personaName}: ");
+            Console.Write($"  [>] {personaName}: ");
             
             // Sanitize text for TTS - remove code blocks, special chars that cause PS issues
             string sanitized = System.Text.RegularExpressions.Regex.Replace(text, @"`[^`]*`", " ");
@@ -1010,7 +1010,7 @@ IMPORTANT RULES:
                     var wordStream = System.Reactive.Linq.Observable.Create<string>(async (observer, ct) =>
                     {
                         // Buffer words into speakable chunks (3-5 words per chunk for natural speech)
-                        const int chunkSize = 4;
+                        const int chunkSize = 1;
                         var chunks = new List<string>();
                         
                         for (int i = 0; i < words.Length; i += chunkSize)
@@ -1031,7 +1031,6 @@ IMPORTANT RULES:
                             foreach (var word in chunkWords)
                             {
                                 observer.OnNext(word);
-                                await Task.Delay(80, ct); // ~12 words/sec visual pace
                             }
                             
                             // Wait for speech to complete before next chunk
@@ -1039,7 +1038,7 @@ IMPORTANT RULES:
                         }
                         
                         observer.OnCompleted();
-                    });
+                    }).SubscribeOn(System.Reactive.Concurrency.ThreadPoolScheduler.Instance);
                     
                     // Subscribe and display words as they stream
                     await wordStream.ForEachAsync(word =>
@@ -1093,7 +1092,7 @@ IMPORTANT RULES:
         finally
         {
             // Resume mic listening after TTS finishes + small delay for echo
-            await Task.Delay(500);
+            await Task.Delay(12);
             isSpeaking = false;
         }
     }
@@ -1113,8 +1112,8 @@ IMPORTANT RULES:
     // Start continuous background speech listener if STT is available
     if (sttService != null && hasMic)
     {
-        Console.WriteLine("  Ô£ô Continuous speech input enabled - speak anytime or type");
-        Console.WriteLine("    ­[>]ñ Listening in background... (speech auto-detected)\n");
+        Console.WriteLine("  [OK] Continuous speech input enabled - speak anytime or type");
+        Console.WriteLine("    [>] Listening in background... (speech auto-detected)\n");
 
         continuousListenerTask = Task.Run(async () =>
         {
@@ -1191,7 +1190,7 @@ IMPORTANT RULES:
     }
     else
     {
-        Console.WriteLine("  Ôä¦ Text input mode (STT not configured)\n");
+        Console.WriteLine("  [i] Text input mode (STT not configured)\n");
     }
 
     // Helper to listen - supports both keyboard input AND continuous background speech
@@ -1207,7 +1206,7 @@ IMPORTANT RULES:
             {
                 // Clear current line and show speech input
                 Console.Write("\r" + new string(' ', inputBuffer.Length + personaName.Length + 10) + "\r");
-                Console.WriteLine($"  ­[>]ñ {speechText}");
+                Console.WriteLine($"  [>] {speechText}");
                 return speechText;
             }
 
@@ -1505,7 +1504,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                         string skillList = string.Join(", ", skills.Take(5).Select(s => s.Name));
                         await SayAsync(response ?? $"I know {skills.Count} skills. Here are some: {skillList}. Would you like me to run one or learn more?");
                         
-                        Console.WriteLine("\n  ­[i] All Skills:");
+                        Console.WriteLine("\n  [i] All Skills:");
                         foreach (var skill in skills)
                         {
                             Console.WriteLine($"     - {skill.Name,-28} ({skill.SuccessRate:P0})");
@@ -1524,7 +1523,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                     {
                         string topic = actionParam;
                         await SayAsync($"Interesting! Let me search for research on {topic}.");
-                        Console.WriteLine($"\n  ­[>] Fetching research on: \"{topic}\"...");
+                        Console.WriteLine($"\n  [>] Fetching research on: \"{topic}\"...");
                         try
                         {
                             string fetchUrl = $"http://export.arxiv.org/api/query?search_query=all:{Uri.EscapeDataString(topic)}&start=0&max_results=5";
@@ -1532,13 +1531,13 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                             var fetchDoc = System.Xml.Linq.XDocument.Parse(fetchXml);
                             System.Xml.Linq.XNamespace fetchAtom = "http://www.w3.org/2005/Atom";
                             var fetchEntries = fetchDoc.Descendants(fetchAtom + "entry").Take(5).ToList();
-                            Console.WriteLine($"  ­[i] Found {fetchEntries.Count} papers");
+                            Console.WriteLine($"  [i] Found {fetchEntries.Count} papers");
                             if (fetchEntries.Count > 0)
                             {
                                 foreach (var fetchEntry in fetchEntries)
                                 {
                                     string fetchTitle = fetchEntry.Element(fetchAtom + "title")?.Value?.Trim().Replace("\n", " ") ?? "Untitled";
-                                    Console.WriteLine($"     ­[i] {fetchTitle}");
+                                    Console.WriteLine($"     [i] {fetchTitle}");
                                 }
                                 string newSkillName = string.Join("", topic.Split(' ').Select(w =>
                                     w.Length > 0 ? char.ToUpperInvariant(w[0]) + (w.Length > 1 ? w[1..].ToLowerInvariant() : "") : "")) + "Analysis";
@@ -1546,7 +1545,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                                     new List<PlanStep> { MakeStep("Gather", topic, "Papers", 0.9), MakeStep("Analyze", "Extract", "Insights", 0.85) }, 
                                     0.75, 0, DateTime.UtcNow, DateTime.UtcNow);
                                 registry.RegisterSkill(newSkill);
-                                Console.WriteLine($"  Ô£ô Created skill: {newSkillName}");
+                                Console.WriteLine($"  [OK] Created skill: {newSkillName}");
                                 await SayAsync($"I found {fetchEntries.Count} papers and created skill {newSkillName}.");
                             }
                             else
@@ -1614,11 +1613,11 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                                     var runDoc = System.Xml.Linq.XDocument.Parse(runXml);
                                     System.Xml.Linq.XNamespace runAtom = "http://www.w3.org/2005/Atom";
                                     var runEntries = runDoc.Descendants(runAtom + "entry").ToList();
-                                    Console.WriteLine($"  ­[i] Found {runEntries.Count} papers");
+                                    Console.WriteLine($"  [i] Found {runEntries.Count} papers");
                                     foreach (var runEntry in runEntries.Take(3))
                                     {
                                         string runTitle = runEntry.Element(runAtom + "title")?.Value?.Trim().Replace("\n", " ") ?? "";
-                                        Console.WriteLine($"     ­[i] {runTitle}");
+                                        Console.WriteLine($"     [i] {runTitle}");
                                     }
                                     await SayAsync($"Found {runEntries.Count} papers on {runTopic}.");
                                 }
@@ -1633,7 +1632,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                             {
                                 Console.Write($"     -> {step.Action}...");
                                 await Task.Delay(300);
-                                Console.WriteLine(" Ô£ô");
+                                Console.WriteLine(" [OK]");
                             }
                             await SayAsync($"Done! {skillToRun.Name} completed.");
                         }
@@ -1646,7 +1645,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                         // Help for specific command
                         if (commandHelp.TryGetValue(actionParam, out var cmdInfo))
                         {
-                            Console.WriteLine($"\n  ­ƒôû Help: {actionParam}");
+                            Console.WriteLine($"\n  [>] Help: {actionParam}");
                             Console.WriteLine($"     Syntax: {cmdInfo.Syntax}");
                             Console.WriteLine($"     {cmdInfo.Description}");
                             Console.WriteLine($"     Examples:");
@@ -1660,8 +1659,8 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                         else if (allTokens.TryGetValue(actionParam, out var tokenInfo))
                         {
                             // Help for a pipeline token
-                            Console.WriteLine($"\n  ­ƒôû Pipeline Token: {tokenInfo.PrimaryName}");
-                            Console.WriteLine($"  ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ");
+                            Console.WriteLine($"\n  [>] Pipeline Token: {tokenInfo.PrimaryName}");
+                            Console.WriteLine($"  [#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][>][i]");
                             Console.WriteLine($"     Source: {tokenInfo.SourceClass}");
                             Console.WriteLine($"     Description: {tokenInfo.Description}");
                             if (tokenInfo.Aliases.Length > 0)
@@ -1693,7 +1692,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                                 kv.Key.Contains(actionParam, StringComparison.OrdinalIgnoreCase)).Take(5).ToList();
                             if (partialMatches.Count > 0)
                             {
-                                Console.WriteLine($"\n  ­[+]í Did you mean one of these?");
+                                Console.WriteLine($"\n  [+] Did you mean one of these?");
                                 foreach (var (name, info) in partialMatches)
                                 {
                                     Console.WriteLine($"     - {info.PrimaryName}: {info.Description}");
@@ -1709,14 +1708,14 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                     else
                     {
                         // Full help
-                        Console.WriteLine("\n  ­ƒôû OUROBOROS VOICE COMMANDS:");
-                        Console.WriteLine("  ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ\n");
+                        Console.WriteLine("\n  [>] OUROBOROS VOICE COMMANDS:");
+                        Console.WriteLine("  [#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][i]\n");
                         foreach (var (cmd, (syntax, desc, _)) in commandHelp)
                         {
                             Console.WriteLine($"  {syntax,-35} {desc}");
                         }
-                        Console.WriteLine("\n  ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ");
-                        Console.WriteLine("  ­[+]í Tips:");
+                        Console.WriteLine("\n  [#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][i]");
+                        Console.WriteLine("  [+] Tips:");
                         Console.WriteLine("     - Press Tab to autocomplete commands and tokens");
                         Console.WriteLine("     - Press F1 or Ctrl+Space for suggestions");
                         Console.WriteLine("     - Use | to chain pipeline steps: ArxivSearch 'AI' | UseOutput");
@@ -1757,11 +1756,11 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                         continue;
                     }
                     await SayAsync($"Searching multiple sources for {actionParam}.");
-                    Console.WriteLine($"\n  ­[>] Multi-source search: \"{actionParam}\"");
+                    Console.WriteLine($"\n  [>] Multi-source search: \"{actionParam}\"");
                     try
                     {
                         // Search arXiv
-                        Console.WriteLine("  ­[i] Searching arXiv...");
+                        Console.WriteLine("  [i] Searching arXiv...");
                         string arxivUrl = $"http://export.arxiv.org/api/query?search_query=all:{Uri.EscapeDataString(actionParam)}&start=0&max_results=3";
                         string arxivXml = await httpClient.GetStringAsync(arxivUrl);
                         var arxivDoc = System.Xml.Linq.XDocument.Parse(arxivXml);
@@ -1770,7 +1769,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                         Console.WriteLine($"     Found {arxivEntries.Count} arXiv papers");
 
                         // Search Wikipedia
-                        Console.WriteLine("  ­ƒôû Searching Wikipedia...");
+                        Console.WriteLine("  [>] Searching Wikipedia...");
                         string wikiUrl = $"https://en.wikipedia.org/api/rest_v1/page/summary/{Uri.EscapeDataString(actionParam.Replace(" ", "_"))}";
                         try
                         {
@@ -1799,7 +1798,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                         continue;
                     }
                     await SayAsync($"Fetching content from {actionParam}.");
-                    Console.WriteLine($"\n  ­ƒîÉ Fetching: {actionParam}");
+                    Console.WriteLine($"\n  [>] Fetching: {actionParam}");
                     try
                     {
                         string content = await httpClient.GetStringAsync(actionParam);
@@ -1812,7 +1811,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                             content = System.Net.WebUtility.HtmlDecode(content);
                             content = System.Text.RegularExpressions.Regex.Replace(content, @"\s+", " ").Trim();
                         }
-                        Console.WriteLine($"  Ô£ô Retrieved {content.Length:N0} characters");
+                        Console.WriteLine($"  [OK] Retrieved {content.Length:N0} characters");
                         Console.WriteLine($"  Preview: {(content.Length > 200 ? content[..200] + "..." : content)}");
                         await SayAsync($"Fetched {content.Length} characters from that URL.");
                     }
@@ -1830,7 +1829,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                         continue;
                     }
                     await SayAsync($"Starting the Ouroboros emergence cycle for {actionParam}. This may take a moment.");
-                    Console.WriteLine($"\n  ­ƒîÇ Starting emergence cycle: \"{actionParam}\"");
+                    Console.WriteLine($"\n  [>] Starting emergence cycle: \"{actionParam}\"");
                     try
                     {
                         // Create minimal pipeline state for the emergence cycle
@@ -1844,7 +1843,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                         var eArxivDoc = System.Xml.Linq.XDocument.Parse(eArxivXml);
                         System.Xml.Linq.XNamespace eArxivAtom = "http://www.w3.org/2005/Atom";
                         var eArxivEntries = eArxivDoc.Descendants(eArxivAtom + "entry").Take(5).ToList();
-                        Console.WriteLine($"     ­[i] arXiv: {eArxivEntries.Count} papers");
+                        Console.WriteLine($"     [i] arXiv: {eArxivEntries.Count} papers");
 
                         foreach (var entry in eArxivEntries)
                         {
@@ -1859,14 +1858,14 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                             {
                                 string hypothesisPrompt = $"Based on research about '{actionParam}', generate 3 brief hypotheses in 2-3 sentences each.";
                                 string hypotheses = await chatModel.GenerateTextAsync(hypothesisPrompt);
-                                Console.WriteLine($"     ­ƒºá Generated hypotheses");
+                                Console.WriteLine($"     [>] Generated hypotheses");
                                 allResults.AppendLine($"\nHypotheses:\n{hypotheses}");
                             }
                             catch { Console.WriteLine("     [LLM unavailable for hypotheses]"); }
                         }
 
                         Console.WriteLine("  Phase 3: EXPLORE - Identifying opportunities...");
-                        Console.WriteLine($"     ­ƒö« Deep dive into {actionParam} breakthroughs");
+                        Console.WriteLine($"     [>] Deep dive into {actionParam} breakthroughs");
 
                         Console.WriteLine("  Phase 4: LEARN - Extracting skills...");
                         string emergenceSkillName = string.Join("", actionParam.Split(' ').Select(w =>
@@ -1881,7 +1880,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                             },
                             0.80, 0, DateTime.UtcNow, DateTime.UtcNow);
                         registry.RegisterSkill(emergenceSkill);
-                        Console.WriteLine($"  Ô£à Created skill: {emergenceSkillName}");
+                        Console.WriteLine($"  [OK] Created skill: {emergenceSkillName}");
 
                         await SayAsync($"Emergence cycle complete! Found {eArxivEntries.Count} papers and created skill {emergenceSkillName}.");
                     }
@@ -1906,12 +1905,12 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                             t.Aliases.Any(a => a.Contains(tokenFilter, StringComparison.OrdinalIgnoreCase))
                         ).ToList();
                         
-                        Console.WriteLine($"\n  ­ƒôª Tokens matching '{tokenFilter}' ({filteredTokens.Count} found):");
-                        Console.WriteLine("  ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ");
+                        Console.WriteLine($"\n  [>] Tokens matching '{tokenFilter}' ({filteredTokens.Count} found):");
+                        Console.WriteLine("  [#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][>][i]");
                         foreach (var token in filteredTokens.OrderBy(t => t.PrimaryName))
                         {
                             string aliases = token.Aliases.Length > 0 ? $" (aliases: {string.Join(", ", token.Aliases)})" : "";
-                            Console.WriteLine($"\n  Ôû© {token.PrimaryName}{aliases}");
+                            Console.WriteLine($"\n  [>] {token.PrimaryName}{aliases}");
                             Console.WriteLine($"    {token.Description}");
                         }
                         if (filteredTokens.Count == 0)
@@ -1925,22 +1924,22 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                     else
                     {
                         // Show all tokens grouped by source
-                        Console.WriteLine($"\n  ­ƒôª ALL PIPELINE TOKENS ({uniqueTokens.Count} total)");
-                        Console.WriteLine("  ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ");
+                        Console.WriteLine($"\n  [>] ALL PIPELINE TOKENS ({uniqueTokens.Count} total)");
+                        Console.WriteLine("  ----------------------------------------------------------------");
                         
                         var grouped = uniqueTokens.GroupBy(t => t.SourceClass).OrderBy(g => g.Key);
                         foreach (var group in grouped)
                         {
-                            Console.WriteLine($"\n  ÔöîÔöÇ {group.Key} ({group.Count()} tokens) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ");
+                            Console.WriteLine($"\n  [*] {group.Key} ({group.Count()} tokens) ---------------");
                             foreach (var token in group.OrderBy(t => t.PrimaryName))
                             {
                                 string aliases = token.Aliases.Length > 0 ? $" [{string.Join(", ", token.Aliases)}]" : "";
                                 string desc = token.Description.Length > 50 ? token.Description[..47] + "..." : token.Description;
-                                Console.WriteLine($"  Ôöé {token.PrimaryName,-25} {desc}{aliases}");
+                                Console.WriteLine($"  [>] {token.PrimaryName,-25} {desc}{aliases}");
                             }
-                            Console.WriteLine("  ÔööÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ");
+                            Console.WriteLine("  ----------------------------------------------------------------");
                         }
-                        Console.WriteLine($"\n  ­[+]í Use 'tokens <filter>' to search, or 'help <TokenName>' for details");
+                        Console.WriteLine($"\n  [+] Use 'tokens <filter>' to search, or 'help <TokenName>' for details");
                         await SayAsync($"I have {uniqueTokens.Count} pipeline tokens available across {grouped.Count()} modules. Use tokens with a filter word to search.");
                     }
                     continue;
