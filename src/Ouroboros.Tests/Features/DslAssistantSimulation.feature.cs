@@ -39,8 +39,8 @@ namespace LangChainPipeline.Features
         public static async System.Threading.Tasks.Task FeatureSetupAsync()
         {
             testRunner = TechTalk.SpecFlow.TestRunnerManager.GetTestRunnerForAssembly(null, TechTalk.SpecFlow.xUnit.SpecFlowPlugin.XUnitParallelWorkerTracker.Instance.GetWorkerId());
-            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "DSL Assistant Simulation Integration Tests", "  As a developer using Ouroboros CLI\r\n  I want AI-powered DSL assistance with cod" +
-                    "e generation\r\n  So that I can build pipelines efficiently like GitHub Copilot", ProgrammingLanguage.CSharp, featureTags);
+            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "DSL Assistant Simulation Integration Tests", "  As a developer using Ouroboros CLI\n  I want AI-powered DSL assistance with code" +
+                    " generation\n  So that I can build pipelines efficiently like GitHub Copilot", ProgrammingLanguage.CSharp, featureTags);
             await testRunner.OnFeatureStartAsync(featureInfo);
         }
         
