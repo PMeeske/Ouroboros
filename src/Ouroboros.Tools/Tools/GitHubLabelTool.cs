@@ -11,6 +11,9 @@ using Octokit;
 /// </summary>
 public sealed class GitHubLabelTool : ITool
 {
+    // Default color for auto-created labels
+    private const string DefaultLabelColor = "EDEDED";
+    
     private readonly GitHubClient client;
     private readonly string owner;
     private readonly string repo;
@@ -112,7 +115,7 @@ public sealed class GitHubLabelTool : ITool
         catch (NotFoundException)
         {
             // Create the label with a default color if it doesn't exist
-            NewLabel newLabel = new NewLabel(labelName, "EDEDED")
+            NewLabel newLabel = new NewLabel(labelName, DefaultLabelColor)
             {
                 Description = $"Label created automatically",
             };

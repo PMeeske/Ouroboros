@@ -15,6 +15,13 @@ using Ouroboros.Tools.MeTTa;
 /// </summary>
 public sealed class SafeCalculatorTool : ITool
 {
+    // Tolerance for floating point comparisons
+    private const double ComparisonTolerance = 0.000001;
+    
+    // Allowed characters for arithmetic expressions (security measure)
+    private static readonly HashSet<char> AllowedCharacters = new HashSet<char>(
+        "0123456789+-*/().Ee ".ToCharArray());
+    
     private readonly IMeTTaEngine? symbolicEngine;
     private readonly bool useSymbolicVerification;
 
@@ -120,8 +127,7 @@ public sealed class SafeCalculatorTool : ITool
             // Step 3: Check against expected result if provided
             if (expectedResult.HasValue)
             {
-                double tolerance = 0.000001;
-                if (Math.Abs(calculatedValue - expectedResult.Value) > tolerance)
+                if (Math.Abs(calculatedValue - expectedResult.Value) > ComparisonTolerance)
                 {
                     return Result<string, string>.Failure(
                         $"❌ Result mismatch: calculated {calculatedValue}, expected {expectedResult.Value}");
@@ -145,6 +151,9 @@ public sealed class SafeCalculatorTool : ITool
     {
         try
         {
+            // NOTE: DataTable.Compute() is used for basic arithmetic evaluation.
+            // While not ideal for production (has security considerations), it works for this demonstration.
+            // For production use, consider using NCalc or implementing a custom expression parser.
             DataTable dataTable = new DataTable();
             object result = dataTable.Compute(expression, string.Empty);
             double value = Convert.ToDouble(result, CultureInfo.InvariantCulture);
@@ -186,8 +195,7 @@ public sealed class SafeCalculatorTool : ITool
                     // Parse MeTTa result and compare with computed result
                     if (this.TryParseMeTTaNumber(mettaValue, out double symbolicResult))
                     {
-                        double tolerance = 0.000001;
-                        bool matches = Math.Abs(symbolicResult - result) < tolerance;
+                        bool matches = Math.Abs(symbolicResult - result) < ComparisonTolerance;
                         return matches
                             ? Result<bool, string>.Success(true)
                             : Result<bool, string>.Failure($"Symbolic result {symbolicResult} does not match computed result {result}");
@@ -211,8 +219,7 @@ public sealed class SafeCalculatorTool : ITool
             // This provides a basic safety check even without MeTTa
             
             // Verify expression contains only allowed characters
-            char[] allowedChars = "0123456789+-*/().Ee ".ToCharArray();
-            if (expression.Any(c => !allowedChars.Contains(c)))
+            if (expression.Any(c => !AllowedCharacters.Contains(c)))
             {
                 return Result<bool, string>.Failure("Expression contains invalid characters");
             }
@@ -223,8 +230,7 @@ public sealed class SafeCalculatorTool : ITool
             return recomputeResult.Match(
                 recomputed =>
                 {
-                    double tolerance = 0.000001;
-                    bool matches = Math.Abs(recomputed - result) < tolerance;
+                    bool matches = Math.Abs(recomputed - result) < ComparisonTolerance;
                     return matches
                         ? Result<bool, string>.Success(true)
                         : Result<bool, string>.Failure("Recomputation verification failed");
