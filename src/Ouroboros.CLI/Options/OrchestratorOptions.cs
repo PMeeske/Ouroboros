@@ -4,7 +4,7 @@ using CommandLine;
 namespace LangChainPipeline.Options;
 
 [Verb("orchestrator", HelpText = "Run smart model orchestrator with intelligent model and tool selection.")]
-sealed class OrchestratorOptions
+public sealed class OrchestratorOptions
 {
     [Option('g', "goal", Required = true, HelpText = "Goal or task for the orchestrator to accomplish.")]
     public string Goal { get; set; } = string.Empty;

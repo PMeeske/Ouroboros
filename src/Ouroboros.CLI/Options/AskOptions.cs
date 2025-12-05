@@ -4,7 +4,7 @@ using CommandLine;
 namespace LangChainPipeline.Options;
 
 [Verb("ask", HelpText = "Ask the LLM. Use --rag to enable minimal RAG.")]
-sealed class AskOptions
+public sealed class AskOptions
 {
     [Option('r', "rag", Required = false, HelpText = "Enable minimal RAG context.")]
     public bool Rag { get; set; }

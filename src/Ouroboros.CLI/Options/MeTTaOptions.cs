@@ -4,7 +4,7 @@ using CommandLine;
 namespace LangChainPipeline.Options;
 
 [Verb("metta", HelpText = "Run MeTTa orchestrator v3.0 with symbolic reasoning capabilities.")]
-sealed class MeTTaOptions
+public sealed class MeTTaOptions
 {
     [Option('g', "goal", Required = true, HelpText = "Goal or task for the MeTTa orchestrator to plan and execute.")]
     public string Goal { get; set; } = string.Empty;

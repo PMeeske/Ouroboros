@@ -4,7 +4,7 @@ using CommandLine;
 namespace LangChainPipeline.Options;
 
 [Verb("pipeline", HelpText = "Run a pipeline DSL.")]
-sealed class PipelineOptions
+public sealed class PipelineOptions
 {
     [Option('d', "dsl", Required = true, HelpText = "Pipeline DSL string.")]
     public string Dsl { get; set; } = string.Empty;

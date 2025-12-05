@@ -4,7 +4,7 @@ using CommandLine;
 namespace LangChainPipeline.Options;
 
 [Verb("skills", HelpText = "Manage research-powered skills and DSL tokens.")]
-sealed class SkillsOptions
+public sealed class SkillsOptions
 {
     [Option('l', "list", HelpText = "List all registered skills.")]
     public bool List { get; set; }
