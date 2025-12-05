@@ -4,7 +4,6 @@
 
 namespace LangChainPipeline.Tests;
 
-using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
 
 /// <summary>

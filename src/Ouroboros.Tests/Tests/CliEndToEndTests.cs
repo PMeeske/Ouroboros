@@ -4,7 +4,6 @@
 
 namespace LangChainPipeline.Tests;
 
-using System.Diagnostics;
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;

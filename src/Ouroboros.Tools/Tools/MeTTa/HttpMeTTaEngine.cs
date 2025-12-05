@@ -5,7 +5,6 @@
 namespace LangChainPipeline.Tools.MeTTa;
 
 using System.Net.Http.Json;
-using System.Text.Json;
 
 /// <summary>
 /// HTTP client for communicating with a Python-based MeTTa/Hyperon service.

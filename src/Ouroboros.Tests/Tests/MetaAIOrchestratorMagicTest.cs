@@ -6,7 +6,6 @@ namespace LangChainPipeline.Tests;
 
 using FluentAssertions;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Tools;
 using Xunit;

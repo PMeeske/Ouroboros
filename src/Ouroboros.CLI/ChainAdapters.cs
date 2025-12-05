@@ -3,7 +3,6 @@ using LangChain.Abstractions.Schema;            // IChainValues
 // BaseStackableChain (namespace assumption)
 using LangChain.Chains.HelperChains;            // StackChain (optional)
 using LangChain.Chains.StackableChains.Context; // StackableChainValues
-using LangChainPipeline.Core.Steps;
 
 namespace LangChainPipeline.CLI.Interop;
 

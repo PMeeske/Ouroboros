@@ -5,7 +5,6 @@
 namespace LangChainPipeline.Core.Configuration;
 
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 
 /// <summary>
 /// Builder for creating pipeline configuration from various sources.

@@ -2,7 +2,6 @@
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Splitters.Text;
-using LangChainPipeline.Domain.Vectors;
 
 namespace LangChainPipeline.Pipeline.Ingestion;
 

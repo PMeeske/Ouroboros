@@ -7,8 +7,6 @@
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.CLI;
-using LangChainPipeline.Domain.Vectors;
-using LangChainPipeline.Providers;
 
 namespace LangChainPipeline.Examples;
 

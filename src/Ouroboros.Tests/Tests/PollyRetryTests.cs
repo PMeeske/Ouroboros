@@ -1,7 +1,4 @@
 using System.Net;
-using System.Net.Http;
-using Xunit;
-using LangChainPipeline.Providers;
 
 namespace LangChainPipeline.Tests.Providers;
 

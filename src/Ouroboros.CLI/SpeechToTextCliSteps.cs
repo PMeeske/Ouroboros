@@ -3,7 +3,6 @@
 // </copyright>
 
 using LangChainPipeline.Providers.SpeechToText;
-using Ouroboros.CLI;
 
 namespace LangChainPipeline.CLI;
 

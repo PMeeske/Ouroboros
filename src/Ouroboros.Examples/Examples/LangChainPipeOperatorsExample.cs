@@ -3,9 +3,6 @@
 // </copyright>
 
 namespace LangChainPipeline.Examples;
-
-using static LangChainPipeline.CLI.Interop.Pipe;
-
 /// <summary>
 /// Demonstrates the LangChain-style pipe operators that have been added to
 /// the Ouroboros system. These operators mirror the original LangChain

@@ -1,14 +1,10 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.Text;
-using Microsoft.CodeAnalysis.MSBuild;
-using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Roslynator.Providers;
-using LangChainPipeline.Roslynator.Pipeline;
 using System.Collections.Immutable;
 
 namespace LangChainPipeline.CLI.CodeGeneration;

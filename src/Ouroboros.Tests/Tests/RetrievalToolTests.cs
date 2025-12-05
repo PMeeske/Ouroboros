@@ -6,12 +6,10 @@ namespace LangChainPipeline.Tests;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using LangChain.Databases;
-using LangChain.DocumentLoaders;
 using LangChainPipeline.Domain;
 using LangChainPipeline.Domain.Vectors;
 using LangChainPipeline.Core.Monads;

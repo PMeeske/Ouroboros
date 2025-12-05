@@ -5,7 +5,6 @@
 namespace LangChainPipeline.Tests;
 
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
 
 /// <summary>

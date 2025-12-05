@@ -2,7 +2,6 @@ using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Splitters.Text;
 using LangChainPipeline.CLI.Configuration;
-using LangChainPipeline.Core.Monads;
 using IEmbeddingModel = LangChainPipeline.Domain.IEmbeddingModel;
 
 namespace LangChainPipeline.CLI.Services;

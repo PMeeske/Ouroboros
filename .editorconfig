@@ -75,6 +75,10 @@ xml_doc_style_include_dot_in_returns_tag = true
 xml_doc_style_include_dot_in_value_tag = true
 
 # JSON files
+
+# RCS1238: Avoid nested ?: operators
+dotnet_diagnostic.RCS1238.severity = none
+
 [*.json]
 indent_style = space
 indent_size = 2

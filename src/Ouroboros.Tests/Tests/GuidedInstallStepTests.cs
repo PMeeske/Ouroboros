@@ -1,10 +1,6 @@
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.CLI;
-using LangChainPipeline.Domain.Vectors;
-using LangChainPipeline.Pipeline.Branches;
-using LangChainPipeline.Providers;
-using LangChainPipeline.Tools;
 
 namespace LangChainPipeline.Tests;
 

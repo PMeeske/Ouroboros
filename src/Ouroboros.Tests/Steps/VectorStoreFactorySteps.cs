@@ -1,8 +1,4 @@
-using System;
-using FluentAssertions;
-using TechTalk.SpecFlow;
 using LangChainPipeline.Core.Configuration;
-using LangChainPipeline.Domain.Vectors;
 
 namespace LangChainPipeline.Specs.Steps;
 

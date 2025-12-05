@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using FluentAssertions;
-using TechTalk.SpecFlow;
 using LangChainPipeline.Diagnostics;
 
 namespace LangChainPipeline.Specs.Steps;

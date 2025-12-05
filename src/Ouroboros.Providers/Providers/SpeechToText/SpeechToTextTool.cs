@@ -4,7 +4,6 @@
 
 using System.Text.Json;
 using LangChainPipeline.Providers.SpeechToText;
-using LangChainPipeline.Tools;
 
 namespace LangChainPipeline.Providers;
 

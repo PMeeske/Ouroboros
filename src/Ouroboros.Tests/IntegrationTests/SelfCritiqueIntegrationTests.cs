@@ -5,7 +5,6 @@
 namespace LangChainPipeline.Tests.IntegrationTests;
 
 using LangChain.DocumentLoaders;
-using LangChain.Providers;
 using LangChainPipeline.Agent;
 using LangChainPipeline.Domain.Vectors;
 using LangChainPipeline.Pipeline.Branches;

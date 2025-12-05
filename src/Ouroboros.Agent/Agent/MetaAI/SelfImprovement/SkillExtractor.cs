@@ -4,8 +4,6 @@
 // Automatic extraction of reusable skills from successful executions
 // ==========================================================
 
-using LangChain.Providers;
-
 namespace LangChainPipeline.Agent.MetaAI;
 
 /// <summary>

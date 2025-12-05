@@ -10,7 +10,6 @@ using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.CLI; // for MicrophoneRecorder, AudioPlayer
 using LangChainPipeline.Diagnostics; // added
 using LangChainPipeline.Options;
 using LangChainPipeline.Providers.SpeechToText; // for STT services

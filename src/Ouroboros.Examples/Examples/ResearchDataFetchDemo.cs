@@ -4,9 +4,6 @@
 
 namespace LangChainPipeline.Examples;
 
-using System.Net.Http;
-using System.Text.Json;
-using System.Xml.Linq;
 using LangChainPipeline.Agent.MetaAI;
 
 /// <summary>

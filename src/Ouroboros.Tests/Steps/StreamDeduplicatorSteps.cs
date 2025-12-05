@@ -1,12 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using FluentAssertions;
-using TechTalk.SpecFlow;
 using LangChainPipeline.Infrastructure.FeatureEngineering;
-using Microsoft.EntityFrameworkCore;
 
 namespace LangChainPipeline.Specs.Steps;
 

@@ -31,11 +31,13 @@ class OllamaAgent(Agent):
             api_key="ollama"  # Ollama doesn't need a real key
         )
     
-    def __call__(self, messages, functions=[]):
+    def __call__(self, messages, functions=None):
         """
         Call the Ollama model with the given messages.
         This receives already-processed messages from Agent.__metta_call__.
         """
+        if functions is None:
+            functions = []
         try:
             # Messages come in as a list of dicts with 'role' and 'content' keys
             # after being processed by get_llm_args in Agent.__metta_call__

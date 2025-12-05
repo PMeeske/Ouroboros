@@ -1,6 +1,4 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-using LangChainPipeline.Domain.Events;
-
 namespace LangChainPipeline.Domain.Persistence;
 
 /// <summary>

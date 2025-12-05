@@ -1,9 +1,5 @@
 using System.Reactive.Linq;
 using LangChainPipeline.CLI;
-using LangChainPipeline.Domain.Vectors;
-using LangChainPipeline.Pipeline.Reasoning;
-using LangChainPipeline.Providers;
-using LangChainPipeline.Tools;
 
 namespace LangChainPipeline.Tests;
 

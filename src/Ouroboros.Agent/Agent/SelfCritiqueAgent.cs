@@ -3,9 +3,6 @@
 // </copyright>
 
 namespace LangChainPipeline.Agent;
-
-using LangChain.DocumentLoaders;
-
 /// <summary>
 /// Agent that wraps LLM calls with self-critique and iterative improvement.
 /// Implements Draft → Critique → Improve loop with configurable iterations.

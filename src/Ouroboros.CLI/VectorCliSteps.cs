@@ -3,11 +3,7 @@
 // </copyright>
 
 using LangChain.Databases;
-using LangChain.DocumentLoaders;
-using LangChainPipeline.CLI;
 using LangChainPipeline.Core.Configuration;
-using LangChainPipeline.Domain.Vectors;
-using Ouroboros.CLI;
 
 namespace LangChainPipeline.CLI;
 

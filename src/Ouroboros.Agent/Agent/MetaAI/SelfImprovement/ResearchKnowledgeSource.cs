@@ -4,7 +4,6 @@
 // Feeds real-world research data into the emergence pipeline
 // ==========================================================
 
-using System.Net.Http;
 using System.Text.Json;
 using System.Xml.Linq;
 

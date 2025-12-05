@@ -1,10 +1,8 @@
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeFixes;
 using LangChainPipeline.Roslynator.Pipeline;
 using LangChainPipeline.Roslynator.Pipeline.Steps;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Threading.Tasks;
 
 namespace LangChainPipeline.Roslynator.Providers;
 

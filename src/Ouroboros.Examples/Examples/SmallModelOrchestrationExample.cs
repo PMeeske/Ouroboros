@@ -6,7 +6,6 @@ namespace LangChainPipeline.Examples;
 
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
-using LangChainPipeline.CLI;
 
 /// <summary>
 /// Demonstrates efficient orchestration of complex tasks using small, specialized models.
