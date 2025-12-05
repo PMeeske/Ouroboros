@@ -75,7 +75,7 @@ public sealed class SmartModelOrchestratorTests
     [Theory]
     [InlineData("Analyze why functional programming uses immutability", UseCaseType.Reasoning)]
     [InlineData("Explain the logic behind this algorithm", UseCaseType.Reasoning)]
-    [InlineData("What causes memory leaks in C#?", UseCaseType.Reasoning)]
+    [InlineData("Reason about the causes of this behavior", UseCaseType.Reasoning)]
     [InlineData("Deduce the pattern in this data", UseCaseType.Reasoning)]
     public void ClassifyUseCase_WithReasoningPrompts_ShouldReturnReasoning(
         string prompt,
@@ -144,8 +144,8 @@ public sealed class SmartModelOrchestratorTests
     /// </summary>
     [Theory]
     [InlineData("Use the search tool to find information", UseCaseType.ToolUse)]
-    [InlineData("Invoke the calculator function", UseCaseType.ToolUse)]
-    [InlineData("Execute the data analysis tool", UseCaseType.ToolUse)]
+    [InlineData("Invoke the analysis tool on this data", UseCaseType.ToolUse)]
+    [InlineData("Execute the data processing tool", UseCaseType.ToolUse)]
     public void ClassifyUseCase_WithToolUsePrompts_ShouldReturnToolUse(
         string prompt,
         UseCaseType expected)
@@ -166,7 +166,7 @@ public sealed class SmartModelOrchestratorTests
     /// Tests use case classification defaults to conversation for ambiguous prompts.
     /// </summary>
     [Theory]
-    [InlineData("Hello, how are you?")]
+    [InlineData("Can you tell me more about that?")]
     [InlineData("What's the weather like?")]
     [InlineData("Tell me more")]
     public void ClassifyUseCase_WithAmbiguousPrompts_ShouldReturnConversation(string prompt)

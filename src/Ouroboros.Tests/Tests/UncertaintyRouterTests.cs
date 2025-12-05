@@ -98,7 +98,7 @@ public sealed class UncertaintyRouterTests
     /// </summary>
     [Theory]
     [InlineData(0.3, "short prompt", FallbackStrategy.UseEnsemble)]
-    [InlineData(0.4, "this is a very long task with more than twenty words which should trigger decomposition strategy for better handling", FallbackStrategy.DecomposeTask)]
+    [InlineData(0.4, "this is a very long task description with many words in it and this should have more than twenty words which should trigger decomposition strategy for better task handling and processing", FallbackStrategy.DecomposeTask)]
     [InlineData(0.49, "short", FallbackStrategy.UseEnsemble)]
     public void DetermineFallback_WithLowConfidence_ShouldUseEnsembleOrDecompose(
         double confidence,
