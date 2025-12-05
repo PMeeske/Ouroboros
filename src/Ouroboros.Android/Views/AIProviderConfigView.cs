@@ -756,16 +756,6 @@ public class AIProviderConfigView : ContentPage
             };
         }
     }
-}
-
-/// <summary>
-/// Result of connection test
-/// </summary>
-internal class TestConnectionResult
-{
-    public bool Success { get; set; }
-    public string Message { get; set; } = string.Empty;
-}
 
     private async void OnSetActiveClicked(object? sender, EventArgs e)
     {
@@ -781,4 +771,13 @@ internal class TestConnectionResult
         LoadActiveProvider();
         await DisplayAlert("Success", $"{AIProviderConfig.GetDefault(provider).GetDisplayName()} is now the active provider", "OK");
     }
+}
+
+/// <summary>
+/// Result of connection test
+/// </summary>
+internal class TestConnectionResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
 }

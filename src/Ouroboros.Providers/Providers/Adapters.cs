@@ -265,7 +265,7 @@ public sealed class OllamaCloudChatModel : IStreamingChatModel
         try
         {
             // Use Ollama's native /api/generate endpoint and JSON format
-            using JsonContent payload = JsonContent.Create(new
+            var payloadObject = new
             {
                 model = _model,
                 prompt = prompt,
@@ -275,24 +275,35 @@ public sealed class OllamaCloudChatModel : IStreamingChatModel
                     temperature = _settings.Temperature,
                     num_predict = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null
                 }
-            });
+            };
 
             HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
             {
+                // Create fresh JsonContent for each retry attempt (content can only be used once)
+                using JsonContent payload = JsonContent.Create(payloadObject);
                 return await _client.PostAsync("/api/generate", payload, ct).ConfigureAwait(false);
             }).ConfigureAwait(false);
             
-            response.EnsureSuccessStatusCode();
-
-            Dictionary<string, object?>? json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
-            if (json is not null && json.TryGetValue("response", out object? responseText) && responseText is string s)
+            string rawContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            
+            if (!response.IsSuccessStatusCode)
             {
-                return s;
+                Console.WriteLine($"[OllamaCloudChatModel] HTTP {(int)response.StatusCode}: {rawContent}");
+                return $"[ollama-cloud-fallback:{_model}] {prompt}";
             }
+
+            using var doc = System.Text.Json.JsonDocument.Parse(rawContent);
+            if (doc.RootElement.TryGetProperty("response", out var responseElement))
+            {
+                return responseElement.GetString() ?? "";
+            }
+            
+            Console.WriteLine($"[OllamaCloudChatModel] No 'response' field in: {rawContent}");
         }
-        catch
+        catch (Exception ex)
         {
-            // Remote Ollama Cloud not reachable → fall back to indicating failure.
+            // Log the actual error for debugging
+            Console.WriteLine($"[OllamaCloudChatModel] Error: {ex.GetType().Name}: {ex.Message}");
         }
         return $"[ollama-cloud-fallback:{_model}] {prompt}";
     }
