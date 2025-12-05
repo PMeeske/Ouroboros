@@ -21,7 +21,11 @@ public enum ChatEndpointType
     /// <summary>
     /// LiteLLM proxy with OpenAI-compatible chat completions
     /// </summary>
-    LiteLLM
+    LiteLLM,
+    /// <summary>
+    /// GitHub Models API with OpenAI-compatible chat completions
+    /// </summary>
+    GitHubModels
 }
 
 /// <summary>
@@ -70,6 +74,12 @@ public static class ChatConfig
         {
             endpointType = ChatEndpointType.LiteLLM;
         }
+        else if (!string.IsNullOrWhiteSpace(endpointTypeStr) &&
+                 (endpointTypeStr.Equals("github-models", StringComparison.OrdinalIgnoreCase) ||
+                  endpointTypeStr.Equals("github", StringComparison.OrdinalIgnoreCase)))
+        {
+            endpointType = ChatEndpointType.GitHubModels;
+        }
 
         // Auto-detect endpoint type based on URL if type is Auto
         if (endpointType == ChatEndpointType.Auto && !string.IsNullOrWhiteSpace(endpoint))
@@ -83,6 +93,11 @@ public static class ChatConfig
                      endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase))
             {
                 endpointType = ChatEndpointType.LiteLLM;
+            }
+            else if (endpoint.Contains("models.inference.ai.azure.com", StringComparison.OrdinalIgnoreCase) ||
+                     endpoint.Contains("github", StringComparison.OrdinalIgnoreCase))
+            {
+                endpointType = ChatEndpointType.GitHubModels;
             }
             else
             {

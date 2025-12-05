@@ -42,6 +42,6 @@ sealed class OrchestratorOptions
     [Option("api-key", Required = false, HelpText = "API key for remote endpoint (overrides CHAT_API_KEY env var)")]
     public string? ApiKey { get; set; }
 
-    [Option("endpoint-type", Required = false, HelpText = "Endpoint type: auto|openai|ollama-cloud (overrides CHAT_ENDPOINT_TYPE env var)")]
+    [Option("endpoint-type", Required = false, HelpText = "Endpoint type: auto|openai|ollama-cloud|litellm|github-models (overrides CHAT_ENDPOINT_TYPE env var)")]
     public string? EndpointType { get; set; }
 }
