@@ -90,7 +90,7 @@ public sealed class Mutation
         }
 
         var newPopulation = new Population<TChromosome>(mutatedChromosomes);
-        return await Task.FromResult(Result<Population<TChromosome>>.Success(newPopulation));
+        return Result<Population<TChromosome>>.Success(newPopulation);
     }
 
     /// <summary>
