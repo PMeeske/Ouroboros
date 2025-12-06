@@ -293,7 +293,38 @@ dotnet test --verbosity detailed
 
 # Run with coverage and detailed output
 dotnet test --collect:"XPlat Code Coverage" --verbosity detailed
+
+# Exclude integration tests (default for CI)
+dotnet test --filter "Category!=Integration"
+
+# Run only integration tests (requires credentials)
+dotnet test --filter "Category=Integration"
 ```
+
+### Integration Tests
+
+Integration tests verify components against real external services (e.g., GitHub API). These tests:
+
+- Are marked with `[Trait("Category", "Integration")]`
+- Require environment variables for credentials
+- Skip gracefully when credentials are not available
+- Are **excluded from CI by default** to avoid credential issues
+- Can be run manually with proper setup
+
+**Current Integration Tests:**
+
+| Test File | Test Count | Service | Status |
+|-----------|------------|---------|--------|
+| GitHubToolsIntegrationTests.cs | 13 | GitHub API | ✅ Active |
+
+**To run integration tests, see:** [INTEGRATION_TESTS.md](./INTEGRATION_TESTS.md)
+
+**Environment Variables Required:**
+- `GITHUB_TOKEN` - GitHub personal access token
+- `GITHUB_TEST_OWNER` - Repository owner
+- `GITHUB_TEST_REPO` - Repository name
+
+When credentials are not set, integration tests pass without executing API calls, ensuring they don't fail in environments where credentials aren't available.
 
 ---
 
