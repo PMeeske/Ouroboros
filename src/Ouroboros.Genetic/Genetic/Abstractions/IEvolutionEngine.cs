@@ -21,8 +21,8 @@ public interface IEvolutionEngine<TChromosome>
     /// <param name="initialPopulation">The initial population to evolve.</param>
     /// <param name="generations">The number of generations to evolve.</param>
     /// <returns>A Result containing the final population or an error message.</returns>
-    Task<Result<Population<TChromosome>>> EvolveAsync(
-        Population<TChromosome> initialPopulation,
+    Task<Result<EvolutionPopulation<TChromosome>>> EvolveAsync(
+        EvolutionPopulation<TChromosome> initialPopulation,
         int generations);
 
     /// <summary>
@@ -30,5 +30,5 @@ public interface IEvolutionEngine<TChromosome>
     /// </summary>
     /// <param name="population">The population to search.</param>
     /// <returns>An Option containing the best chromosome, or None if population is empty.</returns>
-    Option<TChromosome> GetBest(Population<TChromosome> population);
+    Option<TChromosome> GetBest(EvolutionPopulation<TChromosome> population);
 }

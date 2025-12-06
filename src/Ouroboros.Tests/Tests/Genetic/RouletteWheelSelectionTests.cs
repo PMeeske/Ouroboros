@@ -23,8 +23,8 @@ public class RouletteWheelSelectionTests
             new SimpleChromosome(2.0, fitness: 0.5),
             new SimpleChromosome(3.0, fitness: 0.2),
         };
-        var population = new Population<SimpleChromosome>(chromosomes);
-        var selection = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
+        var selection = new EvolutionRouletteWheelSelection<SimpleChromosome>(seed: 42);
 
         // Act
         var result = selection.Select(population);
@@ -38,8 +38,8 @@ public class RouletteWheelSelectionTests
     public void Select_ReturnsFailureForEmptyPopulation()
     {
         // Arrange
-        var population = new Population<SimpleChromosome>(Array.Empty<SimpleChromosome>());
-        var selection = new RouletteWheelSelection<SimpleChromosome>();
+        var population = new EvolutionPopulation<SimpleChromosome>(Array.Empty<SimpleChromosome>());
+        var selection = new EvolutionRouletteWheelSelection<SimpleChromosome>();
 
         // Act
         var result = selection.Select(population);
@@ -53,7 +53,7 @@ public class RouletteWheelSelectionTests
     public void Select_WithSeed_ProducesReproducibleResults()
     {
         // Arrange
-        var chromosomes = new List<IChromosome<int>>
+        var chromosomes = new[]
         {
             new Chromosome<int>(new List<int> { 1 }, 10),
             new Chromosome<int>(new List<int> { 2 }, 20),
@@ -71,22 +71,6 @@ public class RouletteWheelSelectionTests
         // Assert
         selected1.Fitness.Should().Be(selected2.Fitness);
         selected1.Genes.Should().Equal(selected2.Genes);
-        var chromosomes = new[]
-        {
-            new SimpleChromosome(1.0, fitness: 0.3),
-            new SimpleChromosome(2.0, fitness: 0.5),
-            new SimpleChromosome(3.0, fitness: 0.2),
-        };
-        var population = new Population<SimpleChromosome>(chromosomes);
-        var selection1 = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
-        var selection2 = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
-
-        // Act
-        var result1 = selection1.Select(population);
-        var result2 = selection2.Select(population);
-
-        // Assert
-        result1.Value.Id.Should().Be(result2.Value.Id);
     }
 
     [Fact]
@@ -99,8 +83,8 @@ public class RouletteWheelSelectionTests
             new SimpleChromosome(2.0, fitness: 100.0),
             new SimpleChromosome(3.0, fitness: 0.01),
         };
-        var population = new Population<SimpleChromosome>(chromosomes);
-        var selection = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
+        var selection = new EvolutionRouletteWheelSelection<SimpleChromosome>(seed: 42);
 
         // Act - select multiple times
         var selections = Enumerable.Range(0, 100)
@@ -123,8 +107,8 @@ public class RouletteWheelSelectionTests
             new SimpleChromosome(2.0, fitness: 0.5),
             new SimpleChromosome(3.0, fitness: 0.2),
         };
-        var population = new Population<SimpleChromosome>(chromosomes);
-        var selection = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
+        var selection = new EvolutionRouletteWheelSelection<SimpleChromosome>(seed: 42);
 
         // Act
         var result = selection.SelectMany(population, 5);
@@ -139,8 +123,8 @@ public class RouletteWheelSelectionTests
     {
         // Arrange
         var chromosomes = new[] { new SimpleChromosome(1.0, fitness: 0.5) };
-        var population = new Population<SimpleChromosome>(chromosomes);
-        var selection = new RouletteWheelSelection<SimpleChromosome>();
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
+        var selection = new EvolutionRouletteWheelSelection<SimpleChromosome>();
 
         // Act
         var result = selection.SelectMany(population, -1);
@@ -160,8 +144,8 @@ public class RouletteWheelSelectionTests
             new SimpleChromosome(2.0, fitness: -3.0),
             new SimpleChromosome(3.0, fitness: -4.0),
         };
-        var population = new Population<SimpleChromosome>(chromosomes);
-        var selection = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
+        var selection = new EvolutionRouletteWheelSelection<SimpleChromosome>(seed: 42);
 
         // Act
         var result = selection.Select(population);
@@ -181,8 +165,8 @@ public class RouletteWheelSelectionTests
             new SimpleChromosome(2.0, fitness: 0.0),
             new SimpleChromosome(3.0, fitness: 0.0),
         };
-        var population = new Population<SimpleChromosome>(chromosomes);
-        var selection = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
+        var selection = new EvolutionRouletteWheelSelection<SimpleChromosome>(seed: 42);
 
         // Act
         var result = selection.Select(population);

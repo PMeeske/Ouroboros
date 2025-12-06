@@ -11,17 +11,17 @@ using LangChainPipeline.Genetic.Abstractions;
 /// Each gene has an equal probability of coming from either parent.
 /// This is a generic implementation that works with any chromosome type implementing ICrossoverable.
 /// </summary>
-public sealed class UniformCrossover
+public sealed class EvolutionCrossover
 {
     private readonly Random random;
     private readonly double crossoverRate;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="UniformCrossover"/> class.
+    /// Initializes a new instance of the <see cref="EvolutionCrossover"/> class.
     /// </summary>
     /// <param name="crossoverRate">The probability of crossover occurring (0.0 to 1.0).</param>
     /// <param name="seed">Optional seed for reproducible randomness.</param>
-    public UniformCrossover(double crossoverRate = 0.8, int? seed = null)
+    public EvolutionCrossover(double crossoverRate = 0.8, int? seed = null)
     {
         if (crossoverRate < 0.0 || crossoverRate > 1.0)
         {

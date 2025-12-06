@@ -21,7 +21,7 @@ public static class GeneticEvolutionStep
     /// <param name="engine">The evolution engine to use.</param>
     /// <param name="generations">The number of generations to evolve.</param>
     /// <returns>A Step that takes a population and returns the best chromosome wrapped in Result.</returns>
-    public static Step<Population<TChromosome>, Result<TChromosome>> CreateEvolutionStep<TChromosome>(
+    public static Step<EvolutionPopulation<TChromosome>, Result<TChromosome>> CreateEvolutionStep<TChromosome>(
         IEvolutionEngine<TChromosome> engine,
         int generations)
         where TChromosome : IChromosome
@@ -60,7 +60,7 @@ public static class GeneticEvolutionStep
     /// <param name="engine">The evolution engine to use.</param>
     /// <param name="generations">The number of generations to evolve.</param>
     /// <returns>A Step that takes a population and returns the evolved population wrapped in Result.</returns>
-    public static Step<Population<TChromosome>, Result<Population<TChromosome>>> CreatePopulationEvolutionStep<TChromosome>(
+    public static Step<EvolutionPopulation<TChromosome>, Result<EvolutionPopulation<TChromosome>>> CreatePopulationEvolutionStep<TChromosome>(
         IEvolutionEngine<TChromosome> engine,
         int generations)
         where TChromosome : IChromosome
@@ -69,7 +69,7 @@ public static class GeneticEvolutionStep
         {
             if (initialPopulation == null)
             {
-                return Result<Population<TChromosome>>.Failure("Initial population cannot be null");
+                return Result<EvolutionPopulation<TChromosome>>.Failure("Initial population cannot be null");
             }
 
             return await engine.EvolveAsync(initialPopulation, generations);
@@ -86,7 +86,7 @@ public static class GeneticEvolutionStep
     /// <param name="generations">The number of generations to evolve.</param>
     /// <returns>A Step that takes input, evolves a population, and returns the best chromosome.</returns>
     public static Step<TIn, Result<TChromosome>> CreateEvolveFromInputStep<TIn, TChromosome>(
-        Func<TIn, Result<Population<TChromosome>>> populationFactory,
+        Func<TIn, Result<EvolutionPopulation<TChromosome>>> populationFactory,
         IEvolutionEngine<TChromosome> engine,
         int generations)
         where TChromosome : IChromosome

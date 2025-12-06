@@ -12,7 +12,7 @@ using Xunit;
 /// <summary>
 /// Simple fitness function for testing that optimizes towards a target value.
 /// </summary>
-internal sealed class TargetValueFitnessFunction : IFitnessFunction<SimpleChromosome>
+internal sealed class TargetValueFitnessFunction : IEvolutionFitnessFunction<SimpleChromosome>
 {
     private readonly double targetValue;
 
@@ -96,7 +96,7 @@ public class EvolutionEngineTests
         var initialChromosomes = Enumerable.Range(0, 20)
             .Select(i => new SimpleChromosome(i * 5.0))
             .ToList();
-        var initialPopulation = new Population<SimpleChromosome>(initialChromosomes);
+        var initialPopulation = new EvolutionPopulation<SimpleChromosome>(initialChromosomes);
 
         // Act
         var result = await engine.EvolveAsync(initialPopulation, generations: 50);
@@ -155,7 +155,7 @@ public class EvolutionEngineTests
             crossoverFunc,
             mutationFunc);
 
-        var emptyPopulation = new Population<SimpleChromosome>(Array.Empty<SimpleChromosome>());
+        var emptyPopulation = new EvolutionPopulation<SimpleChromosome>(Array.Empty<SimpleChromosome>());
 
         // Act
         var result = await engine.EvolveAsync(emptyPopulation, generations: 10);
@@ -182,7 +182,7 @@ public class EvolutionEngineTests
             crossoverFunc,
             mutationFunc);
 
-        var population = new Population<SimpleChromosome>(new[] { new SimpleChromosome(10.0) });
+        var population = new EvolutionPopulation<SimpleChromosome>(new[] { new SimpleChromosome(10.0) });
 
         // Act
         var result = await engine.EvolveAsync(population, generations: -1);
@@ -209,7 +209,7 @@ public class EvolutionEngineTests
             crossoverFunc,
             mutationFunc);
 
-        var population = new Population<SimpleChromosome>(new[] { new SimpleChromosome(10.0) });
+        var population = new EvolutionPopulation<SimpleChromosome>(new[] { new SimpleChromosome(10.0) });
 
         // Act
         var result = await engine.EvolveAsync(population, generations: 0);
@@ -277,7 +277,7 @@ public class EvolutionEngineTests
         var initialChromosomes = Enumerable.Range(0, 50)
             .Select(i => new SimpleChromosome(i * 2.0))
             .ToList();
-        var initialPopulation = new Population<SimpleChromosome>(initialChromosomes);
+        var initialPopulation = new EvolutionPopulation<SimpleChromosome>(initialChromosomes);
 
         // Act
         var result = await engine.EvolveAsync(initialPopulation, generations: 100);

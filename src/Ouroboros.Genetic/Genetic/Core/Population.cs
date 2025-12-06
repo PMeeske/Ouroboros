@@ -7,20 +7,20 @@ namespace LangChainPipeline.Genetic.Core;
 using LangChainPipeline.Genetic.Abstractions;
 
 /// <summary>
-/// Represents a population of chromosomes in a genetic algorithm.
+/// Represents a population of chromosomes in the evolution engine.
 /// Implements immutable collection pattern following functional programming principles.
 /// </summary>
 /// <typeparam name="TChromosome">The type of chromosome in the population.</typeparam>
-public sealed class Population<TChromosome>
+public sealed class EvolutionPopulation<TChromosome>
     where TChromosome : IChromosome
 {
     private readonly IReadOnlyList<TChromosome> chromosomes;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Population{TChromosome}"/> class.
+    /// Initializes a new instance of the <see cref="EvolutionPopulation{TChromosome}"/> class.
     /// </summary>
     /// <param name="chromosomes">The collection of chromosomes.</param>
-    public Population(IEnumerable<TChromosome> chromosomes)
+    public EvolutionPopulation(IEnumerable<TChromosome> chromosomes)
     {
         this.chromosomes = chromosomes?.ToList() ?? throw new ArgumentNullException(nameof(chromosomes));
     }
@@ -67,43 +67,43 @@ public sealed class Population<TChromosome>
     /// Creates a new population with the specified chromosomes (immutable update).
     /// </summary>
     /// <param name="newChromosomes">The new collection of chromosomes.</param>
-    /// <returns>A new Population instance.</returns>
-    public Population<TChromosome> WithChromosomes(IEnumerable<TChromosome> newChromosomes)
+    /// <returns>A new EvolutionPopulation instance.</returns>
+    public EvolutionPopulation<TChromosome> WithChromosomes(IEnumerable<TChromosome> newChromosomes)
     {
-        return new Population<TChromosome>(newChromosomes);
+        return new EvolutionPopulation<TChromosome>(newChromosomes);
     }
 
     /// <summary>
     /// Adds a chromosome to the population (immutable operation).
     /// </summary>
     /// <param name="chromosome">The chromosome to add.</param>
-    /// <returns>A new Population with the added chromosome.</returns>
-    public Population<TChromosome> Add(TChromosome chromosome)
+    /// <returns>A new EvolutionPopulation with the added chromosome.</returns>
+    public EvolutionPopulation<TChromosome> Add(TChromosome chromosome)
     {
         var newList = this.chromosomes.Append(chromosome);
-        return new Population<TChromosome>(newList);
+        return new EvolutionPopulation<TChromosome>(newList);
     }
 
     /// <summary>
     /// Sorts the population by fitness in descending order.
     /// </summary>
-    /// <returns>A new sorted Population.</returns>
-    public Population<TChromosome> SortByFitness()
+    /// <returns>A new sorted EvolutionPopulation.</returns>
+    public EvolutionPopulation<TChromosome> SortByFitness()
     {
         var sorted = this.chromosomes.OrderByDescending(c => c.Fitness);
-        return new Population<TChromosome>(sorted);
+        return new EvolutionPopulation<TChromosome>(sorted);
     }
 
     /// <summary>
     /// Takes the top N chromosomes by fitness.
     /// </summary>
     /// <param name="count">The number of chromosomes to take.</param>
-    /// <returns>A new Population with the top chromosomes.</returns>
-    public Population<TChromosome> Take(int count)
+    /// <returns>A new EvolutionPopulation with the top chromosomes.</returns>
+    public EvolutionPopulation<TChromosome> Take(int count)
     {
         var topChromosomes = this.chromosomes
             .OrderByDescending(c => c.Fitness)
             .Take(count);
-        return new Population<TChromosome>(topChromosomes);
+        return new EvolutionPopulation<TChromosome>(topChromosomes);
     }
 }

@@ -17,7 +17,7 @@ public class MutationTests
     public void Constructor_AcceptsValidMutationRate()
     {
         // Act & Assert
-        var mutation = new Mutation(0.1);
+        var mutation = new EvolutionMutation(0.1);
         mutation.Should().NotBeNull();
         mutation.MutationRate.Should().Be(0.1);
     }
@@ -26,8 +26,8 @@ public class MutationTests
     public void Constructor_ThrowsForInvalidMutationRate()
     {
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() => new Mutation(-0.1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => new Mutation(1.5));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new EvolutionMutation(-0.1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new EvolutionMutation(1.5));
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class MutationTests
     {
         // Arrange
         var chromosome = new SimpleChromosome(10.0, fitness: 0.5);
-        var mutation = new Mutation(1.0, seed: 42); // Always mutate
+        var mutation = new EvolutionMutation(1.0, seed: 42); // Always mutate
 
         Func<SimpleChromosome, Random, Result<SimpleChromosome>> mutationFunc =
             (c, random) =>
@@ -57,7 +57,7 @@ public class MutationTests
     public void Mutate_ReturnsFailureForNullChromosome()
     {
         // Arrange
-        var mutation = new Mutation();
+        var mutation = new EvolutionMutation();
 
         Func<SimpleChromosome, Random, Result<SimpleChromosome>> mutationFunc =
             (c, random) => Result<SimpleChromosome>.Success(new SimpleChromosome(15.0));
@@ -75,7 +75,7 @@ public class MutationTests
     {
         // Arrange
         var chromosome = new SimpleChromosome(10.0, fitness: 0.5);
-        var mutation = new Mutation(0.0); // Never mutate
+        var mutation = new EvolutionMutation(0.0); // Never mutate
 
         Func<SimpleChromosome, Random, Result<SimpleChromosome>> mutationFunc =
             (c, random) => Result<SimpleChromosome>.Success(new SimpleChromosome(999.0));
@@ -93,8 +93,8 @@ public class MutationTests
     {
         // Arrange
         var chromosome = new SimpleChromosome(10.0, fitness: 0.5);
-        var mutation1 = new Mutation(1.0, seed: 42);
-        var mutation2 = new Mutation(1.0, seed: 42);
+        var mutation1 = new EvolutionMutation(1.0, seed: 42);
+        var mutation2 = new EvolutionMutation(1.0, seed: 42);
 
         Func<SimpleChromosome, Random, Result<SimpleChromosome>> mutationFunc =
             (c, random) =>
@@ -121,8 +121,8 @@ public class MutationTests
             new SimpleChromosome(2.0),
             new SimpleChromosome(3.0),
         };
-        var population = new Population<SimpleChromosome>(chromosomes);
-        var mutation = new Mutation(1.0, seed: 42); // Always mutate
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
+        var mutation = new EvolutionMutation(1.0, seed: 42); // Always mutate
 
         Func<SimpleChromosome, Random, Result<SimpleChromosome>> mutationFunc =
             (c, random) =>
@@ -144,7 +144,7 @@ public class MutationTests
     public async Task MutatePopulation_ReturnsFailureForNullPopulation()
     {
         // Arrange
-        var mutation = new Mutation();
+        var mutation = new EvolutionMutation();
 
         Func<SimpleChromosome, Random, Result<SimpleChromosome>> mutationFunc =
             (c, random) => Result<SimpleChromosome>.Success(new SimpleChromosome(15.0));
@@ -162,8 +162,8 @@ public class MutationTests
     {
         // Arrange
         var chromosomes = new[] { new SimpleChromosome(1.0) };
-        var population = new Population<SimpleChromosome>(chromosomes);
-        var mutation = new Mutation(1.0);
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
+        var mutation = new EvolutionMutation(1.0);
 
         Func<SimpleChromosome, Random, Result<SimpleChromosome>> failingFunc =
             (c, random) => Result<SimpleChromosome>.Failure("Mutation failed");

@@ -43,12 +43,12 @@ public class GeneticPipelineIntegrationTests
             seed: 42);
 
         // Create a pipeline step that produces a population
-        Step<int, Population<SimpleChromosome>> createPopulation = size =>
+        Step<int, EvolutionPopulation<SimpleChromosome>> createPopulation = size =>
         {
             var chromosomes = Enumerable.Range(0, size)
                 .Select(i => new SimpleChromosome(i * 3.0))
                 .ToList();
-            return Task.FromResult(new Population<SimpleChromosome>(chromosomes));
+            return Task.FromResult(new EvolutionPopulation<SimpleChromosome>(chromosomes));
         };
 
         // Act - Use the Evolve extension method
@@ -82,12 +82,12 @@ public class GeneticPipelineIntegrationTests
                 return Result<SimpleChromosome>.Success(new SimpleChromosome(c.Value + delta));
             };
 
-        Step<int, Population<SimpleChromosome>> createPopulation = size =>
+        Step<int, EvolutionPopulation<SimpleChromosome>> createPopulation = size =>
         {
             var chromosomes = Enumerable.Range(0, size)
                 .Select(i => new SimpleChromosome(i * 2.5))
                 .ToList();
-            return Task.FromResult(new Population<SimpleChromosome>(chromosomes));
+            return Task.FromResult(new EvolutionPopulation<SimpleChromosome>(chromosomes));
         };
 
         // Act - Use the EvolveWith extension method
@@ -132,12 +132,12 @@ public class GeneticPipelineIntegrationTests
             mutationFunc,
             seed: 42);
 
-        Step<int, Population<SimpleChromosome>> createPopulation = size =>
+        Step<int, EvolutionPopulation<SimpleChromosome>> createPopulation = size =>
         {
             var chromosomes = Enumerable.Range(0, size)
                 .Select(i => new SimpleChromosome(i * 4.0))
                 .ToList();
-            return Task.FromResult(new Population<SimpleChromosome>(chromosomes));
+            return Task.FromResult(new EvolutionPopulation<SimpleChromosome>(chromosomes));
         };
 
         // Act - Use EvolvePopulation to get the entire population
@@ -168,10 +168,10 @@ public class GeneticPipelineIntegrationTests
             mutationFunc,
             seed: 42);
 
-        Step<int, Population<SimpleChromosome>> createPopulation = size =>
+        Step<int, EvolutionPopulation<SimpleChromosome>> createPopulation = size =>
         {
             var chromosomes = new[] { new SimpleChromosome(10.0) };
-            return Task.FromResult(new Population<SimpleChromosome>(chromosomes));
+            return Task.FromResult(new EvolutionPopulation<SimpleChromosome>(chromosomes));
         };
 
         var defaultChromosome = new SimpleChromosome(-999.0);
@@ -206,10 +206,10 @@ public class GeneticPipelineIntegrationTests
             mutationFunc,
             seed: 42);
 
-        Step<int, Population<SimpleChromosome>> createPopulation = size =>
+        Step<int, EvolutionPopulation<SimpleChromosome>> createPopulation = size =>
         {
             var chromosomes = new[] { new SimpleChromosome(25.0) };
-            return Task.FromResult(new Population<SimpleChromosome>(chromosomes));
+            return Task.FromResult(new EvolutionPopulation<SimpleChromosome>(chromosomes));
         };
 
         // Act
@@ -252,12 +252,12 @@ public class GeneticPipelineIntegrationTests
             mutationFunc,
             seed: 42);
 
-        Func<string, Result<Population<SimpleChromosome>>> populationFactory = seed =>
+        Func<string, Result<EvolutionPopulation<SimpleChromosome>>> populationFactory = seed =>
         {
             var chromosomes = Enumerable.Range(0, 15)
                 .Select(i => new SimpleChromosome(i * 3.5 + seed.Length))
                 .ToList();
-            return Result<Population<SimpleChromosome>>.Success(new Population<SimpleChromosome>(chromosomes));
+            return Result<EvolutionPopulation<SimpleChromosome>>.Success(new EvolutionPopulation<SimpleChromosome>(chromosomes));
         };
 
         // Act
@@ -300,12 +300,12 @@ public class GeneticPipelineIntegrationTests
         // Create complete pipeline
         Step<string, int> parseInput = input => Task.FromResult(int.Parse(input));
 
-        Step<int, Population<SimpleChromosome>> createPopulation = size =>
+        Step<int, EvolutionPopulation<SimpleChromosome>> createPopulation = size =>
         {
             var chromosomes = Enumerable.Range(0, size)
                 .Select(i => new SimpleChromosome(i * 2.8))
                 .ToList();
-            return Task.FromResult(new Population<SimpleChromosome>(chromosomes));
+            return Task.FromResult(new EvolutionPopulation<SimpleChromosome>(chromosomes));
         };
 
         // Act - Chain the complete pipeline

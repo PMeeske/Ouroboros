@@ -17,7 +17,7 @@ public class UniformCrossoverTests
     public void Constructor_AcceptsValidCrossoverRate()
     {
         // Act & Assert
-        var crossover = new UniformCrossover(0.8);
+        var crossover = new EvolutionCrossover(0.8);
         crossover.Should().NotBeNull();
     }
 
@@ -25,8 +25,8 @@ public class UniformCrossoverTests
     public void Constructor_ThrowsForInvalidCrossoverRate()
     {
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() => new UniformCrossover(-0.1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => new UniformCrossover(1.5));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new EvolutionCrossover(-0.1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new EvolutionCrossover(1.5));
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class UniformCrossoverTests
         // Arrange
         var parent1 = new SimpleChromosome(10.0, fitness: 0.5);
         var parent2 = new SimpleChromosome(20.0, fitness: 0.5);
-        var crossover = new UniformCrossover(1.0, seed: 42); // Always crossover
+        var crossover = new EvolutionCrossover(1.0, seed: 42); // Always crossover
 
         Func<SimpleChromosome, SimpleChromosome, double, Result<SimpleChromosome>> crossoverFunc =
             (p1, p2, ratio) =>
@@ -57,7 +57,7 @@ public class UniformCrossoverTests
     {
         // Arrange
         var parent = new SimpleChromosome(10.0);
-        var crossover = new UniformCrossover();
+        var crossover = new EvolutionCrossover();
 
         Func<SimpleChromosome, SimpleChromosome, double, Result<SimpleChromosome>> crossoverFunc =
             (p1, p2, ratio) => Result<SimpleChromosome>.Success(new SimpleChromosome(15.0));
@@ -79,7 +79,7 @@ public class UniformCrossoverTests
         // Arrange
         var parent1 = new SimpleChromosome(10.0, fitness: 0.5);
         var parent2 = new SimpleChromosome(20.0, fitness: 0.5);
-        var crossover = new UniformCrossover(0.0); // Never crossover
+        var crossover = new EvolutionCrossover(0.0); // Never crossover
 
         Func<SimpleChromosome, SimpleChromosome, double, Result<SimpleChromosome>> crossoverFunc =
             (p1, p2, ratio) => Result<SimpleChromosome>.Success(new SimpleChromosome(999.0));
@@ -98,8 +98,8 @@ public class UniformCrossoverTests
         // Arrange
         var parent1 = new SimpleChromosome(10.0, fitness: 0.5);
         var parent2 = new SimpleChromosome(20.0, fitness: 0.5);
-        var crossover1 = new UniformCrossover(0.8, seed: 42);
-        var crossover2 = new UniformCrossover(0.8, seed: 42);
+        var crossover1 = new EvolutionCrossover(0.8, seed: 42);
+        var crossover2 = new EvolutionCrossover(0.8, seed: 42);
 
         Func<SimpleChromosome, SimpleChromosome, double, Result<SimpleChromosome>> crossoverFunc =
             (p1, p2, ratio) =>
@@ -122,7 +122,7 @@ public class UniformCrossoverTests
         // Arrange
         var parent1 = new SimpleChromosome(10.0, fitness: 0.5);
         var parent2 = new SimpleChromosome(20.0, fitness: 0.5);
-        var crossover = new UniformCrossover(1.0, seed: 42); // Always crossover
+        var crossover = new EvolutionCrossover(1.0, seed: 42); // Always crossover
 
         Func<SimpleChromosome, SimpleChromosome, double, Result<SimpleChromosome>> crossoverFunc =
             (p1, p2, ratio) =>
@@ -146,7 +146,7 @@ public class UniformCrossoverTests
         // Arrange
         var parent1 = new SimpleChromosome(10.0);
         var parent2 = new SimpleChromosome(20.0);
-        var crossover = new UniformCrossover(1.0);
+        var crossover = new EvolutionCrossover(1.0);
 
         Func<SimpleChromosome, SimpleChromosome, double, Result<SimpleChromosome>> failingFunc =
             (p1, p2, ratio) => Result<SimpleChromosome>.Failure("Crossover failed");
