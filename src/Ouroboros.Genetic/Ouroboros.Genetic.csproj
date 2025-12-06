@@ -14,6 +14,14 @@
   <!-- Temporarily relax analyzers to unblock builds/tests -->
   <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   <WarningsNotAsErrors>CS1591;CS1570</WarningsNotAsErrors>
+    <RootNamespace>LangChainPipeline</RootNamespace>
+    <AssemblyName>Ouroboros.Genetic</AssemblyName>
+    <Product>Ouroboros Genetic</Product>
+    <Description>Genetic Algorithm primitives for monadic pipeline optimization</Description>
+    <Copyright>Copyright © 2025</Copyright>
+    <Version>1.0.0</Version>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS1591;CS1570</WarningsNotAsErrors>
 
     <!-- Code Quality & Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -21,12 +29,11 @@
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
     <RunAnalyzersDuringLiveAnalysis>false</RunAnalyzersDuringLiveAnalysis>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
     <AnalysisLevel>latest</AnalysisLevel>
   </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Ouroboros.Core\Ouroboros.Core.csproj" />
-  </ItemGroup>
 
   <ItemGroup>
     <!-- Static Analysis -->
@@ -38,6 +45,14 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="9.16.0.82469">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ouroboros.Core\Ouroboros.Core.csproj" />
   </ItemGroup>
 
 </Project>

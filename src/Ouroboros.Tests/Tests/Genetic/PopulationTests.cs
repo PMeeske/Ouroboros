@@ -5,7 +5,6 @@
 namespace LangChainPipeline.Tests.Genetic;
 
 using FluentAssertions;
-using LangChainPipeline.Genetic.Abstractions;
 using LangChainPipeline.Genetic.Core;
 using Xunit;
 
@@ -15,132 +14,172 @@ using Xunit;
 public class PopulationTests
 {
     [Fact]
-    public void Constructor_WithValidChromosomes_CreatesPopulation()
+    public void Constructor_CreatesPopulationWithChromosomes()
     {
         // Arrange
-        var chromosomes = new List<IChromosome<int>>
+        var chromosomes = new[]
         {
-            new Chromosome<int>(new List<int> { 1, 2 }, 10),
-            new Chromosome<int>(new List<int> { 3, 4 }, 20),
+            new SimpleChromosome(1.0),
+            new SimpleChromosome(2.0),
+            new SimpleChromosome(3.0),
         };
 
         // Act
-        var population = new Population<int>(chromosomes);
+        var population = new Population<SimpleChromosome>(chromosomes);
 
         // Assert
-        population.Chromosomes.Should().HaveCount(2);
-        population.Size.Should().Be(2);
+        population.Size.Should().Be(3);
+        population.Chromosomes.Should().HaveCount(3);
     }
 
     [Fact]
-    public void Constructor_WithEmptyList_ThrowsArgumentException()
-    {
-        // Arrange
-        var emptyList = new List<IChromosome<int>>();
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => new Population<int>(emptyList));
-    }
-
-    [Fact]
-    public void Constructor_WithNull_ThrowsArgumentNullException()
+    public void Constructor_ThrowsOnNullChromosomes()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new Population<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => new Population<SimpleChromosome>(null!));
     }
 
     [Fact]
-    public void BestChromosome_ReturnsChromosomeWithHighestFitness()
+    public void GetBest_ReturnsChromosomeWithHighestFitness()
     {
         // Arrange
-        var chromosomes = new List<IChromosome<int>>
+        var chromosomes = new[]
         {
-            new Chromosome<int>(new List<int> { 1 }, 10),
-            new Chromosome<int>(new List<int> { 2 }, 50),
-            new Chromosome<int>(new List<int> { 3 }, 30),
+            new SimpleChromosome(1.0, fitness: 0.3),
+            new SimpleChromosome(2.0, fitness: 0.9),
+            new SimpleChromosome(3.0, fitness: 0.5),
         };
-        var population = new Population<int>(chromosomes);
+        var population = new Population<SimpleChromosome>(chromosomes);
 
         // Act
-        var best = population.BestChromosome;
+        var best = population.GetBest();
 
         // Assert
-        best.Fitness.Should().Be(50);
-        best.Genes.Should().Equal(2);
+        best.HasValue.Should().BeTrue();
+        best.Value!.Value.Should().Be(2.0);
+        best.Value.Fitness.Should().Be(0.9);
     }
 
     [Fact]
-    public void AverageFitness_ReturnsCorrectAverage()
+    public void GetBest_ReturnsNoneForEmptyPopulation()
     {
         // Arrange
-        var chromosomes = new List<IChromosome<int>>
-        {
-            new Chromosome<int>(new List<int> { 1 }, 10),
-            new Chromosome<int>(new List<int> { 2 }, 20),
-            new Chromosome<int>(new List<int> { 3 }, 30),
-        };
-        var population = new Population<int>(chromosomes);
+        var population = new Population<SimpleChromosome>(Array.Empty<SimpleChromosome>());
 
         // Act
-        var average = population.AverageFitness;
+        var best = population.GetBest();
 
         // Assert
-        average.Should().Be(20);
+        best.HasValue.Should().BeFalse();
     }
 
     [Fact]
-    public void WithChromosomes_CreatesNewPopulation()
+    public void GetAverageFitness_CalculatesCorrectAverage()
     {
         // Arrange
-        var original = new List<IChromosome<int>>
+        var chromosomes = new[]
         {
-            new Chromosome<int>(new List<int> { 1 }, 10),
+            new SimpleChromosome(1.0, fitness: 0.2),
+            new SimpleChromosome(2.0, fitness: 0.4),
+            new SimpleChromosome(3.0, fitness: 0.6),
         };
-        var population = new Population<int>(original);
-        
-        var newChromosomes = new List<IChromosome<int>>
-        {
-            new Chromosome<int>(new List<int> { 2 }, 20),
-            new Chromosome<int>(new List<int> { 3 }, 30),
-        };
+        var population = new Population<SimpleChromosome>(chromosomes);
 
         // Act
-        var newPopulation = population.WithChromosomes(newChromosomes);
+        var average = population.GetAverageFitness();
+
+        // Assert
+        average.Should().BeApproximately(0.4, 0.0001);
+    }
+
+    [Fact]
+    public void GetAverageFitness_ReturnsZeroForEmptyPopulation()
+    {
+        // Arrange
+        var population = new Population<SimpleChromosome>(Array.Empty<SimpleChromosome>());
+
+        // Act
+        var average = population.GetAverageFitness();
+
+        // Assert
+        average.Should().Be(0.0);
+    }
+
+    [Fact]
+    public void Add_AddsChromosomeImmutably()
+    {
+        // Arrange
+        var initial = new[] { new SimpleChromosome(1.0) };
+        var population = new Population<SimpleChromosome>(initial);
+        var newChromosome = new SimpleChromosome(2.0);
+
+        // Act
+        var newPopulation = population.Add(newChromosome);
 
         // Assert
         newPopulation.Size.Should().Be(2);
-        newPopulation.BestChromosome.Fitness.Should().Be(30);
         population.Size.Should().Be(1); // Original unchanged
+        newPopulation.Chromosomes.Should().Contain(c => c.Value == 2.0);
     }
 
     [Fact]
-    public async Task EvaluateAsync_EvaluatesAllChromosomes()
+    public void SortByFitness_SortsDescending()
     {
         // Arrange
-        var chromosomes = new List<IChromosome<int>>
+        var chromosomes = new[]
         {
-            new Chromosome<int>(new List<int> { 1, 2 }),
-            new Chromosome<int>(new List<int> { 3, 4 }),
+            new SimpleChromosome(1.0, fitness: 0.3),
+            new SimpleChromosome(2.0, fitness: 0.9),
+            new SimpleChromosome(3.0, fitness: 0.5),
         };
-        var population = new Population<int>(chromosomes);
-        
-        var fitnessFunction = new TestFitnessFunction();
+        var population = new Population<SimpleChromosome>(chromosomes);
 
         // Act
-        var evaluated = await population.EvaluateAsync(fitnessFunction);
+        var sorted = population.SortByFitness();
 
         // Assert
-        evaluated.Chromosomes[0].Fitness.Should().Be(3); // 1 + 2
-        evaluated.Chromosomes[1].Fitness.Should().Be(7); // 3 + 4
+        sorted.Chromosomes[0].Fitness.Should().Be(0.9);
+        sorted.Chromosomes[1].Fitness.Should().Be(0.5);
+        sorted.Chromosomes[2].Fitness.Should().Be(0.3);
     }
 
-    private class TestFitnessFunction : IFitnessFunction<int>
+    [Fact]
+    public void Take_TakesTopNChromosomes()
     {
-        public Task<double> EvaluateAsync(IChromosome<int> chromosome)
+        // Arrange
+        var chromosomes = new[]
         {
-            // Fitness is the sum of all genes
-            double fitness = chromosome.Genes.Sum();
-            return Task.FromResult(fitness);
-        }
+            new SimpleChromosome(1.0, fitness: 0.3),
+            new SimpleChromosome(2.0, fitness: 0.9),
+            new SimpleChromosome(3.0, fitness: 0.5),
+        };
+        var population = new Population<SimpleChromosome>(chromosomes);
+
+        // Act
+        var top2 = population.Take(2);
+
+        // Assert
+        top2.Size.Should().Be(2);
+        top2.Chromosomes[0].Fitness.Should().Be(0.9);
+        top2.Chromosomes[1].Fitness.Should().Be(0.5);
+    }
+
+    [Fact]
+    public void Generation_ReturnsMaxGenerationOfChromosomes()
+    {
+        // Arrange
+        var chromosomes = new[]
+        {
+            new SimpleChromosome(1.0, generation: 1),
+            new SimpleChromosome(2.0, generation: 3),
+            new SimpleChromosome(3.0, generation: 2),
+        };
+        var population = new Population<SimpleChromosome>(chromosomes);
+
+        // Act
+        var generation = population.Generation;
+
+        // Assert
+        generation.Should().Be(3);
     }
 }

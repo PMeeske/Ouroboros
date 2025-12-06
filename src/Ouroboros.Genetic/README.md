@@ -1,139 +1,165 @@
 # Ouroboros.Genetic
 
-Evolutionary optimization module for Ouroboros monadic pipelines using genetic algorithms.
+A functional programming-based genetic algorithm module for the Ouroboros pipeline system. This module enables evolutionary optimization of agents and pipeline steps using monadic composition patterns.
 
 ## Overview
 
-This module enables evolutionary optimization of pipeline parameters, configurations, and prompt variations through genetic algorithms. It treats pipeline optimization as a natural selection problem where the best solutions "survive" and "reproduce" across generations.
+Ouroboros.Genetic provides primitives for implementing genetic algorithms that integrate seamlessly with the existing `Step<TIn, TOut>` architecture. All operations follow functional programming principles with:
 
-## Key Features
+- **Monadic Error Handling**: Uses `Result<T>` monad (no exceptions)
+- **Immutability**: All data structures are immutable
+- **Composability**: Integrates via Kleisli arrow composition
+- **Type Safety**: Leverages C# type system for compile-time guarantees
 
-- **Type-Safe**: Generic implementations work with any gene type
-- **Monadic**: Integrates seamlessly with Ouroboros' monadic pipeline architecture  
-- **Functional**: Immutable data structures and pure operations
-- **Extensible**: Easy to customize selection, crossover, and mutation strategies
-- **Well-Tested**: 49 comprehensive tests with 100% pass rate
+## Core Abstractions
 
-## Quick Start
-
+### IChromosome
+Interface for an evolving solution (e.g., prompts, parameters, configurations):
 ```csharp
-using LangChainPipeline.Genetic.Core;
-using LangChainPipeline.Genetic.Extensions;
-
-// 1. Define a fitness function
-var fitnessFunction = new MyFitnessFunction();
-
-// 2. Create a step factory from genes
-Func<MyGene, Step<Input, Output>> stepFactory = gene =>
-    input => Task.FromResult(ProcessWithGene(input, gene));
-
-// 3. Define mutation
-Func<MyGene, MyGene> mutateGene = gene => MutateGene(gene);
-
-// 4. Create initial population
-var initialPopulation = new List<IChromosome<MyGene>>
+public interface IChromosome
 {
-    new Chromosome<MyGene>(new List<MyGene> { gene1 }),
-    new Chromosome<MyGene>(new List<MyGene> { gene2 }),
-    // ... more chromosomes
-};
-
-// 5. Evolve!
-var evolvedStep = GeneticPipelineExtensions.Identity<Input>()
-    .Evolve(
-        stepFactory,
-        fitnessFunction,
-        mutateGene,
-        initialPopulation,
-        generations: 50);
-
-var result = await evolvedStep(myInput);
+    string Id { get; }
+    double Fitness { get; }
+    int Generation { get; }
+    IChromosome Clone();
+    IChromosome WithFitness(double fitness);
+}
 ```
 
-## Project Structure
-
-```
-Ouroboros.Genetic/
-├── Abstractions/           # Core interfaces
-│   ├── IChromosome.cs
-│   ├── IFitnessFunction.cs
-│   └── IGeneticAlgorithm.cs
-├── Core/                   # Genetic algorithm components
-│   ├── Chromosome.cs
-│   ├── Population.cs
-│   ├── GeneticAlgorithm.cs
-│   ├── RouletteWheelSelection.cs
-│   ├── UniformCrossover.cs
-│   └── Mutation.cs
-├── Steps/                  # Pipeline step wrappers
-│   └── GeneticEvolutionStep.cs
-└── Extensions/             # Fluent API
-    └── GeneticPipelineExtensions.cs
-```
-
-## Core Concepts
-
-### Chromosome
-Represents a potential solution with genes and fitness score:
+### IFitnessFunction<T>
+Interface for evaluating chromosomes:
 ```csharp
-var chromosome = new Chromosome<int>(new List<int> { 1, 2, 3 }, fitness: 42.0);
+public interface IFitnessFunction<TChromosome>
+{
+    Task<Result<double>> EvaluateAsync(TChromosome chromosome);
+}
 ```
 
-### Population
-Manages a collection of chromosomes:
+### IEvolutionEngine
+Interface for the main evolution loop:
 ```csharp
-var population = new Population<int>(chromosomes);
-var best = population.BestChromosome;
-var avg = population.AverageFitness;
+public interface IEvolutionEngine<TChromosome>
+{
+    Task<Result<Population<TChromosome>>> EvolveAsync(
+        Population<TChromosome> initialPopulation,
+        int generations);
+    
+    Option<TChromosome> GetBest(Population<TChromosome> population);
+}
 ```
 
-### Genetic Algorithm
-Orchestrates evolution through selection, crossover, mutation, and elitism:
+## Core Implementations
+
+- **Population**: Manages collections of chromosomes with immutable operations
+- **RouletteWheelSelection**: Fitness-proportionate selection strategy
+- **UniformCrossover**: Standard crossover with configurable rate
+- **Mutation**: Random mutation with configurable rate
+- **EvolutionEngine**: Main orchestrator implementing the complete GA loop
+
+## Fluent API Usage
+
+### Basic Evolution
 ```csharp
-var ga = new GeneticAlgorithm<T>(
+Step<int, Population<MyChromosome>> createPopulation = size => 
+    Task.FromResult(new Population<MyChromosome>(/* ... */));
+
+var pipeline = createPopulation.Evolve(evolutionEngine, generations: 50);
+var result = await pipeline(populationSize);
+```
+
+### Evolution with Custom Parameters
+```csharp
+var pipeline = createPopulation.EvolveWith(
     fitnessFunction,
-    mutateGene,
-    mutationRate: 0.01,
+    crossoverFunc,
+    mutationFunc,
+    generations: 100,
     crossoverRate: 0.8,
+    mutationRate: 0.1,
+    elitismRate: 0.15);
+```
+
+### Complete Pipeline Example
+```csharp
+// Define fitness function
+var fitnessFunction = new MyFitnessFunction(targetValue);
+
+// Define genetic operators
+Func<MyChromosome, MyChromosome, double, Result<MyChromosome>> crossoverFunc =
+    (p1, p2, ratio) => /* crossover logic */;
+
+Func<MyChromosome, Random, Result<MyChromosome>> mutationFunc =
+    (c, random) => /* mutation logic */;
+
+// Create engine
+var engine = new EvolutionEngine<MyChromosome>(
+    fitnessFunction,
+    crossoverFunc,
+    mutationFunc,
+    crossoverRate: 0.8,
+    mutationRate: 0.1,
     elitismRate: 0.1,
     seed: 42);
 
-var result = await ga.EvolveAsync(initialPopulation, generations: 100);
+// Build and execute pipeline
+var result = await Step.Pure<string>()
+    .Map(int.Parse)
+    .Then(size => CreatePopulation(size))
+    .Evolve(engine, generations: 50)
+    .MatchResult(
+        chromosome => $"Best: {chromosome.Value}",
+        error => $"Failed: {error}")("10");
 ```
 
-### Pipeline Integration
-Fluent API for evolving pipeline steps:
+## Extension Methods
+
+### Evolve
+Evolves a population and returns the best chromosome:
 ```csharp
-// Basic evolution
-var step = Identity<T>().Evolve(...);
-
-// Evolution with metadata
-var step = Identity<T>().EvolveWithMetadata(...);
+Step<TIn, Result<TChromosome>> Evolve<TIn, TChromosome>(
+    this Step<TIn, Population<TChromosome>> step,
+    IEvolutionEngine<TChromosome> engine,
+    int generations)
 ```
 
-## Configuration
+### EvolvePopulation
+Evolves and returns the entire population:
+```csharp
+Step<TIn, Result<Population<TChromosome>>> EvolvePopulation<TIn, TChromosome>(
+    this Step<TIn, Population<TChromosome>> step,
+    IEvolutionEngine<TChromosome> engine,
+    int generations)
+```
 
-Key parameters for tuning evolution:
+### EvolveWith
+Creates an engine and evolves in one step:
+```csharp
+Step<TIn, Result<TChromosome>> EvolveWith<TIn, TChromosome>(
+    this Step<TIn, Population<TChromosome>> step,
+    IFitnessFunction<TChromosome> fitnessFunction,
+    Func<TChromosome, TChromosome, double, Result<TChromosome>> crossoverFunc,
+    Func<TChromosome, Random, Result<TChromosome>> mutationFunc,
+    int generations,
+    double crossoverRate = 0.8,
+    double mutationRate = 0.1,
+    double elitismRate = 0.1)
+```
 
-- **`mutationRate`** (0.01): Probability of gene mutation
-- **`crossoverRate`** (0.8): Probability of crossover
-- **`elitismRate`** (0.1): Proportion of elite preservation
-- **`generations`**: Number of evolution cycles
-- **`seed`**: Random seed for reproducibility
+### UnwrapOrDefault
+Extracts value from Result with fallback:
+```csharp
+Step<TIn, TChromosome> UnwrapOrDefault<TIn, TChromosome>(
+    this Step<TIn, Result<TChromosome>> step,
+    TChromosome defaultValue)
+```
 
-## Examples
-
-See `/docs/GENETIC_ALGORITHM_MODULE.md` for comprehensive documentation and examples:
-
-- Optimizing numerical parameters
-- Evolving LLM configurations  
-- Multi-parameter optimization
-- Custom fitness functions
-
-Run the examples:
-```bash
-cd ../Ouroboros.Examples
-dotnet run
+### MatchResult
+Pattern matches on Result:
+```csharp
+Step<TIn, TOut> MatchResult<TIn, TChromosome, TOut>(
+    this Step<TIn, Result<TChromosome>> step,
+    Func<TChromosome, TOut> onSuccess,
+    Func<string, TOut> onFailure)
 ```
 
 ## Testing

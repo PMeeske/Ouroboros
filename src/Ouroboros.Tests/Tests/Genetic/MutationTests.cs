@@ -14,126 +14,165 @@ using Xunit;
 public class MutationTests
 {
     [Fact]
-    public void Constructor_WithValidParameters_CreatesInstance()
+    public void Constructor_AcceptsValidMutationRate()
     {
-        // Act
-        var mutation = new Mutation<int>(0.1, x => x + 1);
-
-        // Assert
+        // Act & Assert
+        var mutation = new Mutation(0.1);
         mutation.Should().NotBeNull();
+        mutation.MutationRate.Should().Be(0.1);
     }
 
     [Fact]
-    public void Constructor_WithInvalidRate_ThrowsArgumentException()
+    public void Constructor_ThrowsForInvalidMutationRate()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => new Mutation<int>(-0.1, x => x + 1));
-        Assert.Throws<ArgumentException>(() => new Mutation<int>(1.1, x => x + 1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new Mutation(-0.1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new Mutation(1.5));
     }
 
     [Fact]
-    public void Constructor_WithNullMutateGene_ThrowsArgumentNullException()
-    {
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new Mutation<int>(0.1, null!));
-    }
-
-    [Fact]
-    public void Mutate_WithZeroRate_ReturnsUnchangedChromosome()
+    public void Mutate_ReturnsSuccessForValidChromosome()
     {
         // Arrange
-        var chromosome = new Chromosome<int>(new List<int> { 1, 2, 3, 4, 5 });
-        var mutation = new Mutation<int>(0.0, x => x + 100, seed: 42);
+        var chromosome = new SimpleChromosome(10.0, fitness: 0.5);
+        var mutation = new Mutation(1.0, seed: 42); // Always mutate
+
+        Func<SimpleChromosome, Random, Result<SimpleChromosome>> mutationFunc =
+            (c, random) =>
+            {
+                var newValue = c.Value + random.NextDouble();
+                return Result<SimpleChromosome>.Success(new SimpleChromosome(newValue));
+            };
 
         // Act
-        var mutated = mutation.Mutate(chromosome);
+        var result = mutation.Mutate(chromosome, mutationFunc);
 
         // Assert
-        mutated.Genes.Should().Equal(chromosome.Genes);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.Value.Should().NotBe(chromosome.Value); // Should be mutated
     }
 
     [Fact]
-    public void Mutate_WithHighRate_MutatesGenes()
+    public void Mutate_ReturnsFailureForNullChromosome()
     {
         // Arrange
-        var chromosome = new Chromosome<int>(new List<int> { 1, 2, 3, 4, 5 });
-        var mutation = new Mutation<int>(1.0, x => x + 10, seed: 42); // 100% mutation rate
+        var mutation = new Mutation();
+
+        Func<SimpleChromosome, Random, Result<SimpleChromosome>> mutationFunc =
+            (c, random) => Result<SimpleChromosome>.Success(new SimpleChromosome(15.0));
 
         // Act
-        var mutated = mutation.Mutate(chromosome);
+        var result = mutation.Mutate(null!, mutationFunc);
 
         // Assert
-        mutated.Genes.Should().Equal(11, 12, 13, 14, 15);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("cannot be null");
     }
 
     [Fact]
-    public void Mutate_WithSeed_ProducesReproducibleResults()
+    public void Mutate_WithZeroRate_ReturnsClone()
     {
         // Arrange
-        var chromosome = new Chromosome<int>(new List<int> { 1, 2, 3, 4, 5 });
-        var mutation1 = new Mutation<int>(0.5, x => x * 2, seed: 42);
-        var mutation2 = new Mutation<int>(0.5, x => x * 2, seed: 42);
+        var chromosome = new SimpleChromosome(10.0, fitness: 0.5);
+        var mutation = new Mutation(0.0); // Never mutate
+
+        Func<SimpleChromosome, Random, Result<SimpleChromosome>> mutationFunc =
+            (c, random) => Result<SimpleChromosome>.Success(new SimpleChromosome(999.0));
 
         // Act
-        var mutated1 = mutation1.Mutate(chromosome);
-        var mutated2 = mutation2.Mutate(chromosome);
+        var result = mutation.Mutate(chromosome, mutationFunc);
 
         // Assert
-        mutated1.Genes.Should().Equal(mutated2.Genes);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Value.Should().Be(10.0); // Should be clone
     }
 
     [Fact]
-    public void Mutate_PreservesChromosomeStructure()
+    public void Mutate_ProducesReproducibleResultsWithSeed()
     {
         // Arrange
-        var chromosome = new Chromosome<int>(new List<int> { 1, 2, 3 });
-        var mutation = new Mutation<int>(0.5, x => x + 1);
+        var chromosome = new SimpleChromosome(10.0, fitness: 0.5);
+        var mutation1 = new Mutation(1.0, seed: 42);
+        var mutation2 = new Mutation(1.0, seed: 42);
+
+        Func<SimpleChromosome, Random, Result<SimpleChromosome>> mutationFunc =
+            (c, random) =>
+            {
+                var newValue = c.Value + random.NextDouble();
+                return Result<SimpleChromosome>.Success(new SimpleChromosome(newValue));
+            };
 
         // Act
-        var mutated = mutation.Mutate(chromosome);
+        var result1 = mutation1.Mutate(chromosome, mutationFunc);
+        var result2 = mutation2.Mutate(chromosome, mutationFunc);
 
         // Assert
-        mutated.Genes.Should().HaveCount(chromosome.Genes.Count);
-        mutated.Should().NotBeSameAs(chromosome); // Should be a new instance
+        result1.Value.Value.Should().Be(result2.Value.Value);
     }
 
     [Fact]
-    public void MutatePopulation_MutatesAllChromosomes()
+    public async Task MutatePopulation_MutatesAllChromosomes()
     {
         // Arrange
-        var chromosomes = new List<Chromosome<int>>
+        var chromosomes = new[]
         {
-            new Chromosome<int>(new List<int> { 1, 2, 3 }),
-            new Chromosome<int>(new List<int> { 4, 5, 6 }),
+            new SimpleChromosome(1.0),
+            new SimpleChromosome(2.0),
+            new SimpleChromosome(3.0),
         };
-        var population = new Population<int>(chromosomes);
-        var mutation = new Mutation<int>(1.0, x => x + 10, seed: 42); // 100% mutation
+        var population = new Population<SimpleChromosome>(chromosomes);
+        var mutation = new Mutation(1.0, seed: 42); // Always mutate
+
+        Func<SimpleChromosome, Random, Result<SimpleChromosome>> mutationFunc =
+            (c, random) =>
+            {
+                var newValue = c.Value + 10.0;
+                return Result<SimpleChromosome>.Success(new SimpleChromosome(newValue));
+            };
 
         // Act
-        var mutatedPopulation = mutation.MutatePopulation(population);
+        var result = await mutation.MutatePopulationAsync(population, mutationFunc);
 
         // Assert
-        mutatedPopulation.Size.Should().Be(2);
-        mutatedPopulation.Chromosomes[0].Genes.Should().Equal(11, 12, 13);
-        mutatedPopulation.Chromosomes[1].Genes.Should().Equal(14, 15, 16);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Size.Should().Be(3);
+        result.Value.Chromosomes.Should().AllSatisfy(c => c.Value.Should().BeGreaterThan(10.0));
     }
 
     [Fact]
-    public void MutatePopulation_CreatesNewPopulation()
+    public async Task MutatePopulation_ReturnsFailureForNullPopulation()
     {
         // Arrange
-        var chromosomes = new List<Chromosome<int>>
-        {
-            new Chromosome<int>(new List<int> { 1, 2, 3 }),
-        };
-        var population = new Population<int>(chromosomes);
-        var mutation = new Mutation<int>(0.5, x => x + 1);
+        var mutation = new Mutation();
+
+        Func<SimpleChromosome, Random, Result<SimpleChromosome>> mutationFunc =
+            (c, random) => Result<SimpleChromosome>.Success(new SimpleChromosome(15.0));
 
         // Act
-        var mutatedPopulation = mutation.MutatePopulation(population);
+        var result = await mutation.MutatePopulationAsync<SimpleChromosome>(null!, mutationFunc);
 
         // Assert
-        mutatedPopulation.Should().NotBeSameAs(population);
-        population.Chromosomes[0].Genes.Should().Equal(1, 2, 3); // Original unchanged
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("cannot be null");
+    }
+
+    [Fact]
+    public async Task MutatePopulation_PropagatesFailures()
+    {
+        // Arrange
+        var chromosomes = new[] { new SimpleChromosome(1.0) };
+        var population = new Population<SimpleChromosome>(chromosomes);
+        var mutation = new Mutation(1.0);
+
+        Func<SimpleChromosome, Random, Result<SimpleChromosome>> failingFunc =
+            (c, random) => Result<SimpleChromosome>.Failure("Mutation failed");
+
+        // Act
+        var result = await mutation.MutatePopulationAsync(population, failingFunc);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Mutation failed");
     }
 }

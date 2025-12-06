@@ -14,109 +14,148 @@ using Xunit;
 public class UniformCrossoverTests
 {
     [Fact]
-    public void Constructor_WithValidRate_CreatesInstance()
+    public void Constructor_AcceptsValidCrossoverRate()
     {
-        // Act
-        var crossover = new UniformCrossover<int>(0.8);
-
-        // Assert
+        // Act & Assert
+        var crossover = new UniformCrossover(0.8);
         crossover.Should().NotBeNull();
     }
 
     [Fact]
-    public void Constructor_WithInvalidRate_ThrowsArgumentException()
+    public void Constructor_ThrowsForInvalidCrossoverRate()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => new UniformCrossover<int>(-0.1));
-        Assert.Throws<ArgumentException>(() => new UniformCrossover<int>(1.1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new UniformCrossover(-0.1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new UniformCrossover(1.5));
     }
 
     [Fact]
-    public void Crossover_WithSameLengthParents_ProducesOffspring()
+    public void Crossover_ReturnsSuccessForValidParents()
     {
         // Arrange
-        var parent1 = new Chromosome<int>(new List<int> { 1, 2, 3, 4, 5 });
-        var parent2 = new Chromosome<int>(new List<int> { 6, 7, 8, 9, 10 });
-        var crossover = new UniformCrossover<int>(1.0, seed: 42); // 100% crossover rate
+        var parent1 = new SimpleChromosome(10.0, fitness: 0.5);
+        var parent2 = new SimpleChromosome(20.0, fitness: 0.5);
+        var crossover = new UniformCrossover(1.0, seed: 42); // Always crossover
+
+        Func<SimpleChromosome, SimpleChromosome, double, Result<SimpleChromosome>> crossoverFunc =
+            (p1, p2, ratio) =>
+            {
+                var newValue = p1.Value * ratio + p2.Value * (1 - ratio);
+                return Result<SimpleChromosome>.Success(new SimpleChromosome(newValue));
+            };
 
         // Act
-        var (offspring1, offspring2) = crossover.Crossover(parent1, parent2);
+        var result = crossover.Crossover(parent1, parent2, crossoverFunc);
 
         // Assert
-        offspring1.Genes.Should().HaveCount(5);
-        offspring2.Genes.Should().HaveCount(5);
-        
-        // Each gene should come from one of the parents
-        for (int i = 0; i < 5; i++)
-        {
-            (parent1.Genes[i] == offspring1.Genes[i] || parent2.Genes[i] == offspring1.Genes[i]).Should().BeTrue();
-            (parent1.Genes[i] == offspring2.Genes[i] || parent2.Genes[i] == offspring2.Genes[i]).Should().BeTrue();
-        }
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
     }
 
     [Fact]
-    public void Crossover_WithDifferentLengthParents_ThrowsArgumentException()
+    public void Crossover_ReturnsFailureForNullParents()
     {
         // Arrange
-        var parent1 = new Chromosome<int>(new List<int> { 1, 2, 3 });
-        var parent2 = new Chromosome<int>(new List<int> { 4, 5 });
-        var crossover = new UniformCrossover<int>();
+        var parent = new SimpleChromosome(10.0);
+        var crossover = new UniformCrossover();
 
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => crossover.Crossover(parent1, parent2));
-    }
-
-    [Fact]
-    public void Crossover_WithZeroRate_ReturnsParentCopies()
-    {
-        // Arrange
-        var parent1 = new Chromosome<int>(new List<int> { 1, 2, 3 });
-        var parent2 = new Chromosome<int>(new List<int> { 4, 5, 6 });
-        var crossover = new UniformCrossover<int>(0.0, seed: 42); // 0% crossover rate
+        Func<SimpleChromosome, SimpleChromosome, double, Result<SimpleChromosome>> crossoverFunc =
+            (p1, p2, ratio) => Result<SimpleChromosome>.Success(new SimpleChromosome(15.0));
 
         // Act
-        var (offspring1, offspring2) = crossover.Crossover(parent1, parent2);
+        var result1 = crossover.Crossover(null!, parent, crossoverFunc);
+        var result2 = crossover.Crossover(parent, null!, crossoverFunc);
 
         // Assert
-        offspring1.Genes.Should().Equal(parent1.Genes);
-        offspring2.Genes.Should().Equal(parent2.Genes);
+        result1.IsFailure.Should().BeTrue();
+        result1.Error.Should().Contain("cannot be null");
+        result2.IsFailure.Should().BeTrue();
+        result2.Error.Should().Contain("cannot be null");
     }
 
     [Fact]
-    public void Crossover_WithSeed_ProducesReproducibleResults()
+    public void Crossover_WithZeroRate_ReturnsClone()
     {
         // Arrange
-        var parent1 = new Chromosome<int>(new List<int> { 1, 2, 3, 4, 5 });
-        var parent2 = new Chromosome<int>(new List<int> { 6, 7, 8, 9, 10 });
-        
-        var crossover1 = new UniformCrossover<int>(1.0, seed: 42);
-        var crossover2 = new UniformCrossover<int>(1.0, seed: 42);
+        var parent1 = new SimpleChromosome(10.0, fitness: 0.5);
+        var parent2 = new SimpleChromosome(20.0, fitness: 0.5);
+        var crossover = new UniformCrossover(0.0); // Never crossover
+
+        Func<SimpleChromosome, SimpleChromosome, double, Result<SimpleChromosome>> crossoverFunc =
+            (p1, p2, ratio) => Result<SimpleChromosome>.Success(new SimpleChromosome(999.0));
 
         // Act
-        var (offspring1a, offspring2a) = crossover1.Crossover(parent1, parent2);
-        var (offspring1b, offspring2b) = crossover2.Crossover(parent1, parent2);
+        var result = crossover.Crossover(parent1, parent2, crossoverFunc);
 
         // Assert
-        offspring1a.Genes.Should().Equal(offspring1b.Genes);
-        offspring2a.Genes.Should().Equal(offspring2b.Genes);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Value.Should().Be(10.0); // Should be clone of parent1
     }
 
     [Fact]
-    public void Crossover_CreatesGeneticDiversity()
+    public void Crossover_ProducesReproducibleResultsWithSeed()
     {
         // Arrange
-        var parent1 = new Chromosome<int>(new List<int> { 1, 1, 1, 1, 1 });
-        var parent2 = new Chromosome<int>(new List<int> { 2, 2, 2, 2, 2 });
-        var crossover = new UniformCrossover<int>(1.0, seed: 42);
+        var parent1 = new SimpleChromosome(10.0, fitness: 0.5);
+        var parent2 = new SimpleChromosome(20.0, fitness: 0.5);
+        var crossover1 = new UniformCrossover(0.8, seed: 42);
+        var crossover2 = new UniformCrossover(0.8, seed: 42);
+
+        Func<SimpleChromosome, SimpleChromosome, double, Result<SimpleChromosome>> crossoverFunc =
+            (p1, p2, ratio) =>
+            {
+                var newValue = p1.Value * ratio + p2.Value * (1 - ratio);
+                return Result<SimpleChromosome>.Success(new SimpleChromosome(newValue));
+            };
 
         // Act
-        var (offspring1, offspring2) = crossover.Crossover(parent1, parent2);
+        var result1 = crossover1.Crossover(parent1, parent2, crossoverFunc);
+        var result2 = crossover2.Crossover(parent1, parent2, crossoverFunc);
 
-        // Assert - offspring should have a mix of genes
-        var hasOnes = offspring1.Genes.Any(g => g == 1);
-        var hasTwos = offspring1.Genes.Any(g => g == 2);
-        
-        hasOnes.Should().BeTrue();
-        hasTwos.Should().BeTrue();
+        // Assert
+        result1.Value.Value.Should().Be(result2.Value.Value);
+    }
+
+    [Fact]
+    public void CrossoverPair_ReturnsTwoOffspring()
+    {
+        // Arrange
+        var parent1 = new SimpleChromosome(10.0, fitness: 0.5);
+        var parent2 = new SimpleChromosome(20.0, fitness: 0.5);
+        var crossover = new UniformCrossover(1.0, seed: 42); // Always crossover
+
+        Func<SimpleChromosome, SimpleChromosome, double, Result<SimpleChromosome>> crossoverFunc =
+            (p1, p2, ratio) =>
+            {
+                var newValue = p1.Value * ratio + p2.Value * (1 - ratio);
+                return Result<SimpleChromosome>.Success(new SimpleChromosome(newValue));
+            };
+
+        // Act
+        var result = crossover.CrossoverPair(parent1, parent2, crossoverFunc);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Offspring1.Should().NotBeNull();
+        result.Value.Offspring2.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void CrossoverPair_PropagatesFailures()
+    {
+        // Arrange
+        var parent1 = new SimpleChromosome(10.0);
+        var parent2 = new SimpleChromosome(20.0);
+        var crossover = new UniformCrossover(1.0);
+
+        Func<SimpleChromosome, SimpleChromosome, double, Result<SimpleChromosome>> failingFunc =
+            (p1, p2, ratio) => Result<SimpleChromosome>.Failure("Crossover failed");
+
+        // Act
+        var result = crossover.CrossoverPair(parent1, parent2, failingFunc);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Crossover failed");
     }
 }
