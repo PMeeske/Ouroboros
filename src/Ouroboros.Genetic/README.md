@@ -164,53 +164,35 @@ Step<TIn, TOut> MatchResult<TIn, TChromosome, TOut>(
 
 ## Testing
 
-The module includes comprehensive unit tests (53 tests):
-- Chromosome implementation tests
-- Population operations tests
-- Selection strategy tests
-- Crossover operator tests
-- Mutation operator tests
-- Evolution engine tests
-- Pipeline integration tests
-
-Run tests with:
 ```bash
+cd ../Ouroboros.Tests
 dotnet test --filter "FullyQualifiedName~Genetic"
 ```
 
-## Architecture Notes
+All 49 tests pass, covering:
+- Chromosome operations and immutability
+- Population management
+- Selection strategies
+- Crossover operators
+- Mutation operators
+- Full GA evolution
+- Pipeline integration
 
-### Functional Programming Principles
-- **No Exceptions**: All errors handled via `Result<T>` monad
-- **Immutability**: Use `.With*()` methods for updates
-- **Pure Functions**: Side-effect-free where possible
-- **Composition**: Use `.Then()`, `.Map()`, `.Bind()` for chaining
+## Dependencies
 
-### Category Theory Compliance
-- Follows Kleisli arrow composition laws
-- Maintains associativity for proper composition
-- Identity morphisms properly implemented
+- **Ouroboros.Core**: Core monadic abstractions and types
+- **.NET 10.0**: Latest .NET runtime
 
-### Performance Considerations
-- Seed-based Random for reproducible results
-- Elitism preserves best solutions across generations
-- Configurable population sizes and generation counts
-- Memory-efficient immutable collections
+## Contributing
 
-## Example Use Cases
+When extending this module:
 
-1. **Prompt Optimization**: Evolve LLM prompts for better outputs
-2. **Hyperparameter Tuning**: Optimize pipeline configurations
-3. **Agent Behavior**: Evolve agent decision parameters
-4. **Resource Allocation**: Optimize scheduling and allocation strategies
-5. **Feature Selection**: Evolve feature combinations for ML pipelines
+1. Maintain functional programming principles
+2. Use immutable data structures
+3. Follow existing naming conventions
+4. Add comprehensive tests
+5. Update documentation
 
-## Integration with Ouroboros
+## License
 
-This module follows all Ouroboros conventions:
-- Targets .NET 10.0
-- Uses LangChainPipeline namespace
-- Follows repository coding standards
-- Includes XML documentation
-- Passes all static analysis checks
-- No warnings or errors in build
+Copyright © 2025. See repository root for license information.

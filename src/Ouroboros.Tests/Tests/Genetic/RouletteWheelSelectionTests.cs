@@ -53,6 +53,24 @@ public class RouletteWheelSelectionTests
     public void Select_WithSeed_ProducesReproducibleResults()
     {
         // Arrange
+        var chromosomes = new List<IChromosome<int>>
+        {
+            new Chromosome<int>(new List<int> { 1 }, 10),
+            new Chromosome<int>(new List<int> { 2 }, 20),
+            new Chromosome<int>(new List<int> { 3 }, 30),
+        };
+        var population = new Population<int>(chromosomes);
+        
+        var selection1 = new RouletteWheelSelection<int>(seed: 42);
+        var selection2 = new RouletteWheelSelection<int>(seed: 42);
+
+        // Act
+        var selected1 = selection1.Select(population);
+        var selected2 = selection2.Select(population);
+
+        // Assert
+        selected1.Fitness.Should().Be(selected2.Fitness);
+        selected1.Genes.Should().Equal(selected2.Genes);
         var chromosomes = new[]
         {
             new SimpleChromosome(1.0, fitness: 0.3),
