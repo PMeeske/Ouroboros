@@ -5,7 +5,7 @@ This quick guide shows you how to use the Qdrant vector store in Ouroboros for l
 ## Prerequisites
 
 - Docker and Docker Compose installed
-- .NET 8.0 SDK installed
+- .NET 10.0 SDK installed
 
 ## Steps
 

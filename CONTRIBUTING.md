@@ -52,7 +52,7 @@ Use the [Feature Request template](.github/ISSUE_TEMPLATE/feature_request.yml) w
 
 ### Prerequisites
 
-- .NET 8.0 SDK or later
+- .NET 10.0 SDK or later
 - Docker (for local testing with Ollama/Qdrant)
 - Git
 

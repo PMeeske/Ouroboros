@@ -17,7 +17,7 @@ This document describes the fixes applied to resolve breaking GitHub Actions wor
 - Used outdated GitHub Actions versions (@v2)
 
 **Solution**:
-- Converted workflow to use .NET 8 and dotnet test
+- Converted workflow to use .NET 10 and dotnet test
 - Added proper test filtering for `OllamaCloudIntegrationTests`
 - Updated to use modern GitHub Actions (checkout@v4, setup-dotnet@v4, cache@v4)
 - Added NuGet package caching for faster builds

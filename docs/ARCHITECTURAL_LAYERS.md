@@ -319,7 +319,7 @@ Terraform (IONOS Cloud)
 ## Technology Stack
 
 ### Core Technologies
-- **Runtime**: .NET 8.0+
+- **Runtime**: .NET 10.0+
 - **Language**: C# 8.0+ (with functional programming patterns)
 - **AI Framework**: LangChain 0.17.0
 - **Category Theory**: Custom implementation

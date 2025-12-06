@@ -10,7 +10,7 @@ This implementation adds a **Kubernetes-friendly ASP.NET Core Web API** as a rem
 
 **Location:** `src/Ouroboros.WebApi/`
 
-A new ASP.NET Core 8.0 Web API project with minimal APIs providing REST endpoints for pipeline operations.
+A new ASP.NET Core 10.0 Web API project with minimal APIs providing REST endpoints for pipeline operations.
 
 **Key Components:**
 - **Models/** - Request/Response DTOs (`AskRequest`, `PipelineRequest`, `ApiResponse<T>`)
@@ -32,8 +32,8 @@ A new ASP.NET Core 8.0 Web API project with minimal APIs providing REST endpoint
 ### 3. Docker Support
 
 **Dockerfile.webapi** - Multi-stage Docker build optimized for Web API:
-- Uses .NET 8.0 SDK for build
-- ASP.NET Core 8.0 runtime for production
+- Uses .NET 10.0 SDK for build
+- ASP.NET Core 10.0 runtime for production
 - Health check configuration
 - Port 8080 exposed
 

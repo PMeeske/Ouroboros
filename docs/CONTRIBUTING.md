@@ -54,7 +54,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 ### Prerequisites
 
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later
 - [Git](https://git-scm.com/)
 - [Ollama](https://ollama.ai/) (optional, for local LLM testing)
 - IDE: Visual Studio 2022, VS Code, or JetBrains Rider

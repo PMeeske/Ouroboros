@@ -261,7 +261,7 @@ terraform/
 
 **Strengths:**
 - Multi-stage builds
-- Optimized for .NET 8
+- Optimized for .NET 10
 - Development and production variants
 - Complete service orchestration
 
@@ -448,7 +448,7 @@ terraform/
 - [ ] 15 stub test files with 0 tests
 - [ ] No property-based tests for pipeline laws
 - [ ] No integration tests for vector stores/LLM providers
-- [ ] No test matrix for .NET 8/.NET 9
+- [ ] No test matrix for .NET 10/.NET 11
 - [ ] Flaky test detection not configured
 - **Action:** Implement stub tests, add property tests, create integration test project
 
