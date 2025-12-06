@@ -10,17 +10,17 @@ using LangChainPipeline.Genetic.Abstractions;
 /// Implements mutation operations for genetic algorithms.
 /// Mutation introduces random variations to maintain genetic diversity.
 /// </summary>
-public sealed class Mutation
+public sealed class EvolutionMutation
 {
     private readonly Random random;
     private readonly double mutationRate;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Mutation"/> class.
+    /// Initializes a new instance of the <see cref="EvolutionMutation"/> class.
     /// </summary>
     /// <param name="mutationRate">The probability of mutation occurring (0.0 to 1.0).</param>
     /// <param name="seed">Optional seed for reproducible randomness.</param>
-    public Mutation(double mutationRate = 0.1, int? seed = null)
+    public EvolutionMutation(double mutationRate = 0.1, int? seed = null)
     {
         if (mutationRate < 0.0 || mutationRate > 1.0)
         {
@@ -66,14 +66,14 @@ public sealed class Mutation
     /// <param name="population">The population to mutate.</param>
     /// <param name="mutationFunc">Function that performs the actual mutation.</param>
     /// <returns>A Result containing the mutated population or an error message.</returns>
-    public async Task<Result<Population<TChromosome>>> MutatePopulationAsync<TChromosome>(
-        Population<TChromosome> population,
+    public async Task<Result<EvolutionPopulation<TChromosome>>> MutatePopulationAsync<TChromosome>(
+        EvolutionPopulation<TChromosome> population,
         Func<TChromosome, Random, Result<TChromosome>> mutationFunc)
         where TChromosome : IChromosome
     {
         if (population == null)
         {
-            return Result<Population<TChromosome>>.Failure("Population cannot be null");
+            return Result<EvolutionPopulation<TChromosome>>.Failure("Population cannot be null");
         }
 
         var mutatedChromosomes = new List<TChromosome>();
@@ -83,14 +83,14 @@ public sealed class Mutation
             var mutationResult = this.Mutate(chromosome, mutationFunc);
             if (mutationResult.IsFailure)
             {
-                return Result<Population<TChromosome>>.Failure($"Mutation failed: {mutationResult.Error}");
+                return Result<EvolutionPopulation<TChromosome>>.Failure($"Mutation failed: {mutationResult.Error}");
             }
 
             mutatedChromosomes.Add(mutationResult.Value);
         }
 
-        var newPopulation = new Population<TChromosome>(mutatedChromosomes);
-        return Result<Population<TChromosome>>.Success(newPopulation);
+        var newPopulation = new EvolutionPopulation<TChromosome>(mutatedChromosomes);
+        return Result<EvolutionPopulation<TChromosome>>.Success(newPopulation);
     }
 
     /// <summary>

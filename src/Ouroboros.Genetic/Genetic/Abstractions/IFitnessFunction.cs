@@ -5,11 +5,11 @@
 namespace LangChainPipeline.Genetic.Abstractions;
 
 /// <summary>
-/// Defines a fitness function for evaluating chromosomes.
+/// Defines a fitness function for evaluating chromosomes in the evolution engine.
 /// Follows functional programming principles with monadic error handling.
 /// </summary>
 /// <typeparam name="TChromosome">The type of chromosome to evaluate.</typeparam>
-public interface IFitnessFunction<TChromosome>
+public interface IEvolutionFitnessFunction<TChromosome>
     where TChromosome : IChromosome
 {
     /// <summary>

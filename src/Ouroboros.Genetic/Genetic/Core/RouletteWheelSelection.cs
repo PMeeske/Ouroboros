@@ -7,20 +7,20 @@ namespace LangChainPipeline.Genetic.Core;
 using LangChainPipeline.Genetic.Abstractions;
 
 /// <summary>
-/// Implements roulette wheel selection (fitness-proportionate selection).
+/// Implements roulette wheel selection (fitness-proportionate selection) for the evolution engine.
 /// Chromosomes with higher fitness have higher probability of being selected.
 /// </summary>
 /// <typeparam name="TChromosome">The type of chromosome to select.</typeparam>
-public sealed class RouletteWheelSelection<TChromosome>
+public sealed class EvolutionRouletteWheelSelection<TChromosome>
     where TChromosome : IChromosome
 {
     private readonly Random random;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RouletteWheelSelection{TChromosome}"/> class.
+    /// Initializes a new instance of the <see cref="EvolutionRouletteWheelSelection{TChromosome}"/> class.
     /// </summary>
     /// <param name="seed">Optional seed for reproducible randomness.</param>
-    public RouletteWheelSelection(int? seed = null)
+    public EvolutionRouletteWheelSelection(int? seed = null)
     {
         this.random = seed.HasValue ? new Random(seed.Value) : new Random();
     }
@@ -31,7 +31,7 @@ public sealed class RouletteWheelSelection<TChromosome>
     /// </summary>
     /// <param name="population">The population to select from.</param>
     /// <returns>A Result containing the selected chromosome or an error message.</returns>
-    public Result<TChromosome> Select(Population<TChromosome> population)
+    public Result<TChromosome> Select(EvolutionPopulation<TChromosome> population)
     {
         if (population.Size == 0)
         {
@@ -73,7 +73,7 @@ public sealed class RouletteWheelSelection<TChromosome>
     /// <param name="population">The population to select from.</param>
     /// <param name="count">The number of chromosomes to select.</param>
     /// <returns>A Result containing the list of selected chromosomes or an error message.</returns>
-    public Result<List<TChromosome>> SelectMany(Population<TChromosome> population, int count)
+    public Result<List<TChromosome>> SelectMany(EvolutionPopulation<TChromosome> population, int count)
     {
         if (count < 0)
         {

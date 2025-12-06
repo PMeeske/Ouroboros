@@ -25,7 +25,7 @@ public class PopulationTests
         };
 
         // Act
-        var population = new Population<SimpleChromosome>(chromosomes);
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
 
         // Assert
         population.Size.Should().Be(3);
@@ -36,7 +36,7 @@ public class PopulationTests
     public void Constructor_ThrowsOnNullChromosomes()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new Population<SimpleChromosome>(null!));
+        Assert.Throws<ArgumentNullException>(() => new EvolutionPopulation<SimpleChromosome>(null!));
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class PopulationTests
             new SimpleChromosome(2.0, fitness: 0.9),
             new SimpleChromosome(3.0, fitness: 0.5),
         };
-        var population = new Population<SimpleChromosome>(chromosomes);
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
 
         // Act
         var best = population.GetBest();
@@ -64,7 +64,7 @@ public class PopulationTests
     public void GetBest_ReturnsNoneForEmptyPopulation()
     {
         // Arrange
-        var population = new Population<SimpleChromosome>(Array.Empty<SimpleChromosome>());
+        var population = new EvolutionPopulation<SimpleChromosome>(Array.Empty<SimpleChromosome>());
 
         // Act
         var best = population.GetBest();
@@ -83,7 +83,7 @@ public class PopulationTests
             new SimpleChromosome(2.0, fitness: 0.4),
             new SimpleChromosome(3.0, fitness: 0.6),
         };
-        var population = new Population<SimpleChromosome>(chromosomes);
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
 
         // Act
         var average = population.GetAverageFitness();
@@ -96,7 +96,7 @@ public class PopulationTests
     public void GetAverageFitness_ReturnsZeroForEmptyPopulation()
     {
         // Arrange
-        var population = new Population<SimpleChromosome>(Array.Empty<SimpleChromosome>());
+        var population = new EvolutionPopulation<SimpleChromosome>(Array.Empty<SimpleChromosome>());
 
         // Act
         var average = population.GetAverageFitness();
@@ -110,7 +110,7 @@ public class PopulationTests
     {
         // Arrange
         var initial = new[] { new SimpleChromosome(1.0) };
-        var population = new Population<SimpleChromosome>(initial);
+        var population = new EvolutionPopulation<SimpleChromosome>(initial);
         var newChromosome = new SimpleChromosome(2.0);
 
         // Act
@@ -132,7 +132,7 @@ public class PopulationTests
             new SimpleChromosome(2.0, fitness: 0.9),
             new SimpleChromosome(3.0, fitness: 0.5),
         };
-        var population = new Population<SimpleChromosome>(chromosomes);
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
 
         // Act
         var sorted = population.SortByFitness();
@@ -153,7 +153,7 @@ public class PopulationTests
             new SimpleChromosome(2.0, fitness: 0.9),
             new SimpleChromosome(3.0, fitness: 0.5),
         };
-        var population = new Population<SimpleChromosome>(chromosomes);
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
 
         // Act
         var top2 = population.Take(2);
@@ -174,7 +174,7 @@ public class PopulationTests
             new SimpleChromosome(2.0, generation: 3),
             new SimpleChromosome(3.0, generation: 2),
         };
-        var population = new Population<SimpleChromosome>(chromosomes);
+        var population = new EvolutionPopulation<SimpleChromosome>(chromosomes);
 
         // Act
         var generation = population.Generation;

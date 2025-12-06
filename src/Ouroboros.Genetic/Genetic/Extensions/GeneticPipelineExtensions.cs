@@ -1,4 +1,4 @@
-// <copyright file="GeneticPipelineExtensions.cs" company="PlaceholderCompany">
+// <copyright file="EvolutionPipelineExtensions.cs" company="PlaceholderCompany">
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
@@ -8,10 +8,10 @@ using LangChainPipeline.Genetic.Abstractions;
 using LangChainPipeline.Genetic.Core;
 
 /// <summary>
-/// Extension methods for integrating genetic algorithms into pipeline composition.
-/// Provides fluent API for evolutionary optimization.
+/// Extension methods for integrating evolution engine into pipeline composition.
+/// Provides fluent API for evolutionary optimization using IEvolutionEngine.
 /// </summary>
-public static class GeneticPipelineExtensions
+public static class EvolutionPipelineExtensions
 {
     /// <summary>
     /// Adds evolutionary optimization to a pipeline step.
@@ -24,7 +24,7 @@ public static class GeneticPipelineExtensions
     /// <param name="generations">The number of generations to evolve.</param>
     /// <returns>A step that evolves the population and returns the best result.</returns>
     public static Step<TIn, Result<TChromosome>> Evolve<TIn, TChromosome>(
-        this Step<TIn, Population<TChromosome>> step,
+        this Step<TIn, EvolutionPopulation<TChromosome>> step,
         IEvolutionEngine<TChromosome> engine,
         int generations)
         where TChromosome : IChromosome
@@ -42,8 +42,8 @@ public static class GeneticPipelineExtensions
     /// <param name="engine">The evolution engine to use.</param>
     /// <param name="generations">The number of generations to evolve.</param>
     /// <returns>A step that evolves and returns the entire population.</returns>
-    public static Step<TIn, Result<Population<TChromosome>>> EvolvePopulation<TIn, TChromosome>(
-        this Step<TIn, Population<TChromosome>> step,
+    public static Step<TIn, Result<EvolutionPopulation<TChromosome>>> EvolvePopulation<TIn, TChromosome>(
+        this Step<TIn, EvolutionPopulation<TChromosome>> step,
         IEvolutionEngine<TChromosome> engine,
         int generations)
         where TChromosome : IChromosome
@@ -68,8 +68,8 @@ public static class GeneticPipelineExtensions
     /// <param name="elitismRate">The elitism rate (default 0.1).</param>
     /// <returns>A step that evolves the population and returns the best result.</returns>
     public static Step<TIn, Result<TChromosome>> EvolveWith<TIn, TChromosome>(
-        this Step<TIn, Population<TChromosome>> step,
-        IFitnessFunction<TChromosome> fitnessFunction,
+        this Step<TIn, EvolutionPopulation<TChromosome>> step,
+        IEvolutionFitnessFunction<TChromosome> fitnessFunction,
         Func<TChromosome, TChromosome, double, Result<TChromosome>> crossoverFunc,
         Func<TChromosome, Random, Result<TChromosome>> mutationFunc,
         int generations,
