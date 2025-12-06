@@ -22,6 +22,13 @@ using Xunit;
 /// 1. Set the required environment variables
 /// 2. Run: dotnet test --filter "Category=Integration"
 /// 
+/// When credentials are not available, tests skip gracefully and pass without executing API calls.
+/// This ensures tests don't fail in CI or local environments without credentials.
+/// 
+/// Test categories:
+/// - Read-only operations: Safe to run frequently (search, read)
+/// - Write operations: Require write permissions, validate input handling
+/// 
 /// These tests are excluded from CI by default using the Integration trait.
 /// </summary>
 [Trait("Category", "Integration")]
@@ -206,23 +213,12 @@ public class GitHubToolsIntegrationTests : IDisposable
             return;
         }
 
-        // Extract issue number from search result (format: "#123 - Title")
+        // Extract issue number from search result using regex (format: "#123 - Title")
         string searchValue = searchResult.Value;
-        int hashIndex = searchValue.IndexOf('#');
-        if (hashIndex < 0)
+        var match = System.Text.RegularExpressions.Regex.Match(searchValue, @"#(\d+)\s*-");
+        if (!match.Success || !int.TryParse(match.Groups[1].Value, out int issueNumber))
         {
-            return; // Skip if we can't parse the issue number
-        }
-
-        int dashIndex = searchValue.IndexOf(" -", hashIndex);
-        if (dashIndex < 0)
-        {
-            return;
-        }
-
-        string issueNumberStr = searchValue.Substring(hashIndex + 1, dashIndex - hashIndex - 1);
-        if (!int.TryParse(issueNumberStr, out int issueNumber))
-        {
+            // Skip if we can't parse the issue number
             return;
         }
 
@@ -253,11 +249,11 @@ public class GitHubToolsIntegrationTests : IDisposable
             return;
         }
 
-        // Arrange
+        // Arrange - Use Int32.MaxValue which is extremely unlikely to exist in any repository
         GitHubIssueReadTool tool = new GitHubIssueReadTool(this.token!, this.owner!, this.repo!);
         string readInput = ToolJson.Serialize(new GitHubIssueReadArgs
         {
-            IssueNumber = 999999999 // Extremely unlikely to exist
+            IssueNumber = int.MaxValue
         });
 
         // Act
