@@ -13,50 +13,46 @@ using Xunit;
 /// Test implementation of IChromosome for unit testing.
 /// Represents a simple numeric chromosome.
 /// </summary>
-internal sealed class SimpleChromosome : IChromosome
+internal sealed class SimpleChromosome : IChromosome<double>
 {
     public SimpleChromosome(double value, int generation = 0, double fitness = 0.0)
+        : this(new[] { value }, generation, fitness)
     {
-        this.Id = Guid.NewGuid().ToString();
-        this.Value = value;
+    }
+
+    public SimpleChromosome(IReadOnlyList<double> genes, int generation = 0, double fitness = 0.0)
+    {
+        this.Genes = genes;
         this.Generation = generation;
         this.Fitness = fitness;
     }
 
-    private SimpleChromosome(string id, double value, int generation, double fitness)
-    {
-        this.Id = id;
-        this.Value = value;
-        this.Generation = generation;
-        this.Fitness = fitness;
-    }
+    public IReadOnlyList<double> Genes { get; }
 
-    public string Id { get; }
-
-    public double Value { get; }
+    public double Value => this.Genes[0];
 
     public int Generation { get; }
 
     public double Fitness { get; }
 
-    public IChromosome Clone()
+    public IChromosome<double> WithGenes(IReadOnlyList<double> genes)
     {
-        return new SimpleChromosome(this.Id, this.Value, this.Generation, this.Fitness);
+        return new SimpleChromosome(genes, this.Generation, this.Fitness);
     }
 
-    public IChromosome WithFitness(double fitness)
+    public IChromosome<double> WithFitness(double fitness)
     {
-        return new SimpleChromosome(this.Id, this.Value, this.Generation, fitness);
+        return new SimpleChromosome(this.Genes, this.Generation, fitness);
     }
 
     public SimpleChromosome WithValue(double value)
     {
-        return new SimpleChromosome(this.Id, value, this.Generation, this.Fitness);
+        return new SimpleChromosome(new[] { value }, this.Generation, this.Fitness);
     }
 
     public SimpleChromosome WithGeneration(int generation)
     {
-        return new SimpleChromosome(this.Id, this.Value, generation, this.Fitness);
+        return new SimpleChromosome(this.Genes, generation, this.Fitness);
     }
 }
 
@@ -79,19 +75,18 @@ public class SimpleChromosomeTests
     }
 
     [Fact]
-    public void Clone_CreatesEqualChromosome()
+    public void WithGenes_CreatesChromosomeWithNewGenes()
     {
         // Arrange
         var original = new SimpleChromosome(10.0, 2, 0.8);
 
         // Act
-        var clone = (SimpleChromosome)original.Clone();
+        var updated = (SimpleChromosome)original.WithGenes(new[] { 20.0 });
 
         // Assert
-        clone.Id.Should().Be(original.Id);
-        clone.Value.Should().Be(original.Value);
-        clone.Generation.Should().Be(original.Generation);
-        clone.Fitness.Should().Be(original.Fitness);
+        updated.Value.Should().Be(20.0);
+        updated.Generation.Should().Be(original.Generation);
+        updated.Fitness.Should().Be(original.Fitness);
     }
 
     [Fact]

@@ -12,7 +12,7 @@ using Xunit;
 /// <summary>
 /// Simple fitness function for testing that optimizes towards a target value.
 /// </summary>
-internal sealed class TargetValueFitnessFunction : IFitnessFunction<SimpleChromosome>
+internal sealed class TargetValueFitnessFunction : IFitnessFunction<double>
 {
     private readonly double targetValue;
 
@@ -21,12 +21,13 @@ internal sealed class TargetValueFitnessFunction : IFitnessFunction<SimpleChromo
         this.targetValue = targetValue;
     }
 
-    public Task<Result<double>> EvaluateAsync(SimpleChromosome chromosome)
+    public Task<double> EvaluateAsync(IChromosome<double> chromosome)
     {
         // Fitness is inverse of distance from target (closer = better)
-        var distance = Math.Abs(chromosome.Value - this.targetValue);
+        var value = chromosome.Genes[0];
+        var distance = Math.Abs(value - this.targetValue);
         var fitness = 1.0 / (1.0 + distance);
-        return Task.FromResult(Result<double>.Success(fitness));
+        return Task.FromResult(fitness);
     }
 }
 
