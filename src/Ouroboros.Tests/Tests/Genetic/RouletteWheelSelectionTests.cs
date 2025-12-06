@@ -1,0 +1,176 @@
+// <copyright file="RouletteWheelSelectionTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace LangChainPipeline.Tests.Genetic;
+
+using FluentAssertions;
+using LangChainPipeline.Genetic.Core;
+using Xunit;
+
+/// <summary>
+/// Tests for the RouletteWheelSelection class.
+/// </summary>
+public class RouletteWheelSelectionTests
+{
+    [Fact]
+    public void Select_ReturnsSuccessForNonEmptyPopulation()
+    {
+        // Arrange
+        var chromosomes = new[]
+        {
+            new SimpleChromosome(1.0, fitness: 0.3),
+            new SimpleChromosome(2.0, fitness: 0.5),
+            new SimpleChromosome(3.0, fitness: 0.2),
+        };
+        var population = new Population<SimpleChromosome>(chromosomes);
+        var selection = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
+
+        // Act
+        var result = selection.Select(population);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Select_ReturnsFailureForEmptyPopulation()
+    {
+        // Arrange
+        var population = new Population<SimpleChromosome>(Array.Empty<SimpleChromosome>());
+        var selection = new RouletteWheelSelection<SimpleChromosome>();
+
+        // Act
+        var result = selection.Select(population);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("empty population");
+    }
+
+    [Fact]
+    public void Select_WithSeed_ProducesReproducibleResults()
+    {
+        // Arrange
+        var chromosomes = new[]
+        {
+            new SimpleChromosome(1.0, fitness: 0.3),
+            new SimpleChromosome(2.0, fitness: 0.5),
+            new SimpleChromosome(3.0, fitness: 0.2),
+        };
+        var population = new Population<SimpleChromosome>(chromosomes);
+        var selection1 = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
+        var selection2 = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
+
+        // Act
+        var result1 = selection1.Select(population);
+        var result2 = selection2.Select(population);
+
+        // Assert
+        result1.Value.Id.Should().Be(result2.Value.Id);
+    }
+
+    [Fact]
+    public void Select_FavorsHigherFitness()
+    {
+        // Arrange
+        var chromosomes = new[]
+        {
+            new SimpleChromosome(1.0, fitness: 0.01),
+            new SimpleChromosome(2.0, fitness: 100.0),
+            new SimpleChromosome(3.0, fitness: 0.01),
+        };
+        var population = new Population<SimpleChromosome>(chromosomes);
+        var selection = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
+
+        // Act - select multiple times
+        var selections = Enumerable.Range(0, 100)
+            .Select(_ => selection.Select(population).Value)
+            .ToList();
+
+        var highFitnessCount = selections.Count(c => c.Value == 2.0);
+
+        // Assert - high fitness chromosome should be selected significantly more often
+        highFitnessCount.Should().BeGreaterThan(50);
+    }
+
+    [Fact]
+    public void SelectMany_SelectsCorrectCount()
+    {
+        // Arrange
+        var chromosomes = new[]
+        {
+            new SimpleChromosome(1.0, fitness: 0.3),
+            new SimpleChromosome(2.0, fitness: 0.5),
+            new SimpleChromosome(3.0, fitness: 0.2),
+        };
+        var population = new Population<SimpleChromosome>(chromosomes);
+        var selection = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
+
+        // Act
+        var result = selection.SelectMany(population, 5);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().HaveCount(5);
+    }
+
+    [Fact]
+    public void SelectMany_ReturnsFailureForNegativeCount()
+    {
+        // Arrange
+        var chromosomes = new[] { new SimpleChromosome(1.0, fitness: 0.5) };
+        var population = new Population<SimpleChromosome>(chromosomes);
+        var selection = new RouletteWheelSelection<SimpleChromosome>();
+
+        // Act
+        var result = selection.SelectMany(population, -1);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("non-negative");
+    }
+
+    [Fact]
+    public void Select_HandlesNegativeFitness()
+    {
+        // Arrange
+        var chromosomes = new[]
+        {
+            new SimpleChromosome(1.0, fitness: -5.0),
+            new SimpleChromosome(2.0, fitness: -3.0),
+            new SimpleChromosome(3.0, fitness: -4.0),
+        };
+        var population = new Population<SimpleChromosome>(chromosomes);
+        var selection = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
+
+        // Act
+        var result = selection.Select(population);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Select_HandlesZeroFitness()
+    {
+        // Arrange
+        var chromosomes = new[]
+        {
+            new SimpleChromosome(1.0, fitness: 0.0),
+            new SimpleChromosome(2.0, fitness: 0.0),
+            new SimpleChromosome(3.0, fitness: 0.0),
+        };
+        var population = new Population<SimpleChromosome>(chromosomes);
+        var selection = new RouletteWheelSelection<SimpleChromosome>(seed: 42);
+
+        // Act
+        var result = selection.Select(population);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+    }
+}
