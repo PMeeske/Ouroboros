@@ -53,7 +53,7 @@ public class RouletteWheelSelectionTests
     public void Select_WithSeed_ProducesReproducibleResults()
     {
         // Arrange
-        var chromosomes = new List<IChromosome<int>>
+        var chromosomes = new[]
         {
             new Chromosome<int>(new List<int> { 1 }, 10),
             new Chromosome<int>(new List<int> { 2 }, 20),
