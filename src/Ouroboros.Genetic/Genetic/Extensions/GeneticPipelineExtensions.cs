@@ -1,4 +1,4 @@
-// <copyright file="EvolutionPipelineExtensions.cs" company="PlaceholderCompany">
+// <copyright file="GeneticPipelineExtensions.cs" company="PlaceholderCompany">
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
@@ -8,8 +8,10 @@ using LangChainPipeline.Genetic.Abstractions;
 using LangChainPipeline.Genetic.Core;
 
 /// <summary>
-/// Extension methods for integrating evolution engine into pipeline composition.
+/// Extension methods for integrating the evolution engine into pipeline composition.
 /// Provides fluent API for evolutionary optimization using IEvolutionEngine.
+/// Note: This file contains the Evolution API extensions (EvolutionPipelineExtensions class).
+/// For root API genetic extensions, see the root Extensions/GeneticPipelineExtensions.cs file.
 /// </summary>
 public static class EvolutionPipelineExtensions
 {
