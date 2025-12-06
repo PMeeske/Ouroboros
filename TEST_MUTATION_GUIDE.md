@@ -4,7 +4,7 @@ Stryker.NET provides mutation testing for Ouroboros to ensure that unit tests de
 
 ## Prerequisites
 
-- .NET 8 SDK or later
+- .NET 10 SDK or later
 - Local dotnet tool restore permissions
 
 The repository uses a local tool manifest at `.config/dotnet-tools.json` to pin the Stryker.NET version.

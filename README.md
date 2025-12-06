@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/PMeeske/Ouroboros"><img src="https://img.shields.io/badge/build-passing-brightgreen" alt="Build Status"></a>
-  <a href="https://dotnet.microsoft.com/download/dotnet/8.0"><img src="https://img.shields.io/badge/.NET-8.0-blue" alt=".NET Version"></a>
+  <a href="https://dotnet.microsoft.com/download/dotnet/10.0"><img src="https://img.shields.io/badge/.NET-10.0-blue" alt=".NET Version"></a>
   <a href="https://www.nuget.org/packages/LangChain/"><img src="https://img.shields.io/badge/LangChain-0.17.0-purple" alt="LangChain"></a>
   <a href="TEST_COVERAGE_REPORT.md"><img src="https://img.shields.io/badge/coverage-8.4%25-yellow" alt="Coverage"></a>
   <a href="src/Ouroboros.Tests"><img src="https://img.shields.io/badge/tests-304%20passing-brightgreen" alt="Tests"></a>
@@ -99,7 +99,7 @@ Iteration N:  Critique(FinalSpec_{N-1}) → Improve → FinalSpec_N
 
 ### Prerequisites
 
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later
 - [Ollama](https://ollama.ai/) (for local LLM providers) or remote API access (optional)
 
 ### Installation
@@ -298,10 +298,10 @@ Ouroboros is now available as an Android app with a terminal-style CLI interface
 ```bash
 # To build locally (requires: dotnet workload install maui-android)
 cd src/Ouroboros.Android
-dotnet build -c Release -f net8.0-android
+dotnet build -c Release -f net10.0-android
 
 # Install on connected device
-dotnet build -c Release -f net8.0-android -t:Install
+dotnet build -c Release -f net10.0-android -t:Install
 ```
 
 **Features:**
@@ -772,7 +772,7 @@ See [SCOPE_LOCK_GUIDE.md](docs/SCOPE_LOCK_GUIDE.md) for detailed documentation o
 
 ### Testing
 
-Ouroboros has a comprehensive test suite with 224 passing tests covering core functionality, domain models, security, and performance.
+Ouroboros has a comprehensive test suite with 300+ passing tests covering core functionality, domain models, security, and performance.
 
 #### Run Tests
 
@@ -816,7 +816,7 @@ dotnet run -- pipeline --dsl "SetPrompt('test') | UseDraft" --model "llama3:8b"
 
 [![Line Coverage](https://img.shields.io/badge/coverage-8.4%25-yellow)](TEST_COVERAGE_REPORT.md)
 [![Branch Coverage](https://img.shields.io/badge/branch--coverage-6.2%25-red)](TEST_COVERAGE_REPORT.md)
-[![Tests](https://img.shields.io/badge/tests-224%20passing-brightgreen)](src/Ouroboros.Tests)
+[![Tests](https://img.shields.io/badge/tests-300%2B%20passing-brightgreen)](src/Ouroboros.Tests)
 
 **Current Coverage Summary:**
 - **Line Coverage:** 8.4% (1,134 of 13,465 lines)
@@ -953,7 +953,7 @@ See [`.github/copilot-instructions.md`](.github/copilot-instructions.md) for det
 
 ## 📋 Requirements
 
-- **Runtime**: .NET 8.0+
+- **Runtime**: .NET 10.0+
 - **LangChain**: 0.17.0
 - **Ollama** (optional): For local LLM providers
 

@@ -58,7 +58,7 @@ The Android APK is automatically built by CI/CD and available as an artifact:
 
 #### Prerequisites
 
-1. Install .NET 8.0 SDK or later
+1. Install .NET 10.0 SDK or later
 2. Install .NET MAUI workload:
    ```bash
    dotnet workload install maui-android
@@ -78,12 +78,12 @@ The Android APK is automatically built by CI/CD and available as an artifact:
 
 3. Build the APK:
    ```bash
-   dotnet build -c Release -f net8.0-android
+   dotnet build -c Release -f net10.0-android
    ```
 
 4. The APK will be located at:
    ```
-   bin/Release/net8.0-android/com.adaptivesystems.Ouroboros-Signed.apk
+   bin/Release/net10.0-android/com.adaptivesystems.Ouroboros-Signed.apk
    ```
 
 **Note:** The Android project is built separately from the main solution to avoid requiring MAUI workloads in all CI environments.
@@ -93,7 +93,7 @@ The Android APK is automatically built by CI/CD and available as an artifact:
 To install directly on a connected Android device:
 
 ```bash
-dotnet build -c Release -f net8.0-android -t:Install
+dotnet build -c Release -f net10.0-android -t:Install
 ```
 
 ## Usage

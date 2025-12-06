@@ -4,7 +4,7 @@
 
 Ouroboros is a sophisticated **functional programming-based AI pipeline system** built on LangChain. The project implements category theory principles, monadic composition, and functional programming patterns to create type-safe, composable AI workflows.
 
-**Key Technologies**: C# 8.0+, LangChain, Category Theory, Functional Programming, Vector Databases
+**Key Technologies**: C# 14.0+, LangChain, Category Theory, Functional Programming, Vector Databases
 
 ## Architecture Patterns
 

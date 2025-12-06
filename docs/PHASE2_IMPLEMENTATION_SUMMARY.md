@@ -281,7 +281,7 @@ While Phase 2 is complete, potential enhancements include:
 ## Compatibility
 
 - **Phase 1 Components**: Fully compatible, Phase 2 components work alongside Phase 1
-- **.NET Version**: Requires .NET 8.0+
+- **.NET Version**: Requires .NET 10.0+
 - **LangChain**: Compatible with existing LangChain integration
 - **Breaking Changes**: None - purely additive functionality
 

@@ -159,7 +159,7 @@ Ouroboros is a sophisticated functional programming-based AI pipeline system bui
 - **Audit Trail**: Full transparency into decision-making process
 
 ### 4. Type Safety
-- Leverages C# 8.0+ type system for compile-time guarantees
+- Leverages C# 14.0+ type system for compile-time guarantees
 - No null reference exceptions through `Option<T>` monad
 - All errors handled explicitly through `Result<T>` monad
 
@@ -319,8 +319,8 @@ Terraform (IONOS Cloud)
 ## Technology Stack
 
 ### Core Technologies
-- **Runtime**: .NET 8.0+
-- **Language**: C# 8.0+ (with functional programming patterns)
+- **Runtime**: .NET 10.0+
+- **Language**: C# 14.0+ (with functional programming patterns)
 - **AI Framework**: LangChain 0.17.0
 - **Category Theory**: Custom implementation
 

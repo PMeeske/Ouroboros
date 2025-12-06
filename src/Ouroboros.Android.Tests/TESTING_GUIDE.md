@@ -296,7 +296,7 @@ Let me update the Android test project to use the official frameworks:
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsTestProject>true</IsTestProject>
@@ -365,7 +365,7 @@ jobs:
     - name: Build APK
       run: |
         cd src/Ouroboros.Android
-        dotnet build -c Release -f net8.0-android
+        dotnet build -c Release -f net10.0-android
     
     - name: Start Android Emulator
       uses: reactivecircus/android-emulator-runner@v2
