@@ -368,7 +368,6 @@ public static class AsyncKleisliExtensions
     private static async IAsyncEnumerable<T> SingleAsync<T>(T value)
     {
         yield return value;
-        await Task.CompletedTask;
     }
 
     private static async IAsyncEnumerable<TOut> LiftAsyncImpl<TIn, TOut>(

@@ -204,13 +204,14 @@ public static class ReactiveKleisliExtensions
         => input => arrow(input).Throttle(dueTime);
 
     /// <summary>
-    /// Debounces the stream to emit only after a period of silence.
+    /// Throttles the stream to emit only after a period of silence.
+    /// This is the debounce operation in reactive programming.
     /// </summary>
     /// <typeparam name="TIn">The input type.</typeparam>
     /// <typeparam name="TOut">The output type.</typeparam>
     /// <param name="arrow">The source arrow.</param>
-    /// <param name="dueTime">The debounce duration.</param>
-    /// <returns>An arrow with debounced results.</returns>
+    /// <param name="dueTime">The throttle/debounce duration.</param>
+    /// <returns>An arrow with throttled results.</returns>
     public static ReactiveKleisli<TIn, TOut> Debounce<TIn, TOut>(
         this ReactiveKleisli<TIn, TOut> arrow,
         TimeSpan dueTime)
