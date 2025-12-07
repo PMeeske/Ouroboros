@@ -181,12 +181,9 @@ public sealed class SafeCalculatorTool : ITool
             string mettaExpression = this.ConvertToMeTTaExpression(expression);
             Result<string, string> mettaResult = await this.symbolicEngine!.ExecuteQueryAsync(mettaExpression, ct);
 
-            return mettaResult.Bind(mettaValue =>
-                this.TryParseMeTTaNumber(mettaValue)
-                    .Bind(symbolicResult =>
-                        Math.Abs(symbolicResult - result) < ComparisonTolerance
-                            ? Result<bool, string>.Success(true)
-                            : Result<bool, string>.Failure($"Symbolic result {symbolicResult} does not match computed result {result}")));
+            return mettaResult
+                .Bind(this.TryParseMeTTaNumber)
+                .Bind(symbolicResult => this.ValidateCalculationMatch(symbolicResult, result, "Symbolic result does not match computed result"));
         }
         catch (Exception ex)
         {
@@ -200,16 +197,18 @@ public sealed class SafeCalculatorTool : ITool
         {
             return this.ValidateAllowedCharacters(expression)
                 .Bind(_ => this.ComputeExpression(expression))
-                .Bind(recomputed =>
-                    Math.Abs(recomputed - result) < ComparisonTolerance
-                        ? Result<bool, string>.Success(true)
-                        : Result<bool, string>.Failure("Recomputation verification failed"));
+                .Bind(recomputed => this.ValidateCalculationMatch(recomputed, result, "Recomputation verification failed"));
         }
         catch (Exception ex)
         {
             return Result<bool, string>.Failure($"Simulated verification exception: {ex.Message}");
         }
     }
+
+    private Result<bool, string> ValidateCalculationMatch(double calculated, double expected, string errorMessage) =>
+        Math.Abs(calculated - expected) < ComparisonTolerance
+            ? Result<bool, string>.Success(true)
+            : Result<bool, string>.Failure($"{errorMessage}: calculated={calculated}, expected={expected}");
 
     private Result<Unit, string> ValidateAllowedCharacters(string expression) =>
         expression.All(c => AllowedCharacters.Contains(c))
