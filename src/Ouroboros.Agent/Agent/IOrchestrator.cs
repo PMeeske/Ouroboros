@@ -1,4 +1,7 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+// <copyright file="IOrchestrator.cs" company="Adaptive Systems Inc.">
+// Copyright (c) Adaptive Systems Inc. All rights reserved.
+// </copyright>
+
 // ==========================================================
 // Base Orchestrator Interface
 // Unified interface for all orchestrators in the suite

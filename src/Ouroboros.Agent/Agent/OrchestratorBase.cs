@@ -1,4 +1,7 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+// <copyright file="OrchestratorBase.cs" company="Adaptive Systems Inc.">
+// Copyright (c) Adaptive Systems Inc. All rights reserved.
+// </copyright>
+
 // ==========================================================
 // Base Orchestrator Implementation
 // Abstract base class providing common orchestrator functionality
@@ -136,7 +139,7 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
     /// <summary>
     /// Activity source for tracing.
     /// </summary>
-    private static readonly ActivitySource ActivitySource = new("Ouroboros.Orchestrator", "1.0.0");
+    private static readonly ActivitySource ActivitySource = new("Ouroboros.Orchestrator", typeof(OrchestratorBase<,>).Assembly.GetName().Version?.ToString() ?? "1.0.0");
 
     /// <inheritdoc/>
     public virtual async Task<Dictionary<string, object>> GetHealthAsync(CancellationToken ct = default)
@@ -277,7 +280,9 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
             }
             catch (Exception ex) when (attempt < retryConfig.MaxRetries && !ct.IsCancellationRequested)
             {
-                await Task.Delay(delay, ct);
+                // Add jitter to prevent thundering herd
+                var jitter = TimeSpan.FromMilliseconds(Random.Shared.Next(0, (int)(delay.TotalMilliseconds * 0.1)));
+                await Task.Delay(delay + jitter, ct);
                 delay = TimeSpan.FromMilliseconds(
                     Math.Min(delay.TotalMilliseconds * retryConfig.BackoffMultiplier,
                              retryConfig.MaxDelay.TotalMilliseconds));

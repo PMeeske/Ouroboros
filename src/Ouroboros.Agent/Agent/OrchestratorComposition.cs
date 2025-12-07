@@ -1,4 +1,7 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+// <copyright file="OrchestratorComposition.cs" company="Adaptive Systems Inc.">
+// Copyright (c) Adaptive Systems Inc. All rights reserved.
+// </copyright>
+
 // ==========================================================
 // Orchestrator Composition Helpers
 // Fluent API for composing and chaining orchestrators
@@ -188,7 +191,10 @@ public sealed class OrchestratorComposer
     /// <summary>
     /// Creates a parallel orchestrator that executes multiple orchestrators concurrently.
     /// </summary>
+    /// <param name="maxConcurrency">Maximum number of orchestrators to execute concurrently (default: unlimited).</param>
+    /// <param name="orchestrators">The orchestrators to execute in parallel.</param>
     public static IComposableOrchestrator<TInput, TOutput[]> Parallel<TInput, TOutput>(
+        int maxConcurrency,
         params IOrchestrator<TInput, TOutput>[] orchestrators)
     {
         ArgumentNullException.ThrowIfNull(orchestrators);
@@ -201,19 +207,55 @@ public sealed class OrchestratorComposer
             "parallel_orchestrator",
             async (input, context) =>
             {
-                var tasks = orchestrators.Select(o => o.ExecuteAsync(input, context)).ToArray();
-                var results = await Task.WhenAll(tasks);
+                var semaphore = maxConcurrency > 0 
+                    ? new SemaphoreSlim(maxConcurrency, maxConcurrency) 
+                    : null;
 
-                // Check for failures
-                var failures = results.Where(r => !r.Success).ToList();
-                if (failures.Any())
+                try
                 {
-                    var errors = string.Join("; ", failures.Select(f => f.ErrorMessage));
-                    throw new InvalidOperationException($"Parallel orchestration had failures: {errors}");
-                }
+                    var tasks = orchestrators.Select(async o =>
+                    {
+                        if (semaphore != null)
+                        {
+                            await semaphore.WaitAsync(context.CancellationToken).ConfigureAwait(false);
+                        }
+                        try
+                        {
+                            return await o.ExecuteAsync(input, context).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            semaphore?.Release();
+                        }
+                    }).ToArray();
 
-                return results.Select(r => r.Output!).ToArray();
+                    var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+                    // Check for failures
+                    var failures = results.Where(r => !r.Success).ToList();
+                    if (failures.Any())
+                    {
+                        var errors = string.Join("; ", failures.Select(f => f.ErrorMessage));
+                        throw new InvalidOperationException($"Parallel orchestration had failures: {errors}");
+                    }
+
+                    return results.Select(r => r.Output!).ToArray();
+                }
+                finally
+                {
+                    semaphore?.Dispose();
+                }
             });
+    }
+
+    /// <summary>
+    /// Creates a parallel orchestrator that executes multiple orchestrators concurrently without limits.
+    /// </summary>
+    /// <param name="orchestrators">The orchestrators to execute in parallel.</param>
+    public static IComposableOrchestrator<TInput, TOutput[]> Parallel<TInput, TOutput>(
+        params IOrchestrator<TInput, TOutput>[] orchestrators)
+    {
+        return Parallel(-1, orchestrators);
     }
 
     /// <summary>
