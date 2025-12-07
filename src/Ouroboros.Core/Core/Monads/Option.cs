@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using System.Runtime.CompilerServices;
+
 namespace LangChainPipeline.Core.Monads;
 
 /// <summary>
@@ -17,12 +19,20 @@ public readonly struct Option<T>
     /// <summary>
     /// Gets the underlying value if present.
     /// </summary>
-    public T? Value => this.value;
+    public T? Value
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this.value;
+    }
 
     /// <summary>
     /// Gets a value indicating whether this instance contains a value.
     /// </summary>
-    public bool HasValue => this.hasValue;
+    public bool HasValue
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this.hasValue;
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Option{T}"/> struct.
@@ -51,12 +61,14 @@ public readonly struct Option<T>
     /// </summary>
     /// <param name="value">The value to wrap.</param>
     /// <returns>An Option containing the value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Option<T> Some(T value) => new(value);
 
     /// <summary>
     /// Creates an empty Option (represents None/Nothing).
     /// </summary>
     /// <returns>An empty Option.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Option<T> None() => default;
 
     /// <summary>
@@ -65,6 +77,7 @@ public readonly struct Option<T>
     /// <typeparam name="TResult">The type of the result value.</typeparam>
     /// <param name="func">Function to apply if value is present.</param>
     /// <returns>The result of the function, or None if this Option is empty.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Option<TResult> Bind<TResult>(Func<T, Option<TResult>> func)
     {
         return this.HasValue && this.value is not null ? func(this.value) : Option<TResult>.None();
@@ -76,6 +89,7 @@ public readonly struct Option<T>
     /// <typeparam name="TResult">The type of the result value.</typeparam>
     /// <param name="func">Function to apply to the wrapped value.</param>
     /// <returns>An Option containing the transformed value, or None if this Option is empty.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Option<TResult> Map<TResult>(Func<T, TResult> func)
     {
         return this.HasValue && this.value is not null ? Option<TResult>.Some(func(this.value)) : Option<TResult>.None();
@@ -88,6 +102,7 @@ public readonly struct Option<T>
     /// <param name="func">Function to apply to the value.</param>
     /// <param name="defaultValue">Value to return if Option is empty.</param>
     /// <returns>The result of the function or the default value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TResult Match<TResult>(Func<T, TResult> func, TResult defaultValue)
     {
         return this.HasValue && this.value is not null ? func(this.value) : defaultValue;
@@ -115,6 +130,7 @@ public readonly struct Option<T>
     /// </summary>
     /// <param name="defaultValue">The default value to return if Option is empty.</param>
     /// <returns>The wrapped value or the default value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T GetValueOrDefault(T defaultValue)
     {
         return this.HasValue && this.value is not null ? this.value : defaultValue;

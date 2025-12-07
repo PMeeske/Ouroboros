@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using System.Runtime.CompilerServices;
+
 namespace LangChainPipeline.Core.Monads;
 
 /// <summary>
@@ -19,22 +21,38 @@ public readonly struct Result<TValue, TError>
     /// <summary>
     /// Gets a value indicating whether this result represents success.
     /// </summary>
-    public bool IsSuccess => this.isSuccess;
+    public bool IsSuccess
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this.isSuccess;
+    }
 
     /// <summary>
     /// Gets a value indicating whether this result represents failure.
     /// </summary>
-    public bool IsFailure => !this.isSuccess;
+    public bool IsFailure
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => !this.isSuccess;
+    }
 
     /// <summary>
     /// Gets the success value (only valid when IsSuccess is true).
     /// </summary>
-    public TValue Value => this.isSuccess ? this.value! : throw new InvalidOperationException("Cannot access Value of a failed Result");
+    public TValue Value
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this.isSuccess ? this.value! : throw new InvalidOperationException("Cannot access Value of a failed Result");
+    }
 
     /// <summary>
     /// Gets the error value (only valid when IsFailure is true).
     /// </summary>
-    public TError Error => !this.isSuccess ? this.error! : throw new InvalidOperationException("Cannot access Error of a successful Result");
+    public TError Error
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => !this.isSuccess ? this.error! : throw new InvalidOperationException("Cannot access Error of a successful Result");
+    }
 
     private Result(TValue value)
     {
@@ -55,6 +73,7 @@ public readonly struct Result<TValue, TError>
     /// </summary>
     /// <param name="value">The success value.</param>
     /// <returns>A successful Result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<TValue, TError> Success(TValue value) => new(value);
 
     /// <summary>
@@ -62,6 +81,7 @@ public readonly struct Result<TValue, TError>
     /// </summary>
     /// <param name="error">The error value.</param>
     /// <returns>A failed Result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<TValue, TError> Failure(TError error) => new(error);
 
     /// <summary>
@@ -70,6 +90,7 @@ public readonly struct Result<TValue, TError>
     /// <typeparam name="TResult">The type of the result value.</typeparam>
     /// <param name="func">Function to apply if this Result is successful.</param>
     /// <returns>The result of the function, or the original error if this Result failed.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<TResult, TError> Bind<TResult>(Func<TValue, Result<TResult, TError>> func)
     {
         return this.IsSuccess ? func(this.value!) : Result<TResult, TError>.Failure(this.error!);
@@ -81,6 +102,7 @@ public readonly struct Result<TValue, TError>
     /// <typeparam name="TResult">The type of the result value.</typeparam>
     /// <param name="func">Function to apply to the wrapped value.</param>
     /// <returns>A Result containing the transformed value, or the original error.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<TResult, TError> Map<TResult>(Func<TValue, TResult> func)
     {
         return this.IsSuccess ? Result<TResult, TError>.Success(func(this.value!)) : Result<TResult, TError>.Failure(this.error!);
@@ -92,6 +114,7 @@ public readonly struct Result<TValue, TError>
     /// <typeparam name="TNewError">The new error type.</typeparam>
     /// <param name="func">Function to transform the error.</param>
     /// <returns>A Result with the transformed error type.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<TValue, TNewError> MapError<TNewError>(Func<TError, TNewError> func)
     {
         return this.IsSuccess ? Result<TValue, TNewError>.Success(this.value!) : Result<TValue, TNewError>.Failure(func(this.error!));
@@ -104,6 +127,7 @@ public readonly struct Result<TValue, TError>
     /// <param name="onSuccess">Function to execute if Result is successful.</param>
     /// <param name="onFailure">Function to execute if Result failed.</param>
     /// <returns>The result of the appropriate function.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TResult Match<TResult>(Func<TValue, TResult> onSuccess, Func<TError, TResult> onFailure)
     {
         return this.IsSuccess ? onSuccess(this.value!) : onFailure(this.error!);
@@ -131,6 +155,7 @@ public readonly struct Result<TValue, TError>
     /// </summary>
     /// <param name="defaultValue">The default value to return on failure.</param>
     /// <returns>The success value or the default value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TValue GetValueOrDefault(TValue defaultValue)
     {
         return this.IsSuccess ? this.value! : defaultValue;
@@ -140,6 +165,7 @@ public readonly struct Result<TValue, TError>
     /// Converts a Result to an Option, discarding error information.
     /// </summary>
     /// <returns>Some(value) if successful, None if failed.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Option<TValue> ToOption()
     {
         return this.IsSuccess ? Option<TValue>.Some(this.value!) : Option<TValue>.None();
@@ -219,39 +245,58 @@ public readonly struct Result<TValue> : IEquatable<Result<TValue>>
     /// <summary>
     /// Gets a value indicating whether this result represents success.
     /// </summary>
-    public bool IsSuccess => this.inner.IsSuccess;
+    public bool IsSuccess
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this.inner.IsSuccess;
+    }
 
     /// <summary>
     /// Gets a value indicating whether this result represents failure.
     /// </summary>
-    public bool IsFailure => this.inner.IsFailure;
+    public bool IsFailure
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this.inner.IsFailure;
+    }
 
     /// <summary>
     /// Gets the success value.
     /// </summary>
-    public TValue Value => this.inner.Value;
+    public TValue Value
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this.inner.Value;
+    }
 
     /// <summary>
     /// Gets the error message.
     /// </summary>
-    public string Error => this.inner.Error;
+    public string Error
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this.inner.Error;
+    }
 
     /// <summary>
     /// Creates a successful Result.
     /// </summary>
     /// <returns></returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<TValue> Success(TValue value) => new(Result<TValue, string>.Success(value));
 
     /// <summary>
     /// Creates a failed Result.
     /// </summary>
     /// <returns></returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<TValue> Failure(string error) => new(Result<TValue, string>.Failure(error));
 
     /// <summary>
     /// Monadic bind operation.
     /// </summary>
     /// <returns></returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<TResult> Bind<TResult>(Func<TValue, Result<TResult>> func)
     {
         return new(this.inner.Bind(v => func(v).inner));
@@ -261,6 +306,7 @@ public readonly struct Result<TValue> : IEquatable<Result<TValue>>
     /// Functor map operation.
     /// </summary>
     /// <returns></returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<TResult> Map<TResult>(Func<TValue, TResult> func)
     {
         return new(this.inner.Map(func));
@@ -270,6 +316,7 @@ public readonly struct Result<TValue> : IEquatable<Result<TValue>>
     /// Pattern matching.
     /// </summary>
     /// <returns></returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TResult Match<TResult>(Func<TValue, TResult> onSuccess, Func<string, TResult> onFailure)
     {
         return this.inner.Match(onSuccess, onFailure);
@@ -287,12 +334,14 @@ public readonly struct Result<TValue> : IEquatable<Result<TValue>>
     /// Gets value or default.
     /// </summary>
     /// <returns></returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TValue GetValueOrDefault(TValue defaultValue) => this.inner.GetValueOrDefault(defaultValue);
 
     /// <summary>
     /// Converts to Option.
     /// </summary>
     /// <returns></returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Option<TValue> ToOption() => this.inner.ToOption();
 
     /// <summary>

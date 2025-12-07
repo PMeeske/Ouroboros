@@ -1,4 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
+using System.Runtime.CompilerServices;
+
 namespace LangChainPipeline.Core.Steps;
 
 /// <summary>
@@ -26,11 +29,13 @@ public readonly struct SyncStep<TIn, TOut> : IEquatable<SyncStep<TIn, TOut>>
     /// <summary>
     /// Execute the synchronous step
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TOut Invoke(TIn input) => _f(input);
 
     /// <summary>
     /// Convert to async Step
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Step<TIn, TOut> ToAsync()
     {
         Func<TIn, TOut> func = _f; // Capture to avoid struct 'this' issues
@@ -40,6 +45,7 @@ public readonly struct SyncStep<TIn, TOut> : IEquatable<SyncStep<TIn, TOut>>
     /// <summary>
     /// Pipe composition (heterogeneous) - synchronous version
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public SyncStep<TIn, TNext> Pipe<TNext>(SyncStep<TOut, TNext> next)
     {
         Func<TIn, TOut> func = _f; // Capture to avoid struct 'this' issues
@@ -58,6 +64,7 @@ public readonly struct SyncStep<TIn, TOut> : IEquatable<SyncStep<TIn, TOut>>
     /// <summary>
     /// Functor/Map operation
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public SyncStep<TIn, TNext> Map<TNext>(Func<TOut, TNext> map)
     {
         Func<TIn, TOut> func = _f; // Capture to avoid struct 'this' issues
@@ -111,6 +118,7 @@ public static class SyncStepExtensions
     /// <summary>
     /// Lift a pure function to SyncStep
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static SyncStep<TIn, TOut> ToSyncStep<TIn, TOut>(this Func<TIn, TOut> func)
         => new(func);
 
