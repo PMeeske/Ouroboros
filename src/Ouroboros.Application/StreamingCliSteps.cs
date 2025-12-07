@@ -279,9 +279,9 @@ public static class StreamingCliSteps
             Dictionary<string, string> options = ParseKeyValueArgs(args);
             string topic = options.TryGetValue("topic", out string? t) ? t : "General";
             int k = options.TryGetValue("k", out string? kStr) && int.TryParse(kStr, out int kv) ? kv : 5;
-            
+
             // Use query from state if not provided in args
-            string query = s.Query; 
+            string query = s.Query;
             if (string.IsNullOrWhiteSpace(query))
             {
                  Console.WriteLine("[error] No query provided in state.");
@@ -299,14 +299,14 @@ public static class StreamingCliSteps
                 k
             );
 
-            try 
+            try
             {
-                await pipeline.ForEachAsync(item => 
+                await pipeline.ForEachAsync(item =>
                 {
-                    Console.Write(item.chunk); 
+                    Console.Write(item.chunk);
                     s.Branch = item.branch;
                 });
-                
+
                 Console.WriteLine(); // Newline at end
                 Console.WriteLine("[stream] Reasoning pipeline completed.");
             }
@@ -316,6 +316,144 @@ public static class StreamingCliSteps
             }
 
             return s;
+        };
+
+    /// <summary>
+    /// Streams LLM responses directly through Rx to a console sink with real-time output.
+    /// Couples IStreamingChatModel.StreamReasoningContent() → IObservable&lt;string&gt; → Console.Write
+    /// Args: 'prefix=[stream]|newline=true'
+    /// </summary>
+    /// <example>
+    /// Pipeline DSL: StreamToConsole('prefix=[ai]|newline=true')
+    /// </example>
+    [PipelineToken("StreamToConsole", "RxConsole")]
+    public static Step<CliPipelineState, CliPipelineState> StreamToConsole(string? args = null)
+        => async s =>
+        {
+            if (s.Llm.InnerModel is not LangChainPipeline.Providers.IStreamingChatModel streamingModel)
+            {
+                Console.WriteLine("[error] Current model does not support streaming (IStreamingChatModel required).");
+                return s;
+            }
+
+            string query = s.Query;
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                Console.WriteLine("[error] No query provided. Use SetQuery('your prompt') first.");
+                return s;
+            }
+
+            Dictionary<string, string> options = ParseKeyValueArgs(args);
+            string prefix = options.TryGetValue("prefix", out string? p) ? p : string.Empty;
+            bool addNewline = options.TryGetValue("newline", out string? nl) &&
+                              (nl.Equals("true", StringComparison.OrdinalIgnoreCase) || nl == "1");
+
+            // Initialize streaming context for subscription management
+            s.Streaming ??= new StreamingContext();
+
+            if (!string.IsNullOrEmpty(prefix))
+            {
+                Console.Write($"{prefix} ");
+            }
+
+            // Create the Rx Observable from the streaming model
+            IObservable<string> tokenStream = streamingModel.StreamReasoningContent(query);
+
+            // Store active stream as IObservable<object> for composability
+            s.ActiveStream = tokenStream.Select(token => (object)token);
+
+            // Collect full response for state tracking
+            System.Text.StringBuilder fullResponse = new System.Text.StringBuilder();
+            using System.Threading.ManualResetEventSlim completionEvent = new System.Threading.ManualResetEventSlim(false);
+            Exception? streamError = null;
+
+            // Subscribe to the Rx stream with console sink
+            IDisposable subscription = tokenStream.Subscribe(
+                onNext: token =>
+                {
+                    // Real-time console output
+                    Console.Write(token);
+                    fullResponse.Append(token);
+                },
+                onError: ex =>
+                {
+                    Console.WriteLine();
+                    Console.WriteLine($"[stream:error] {ex.Message}");
+                    streamError = ex;
+                    completionEvent.Set();
+                },
+                onCompleted: () =>
+                {
+                    if (addNewline)
+                    {
+                        Console.WriteLine();
+                    }
+                    completionEvent.Set();
+                }
+            );
+
+            // Register subscription for cleanup
+            s.Streaming.Register(subscription);
+
+            // Wait for stream completion
+            completionEvent.Wait();
+
+            // Update state with the full response
+            if (streamError == null)
+            {
+                s.Output = fullResponse.ToString();
+                s.Branch = s.Branch.WithIngestEvent("stream:console:completed", new[] { $"tokens:{fullResponse.Length}" });
+
+                if (s.Trace)
+                {
+                    Console.WriteLine($"[trace] Stream completed: {fullResponse.Length} chars");
+                }
+            }
+
+            return s;
+        };
+
+    /// <summary>
+    /// Creates a live Rx Observable from model streaming that can be piped to other Rx operators.
+    /// Use with ApplyMap, ApplyFilter, ApplySink for custom processing.
+    /// Args: none (uses current query)
+    /// </summary>
+    /// <example>
+    /// Pipeline DSL: CreateModelStream | ApplyFilter('length > 0') | ApplySink('console')
+    /// </example>
+    [PipelineToken("CreateModelStream", "ModelStream")]
+    public static Step<CliPipelineState, CliPipelineState> CreateModelStream(string? args = null)
+        => s =>
+        {
+            if (s.Llm.InnerModel is not LangChainPipeline.Providers.IStreamingChatModel streamingModel)
+            {
+                Console.WriteLine("[error] Current model does not support streaming (IStreamingChatModel required).");
+                return Task.FromResult(s);
+            }
+
+            string query = s.Query;
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                Console.WriteLine("[error] No query provided. Use SetQuery('your prompt') first.");
+                return Task.FromResult(s);
+            }
+
+            // Initialize streaming context
+            s.Streaming ??= new StreamingContext();
+
+            // Create the Rx Observable from the streaming model
+            IObservable<string> tokenStream = streamingModel.StreamReasoningContent(query);
+
+            // Store as IObservable<object> for composability with other Rx operators
+            s.ActiveStream = tokenStream.Select(token => (object)token);
+            s.Branch = s.Branch.WithIngestEvent("stream:model:created", Array.Empty<string>());
+
+            if (s.Trace)
+            {
+                Console.WriteLine($"[trace] Model stream created for query: {query.Substring(0, Math.Min(50, query.Length))}...");
+            }
+
+            return Task.FromResult(s);
         };
 
     /// <summary>

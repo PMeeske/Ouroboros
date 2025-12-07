@@ -31,6 +31,15 @@ public sealed class SkillRegistry : ISkillRegistry
     }
 
     /// <summary>
+    /// Registers a skill asynchronously (for in-memory this is the same as sync).
+    /// </summary>
+    public Task RegisterSkillAsync(Skill skill, CancellationToken ct = default)
+    {
+        RegisterSkill(skill);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Finds skills matching a goal.
     /// </summary>
     public async Task<List<Skill>> FindMatchingSkillsAsync(

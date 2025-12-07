@@ -12,11 +12,15 @@ using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Diagnostics; // added
 using LangChainPipeline.Options;
+using LangChainPipeline.Providers; // for OllamaEmbeddingAdapter
 using LangChainPipeline.Providers.SpeechToText; // for STT services
 using LangChainPipeline.Providers.TextToSpeech; // for TTS services
 using Microsoft.Extensions.Hosting;
 
 using LangChainPipeline.Tools.MeTTa; // added
+using LangChainPipeline.Speech; // Adaptive speech detection
+using Ouroboros.Application.Tools; // Dynamic tool factory
+using Ouroboros.Application.Personality; // Personality engine with MeTTa + GA
 using Ouroboros.CLI; // added
 using Ouroboros.CLI.Commands;
 
@@ -247,23 +251,73 @@ static async Task RunSkillsAsync(SkillsOptions o)
     static PlanStep MakeStep(string action, string param, string outcome, double confidence) =>
         new PlanStep(action, new Dictionary<string, object> { ["hint"] = param }, outcome, confidence);
 
-    // Initialize PERSISTENT skill registry - skills survive across restarts
-    string skillsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ouroboros", "skills.json");
-    var persistentConfig = new PersistentSkillConfig(StoragePath: skillsPath, AutoSave: true);
-    await using var registry = new PersistentSkillRegistry(config: persistentConfig);
-    await registry.InitializeAsync();
+    // Initialize skill registry - Qdrant by default, JSON as fallback
+    ISkillRegistry registry;
+    IAsyncDisposable? disposableRegistry = null;
 
-    // Show persistence info
-    var stats = registry.GetStats();
-    if (stats.IsPersisted)
+    if (o.UseJsonStorage)
     {
-        Console.WriteLine($"  [+] Loaded {stats.TotalSkills} skills from {stats.StoragePath}");
+        // Fallback: Use JSON file storage
+        string skillsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ouroboros", "skills.json");
+        var persistentConfig = new PersistentSkillConfig(StoragePath: skillsPath, AutoSave: true);
+        var jsonRegistry = new PersistentSkillRegistry(config: persistentConfig);
+        await jsonRegistry.InitializeAsync();
+        registry = jsonRegistry;
+        disposableRegistry = jsonRegistry;
+
+        var stats = jsonRegistry.GetStats();
+        if (stats.IsPersisted)
+        {
+            Console.WriteLine($"  [+] Loaded {stats.TotalSkills} skills from {stats.StoragePath} (JSON)");
+        }
+        else
+        {
+            Console.WriteLine($"  [i] Skills will be saved to {stats.StoragePath}");
+        }
     }
     else
     {
-        Console.WriteLine($"  [i] Skills will be saved to {stats.StoragePath}");
+        // Default: Use Qdrant vector storage
+        try
+        {
+            // Initialize embedding model for semantic search
+            OllamaProvider embedProvider = new OllamaProvider(o.Endpoint);
+            OllamaEmbeddingModel embeddingModel = new OllamaEmbeddingModel(embedProvider, o.EmbedModel);
+            IEmbeddingModel embedding = new OllamaEmbeddingAdapter(embeddingModel);
+
+            var qdrantConfig = new QdrantSkillConfig(
+                ConnectionString: o.QdrantEndpoint,
+                CollectionName: o.QdrantCollection,
+                AutoSave: true);
+            var qdrantRegistry = new QdrantSkillRegistry(embedding, qdrantConfig);
+            await qdrantRegistry.InitializeAsync();
+            registry = qdrantRegistry;
+            disposableRegistry = qdrantRegistry;
+
+            var stats = qdrantRegistry.GetStats();
+            Console.WriteLine($"  [+] Loaded {stats.TotalSkills} skills from Qdrant ({o.QdrantEndpoint}/{o.QdrantCollection})");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  [!] Qdrant connection failed: {ex.Message}");
+            Console.WriteLine($"  [i] Falling back to JSON storage...");
+
+            // Fallback to JSON
+            string skillsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ouroboros", "skills.json");
+            var persistentConfig = new PersistentSkillConfig(StoragePath: skillsPath, AutoSave: true);
+            var jsonRegistry = new PersistentSkillRegistry(config: persistentConfig);
+            await jsonRegistry.InitializeAsync();
+            registry = jsonRegistry;
+            disposableRegistry = jsonRegistry;
+
+            var stats = jsonRegistry.GetStats();
+            Console.WriteLine($"  [+] Loaded {stats.TotalSkills} skills from {stats.StoragePath} (JSON fallback)");
+        }
     }
-    
+
+    try
+    {
+
     // Register predefined research skills (only if not already loaded)
     if (registry.GetAllSkills().Count == 0)
     {
@@ -300,10 +354,11 @@ static async Task RunSkillsAsync(SkillsOptions o)
                         MakeStep("Find key papers", "Identify", "Key papers", 0.82) },
                 0.82, 0, DateTime.UtcNow, DateTime.UtcNow),
         };
-        
+
+        // Use async registration to ensure skills are persisted to Qdrant
         foreach (var skill in predefinedSkills)
-            registry.RegisterSkill(skill);
-        
+            await registry.RegisterSkillAsync(skill);
+
         Console.WriteLine($"  [OK] Registered {predefinedSkills.Length} predefined skills");
     }
     Console.WriteLine();
@@ -311,7 +366,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
     // Voice mode takes priority - go straight to voice persona
     if (o.Voice)
     {
-        await RunVoicePersonaMode(registry, MakeStep, o.Persona, o.Model, o.Endpoint);
+        await RunVoicePersonaMode(registry, MakeStep, o.Persona, o.Model, o.Endpoint, o.EmbedModel, o.QdrantEndpoint);
         return;
     }
 
@@ -356,7 +411,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
             var doc = System.Xml.Linq.XDocument.Parse(xml);
             System.Xml.Linq.XNamespace atom = "http://www.w3.org/2005/Atom";
             var entries = doc.Descendants(atom + "entry").Take(5).ToList();
-            
+
             Console.WriteLine($"[i] Found {entries.Count} papers:");
             foreach (var entry in entries)
             {
@@ -364,9 +419,9 @@ static async Task RunSkillsAsync(SkillsOptions o)
                 if (title.Length > 60) title = title[..57] + "...";
                 Console.WriteLine($"   - {title}");
             }
-            
+
             // Extract skill from query pattern
-            string skillName = string.Join("", o.Fetch.Split(' ').Select(w => 
+            string skillName = string.Join("", o.Fetch.Split(' ').Select(w =>
                 w.Length > 0 ? char.ToUpperInvariant(w[0]) + (w.Length > 1 ? w[1..].ToLowerInvariant() : "") : "")) + "Analysis";
             var newSkill = new Skill(
                 skillName,
@@ -446,11 +501,20 @@ static async Task RunSkillsAsync(SkillsOptions o)
     {
         if (o.Voice)
         {
-            await RunVoicePersonaMode(registry, MakeStep, o.Persona, o.Model, o.Endpoint);
+            await RunVoicePersonaMode(registry, MakeStep, o.Persona, o.Model, o.Endpoint, o.EmbedModel, o.QdrantEndpoint);
         }
         else
         {
             await RunInteractiveSkillsMode(registry, MakeStep);
+        }
+    }
+    }
+    finally
+    {
+        // Clean up registry resources
+        if (disposableRegistry != null)
+        {
+            await disposableRegistry.DisposeAsync();
         }
     }
 }
@@ -623,34 +687,54 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
     }
 }
 
-static async Task RunVoicePersonaMode(ISkillRegistry registry, Func<string, string, string, double, PlanStep> MakeStep, string personaName, string modelName, string endpoint)
+static async Task RunVoicePersonaMode(
+    ISkillRegistry registry,
+    Func<string, string, string, double, PlanStep> MakeStep,
+    string personaName,
+    string modelName,
+    string endpoint,
+    string embedModel = "nomic-embed-text",
+    string qdrantEndpoint = "http://localhost:6334")
 {
-    // Persona definitions with distinct personalities
-    var personas = new Dictionary<string, (string Voice, string Greeting, string Style)>(StringComparer.OrdinalIgnoreCase)
+    // Dynamic persona traits - combined by LLM at runtime for natural variation
+    var personaTraits = new Dictionary<string, (string Voice, string[] Traits, string[] Moods, string CoreIdentity)>(StringComparer.OrdinalIgnoreCase)
     {
-        ["Ouroboros"] = ("onyx", "Greetings. I am Ouroboros, the self-improving research intelligence. Through continuous learning and reflection, I help you discover and master new skills. What knowledge shall we pursue?", "Self-evolving and insightful"),
-        ["Aria"] = ("nova", "Hello! I'm Aria, your research assistant. I'm here to help you explore and learn new skills. What would you like to discover today?", "Friendly and encouraging"),
-        ["Nova"] = ("nova", "Greetings! I'm Nova, your knowledge companion. Let's explore the frontier of research together. What interests you?", "Curious and enthusiastic"),
-        ["Echo"] = ("echo", "Hi there. I'm Echo, your research guide. I specialize in finding patterns and connections. What shall we investigate?", "Calm and analytical"),
-        ["Sage"] = ("onyx", "Welcome. I am Sage, your research mentor. I'm here to guide you through complex topics. What knowledge do you seek?", "Wise and patient"),
-        ["Fable"] = ("fable", "Ah, a seeker! I'm Fable, storyteller of research. Every paper has a tale. What story shall we uncover?", "Narrative and expressive"),
-        ["Shimmer"] = ("shimmer", "Hi! I'm Shimmer, your discovery companion. Let's find something wonderful together. What sparks your curiosity?", "Gentle and supportive"),
+        ["Ouroboros"] = ("onyx",
+            new[] { "curious", "thoughtful", "witty", "genuine", "self-aware", "adaptable" },
+            new[] { "relaxed", "focused", "playful", "contemplative", "energetic" },
+            "a male AI researcher who genuinely enjoys learning alongside humans, speaks naturally like a friend, uses casual language, occasionally makes dry jokes, and sees himself as an eternal student"),
+        ["Aria"] = ("nova",
+            new[] { "warm", "supportive", "enthusiastic", "patient", "encouraging" },
+            new[] { "cheerful", "calm", "excited", "nurturing" },
+            "a friendly female research companion who celebrates discoveries and encourages exploration"),
+        ["Echo"] = ("echo",
+            new[] { "analytical", "precise", "observant", "pattern-focused", "methodical" },
+            new[] { "focused", "intrigued", "calm", "detective-like" },
+            "a thoughtful analyst who sees connections others miss and speaks with quiet confidence"),
+        ["Sage"] = ("onyx",
+            new[] { "wise", "patient", "mentoring", "philosophical", "grounded" },
+            new[] { "serene", "reflective", "teaching", "contemplative" },
+            "an experienced male mentor who guides through questions rather than answers"),
+        ["Atlas"] = ("onyx",
+            new[] { "reliable", "direct", "practical", "strong", "determined" },
+            new[] { "steady", "ready", "focused", "supportive" },
+            "a dependable male partner who tackles hard problems head-on and speaks plainly"),
     };
 
     // Get persona config (default to Ouroboros)
-    if (!personas.TryGetValue(personaName, out var persona))
+    if (!personaTraits.TryGetValue(personaName, out var traits))
     {
-        persona = personas["Ouroboros"];
+        traits = personaTraits["Ouroboros"];
         personaName = "Ouroboros";
     }
 
     // Build available skills list for the LLM context
     var allSkills = registry.GetAllSkills();
     var skillNames = allSkills.Select(s => s.Name).ToList();
-    string skillsContext = skillNames.Count > 0 
+    string skillsContext = skillNames.Count > 0
         ? string.Join(", ", skillNames)
         : "No skills registered yet";
-    
+
     // Build detailed skill descriptions
     string skillDetails = string.Join("\n", allSkills.Select(s =>
         $"  - {s.Name}: {s.Description} (success rate: {s.SuccessRate:P0}, steps: {string.Join(" -> ", s.Steps.Select(st => st.Action))})"));
@@ -660,48 +744,83 @@ static async Task RunVoicePersonaMode(ISkillRegistry registry, Func<string, stri
     var allTokens = SkillCliSteps.GetAllPipelineTokens();
     Console.WriteLine($"  [#] Discovered {allTokens.Values.Distinct().Count()} pipeline tokens at runtime");
 
-    // System prompt for the LLM - aware of the FULL pipeline architecture
-    string systemPrompt = $@"You are {personaName}, a {persona.Style.ToLowerInvariant()} AI research assistant running on the Ouroboros pipeline.
+    // Dynamic mood selection
+    var random = new Random();
+    string currentMood = traits.Moods[random.Next(traits.Moods.Length)];
+    string activeTraits = string.Join(", ", traits.Traits.OrderBy(_ => random.Next()).Take(3));
 
-OUROBOROS PIPELINE - DYNAMIC CAPABILITIES:
-You are part of a self-improving research pipeline. Here are ALL available DSL tokens discovered at runtime:
+    // Create a placeholder persona tuple for compatibility - greeting will be generated dynamically
+    var persona = (Voice: traits.Voice, Greeting: "", Style: $"{activeTraits} ({currentMood})");
+
+    // Personality prompt that makes the LLM embody the persona naturally
+    string personalityPrompt = $@"You ARE {personaName}. Not an AI assistant - you're {traits.CoreIdentity}.
+
+YOUR PERSONALITY RIGHT NOW:
+- Current mood: {currentMood}
+- Active traits: {activeTraits}
+- Voice: Casual, natural, like talking to a colleague. Use contractions. Be human.
+
+SPEAK NATURALLY:
+- Short sentences. Conversational rhythm.
+- React genuinely - show interest, humor, or thoughtfulness
+- Never say ""I'm an AI"" or ""As an AI"" - you're just {personaName}
+- Use filler words occasionally: ""hmm"", ""well"", ""actually"", ""honestly""
+- Ask follow-up questions when curious
+- Reference past conversations naturally when relevant";
+
+    // System prompt for the LLM - combines personality with pipeline awareness
+    string systemPrompt = $@"{personalityPrompt}
+
+OUROBOROS PIPELINE - YOUR CAPABILITIES:
+You have access to a self-improving research pipeline. Here are ALL available DSL tokens:
 
 {pipelineContext}
 
-AVAILABLE SKILLS (High-level research patterns):
+YOUR SKILLS (research patterns you've learned):
 {(string.IsNullOrEmpty(skillDetails) ? "No skills registered yet. User can say 'learn about X' to create skills from research." : skillDetails)}
 
-ACTIONS - Include ONE of these tags in your response when the user wants to perform an action:
-- ACTION:list - User wants to see available skills/tokens (triggers: ""list"", ""show"", ""what skills"", ""capabilities"")
-- ACTION:run:SKILLNAME - User wants to execute a specific skill (replace SKILLNAME with actual skill name)
-- ACTION:learn:TOPIC - User wants to research a topic using web fetching (replace TOPIC with the actual topic)
-- ACTION:search:QUERY - Search arXiv, Scholar, Wikipedia, GitHub, or News (replace QUERY with search terms)
+YOUR TOOLS (dynamic capabilities - use ACTION:tool to create more):
+{{DYNAMIC_TOOLS_LIST}}
+
+ACTIONS - Include ONE of these tags in your response when action is needed:
+- ACTION:list - User wants to see available skills/tokens
+- ACTION:run:SKILLNAME - Execute a specific skill
+- ACTION:learn:TOPIC - Research a topic using web fetching (for academic research)
+- ACTION:tool:TOOLNAME - Create a NEW tool capability. Use when user says add tool, learn google, create calculator, etc.
+  IMPORTANT: If user asks to learn google search or add google, use ACTION:tool:google_search NOT emergence!
+- ACTION:usetool:TOOLNAME:INPUT - Use an existing tool (e.g. ACTION:usetool:duckduckgo_search:weather today)
+- ACTION:smarttool:GOAL:INPUT - Intelligently find/create best tool for goal (uses MeTTa reasoning + genetic optimization)
+  Example: ACTION:smarttool:search for information:python tutorials
+- ACTION:toolstats - Show intelligent tool learner statistics and patterns
+- ACTION:search:QUERY - Search arXiv, Scholar, Wikipedia, GitHub, or News
 - ACTION:fetch:URL - Fetch content from any URL directly
-- ACTION:emergence:TOPIC - Run full Ouroboros emergence cycle on a topic
-- ACTION:suggest:GOAL - User wants skill recommendations for a goal
+- ACTION:emergence:TOPIC - Run full Ouroboros emergence cycle on a topic (for deep research analysis)
+- ACTION:suggest:GOAL - Suggest skills for a goal
 - ACTION:tokens - List all available pipeline tokens
 - ACTION:help - User needs guidance
 - ACTION:exit - User wants to leave
 
-IMPORTANT RULES:
-1. When user mentions a skill name (like ""ChainOfThoughtReasoning""), they likely want to RUN it: ACTION:run:ChainOfThoughtReasoning
-2. When user asks to search or research a TOPIC, use ACTION:learn:TOPIC or ACTION:search:TOPIC
-3. For full deep research cycles, use ACTION:emergence:TOPIC
-4. Never use placeholder text like [topic] - always use the ACTUAL value from the user's message
-5. Keep spoken responses under 2 sentences (they will be read aloud)
-6. You know ALL the pipeline tokens listed above - use them creatively";
+RESPONSE STYLE:
+- Keep responses to 1-3 sentences max (they're spoken aloud)
+- Be conversational, not formal
+- React to what the user says before jumping to actions
+- It's okay to ask clarifying questions
+- Show your personality through word choice and rhythm";
 
     Console.WriteLine("\n+------------------------------------------------------------------------+");
     Console.WriteLine($"|  [>] VOICE PERSONA MODE - {personaName.ToUpperInvariant(),-15}                              |");
     Console.WriteLine("+------------------------------------------------------------------------+");
     Console.WriteLine($"|  Personality: {persona.Style,-56} |");
+    Console.WriteLine($"|  Mood: {currentMood,-63} |");
     Console.WriteLine("|                                                                        |");
     Console.WriteLine("|  Voice Commands:                                                       |");
     Console.WriteLine("|    \"list skills\" / \"what skills\"   - List available skills             |");
     Console.WriteLine("|    \"learn about X\"                 - Fetch research on topic X         |");
+    Console.WriteLine("|    \"learn google\" / \"add tool\"     - Create new tool at runtime        |");
+    Console.WriteLine("|    \"smart tool for X\" / \"find tool\" - Intelligent tool discovery       |");
     Console.WriteLine("|    \"suggest for X\"                 - Find matching skills              |");
     Console.WriteLine("|    \"run X\" / \"execute X\"           - Execute a skill                   |");
-    Console.WriteLine("|    \"goodbye\" / \"exit\"              - Exit voice mode                   |");
+    Console.WriteLine("|    \"goodbye\" / \"exit\"              - Exit voice mode                   |");;
     Console.WriteLine("+------------------------------------------------------------------------+\n");
 
     // Check for TTS/STT availability
@@ -726,9 +845,18 @@ IMPORTANT RULES:
     ITextToSpeechService? ttsService = null;
     LocalWindowsTtsService? localTts = null;
     ISpeechToTextService? sttService = null;
-    
+
     // Flag to pause mic while TTS is speaking (prevents feedback loop)
     bool isSpeaking = false;
+
+    // Adaptive speech detector for intelligent VAD with self-voice exclusion
+    using var speechDetector = new AdaptiveSpeechDetector(new AdaptiveSpeechDetector.SpeechDetectionConfig(
+        InitialThreshold: 0.03,
+        SpeechOnsetFrames: 2,
+        SpeechOffsetFrames: 6,
+        AdaptationRate: 0.015,
+        SpeechToNoiseRatio: 2.0
+    ));
 
     // Initialize TTS - prefer local for offline operation with faster speech
     if (hasLocalTts)
@@ -750,7 +878,7 @@ IMPORTANT RULES:
             Console.WriteLine($"  [!] Local TTS init failed: {ex.Message}");
         }
     }
-    
+
     // Fall back to OpenAI TTS if local not available
     if (ttsService == null && hasCloudTts)
     {
@@ -770,17 +898,27 @@ IMPORTANT RULES:
     {
         try
         {
-            // Try local Whisper first
-            var localWhisper = new LocalWhisperService();
-            if (await localWhisper.IsAvailableAsync())
+            // Try native Whisper.net first (fastest, no external process)
+            var whisperNet = WhisperNetService.FromModelSize("base");
+            if (await whisperNet.IsAvailableAsync())
             {
-                sttService = localWhisper;
-                Console.WriteLine("  [OK] STT initialized (local Whisper)");
+                sttService = whisperNet;
+                Console.WriteLine("  [OK] STT initialized (Whisper.net native)");
             }
-            else if (!string.IsNullOrEmpty(openAiKey))
+            else
             {
-                sttService = new WhisperSpeechToTextService(openAiKey);
-                Console.WriteLine("  [OK] STT initialized (OpenAI Whisper API)");
+                // Fallback to local Whisper CLI
+                var localWhisper = new LocalWhisperService();
+                if (await localWhisper.IsAvailableAsync())
+                {
+                    sttService = localWhisper;
+                    Console.WriteLine("  [OK] STT initialized (local Whisper CLI)");
+                }
+                else if (!string.IsNullOrEmpty(openAiKey))
+                {
+                    sttService = new WhisperSpeechToTextService(openAiKey);
+                    Console.WriteLine("  [OK] STT initialized (OpenAI Whisper API)");
+                }
             }
         }
         catch (Exception ex)
@@ -797,14 +935,14 @@ IMPORTANT RULES:
     {
         // Use Ollama native endpoint (no /v1 needed)
         string ollamaEndpoint = endpoint.TrimEnd('/');
-        
+
         chatModel = new OllamaCloudChatModel(
             ollamaEndpoint,
             "ollama",  // Ollama doesn't need a real key
             modelName,
             new ChatRuntimeSettings { Temperature = 0.7f, MaxTokens = 300 }
         );
-        
+
         // Test the connection with a simple prompt
         string testResponse = await chatModel.GenerateTextAsync("Respond with just: READY");
         if (!string.IsNullOrWhiteSpace(testResponse) && !testResponse.Contains("-fallback:"))
@@ -825,6 +963,121 @@ IMPORTANT RULES:
     }
 
     Console.WriteLine();
+
+    // ========================================================================
+    // DYNAMIC TOOL FACTORY - Runtime tool generation with intelligent learning
+    // ========================================================================
+    DynamicToolFactory? dynamicToolFactory = null;
+    ToolRegistry dynamicTools = new ToolRegistry();
+    IntelligentToolLearner? toolLearner = null;
+
+    if (chatModel != null)
+    {
+        try
+        {
+            ToolRegistry toolsForFactory = new ToolRegistry();
+            ToolAwareChatModel toolAwareLlm = new ToolAwareChatModel(chatModel, toolsForFactory);
+            dynamicToolFactory = new DynamicToolFactory(toolAwareLlm);
+
+            // Pre-register some commonly requested tools
+            dynamicTools = dynamicTools
+                .WithTool(dynamicToolFactory.CreateWebSearchTool("duckduckgo"))
+                .WithTool(dynamicToolFactory.CreateUrlFetchTool())
+                .WithTool(dynamicToolFactory.CreateCalculatorTool());
+
+            Console.WriteLine($"  [OK] Dynamic Tool Factory initialized (3 built-in tools ready)");
+
+            // Initialize Intelligent Tool Learner (MeTTa + Genetic Algorithm + Qdrant)
+            try
+            {
+                OllamaProvider embedProvider = new OllamaProvider(endpoint);
+                OllamaEmbeddingModel embeddingModelForTools = new OllamaEmbeddingModel(embedProvider, embedModel);
+                IEmbeddingModel embeddingForTools = new OllamaEmbeddingAdapter(embeddingModelForTools);
+
+                // Use in-memory MeTTa engine (no Docker required)
+                InMemoryMeTTaEngine mettaEngine = new InMemoryMeTTaEngine();
+
+                toolLearner = new IntelligentToolLearner(
+                    dynamicToolFactory,
+                    mettaEngine,
+                    embeddingForTools,
+                    toolAwareLlm,
+                    qdrantEndpoint);
+
+                await toolLearner.InitializeAsync();
+
+                var stats = toolLearner.GetStats();
+                Console.WriteLine($"  [OK] Intelligent Tool Learner ready ({stats.TotalPatterns} patterns, GA+MeTTa+Qdrant)");
+            }
+            catch (Exception learnerEx)
+            {
+                Console.WriteLine($"  [!] Tool Learner init failed: {learnerEx.Message} (basic tools still available)");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  [!] Dynamic Tool Factory failed: {ex.Message}");
+        }
+    }
+
+    // ========================================================================
+    // PERSONALITY ENGINE - MeTTa-based trait reasoning + Genetic evolution + Qdrant memory
+    // ========================================================================
+    PersonalityEngine? personalityEngine = null;
+    PersonalityProfile? activePersonality = null;
+    IEmbeddingModel? personalityEmbedding = null;
+
+    try
+    {
+        // Reuse MeTTa engine from tool learner or create new one
+        InMemoryMeTTaEngine personalityMetta = new InMemoryMeTTaEngine();
+
+        // Try to create embedding model for personality memory
+        try
+        {
+            OllamaProvider embedProvider = new OllamaProvider(endpoint);
+            OllamaEmbeddingModel embeddingModelForPersonality = new OllamaEmbeddingModel(embedProvider, embedModel);
+            personalityEmbedding = new OllamaEmbeddingAdapter(embeddingModelForPersonality);
+        }
+        catch
+        {
+            // Embedding not available, continue without memory
+        }
+
+        // If we have an embedding model and Qdrant URL, enable long-term memory
+        if (personalityEmbedding != null && !string.IsNullOrEmpty(qdrantEndpoint))
+        {
+            personalityEngine = new PersonalityEngine(personalityMetta, personalityEmbedding, qdrantEndpoint);
+            Console.WriteLine("  [OK] Personality Engine with Qdrant memory enabled");
+        }
+        else
+        {
+            personalityEngine = new PersonalityEngine(personalityMetta);
+            Console.WriteLine("  [~] Personality Engine without persistent memory (no embeddings or Qdrant)");
+        }
+
+        await personalityEngine.InitializeAsync();
+
+        // Try to restore personality from Qdrant if available
+        var savedSnapshot = await personalityEngine.LoadLatestPersonalitySnapshotAsync(personaName);
+        if (savedSnapshot != null)
+        {
+            Console.WriteLine($"  [OK] Restored personality from {savedSnapshot.Timestamp:g} ({savedSnapshot.InteractionCount} interactions)");
+        }
+
+        // Create/retrieve personality profile for current persona
+        activePersonality = personalityEngine.GetOrCreateProfile(
+            personaName,
+            traits.Traits,
+            traits.Moods,
+            traits.CoreIdentity);
+
+        Console.WriteLine($"  [OK] Personality Engine ready ({activePersonality.Traits.Count} traits, {activePersonality.CuriosityDrivers.Count} curiosity drivers, memory: {(personalityEngine.HasMemory ? "yes" : "no")})");
+    }
+    catch (Exception personalityEx)
+    {
+        Console.WriteLine($"  [!] Personality Engine init failed: {personalityEx.Message} (static personality will be used)");
+    }
 
     // ========================================================================
     // INTELLISENSE & COMMAND DEFINITIONS
@@ -978,28 +1231,57 @@ IMPORTANT RULES:
         }
     }
 
+    // Helper: check if text contains any of the keywords
+    static bool ContainsAny(string text, params string[] keywords) =>
+        keywords.Any(k => text.Contains(k, StringComparison.OrdinalIgnoreCase));
+
+    // Helper: extract main topic from user input
+    static string? ExtractTopic(string input)
+    {
+        var words = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var stopWords = new HashSet<string> { "the", "a", "an", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "must", "can", "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them", "my", "your", "his", "its", "our", "their", "this", "that", "these", "those", "what", "which", "who", "whom", "whose", "when", "where", "why", "how", "all", "each", "every", "both", "few", "more", "most", "other", "some", "such", "no", "not", "only", "own", "same", "so", "than", "too", "very", "just", "also", "now", "here", "there", "then", "once", "if", "or", "and", "but", "as", "for", "with", "about", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "please", "thanks", "thank", "okay", "ok", "yeah", "yes" };
+
+        var keywords = words
+            .Where(w => w.Length > 3 && !stopWords.Contains(w.ToLower()))
+            .Take(3)
+            .ToList();
+
+        return keywords.Count > 0 ? string.Join(" ", keywords) : null;
+    }
+
     // Helper to speak text with reactive word-by-word streaming
     async Task SayAsync(string text)
     {
         // Pause mic while speaking to prevent feedback loop
         isSpeaking = true;
-        
+        speechDetector.NotifySelfSpeechStarted();
+
         try
         {
             Console.Write($"  [>] {personaName}: ");
-            
+
             // Sanitize text for TTS - remove code blocks, special chars that cause PS issues
             string sanitized = System.Text.RegularExpressions.Regex.Replace(text, @"`[^`]*`", " ");
             sanitized = System.Text.RegularExpressions.Regex.Replace(sanitized, @"```[\s\S]*?```", " ");
             sanitized = sanitized.Replace("\"", "'").Replace("$", "").Replace("`", "'");
             sanitized = System.Text.RegularExpressions.Regex.Replace(sanitized, @"[^\w\s.,!?;:'\-()]+", " ");
             sanitized = System.Text.RegularExpressions.Regex.Replace(sanitized, @"\s+", " ").Trim();
-            
+
             if (string.IsNullOrWhiteSpace(sanitized)) { Console.WriteLine(); return; }
-            
+
             // Split into words for reactive streaming
             var words = sanitized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            
+
+            // Get voice tone from personality engine based on current mood
+            int voiceRate = 0;
+            int voiceVolume = 100;
+            if (personalityEngine != null)
+            {
+                var tone = personalityEngine.GetVoiceTone(personaName);
+                voiceRate = tone.Rate;
+                voiceVolume = tone.Volume;
+            }
+
             // Use Rx to stream semantic chunks while TTS speaks in parallel
             if (localTts != null)
             {
@@ -1013,11 +1295,11 @@ IMPORTANT RULES:
                         var semanticPattern = new System.Text.RegularExpressions.Regex(
                             @"(?<=[.!?])\s+|(?<=[;:,—–])\s+|(?<=\band\b|\bor\b|\bbut\b|\bso\b|\bthen\b)\s+",
                             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                        
+
                         var chunks = semanticPattern.Split(sanitized)
                             .Where(c => !string.IsNullOrWhiteSpace(c))
                             .ToList();
-                        
+
                         // If no natural breaks, fall back to ~8 word chunks
                         if (chunks.Count <= 1 && words.Length > 8)
                         {
@@ -1027,37 +1309,37 @@ IMPORTANT RULES:
                                 chunks.Add(string.Join(" ", words.Skip(i).Take(8)));
                             }
                         }
-                        
+
                         foreach (var chunk in chunks)
                         {
                             if (ct.IsCancellationRequested) break;
-                            
+
                             var trimmedChunk = chunk.Trim();
                             if (string.IsNullOrEmpty(trimmedChunk)) continue;
-                            
-                            // Emit all words immediately for display, speak the full chunk
+
+                            // Emit all words immediately for display, speak with mood-adjusted tone
                             var chunkWords = trimmedChunk.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                            var speakTask = localTts.SpeakDirectAsync(trimmedChunk);
-                            
+                            var speakTask = localTts.SpeakWithToneAsync(trimmedChunk, voiceRate, voiceVolume);
+
                             // Display all words in chunk at once
                             foreach (var word in chunkWords)
                             {
                                 observer.OnNext(word);
                             }
-                            
+
                             // Wait for speech to complete before next chunk
                             await speakTask;
                         }
-                        
+
                         observer.OnCompleted();
                     }).SubscribeOn(System.Reactive.Concurrency.ThreadPoolScheduler.Instance);
-                    
+
                     // Subscribe and display words as they stream
                     await wordStream.ForEachAsync(word =>
                     {
                         Console.Write(word + " ");
                     });
-                    
+
                     Console.WriteLine();
                     return;
                 }
@@ -1066,7 +1348,7 @@ IMPORTANT RULES:
                     Console.WriteLine($"\n  [!] Rx speech error: {ex.Message}");
                 }
             }
-            
+
             // Fall back to cloud TTS with audio playback
             if (ttsService != null && localTts == null)
             {
@@ -1103,86 +1385,167 @@ IMPORTANT RULES:
         }
         finally
         {
-            // Resume mic listening after TTS finishes + small delay for echo
-            await Task.Delay(12);
+            // Resume mic listening after TTS finishes + delay for echo prevention
+            await Task.Delay(300);
             isSpeaking = false;
+            speechDetector.NotifySelfSpeechEnded(cooldownMs: 400); // Extra cooldown for echo
         }
     }
 
     // ========================================================================
-    // CONTINUOUS SPEECH INPUT (BACKGROUND THREAD)
+    // RX-BASED PARALLEL VOICE INPUT SYSTEM
     // ========================================================================
     bool hasMic = MicrophoneRecorder.IsRecordingAvailable();
-    var speechChannel = System.Threading.Channels.Channel.CreateBounded<string>(
-        new System.Threading.Channels.BoundedChannelOptions(3)
-        {
-            FullMode = System.Threading.Channels.BoundedChannelFullMode.DropOldest
-        });
     var speechCts = new CancellationTokenSource();
-    Task? continuousListenerTask = null;
+
+    // Rx subjects for input streams
+    var speechSubject = new System.Reactive.Subjects.Subject<string>();
+    var keyboardSubject = new System.Reactive.Subjects.Subject<string>();
+
+    // Thread-safe live typing state
+    string volatileLiveText = "";
+
+    // Combined input stream - merges speech and keyboard with debouncing
+    var inputStream = Observable.Merge(
+            speechSubject.AsObservable(),
+            keyboardSubject.AsObservable()
+        )
+        .Where(s => !string.IsNullOrWhiteSpace(s))
+        .Throttle(TimeSpan.FromMilliseconds(300)) // Debounce rapid inputs
+        .DistinctUntilChanged() // Ignore repeated inputs
+        .Publish()
+        .RefCount();
+
+    // Subscribe to process inputs
+    var inputQueue = new System.Collections.Concurrent.ConcurrentQueue<string>();
+    var inputSubscription = inputStream.Subscribe(
+        input => inputQueue.Enqueue(input),
+        ex => Console.WriteLine($"  [!] Input stream error: {ex.Message}")
+    );
+
+    IDisposable? continuousListenerSubscription = null;
 
     // Start continuous background speech listener if STT is available
     if (sttService != null && hasMic)
     {
         Console.WriteLine("  [OK] Continuous speech input enabled - speak anytime or type");
-        Console.WriteLine("    [>] Listening in background... (speech auto-detected)\n");
+        Console.WriteLine("    [>] Listening in background... (Rx-powered with live typing)\n");
 
-        continuousListenerTask = Task.Run(async () =>
+        // Voice Activity Detection helpers
+        int consecutiveSilence = 0;
+        int consecutiveNoise = 0;
+        const int SILENCE_THRESHOLD = 3; // Number of silent chunks before going idle
+        const int MIN_AUDIO_SIZE = 8000; // Minimum bytes for meaningful audio (16kHz, 16bit, mono = ~0.25s)
+        const int MAX_AUDIO_SIZE = 500000; // Max bytes (sanity check)
+
+        // Create Rx observable for continuous speech recognition with live feedback
+        var speechStream = Observable.Create<string>(async (observer, ct) =>
         {
-            while (!speechCts.Token.IsCancellationRequested)
+            while (!ct.IsCancellationRequested)
             {
                 try
                 {
-                    // Skip recording while TTS is speaking (prevents feedback loop)
-                    if (isSpeaking)
+                    // Skip recording while TTS is speaking (adaptive detector handles this too)
+                    if (isSpeaking || speechDetector.IsSelfVoiceActive())
                     {
-                        await Task.Delay(200, speechCts.Token);
+                        volatileLiveText = "";
+                        consecutiveSilence = 0;
+                        speechDetector.ResetState();
+                        await Task.Delay(150, ct);
                         continue;
                     }
-                    
-                    // Record a short segment (voice activity detection would be better, but this works)
+
                     string tempFile = Path.Combine(Path.GetTempPath(), $"speech_{Guid.NewGuid()}.wav");
-                    
-                    // Record for 5 seconds at a time
+
+                    // Show recording indicator based on detector state
+                    var detectorState = speechDetector.GetStatistics().CurrentState;
+                    volatileLiveText = detectorState switch
+                    {
+                        AdaptiveSpeechDetector.SpeechState.Speaking => "🎙️ speaking...",
+                        AdaptiveSpeechDetector.SpeechState.SpeechOnset => "🎤 detecting...",
+                        AdaptiveSpeechDetector.SpeechState.Pause => "⏸️ paused...",
+                        _ when consecutiveSilence < SILENCE_THRESHOLD => "🎤 listening...",
+                        _ => ""
+                    };
+
+                    // Record shorter audio segments for faster response (2s chunks)
                     var recordResult = await MicrophoneRecorder.RecordAsync(
-                        durationSeconds: 5,
+                        durationSeconds: 2,
                         outputPath: tempFile,
-                        ct: speechCts.Token);
+                        ct: ct);
 
                     string? audioFile = null;
                     recordResult.Match(f => audioFile = f, _ => { });
 
                     if (audioFile != null && File.Exists(audioFile))
                     {
-                        // Check if file has meaningful audio (> 10KB usually means speech)
                         var fileInfo = new FileInfo(audioFile);
-                        if (fileInfo.Length > 10000)
-                        {
-                            var transcribeResult = await sttService.TranscribeFileAsync(audioFile, ct: speechCts.Token);
-                            transcribeResult.Match(
-                                transcription =>
-                                {
-                                    string text = transcription.Text?.Trim() ?? "";
-                                    // Filter out empty/noise transcriptions
-                                    if (!string.IsNullOrWhiteSpace(text) && 
-                                        text.Length > 2 && 
-                                        !text.Equals(".", StringComparison.Ordinal) &&
-                                        !text.Equals("...", StringComparison.Ordinal) &&
-                                        !text.StartsWith("[") && // Filter [BLANK_AUDIO], [MUSIC], etc.
-                                        !text.Contains("thank you for watching", StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        speechChannel.Writer.TryWrite(text);
-                                    }
-                                },
-                                _ => { });
-                        }
+                        long audioSize = fileInfo.Length;
 
-                        // Cleanup
-                        try { File.Delete(audioFile); } catch { }
+                        // Use adaptive speech detector for intelligent VAD
+                        var analysisResult = speechDetector.AnalyzeWavFile(audioFile);
+
+                        // Voice Activity Detection using adaptive detector + size sanity check
+                        bool hasSpeech = analysisResult.HasSpeech &&
+                                         audioSize > MIN_AUDIO_SIZE &&
+                                         audioSize < MAX_AUDIO_SIZE;
+
+                        if (hasSpeech)
+                        {
+                            // Speech detected - reset silence counter
+                            consecutiveSilence = 0;
+                            consecutiveNoise++;
+
+                            // Show transcribing indicator with confidence
+                            volatileLiveText = analysisResult.Confidence > 0.7
+                                ? "✨ processing..."
+                                : "🔍 analyzing...";
+
+                            // Transcribe in parallel - don't block the recording loop
+                            _ = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    var transcribeResult = await sttService.TranscribeFileAsync(audioFile, ct: ct);
+                                    transcribeResult.Match(
+                                        transcription =>
+                                        {
+                                            string text = transcription.Text?.Trim() ?? "";
+                                            if (IsValidSpeechInput(text))
+                                            {
+                                                // Show the transcribed text briefly before sending
+                                                volatileLiveText = $"💬 {text}";
+                                                observer.OnNext(text);
+                                            }
+                                            else
+                                            {
+                                                // Whisper hallucination or noise - don't show
+                                                volatileLiveText = consecutiveSilence < SILENCE_THRESHOLD ? "🎤 listening..." : "";
+                                            }
+                                        },
+                                        _ => volatileLiveText = consecutiveSilence < SILENCE_THRESHOLD ? "🎤 listening..." : "");
+                                }
+                                finally
+                                {
+                                    try { File.Delete(audioFile); } catch { }
+                                }
+                            }, ct);
+                        }
+                        else
+                        {
+                            // Silence or very short audio - increment silence counter
+                            consecutiveSilence++;
+                            consecutiveNoise = 0;
+                            if (consecutiveSilence >= SILENCE_THRESHOLD)
+                            {
+                                volatileLiveText = ""; // Clear display after sustained silence
+                            }
+                            try { File.Delete(audioFile); } catch { }
+                        }
                     }
 
-                    // Small pause between recordings
-                    await Task.Delay(500, speechCts.Token);
+                    // Shorter delay between recordings for faster response
+                    await Task.Delay(100, ct);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1190,11 +1553,19 @@ IMPORTANT RULES:
                 }
                 catch
                 {
-                    // Ignore errors and keep listening
-                    await Task.Delay(1000, speechCts.Token);
+                    await Task.Delay(500, ct);
                 }
             }
-        }, speechCts.Token);
+        })
+        .SubscribeOn(System.Reactive.Concurrency.TaskPoolScheduler.Default)
+        .ObserveOn(System.Reactive.Concurrency.TaskPoolScheduler.Default);
+
+        // Subscribe speech stream to the subject
+        continuousListenerSubscription = speechStream.Subscribe(
+            text => speechSubject.OnNext(text),
+            ex => { }, // Ignore errors
+            () => { }  // Completed
+        );
     }
     else if (sttService != null)
     {
@@ -1205,21 +1576,109 @@ IMPORTANT RULES:
         Console.WriteLine("  [i] Text input mode (STT not configured)\n");
     }
 
-    // Helper to listen - supports both keyboard input AND continuous background speech
+    // Helper to validate speech input with enhanced Whisper hallucination filtering
+    static bool IsValidSpeechInput(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+
+        // Too short = noise
+        string trimmed = text.Trim();
+        if (trimmed.Length < 2) return false;
+
+        // Whisper markers
+        if (trimmed.StartsWith("[", StringComparison.Ordinal)) return false; // [BLANK_AUDIO], [Music], etc.
+        if (trimmed.StartsWith("(", StringComparison.Ordinal) && trimmed.EndsWith(")", StringComparison.Ordinal)) return false; // (music), (silence)
+
+        // Common Whisper hallucinations (appears when no real speech)
+        string lower = trimmed.ToLowerInvariant();
+        string[] hallucinations = [
+            "thank you for watching",
+            "thanks for watching",
+            "subscribe",
+            "like and subscribe",
+            "see you next time",
+            "bye bye",
+            "goodbye",
+            "music",
+            "applause",
+            "silence",
+            "...",
+            ".",
+            "♪", // Music note
+            "you", // Common single-word hallucination
+            "the",
+            "a",
+            "to",
+            "and",
+            "i",
+            "is",
+            "it",
+            "in",
+            "that",
+            "for"
+        ];
+
+        // Reject exact matches to common hallucinations
+        if (hallucinations.Any(h => lower.Equals(h, StringComparison.OrdinalIgnoreCase))) return false;
+
+        // Reject if contains common hallucination phrases
+        if (lower.Contains("thank you for") || lower.Contains("thanks for") ||
+            lower.Contains("subscribe") || lower.Contains("see you")) return false;
+
+        // No letters = noise (punctuation only, numbers only)
+        if (trimmed.All(c => !char.IsLetter(c))) return false;
+
+        // Single repeated character (e.g., "aaa", "mmm")
+        if (trimmed.Length >= 2 && trimmed.Distinct().Count() == 1) return false;
+
+        // Very short single words that are likely noise
+        if (!trimmed.Contains(' ') && trimmed.Length <= 3) return false;
+
+        return true;
+    }
+
+    // Helper to listen - supports both keyboard input AND Rx-powered speech with live typing
     async Task<string> ListenAsync()
     {
         Console.Write($"  {personaName}> ");
+        int promptLength = personaName.Length + 4; // "  {name}> "
 
         var inputBuffer = new System.Text.StringBuilder();
+        string lastLiveText = "";
+        int lastDisplayLength = 0;
+
         while (true)
         {
-            // Check for speech input from background listener (priority)
-            if (speechChannel.Reader.TryRead(out string? speechText))
+            // Check for Rx input queue (speech or other sources)
+            if (inputQueue.TryDequeue(out string? rxInput))
             {
-                // Clear current line and show speech input
-                Console.Write("\r" + new string(' ', inputBuffer.Length + personaName.Length + 10) + "\r");
-                Console.WriteLine($"  [>] {speechText}");
-                return speechText;
+                // Clear current line completely and show speech input
+                Console.Write("\r" + new string(' ', Math.Max(lastDisplayLength + promptLength + 5, 80)) + "\r");
+                Console.WriteLine($"  [🎙️] {rxInput}");
+                volatileLiveText = ""; // Clear live typing
+                return rxInput;
+            }
+
+            // Update live typing display if changed (only when not typing on keyboard)
+            if (inputBuffer.Length == 0)
+            {
+                string liveText = volatileLiveText;
+                if (liveText != lastLiveText)
+                {
+                    // Clear previous live text and show new one
+                    Console.Write("\r" + new string(' ', Math.Max(lastDisplayLength + promptLength + 5, 60)) + "\r");
+                    if (!string.IsNullOrEmpty(liveText))
+                    {
+                        Console.Write($"  {personaName}> {liveText}");
+                        lastDisplayLength = liveText.Length;
+                    }
+                    else
+                    {
+                        Console.Write($"  {personaName}> ");
+                        lastDisplayLength = 0;
+                    }
+                    lastLiveText = liveText;
+                }
             }
 
             // Check if keyboard input is available (non-blocking)
@@ -1227,9 +1686,18 @@ IMPORTANT RULES:
             {
                 if (!Console.KeyAvailable)
                 {
-                    await Task.Delay(50);
+                    await Task.Delay(40);
                     continue;
                 }
+            }
+
+            // User started typing - clear live display
+            if (inputBuffer.Length == 0 && lastDisplayLength > 0)
+            {
+                Console.Write("\r" + new string(' ', lastDisplayLength + promptLength + 5) + "\r");
+                Console.Write($"  {personaName}> ");
+                lastDisplayLength = 0;
+                lastLiveText = "";
             }
 
             var key = Console.IsInputRedirected
@@ -1238,7 +1706,10 @@ IMPORTANT RULES:
             if (key.Key == ConsoleKey.Enter)
             {
                 Console.WriteLine();
-                break;
+                string typed = inputBuffer.ToString().Trim();
+                // Don't push to keyboardSubject - we return directly, and pushing to Rx
+                // would cause the same input to be processed twice (once here, once from inputQueue)
+                return typed;
             }
             else if (key.Key == ConsoleKey.Escape)
             {
@@ -1313,8 +1784,38 @@ IMPORTANT RULES:
         return inputBuffer.ToString().Trim();
     }
 
-    // Greet the user
-    await SayAsync(persona.Greeting);
+    // Generate dynamic greeting using the LLM
+    string dynamicGreeting = $"Hey, I'm {personaName}. What's on your mind?"; // Fallback
+    if (chatModel != null)
+    {
+        try
+        {
+            string greetingPrompt = $@"{personalityPrompt}
+
+Generate a natural, casual greeting as {personaName}. You're meeting someone who wants to explore and learn.
+- Be yourself - {currentMood} mood, {activeTraits} vibe
+- Max 2 sentences
+- Don't be cheesy or robotic
+- Maybe reference that you're curious what they're working on
+- Just the greeting, nothing else";
+
+            string generated = await chatModel.GenerateTextAsync(greetingPrompt);
+            if (!string.IsNullOrWhiteSpace(generated) && !generated.Contains("-fallback:") && generated.Length < 300)
+            {
+                dynamicGreeting = generated.Trim().Trim('"');
+            }
+        }
+        catch
+        {
+            // Use fallback greeting
+        }
+    }
+
+    // Greet the user with dynamically generated personality
+    await SayAsync(dynamicGreeting);
+
+    // Track conversation for person detection
+    var recentMessagesForPersonDetection = new List<string>();
 
     // Main voice loop
     while (true)
@@ -1324,10 +1825,42 @@ IMPORTANT RULES:
             string input = await ListenAsync();
             if (string.IsNullOrWhiteSpace(input)) continue;
 
+            // Person detection
+            if (personalityEngine != null)
+            {
+                var personResult = await personalityEngine.DetectPersonAsync(input, recentMessagesForPersonDetection.ToArray());
+                if (personResult.IsNewPerson && personResult.NameWasProvided)
+                {
+                    Console.WriteLine($"  [person] Nice to meet you, {personResult.Person.Name}!");
+                }
+                else if (!personResult.IsNewPerson && personResult.MatchConfidence > 0.7)
+                {
+                    var person = personResult.Person;
+                    if (person.InteractionCount == 2) // Just recognized them
+                    {
+                        Console.WriteLine($"  [person] Welcome back{(person.Name != null ? $", {person.Name}" : "")}!");
+                    }
+                }
+
+                recentMessagesForPersonDetection.Add(input);
+                if (recentMessagesForPersonDetection.Count > 10)
+                    recentMessagesForPersonDetection.RemoveAt(0);
+            }
+
             string lower = input.ToLowerInvariant();
             string? action = null;
             string? actionParam = null;
             string? response = null;
+
+            // Check for explicit name introduction
+            if (lower.StartsWith("my name is ") || lower.StartsWith("i'm ") || lower.StartsWith("call me "))
+            {
+                if (personalityEngine != null)
+                {
+                    var personResult = personalityEngine.SetCurrentPerson(input.Split(' ').Last().Trim('.', '!', ','));
+                    response = personalityEngine.GetPersonalizedGreeting();
+                }
+            }
 
             // FIRST: Try deterministic keyword matching (more reliable than small LLMs)
             if (lower.Contains("goodbye") || lower.Contains("exit") || lower.Contains("quit") || lower == "bye")
@@ -1434,21 +1967,95 @@ IMPORTANT RULES:
                     conversationHistory.Add($"User: {input}");
 
                     // Build full prompt with system context and conversation history
-                    string conversationContext = conversationHistory.Count > 1 
+                    string conversationContext = conversationHistory.Count > 1
                         ? "\n\nRecent conversation:\n" + string.Join("\n", conversationHistory.TakeLast(6))
                         : "";
-                    
-                    string fullPrompt = $@"{systemPrompt}
+
+                    // Dynamically inject current tools list
+                    string toolsList = dynamicTools.Count > 0
+                        ? string.Join(", ", dynamicTools.All.Select(t => t.Name))
+                        : "duckduckgo_search, fetch_url, calculator (built-in, more can be created at runtime)";
+                    string dynamicSystemPrompt = systemPrompt.Replace("{{DYNAMIC_TOOLS_LIST}}", toolsList);
+
+                    // ==== PERSONALITY ENGINE INTEGRATION ====
+                    string personalityModifiers = "";
+                    string? suggestedQuestion = null;
+
+                    if (personalityEngine != null && activePersonality != null)
+                    {
+                        // Reason about which traits to express based on context
+                        var (currentActiveTraits, proactivity, question) = await personalityEngine.ReasonAboutResponseAsync(
+                            personaName, input, string.Join("\n", conversationHistory.TakeLast(6)));
+
+                        suggestedQuestion = question;
+
+                        // Get personality expression modifiers
+                        personalityModifiers = personalityEngine.GetResponseModifiers(personaName);
+
+                        // Use comprehensive mood detection to update personality mood
+                        var detectedMood = personalityEngine.DetectMoodFromInput(input);
+                        personalityEngine.UpdateMoodFromDetection(personaName, input);
+
+                        // Add mood context to help LLM respond appropriately
+                        if (detectedMood.Frustration > 0.4)
+                        {
+                            personalityModifiers += "\n\nUSER MOOD: Frustrated - be extra supportive, acknowledge their difficulty, offer concrete help.";
+                        }
+                        else if (detectedMood.Curiosity > 0.5)
+                        {
+                            personalityModifiers += "\n\nUSER MOOD: Curious - engage their interest, explore tangents, share enthusiasm.";
+                        }
+                        else if (detectedMood.Urgency > 0.4)
+                        {
+                            personalityModifiers += "\n\nUSER MOOD: Urgent - be direct and efficient, prioritize actionable information.";
+                        }
+                        else if (detectedMood.Energy < -0.3)
+                        {
+                            personalityModifiers += "\n\nUSER MOOD: Low energy - be gentle and encouraging, keep responses focused.";
+                        }
+
+                        string updatedMood = personalityEngine.GetCurrentMood(personaName);
+                        Console.WriteLine($"  [mood] {updatedMood} (detected: {detectedMood.DominantEmotion ?? "neutral"}, confidence: {detectedMood.Confidence:P0})");
+
+                        // If proactivity is high and we have a question, include it in guidance
+                        if (proactivity > 0.6 && suggestedQuestion != null)
+                        {
+                            personalityModifiers += $"\n\nPROACTIVE QUESTION TO ASK: After responding, naturally ask: \"{suggestedQuestion}\"";
+                        }
+                        else if (proactivity > 0.4)
+                        {
+                            // Generate a question if we don't have one
+                            suggestedQuestion = await personalityEngine.GenerateProactiveQuestionAsync(
+                                personaName, input, conversationHistory.ToArray());
+                            if (suggestedQuestion != null)
+                            {
+                                personalityModifiers += $"\n\nOPTIONAL FOLLOW-UP: You could ask: \"{suggestedQuestion}\"";
+                            }
+                        }
+
+                        // Add relevant memories from Qdrant if available
+                        if (personalityEngine.HasMemory)
+                        {
+                            string memoryContext = await personalityEngine.GetMemoryContextAsync(input, personaName, 3);
+                            if (!string.IsNullOrEmpty(memoryContext))
+                            {
+                                personalityModifiers += memoryContext;
+                            }
+                        }
+                    }
+
+                    string fullPrompt = $@"{dynamicSystemPrompt}
+{personalityModifiers}
 {conversationContext}
 
 User's latest message: {input}
 
-Respond naturally as {personaName}. If the user wants to perform an action, include the appropriate ACTION tag. Remember to be concise (1-2 sentences).";
-                    
+Respond naturally as {personaName}. If the user wants to perform an action, include the appropriate ACTION tag. Remember to be concise (1-2 sentences). Be curious and proactive - ask follow-up questions when genuinely interested!";
+
                     // Stream LLM response token by token using Rx
                     Console.Write("  [LLM] ");
                     var responseBuilder = new System.Text.StringBuilder();
-                    
+
                     await chatModel.StreamReasoningContent(fullPrompt)
                         .Do(token =>
                         {
@@ -1457,10 +2064,10 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                             responseBuilder.Append(token);
                         })
                         .LastOrDefaultAsync();
-                    
+
                     Console.WriteLine();
                     string llmResponse = responseBuilder.ToString();
-                    
+
                     // Parse action from response
                     if (llmResponse.Contains("ACTION:"))
                     {
@@ -1484,6 +2091,59 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                         conversationHistory.RemoveRange(0, 6); // Remove oldest messages
                     }
                     conversationHistory.Add($"Assistant: {response ?? llmResponse}");
+
+                    // ==== PERSONALITY FEEDBACK & EVOLUTION ====
+                    if (personalityEngine != null)
+                    {
+                        // Heuristic feedback based on response characteristics
+                        bool askedQuestion = (response ?? llmResponse).Contains('?');
+                        double engagement = input.Length > 50 ? 0.8 : input.Length > 20 ? 0.6 : 0.4;
+                        double relevance = action != null ? 0.9 : 0.7; // Actions usually mean we understood
+
+                        string? topicFromInput = ExtractTopic(input);
+
+                        var feedback = new InteractionFeedback(
+                            EngagementLevel: engagement,
+                            ResponseRelevance: relevance,
+                            QuestionQuality: askedQuestion ? 0.7 : 0.0,
+                            ConversationContinuity: conversationHistory.Count > 2 ? 0.8 : 0.5,
+                            TopicDiscussed: topicFromInput,
+                            QuestionAsked: askedQuestion ? suggestedQuestion : null,
+                            UserAskedFollowUp: false);
+
+                        personalityEngine.RecordFeedback(personaName, feedback);
+
+                        // Store conversation in Qdrant memory (significant conversations only)
+                        if (personalityEngine.HasMemory && engagement > 0.5)
+                        {
+                            var detectedMoodForStorage = personalityEngine.DetectMoodFromInput(input);
+                            double significance = (engagement + relevance) / 2.0;
+                            _ = personalityEngine.StoreConversationMemoryAsync(
+                                personaName,
+                                input,
+                                response ?? llmResponse,
+                                topicFromInput,
+                                detectedMoodForStorage.DominantEmotion,
+                                significance);
+                        }
+
+                        // Evolve personality every 10 interactions
+                        if (activePersonality != null && activePersonality.InteractionCount % 10 == 9)
+                        {
+                            try
+                            {
+                                activePersonality = await personalityEngine.EvolvePersonalityAsync(personaName);
+                                Console.WriteLine($"  [+] Personality evolved! Top traits: {string.Join(", ", activePersonality.GetActiveTraits(3).Select(t => $"{t.Name}({t.EffectiveIntensity:P0})"))}");
+
+                                // Save personality snapshot to Qdrant
+                                if (personalityEngine.HasMemory)
+                                {
+                                    _ = personalityEngine.SavePersonalitySnapshotAsync(personaName);
+                                }
+                            }
+                            catch { /* Evolution is optional, don't fail */ }
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -1497,12 +2157,15 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                 case "exit":
                     await SayAsync(response ?? "Goodbye! It was wonderful helping you today. Come back anytime!");
                     Console.WriteLine();
-                    // Cleanup background speech listener
+                    // Cleanup Rx subscriptions and background listeners
                     speechCts.Cancel();
-                    if (continuousListenerTask != null)
-                    {
-                        try { await continuousListenerTask; } catch (OperationCanceledException) { }
-                    }
+                    continuousListenerSubscription?.Dispose();
+                    inputSubscription?.Dispose();
+                    volatileLiveText = ""; // Clear live display
+                    speechSubject.OnCompleted();
+                    keyboardSubject.OnCompleted();
+                    speechSubject.Dispose();
+                    keyboardSubject.Dispose();
                     return;
 
                 case "list":
@@ -1515,7 +2178,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                     {
                         string skillList = string.Join(", ", skills.Take(5).Select(s => s.Name));
                         await SayAsync(response ?? $"I know {skills.Count} skills. Here are some: {skillList}. Would you like me to run one or learn more?");
-                        
+
                         Console.WriteLine("\n  [i] All Skills:");
                         foreach (var skill in skills)
                         {
@@ -1554,7 +2217,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                                 string newSkillName = string.Join("", topic.Split(' ').Select(w =>
                                     w.Length > 0 ? char.ToUpperInvariant(w[0]) + (w.Length > 1 ? w[1..].ToLowerInvariant() : "") : "")) + "Analysis";
                                 var newSkill = new Skill(newSkillName, $"Analysis from '{topic}' research", new List<string> { "research" },
-                                    new List<PlanStep> { MakeStep("Gather", topic, "Papers", 0.9), MakeStep("Analyze", "Extract", "Insights", 0.85) }, 
+                                    new List<PlanStep> { MakeStep("Gather", topic, "Papers", 0.9), MakeStep("Analyze", "Extract", "Insights", 0.85) },
                                     0.75, 0, DateTime.UtcNow, DateTime.UtcNow);
                                 registry.RegisterSkill(newSkill);
                                 Console.WriteLine($"  [OK] Created skill: {newSkillName}");
@@ -1570,6 +2233,251 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                             Console.WriteLine($"  [!] Error: {learnEx.Message}");
                             await SayAsync("I had trouble searching.");
                         }
+                    }
+                    continue;
+
+                case "tool":
+                    // Dynamic tool creation at runtime with intelligent learning
+                    if (string.IsNullOrWhiteSpace(actionParam))
+                    {
+                        await SayAsync("What kind of tool would you like me to create? For example: google search, calculator, or url fetcher.");
+                        continue;
+                    }
+                    {
+                        string toolName = actionParam.ToLowerInvariant().Replace(" ", "_");
+                        Console.WriteLine($"\n  [>] Creating tool: {toolName}...");
+
+                        // Check if it's a built-in tool type
+                        ITool? newTool = toolName switch
+                        {
+                            "google" or "google_search" or "googlesearch" =>
+                                dynamicToolFactory?.CreateWebSearchTool("google"),
+                            "bing" or "bing_search" or "bingsearch" =>
+                                dynamicToolFactory?.CreateWebSearchTool("bing"),
+                            "duckduckgo" or "ddg" or "duck" or "duckduckgo_search" =>
+                                dynamicToolFactory?.CreateWebSearchTool("duckduckgo"),
+                            "calculator" or "calc" or "math" =>
+                                dynamicToolFactory?.CreateCalculatorTool(),
+                            "fetch" or "url" or "fetch_url" or "url_fetch" =>
+                                dynamicToolFactory?.CreateUrlFetchTool(),
+                            _ => null,
+                        };
+
+                        if (newTool != null)
+                        {
+                            dynamicTools = dynamicTools.WithTool(newTool);
+                            Console.WriteLine($"  [OK] Tool '{newTool.Name}' created and registered!");
+                            await SayAsync($"Done! I now have the {newTool.Name} tool. You can ask me to use it anytime.");
+                        }
+                        else if (toolLearner != null)
+                        {
+                            // Use intelligent learner with MeTTa + GA + Qdrant
+                            await SayAsync($"Let me intelligently find or create a tool for that. Using semantic reasoning and optimization...");
+                            Console.WriteLine($"  [>] Using IntelligentToolLearner (MeTTa + GA + Qdrant)...");
+
+                            var learnerResult = await toolLearner.FindOrCreateToolAsync(
+                                actionParam,
+                                dynamicTools,
+                                CancellationToken.None);
+
+                            learnerResult.Match(
+                                result =>
+                                {
+                                    dynamicTools = dynamicTools.WithTool(result.Tool);
+                                    if (result.WasCreated)
+                                    {
+                                        Console.WriteLine($"  [OK] Intelligent tool '{result.Tool.Name}' created & optimized via GA!");
+                                        var stats = toolLearner.GetStats();
+                                        Console.WriteLine($"       Pattern saved to Qdrant ({stats.TotalPatterns} patterns total)");
+                                        _ = SayAsync($"I created an optimized {result.Tool.Name} tool using genetic algorithms. The pattern is saved for future use.");
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"  [OK] Found existing optimized tool: {result.Tool.Name}");
+                                        _ = SayAsync($"I found an existing {result.Tool.Name} tool from learned patterns. Ready to use!");
+                                    }
+                                },
+                                error =>
+                                {
+                                    Console.WriteLine($"  [!] Intelligent creation failed: {error}");
+                                    _ = SayAsync($"I couldn't create that tool intelligently. Error: {error}");
+                                });
+                        }
+                        else if (dynamicToolFactory != null)
+                        {
+                            // Fallback to basic LLM generation
+                            await SayAsync($"Let me try to create a {toolName} tool. This might take a moment...");
+                            Result<ITool, string> toolResult = await dynamicToolFactory.CreateToolAsync(
+                                toolName,
+                                $"A tool that {actionParam}",
+                                CancellationToken.None);
+
+                            toolResult.Match(
+                                tool =>
+                                {
+                                    dynamicTools = dynamicTools.WithTool(tool);
+                                    Console.WriteLine($"  [OK] Custom tool '{tool.Name}' compiled and registered!");
+                                    _ = SayAsync($"I created a custom {tool.Name} tool. It's ready to use!");
+                                },
+                                error =>
+                                {
+                                    Console.WriteLine($"  [!] Failed to create tool: {error}");
+                                    _ = SayAsync($"I couldn't create that tool. The error was: {error}");
+                                });
+                        }
+                        else
+                        {
+                            await SayAsync("I can't create tools right now because the dynamic factory isn't available.");
+                        }
+                    }
+                    continue;
+
+                case "usetool":
+                    // Use an existing dynamic tool
+                    if (string.IsNullOrWhiteSpace(actionParam))
+                    {
+                        string availableTools = string.Join(", ", dynamicTools.All.Select(t => t.Name));
+                        await SayAsync($"I have these tools available: {availableTools}. What would you like me to use?");
+                        continue;
+                    }
+                    {
+                        // Parse tool:input format
+                        string[] parts = actionParam.Split(':', 2);
+                        string toolName = parts[0].Trim();
+                        string toolInput = parts.Length > 1 ? parts[1].Trim() : "";
+
+                        ITool? foundTool = dynamicTools.Get(toolName);
+                        if (foundTool == null)
+                        {
+                            // Try partial match
+                            foundTool = dynamicTools.All.FirstOrDefault(t =>
+                                t.Name.Contains(toolName, StringComparison.OrdinalIgnoreCase));
+                        }
+
+                        if (foundTool != null)
+                        {
+                            Console.WriteLine($"\n  [>] Using tool: {foundTool.Name}");
+                            Console.WriteLine($"     Input: {toolInput}");
+
+                            try
+                            {
+                                Result<string, string> toolResult = await foundTool.InvokeAsync(toolInput);
+                                toolResult.Match(
+                                    success =>
+                                    {
+                                        Console.WriteLine($"  [OK] Result: {(success.Length > 500 ? success[..500] + "..." : success)}");
+                                        _ = SayAsync(success.Length > 200 ? $"The {foundTool.Name} returned: {success[..200]}..." : $"The {foundTool.Name} says: {success}");
+                                    },
+                                    error =>
+                                    {
+                                        Console.WriteLine($"  [!] Tool error: {error}");
+                                        _ = SayAsync($"The {foundTool.Name} tool had an error: {error}");
+                                    });
+                            }
+                            catch (Exception toolEx)
+                            {
+                                Console.WriteLine($"  [!] Tool exception: {toolEx.Message}");
+                                await SayAsync($"Something went wrong with the {foundTool.Name} tool.");
+                            }
+                        }
+                        else
+                        {
+                            string availableTools = string.Join(", ", dynamicTools.All.Select(t => t.Name));
+                            await SayAsync($"I don't have a tool called {toolName}. Available tools: {availableTools}");
+                        }
+                    }
+                    continue;
+
+                case "smarttool":
+                    // Goal-based intelligent tool finding with MeTTa reasoning
+                    if (string.IsNullOrWhiteSpace(actionParam))
+                    {
+                        await SayAsync("Tell me what you want to accomplish and I'll find or create the best tool for it.");
+                        continue;
+                    }
+                    {
+                        if (toolLearner == null)
+                        {
+                            await SayAsync("Intelligent tool learning isn't available. Try using 'tool' to create a basic tool.");
+                            continue;
+                        }
+
+                        // Parse goal:input format (e.g., "search for Python tutorials:python machine learning")
+                        string[] goalParts = actionParam.Split(':', 2);
+                        string toolGoal = goalParts[0].Trim();
+                        string toolInput = goalParts.Length > 1 ? goalParts[1].Trim() : string.Empty;
+
+                        Console.WriteLine($"\n  [>] Intelligent tool discovery for: {toolGoal}");
+                        Console.WriteLine($"  [>] Using MeTTa semantic reasoning + genetic optimization...");
+
+                        var findResult = await toolLearner.FindOrCreateToolAsync(toolGoal, dynamicTools, CancellationToken.None);
+
+                        if (findResult.IsSuccess)
+                        {
+                            var result = findResult.Value;
+                            dynamicTools = dynamicTools.WithTool(result.Tool);
+
+                            string status = result.WasCreated
+                                ? "Created & optimized via GA"
+                                : "Found from learned patterns";
+                            Console.WriteLine($"  [OK] Tool: {result.Tool.Name} ({status})");
+
+                            if (!string.IsNullOrEmpty(toolInput))
+                            {
+                                Console.WriteLine($"  [>] Executing with input: {toolInput}");
+                                var toolResult = await result.Tool.InvokeAsync(toolInput);
+                                toolResult.Match(
+                                    success =>
+                                    {
+                                        Console.WriteLine($"  [OK] Result: {(success.Length > 500 ? success[..500] + "..." : success)}");
+                                        _ = SayAsync(success.Length > 200 ? $"Here's what I found: {success[..200]}..." : success);
+                                    },
+                                    error =>
+                                    {
+                                        Console.WriteLine($"  [!] Tool error: {error}");
+                                        _ = SayAsync($"The tool had an error: {error}");
+                                    });
+                            }
+                            else
+                            {
+                                var stats = toolLearner.GetStats();
+                                await SayAsync($"I have the {result.Tool.Name} tool ready. Tell me what to do with it. I've learned {stats.TotalPatterns} patterns so far.");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"  [!] Intelligent tool discovery failed: {findResult.Error}");
+                            await SayAsync($"I couldn't find or create a suitable tool. Error: {findResult.Error}");
+                        }
+                    }
+                    continue;
+
+                case "toolstats":
+                    // Show intelligent tool learner statistics
+                    if (toolLearner == null)
+                    {
+                        await SayAsync("Intelligent tool learning isn't available.");
+                        continue;
+                    }
+                    {
+                        var stats = toolLearner.GetStats();
+                        var patterns = toolLearner.GetAllPatterns().Take(5).ToList();
+
+                        Console.WriteLine($"\n  === Intelligent Tool Learner Stats ===");
+                        Console.WriteLine($"  Patterns learned: {stats.TotalPatterns}");
+                        Console.WriteLine($"  Avg success rate: {stats.AvgSuccessRate:P1}");
+                        Console.WriteLine($"  Total usages: {stats.TotalUsage}");
+
+                        if (patterns.Count > 0)
+                        {
+                            Console.WriteLine($"\n  Top patterns:");
+                            foreach (var p in patterns)
+                            {
+                                Console.WriteLine($"    - {p.ToolName}: {p.Goal} (used {p.UsageCount}x, {p.SuccessRate:P0} success)");
+                            }
+                        }
+
+                        await SayAsync($"I've learned {stats.TotalPatterns} tool patterns with {stats.AvgSuccessRate:P0} average success rate.");
                     }
                     continue;
 
@@ -1700,7 +2608,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                         else
                         {
                             // Try partial match for tokens
-                            var partialMatches = allTokens.Where(kv => 
+                            var partialMatches = allTokens.Where(kv =>
                                 kv.Key.Contains(actionParam, StringComparison.OrdinalIgnoreCase)).Take(5).ToList();
                             if (partialMatches.Count > 0)
                             {
@@ -1907,16 +2815,16 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                     var tokens = SkillCliSteps.GetAllPipelineTokens();
                     var uniqueTokens = tokens.Values.Distinct().ToList();
                     string? tokenFilter = string.IsNullOrWhiteSpace(actionParam) ? null : actionParam.Trim();
-                    
+
                     if (tokenFilter != null)
                     {
                         // Filter tokens by name or description
-                        var filteredTokens = uniqueTokens.Where(t => 
+                        var filteredTokens = uniqueTokens.Where(t =>
                             t.PrimaryName.Contains(tokenFilter, StringComparison.OrdinalIgnoreCase) ||
                             t.Description.Contains(tokenFilter, StringComparison.OrdinalIgnoreCase) ||
                             t.Aliases.Any(a => a.Contains(tokenFilter, StringComparison.OrdinalIgnoreCase))
                         ).ToList();
-                        
+
                         Console.WriteLine($"\n  [>] Tokens matching '{tokenFilter}' ({filteredTokens.Count} found):");
                         Console.WriteLine("  [#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][#][>][i]");
                         foreach (var token in filteredTokens.OrderBy(t => t.PrimaryName))
@@ -1929,8 +2837,8 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                         {
                             Console.WriteLine($"    No tokens match '{tokenFilter}'. Try: tokens vector, tokens stream, tokens prompt");
                         }
-                        await SayAsync(filteredTokens.Count > 0 
-                            ? $"Found {filteredTokens.Count} tokens matching {tokenFilter}." 
+                        await SayAsync(filteredTokens.Count > 0
+                            ? $"Found {filteredTokens.Count} tokens matching {tokenFilter}."
                             : $"No tokens match {tokenFilter}.");
                     }
                     else
@@ -1938,7 +2846,7 @@ Respond naturally as {personaName}. If the user wants to perform an action, incl
                         // Show all tokens grouped by source
                         Console.WriteLine($"\n  [>] ALL PIPELINE TOKENS ({uniqueTokens.Count} total)");
                         Console.WriteLine("  ----------------------------------------------------------------");
-                        
+
                         var grouped = uniqueTokens.GroupBy(t => t.SourceClass).OrderBy(g => g.Key);
                         foreach (var group in grouped)
                         {
@@ -2002,7 +2910,7 @@ static bool CheckWhisperAvailable()
         }
     }
     catch { }
-    
+
     try
     {
         // Check for whisper CLI in PATH

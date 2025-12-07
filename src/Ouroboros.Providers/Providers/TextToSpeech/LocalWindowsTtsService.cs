@@ -164,7 +164,7 @@ Write-Output 'OK'
 ";
 
             var runResult = await RunPowerShellAsync(script, ct);
-            
+
             if (runResult.IsSuccess)
             {
                 if (!File.Exists(tempFile))
@@ -173,7 +173,7 @@ Write-Output 'OK'
                 }
 
                 byte[] audioData = await File.ReadAllBytesAsync(tempFile, ct);
-                
+
                 // Clean up temp file
                 try { File.Delete(tempFile); } catch { }
 
@@ -232,7 +232,7 @@ Write-Output 'OK'
         text = CommaPauseRegex().Replace(text, ", <break time='200ms'/>");
         text = SemicolonPauseRegex().Replace(text, "; <break time='300ms'/>");
         text = ColonPauseRegex().Replace(text, ": <break time='250ms'/>");
-        
+
         // Add emphasis to words in ALL CAPS (but not single letters)
         text = AllCapsRegex().Replace(text, "<emphasis level='strong'>$1</emphasis>");
 
@@ -277,7 +277,7 @@ Write-Output 'OK'
         CancellationToken ct = default)
     {
         var result = await SynthesizeAsync(text, options, ct);
-        
+
         if (result.IsSuccess)
         {
             try
@@ -310,7 +310,7 @@ Write-Output 'OK'
         CancellationToken ct = default)
     {
         var result = await SynthesizeAsync(text, options, ct);
-        
+
         if (result.IsSuccess)
         {
             try
@@ -337,6 +337,23 @@ Write-Output 'OK'
     /// <returns>Result indicating success or failure.</returns>
     public async Task<Result<bool, string>> SpeakDirectAsync(string text, CancellationToken ct = default)
     {
+        return await SpeakWithToneAsync(text, _rate, _volume, ct);
+    }
+
+    /// <summary>
+    /// Speaks text with specified voice tone settings.
+    /// </summary>
+    /// <param name="text">Text to speak.</param>
+    /// <param name="rate">Speech rate from -10 (slow) to 10 (fast).</param>
+    /// <param name="volume">Volume from 0 to 100.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Result indicating success or failure.</returns>
+    public async Task<Result<bool, string>> SpeakWithToneAsync(
+        string text,
+        int rate,
+        int volume,
+        CancellationToken ct = default)
+    {
         if (!IsAvailable())
         {
             return Result<bool, string>.Failure("Windows TTS only available on Windows");
@@ -344,6 +361,10 @@ Write-Output 'OK'
 
         try
         {
+            // Clamp values to valid ranges
+            rate = Math.Clamp(rate, -10, 10);
+            volume = Math.Clamp(volume, 0, 100);
+
             // Escape for PowerShell double-quoted string
             string speechContent = text
                 .Replace("\"", "`\"")
@@ -361,8 +382,8 @@ foreach ($v in $voices) {{
         break
     }}
 }}
-$synth.Rate = {_rate}
-$synth.Volume = {_volume}
+$synth.Rate = {rate}
+$synth.Volume = {volume}
 $synth.Speak(""{speechContent}"")
 ";
 

@@ -31,6 +31,14 @@ public interface ISkillRegistry
     void RegisterSkill(Skill skill);
 
     /// <summary>
+    /// Registers a new skill asynchronously with immediate persistence.
+    /// Use this method when you need to ensure the skill is persisted before continuing.
+    /// </summary>
+    /// <param name="skill">The skill to register</param>
+    /// <param name="ct">Cancellation token</param>
+    Task RegisterSkillAsync(Skill skill, CancellationToken ct = default);
+
+    /// <summary>
     /// Finds skills that match the given goal and context.
     /// </summary>
     /// <param name="goal">The goal to accomplish</param>

@@ -35,4 +35,17 @@ public sealed class SkillsOptions
 
     [Option("endpoint", Default = "http://localhost:11434", HelpText = "LLM endpoint URL (Ollama, OpenAI-compatible).")]
     public string Endpoint { get; set; } = "http://localhost:11434";
+
+    // Qdrant storage options (skills are stored in Qdrant by default)
+    [Option("qdrant", Default = "http://localhost:6334", HelpText = "Qdrant connection string for skill storage.")]
+    public string QdrantEndpoint { get; set; } = "http://localhost:6334";
+
+    [Option("qdrant-collection", Default = "ouroboros_skills", HelpText = "Qdrant collection name for skills.")]
+    public string QdrantCollection { get; set; } = "ouroboros_skills";
+
+    [Option("use-json", Default = false, HelpText = "Use JSON file storage instead of Qdrant (fallback mode).")]
+    public bool UseJsonStorage { get; set; } = false;
+
+    [Option("embed-model", Default = "nomic-embed-text", HelpText = "Embedding model for semantic skill search.")]
+    public string EmbedModel { get; set; } = "nomic-embed-text";
 }
