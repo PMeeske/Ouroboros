@@ -162,6 +162,15 @@ public static class PipelineCommands
             Step<CliPipelineState, CliPipelineState> step = PipelineDsl.Build(dsl); // Steps will use embed & llm from state; k optionally influences reasoning if we extend arrows
             state = await step(state);
 
+            if (trace)
+            {
+                Console.WriteLine("\n=== PIPELINE EVENTS ===");
+                foreach (var evt in state.Branch.Events)
+                {
+                    Console.WriteLine($"- {evt.Kind}: {evt}");
+                }
+            }
+
             ReasoningStep? last = state.Branch.Events.OfType<ReasoningStep>().LastOrDefault();
             if (last is not null)
             {

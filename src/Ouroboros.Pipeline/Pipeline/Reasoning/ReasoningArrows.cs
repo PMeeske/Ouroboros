@@ -298,7 +298,7 @@ public static class ReasoningArrows
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
             System.Text.StringBuilder currentTurnText = new System.Text.StringBuilder();
             List<ToolExecution> allToolCalls = new List<ToolExecution>();
-            
+
             // Agent loop: continue as long as tools are called
             while (!ct.IsCancellationRequested)
             {
@@ -309,7 +309,7 @@ public static class ReasoningArrows
                 {
                     fullText.Append(chunk);
                     currentTurnText.Append(chunk);
-                    
+
                     PipelineBranch updatedBranch = branch.WithReasoning(new Thinking(fullText.ToString()), prompt, allToolCalls);
                     yield return (chunk, updatedBranch);
                 }
@@ -347,7 +347,7 @@ public static class ReasoningArrows
                     allToolCalls.Add(execution);
 
                     string resultTag = $"[TOOL-RESULT:{name}] {output}";
-                    
+
                     // Emit the tool result as a chunk so the user sees it
                     fullText.Append(resultTag);
                     PipelineBranch withTool = branch.WithReasoning(new Thinking(fullText.ToString()), prompt, allToolCalls);
