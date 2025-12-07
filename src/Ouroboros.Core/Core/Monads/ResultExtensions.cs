@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using System.Runtime.CompilerServices;
+
 namespace LangChainPipeline.Core.Monads;
 
 /// <summary>
@@ -20,6 +22,7 @@ public static class ResultExtensions
     /// <param name="result">The result to transform.</param>
     /// <param name="func">The transformation function.</param>
     /// <returns>A Result containing the transformed value or the original error.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<TResult, TError> Select<TValue, TResult, TError>(
         this Result<TValue, TError> result,
         Func<TValue, TResult> func)
@@ -35,6 +38,7 @@ public static class ResultExtensions
     /// <param name="result">The result to bind.</param>
     /// <param name="func">The binding function.</param>
     /// <returns>The result of the binding function or the original error.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<TResult, TError> SelectMany<TValue, TResult, TError>(
         this Result<TValue, TError> result,
         Func<TValue, Result<TResult, TError>> func)
@@ -52,6 +56,7 @@ public static class ResultExtensions
     /// <param name="selector">Function to select the intermediate result.</param>
     /// <param name="resultSelector">Function to combine the original and intermediate values.</param>
     /// <returns>The combined result or the first error encountered.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<TResult, TError> SelectMany<TValue, TIntermediate, TResult, TError>(
         this Result<TValue, TError> result,
         Func<TValue, Result<TIntermediate, TError>> selector,
@@ -68,6 +73,7 @@ public static class ResultExtensions
     /// <param name="first">The first Result.</param>
     /// <param name="second">The second Result.</param>
     /// <returns>A Result containing a tuple of both values, or the first error encountered.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<(T1, T2), TError> Combine<T1, T2, TError>(
         this Result<T1, TError> first,
         Result<T2, TError> second)
@@ -77,6 +83,7 @@ public static class ResultExtensions
     /// Combines three Results into a single Result containing a tuple.
     /// </summary>
     /// <returns></returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<(T1, T2, T3), TError> Combine<T1, T2, T3, TError>(
         this Result<T1, TError> first,
         Result<T2, TError> second,
@@ -93,6 +100,7 @@ public static class ResultExtensions
     /// <param name="predicate">The predicate to test.</param>
     /// <param name="errorOnFalse">The error to return if predicate fails.</param>
     /// <returns>The original Result if predicate passes, otherwise a failure.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<TValue, TError> Where<TValue, TError>(
         this Result<TValue, TError> result,
         Func<TValue, bool> predicate,
@@ -109,6 +117,7 @@ public static class ResultExtensions
     /// <param name="result">The Result.</param>
     /// <param name="action">The side effect to execute.</param>
     /// <returns>The original Result unchanged.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<TValue, TError> Tap<TValue, TError>(
         this Result<TValue, TError> result,
         Action<TValue> action)
@@ -129,6 +138,7 @@ public static class ResultExtensions
     /// <param name="result">The Result.</param>
     /// <param name="action">The side effect to execute on error.</param>
     /// <returns>The original Result unchanged.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<TValue, TError> TapError<TValue, TError>(
         this Result<TValue, TError> result,
         Action<TError> action)
@@ -149,6 +159,7 @@ public static class ResultExtensions
     /// <param name="result">The Result.</param>
     /// <param name="fallback">The fallback value.</param>
     /// <returns>The successful value or the fallback.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TValue OrElse<TValue, TError>(
         this Result<TValue, TError> result,
         TValue fallback)
@@ -162,6 +173,7 @@ public static class ResultExtensions
     /// <param name="result">The Result.</param>
     /// <param name="fallbackFunc">Function to compute fallback from error.</param>
     /// <returns>The successful value or the computed fallback.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TValue OrElse<TValue, TError>(
         this Result<TValue, TError> result,
         Func<TError, TValue> fallbackFunc)
@@ -173,6 +185,7 @@ public static class ResultExtensions
     /// <typeparam name="TValue">Type of the value.</typeparam>
     /// <param name="result">The Result with Exception error.</param>
     /// <returns>A Result with string error.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<TValue> ToStringError<TValue>(
         this Result<TValue, Exception> result)
         => result.IsSuccess
