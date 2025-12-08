@@ -1,5 +1,6 @@
-// <copyright file="OrchestratorBase.cs" company="Adaptive Systems Inc.">
-// Copyright (c) Adaptive Systems Inc. All rights reserved.
+// <copyright file="OrchestratorBase.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
 // ==========================================================
@@ -278,7 +279,7 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
                 var result = await operation();
                 return Result<T, string>.Success(result);
             }
-            catch (Exception ex) when (attempt < retryConfig.MaxRetries && !ct.IsCancellationRequested)
+            catch (Exception) when (attempt < retryConfig.MaxRetries && !ct.IsCancellationRequested)
             {
                 // Add jitter to prevent thundering herd
                 var jitter = TimeSpan.FromMilliseconds(Random.Shared.Next(0, (int)(delay.TotalMilliseconds * 0.1)));

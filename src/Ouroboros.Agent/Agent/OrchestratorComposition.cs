@@ -1,5 +1,6 @@
-// <copyright file="OrchestratorComposition.cs" company="Adaptive Systems Inc.">
-// Copyright (c) Adaptive Systems Inc. All rights reserved.
+// <copyright file="OrchestratorComposition.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
 // ==========================================================
