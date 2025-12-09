@@ -8,7 +8,7 @@
 // Fluent API for composing and chaining orchestrators
 // ==========================================================
 
-namespace LangChainPipeline.Agent;
+namespace Ouroboros.Agent;
 
 /// <summary>
 /// Represents a composable orchestrator that can be chained with other orchestrators.

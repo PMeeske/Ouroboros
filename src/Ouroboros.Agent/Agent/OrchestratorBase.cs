@@ -11,7 +11,7 @@
 using System.Diagnostics;
 using LangChainPipeline.Agent.MetaAI;
 
-namespace LangChainPipeline.Agent;
+namespace Ouroboros.Agent;
 
 /// <summary>
 /// Abstract base class for orchestrators providing common functionality.

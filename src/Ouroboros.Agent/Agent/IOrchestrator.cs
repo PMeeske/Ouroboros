@@ -8,7 +8,7 @@
 // Unified interface for all orchestrators in the suite
 // ==========================================================
 
-namespace LangChainPipeline.Agent;
+namespace Ouroboros.Agent;
 
 /// <summary>
 /// Represents the execution context for an orchestration operation.
