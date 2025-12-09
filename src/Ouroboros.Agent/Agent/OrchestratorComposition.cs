@@ -192,11 +192,11 @@ public sealed class OrchestratorComposer
     /// <summary>
     /// Creates a parallel orchestrator that executes multiple orchestrators concurrently.
     /// </summary>
-    /// <param name="maxConcurrency">Maximum number of orchestrators to execute concurrently (default: unlimited).</param>
+    /// <param name="maxConcurrency">Maximum number of orchestrators to execute concurrently. Use -1 for unlimited.</param>
     /// <param name="orchestrators">The orchestrators to execute in parallel.</param>
     public static IComposableOrchestrator<TInput, TOutput[]> Parallel<TInput, TOutput>(
         int maxConcurrency,
-        params IOrchestrator<TInput, TOutput>[] orchestrators)
+        IOrchestrator<TInput, TOutput>[] orchestrators)
     {
         ArgumentNullException.ThrowIfNull(orchestrators);
         if (orchestrators.Length == 0)
