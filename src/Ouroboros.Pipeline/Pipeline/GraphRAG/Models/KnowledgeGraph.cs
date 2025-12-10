@@ -73,12 +73,14 @@ public sealed record KnowledgeGraph(
     /// <returns>A new merged KnowledgeGraph.</returns>
     public KnowledgeGraph Merge(KnowledgeGraph other)
     {
+        var existingEntityIds = new HashSet<string>(Entities.Select(e => e.Id));
         var mergedEntities = Entities
-            .Concat(other.Entities.Where(e => !Entities.Any(existing => existing.Id == e.Id)))
+            .Concat(other.Entities.Where(e => !existingEntityIds.Contains(e.Id)))
             .ToList();
 
+        var existingRelationshipIds = new HashSet<string>(Relationships.Select(r => r.Id));
         var mergedRelationships = Relationships
-            .Concat(other.Relationships.Where(r => !Relationships.Any(existing => existing.Id == r.Id)))
+            .Concat(other.Relationships.Where(r => !existingRelationshipIds.Contains(r.Id)))
             .ToList();
 
         return new KnowledgeGraph(mergedEntities, mergedRelationships);

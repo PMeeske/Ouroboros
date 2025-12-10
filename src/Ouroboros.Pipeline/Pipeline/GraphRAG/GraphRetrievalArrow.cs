@@ -141,8 +141,9 @@ public static class GraphRetrievalArrow
     /// </summary>
     /// <param name="result">The search result to format.</param>
     /// <param name="maxMatches">Maximum number of matches to include.</param>
+    /// <param name="maxContentLength">Maximum length for each content field.</param>
     /// <returns>Formatted context string.</returns>
-    public static string FormatAsContext(HybridSearchResult result, int maxMatches = 5)
+    public static string FormatAsContext(HybridSearchResult result, int maxMatches = 5, int maxContentLength = 500)
     {
         var matches = result.TopMatches(maxMatches).ToList();
         if (matches.Count == 0)
@@ -151,9 +152,14 @@ public static class GraphRetrievalArrow
         }
 
         var sections = matches.Select((m, i) =>
-            $"[{i + 1}] {m.EntityName} ({m.EntityType})\n" +
-            $"Relevance: {m.Relevance:P0}\n" +
-            $"Content: {m.Content}");
+        {
+            var truncatedContent = m.Content.Length > maxContentLength
+                ? m.Content[..maxContentLength] + "..."
+                : m.Content;
+            return $"[{i + 1}] {m.EntityName} ({m.EntityType})\n" +
+                   $"Relevance: {m.Relevance:P0}\n" +
+                   $"Content: {truncatedContent}";
+        });
 
         return string.Join("\n\n", sections);
     }

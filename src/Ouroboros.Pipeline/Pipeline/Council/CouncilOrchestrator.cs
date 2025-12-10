@@ -11,6 +11,7 @@ namespace LangChainPipeline.Pipeline.Council;
 /// </summary>
 public sealed class CouncilOrchestrator : ICouncilOrchestrator
 {
+    private const int MaxContentPreviewLength = 200;
     private readonly List<IAgentPersona> _agents = [];
     private readonly ToolAwareChatModel _llm;
 
@@ -344,7 +345,7 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
     {
         var transcriptSummary = string.Join("\n", transcript.Select(r =>
             $"## {r.Phase}\n" + string.Join("\n", r.Contributions.Select(c =>
-                $"- **{c.AgentName}**: {c.Content[..Math.Min(200, c.Content.Length)]}..."))));
+                $"- **{c.AgentName}**: {c.Content[..Math.Min(MaxContentPreviewLength, c.Content.Length)]}..."))));
 
         var votesSummary = string.Join("\n", votes.Select(v =>
             $"- {v.Key}: {v.Value.Position} (weight: {v.Value.Weight:F2})"));
