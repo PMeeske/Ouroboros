@@ -121,4 +121,16 @@ public sealed record PipelineBranch
 
         return new PipelineBranch(newName, newStore, Source, _events);
     }
+
+    /// <summary>
+    /// Pure functional operation that returns a new branch with the specified event added.
+    /// Generic method for adding any type of pipeline event.
+    /// </summary>
+    /// <param name="pipelineEvent">The event to add.</param>
+    /// <returns>A new PipelineBranch with the event added.</returns>
+    public PipelineBranch WithEvent(PipelineEvent pipelineEvent)
+    {
+        ArgumentNullException.ThrowIfNull(pipelineEvent);
+        return new PipelineBranch(Name, Store, Source, _events.Add(pipelineEvent));
+    }
 }
