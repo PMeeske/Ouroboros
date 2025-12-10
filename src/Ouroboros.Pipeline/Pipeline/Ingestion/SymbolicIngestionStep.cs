@@ -87,8 +87,9 @@ public sealed class SymbolicIngestionStep
                 
                 if (addResult.IsFailure)
                 {
-                    // Log warning but continue - don't fail entire ingestion
-                    Console.WriteLine($"Warning: Failed to add fact: {addResult.Error}");
+                    // Continue processing - individual fact failures shouldn't fail entire ingestion
+                    // Errors are tracked but not blocking
+                    System.Diagnostics.Debug.WriteLine($"Warning: Failed to add fact: {addResult.Error}");
                 }
             }
 

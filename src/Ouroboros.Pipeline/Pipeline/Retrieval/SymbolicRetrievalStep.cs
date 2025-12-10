@@ -24,10 +24,17 @@ public sealed record HybridRetrievalResult(
     /// </summary>
     public IEnumerable<string> AllDocumentIds =>
         this.SymbolicMatches
-            .Concat(this.SemanticMatches.Select(d => 
-                d.Metadata.TryGetValue("id", out var id) ? id?.ToString() ?? d.PageContent[..Math.Min(50, d.PageContent.Length)] 
-                    : d.PageContent[..Math.Min(50, d.PageContent.Length)]))
+            .Concat(this.SemanticMatches.Select(d => GetDocumentId(d)))
             .Distinct();
+
+    /// <summary>
+    /// Extracts the document ID from a Document, falling back to a content preview.
+    /// </summary>
+    private static string GetDocumentId(LangChain.DocumentLoaders.Document doc)
+    {
+        string fallback = doc.PageContent[..Math.Min(50, doc.PageContent.Length)];
+        return doc.Metadata.TryGetValue("id", out var id) ? id?.ToString() ?? fallback : fallback;
+    }
 }
 
 /// <summary>

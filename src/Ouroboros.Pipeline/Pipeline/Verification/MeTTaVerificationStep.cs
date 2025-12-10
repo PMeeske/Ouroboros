@@ -141,10 +141,34 @@ public sealed class MeTTaVerificationStep
     /// </summary>
     private bool ParseAllowedResult(string result)
     {
-        // MeTTa returns results in various formats
-        // We check for True/true or absence of False/false
-        string normalized = result.Trim().ToLowerInvariant();
-        return normalized.Contains("true") && !normalized.Contains("false");
+        if (string.IsNullOrWhiteSpace(result))
+        {
+            return false;
+        }
+
+        string normalized = result.Trim();
+
+        // Check for exact boolean matches first (case-insensitive)
+        if (normalized.Equals("True", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("[True]", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("(True)", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("[[True]]", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (normalized.Equals("False", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("[False]", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("(False)", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("[[False]]", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        // For complex responses, check if it contains True without False
+        // This is a fallback for non-standard MeTTa response formats
+        string lower = normalized.ToLowerInvariant();
+        return lower.Contains("true") && !lower.Contains("false");
     }
 }
 

@@ -268,7 +268,7 @@ public class MeTTaNeuroSymbolicTests
     public async Task MeTTaPlanner_RegisterToolSignature_AddsToEngine()
     {
         // Arrange
-        var engine = new MockMeTTaEngine();
+        var engine = new PlannerMockMeTTaEngine("added");
         var planner = new MeTTaPlanner(engine);
 
         // Act
