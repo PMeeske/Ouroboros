@@ -1,6 +1,10 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 namespace LangChainPipeline.Domain;
 
+/// <summary>
+/// Machine capabilities detection utilities.
+/// Note: Uses global:: prefix for System.Environment to avoid conflict with LangChainPipeline.Domain.Environment namespace.
+/// </summary>
 public static class MachineCapabilities
 {
     public static int CpuCores => global::System.Environment.ProcessorCount;
