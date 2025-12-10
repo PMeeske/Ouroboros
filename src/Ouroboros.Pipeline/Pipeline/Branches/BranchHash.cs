@@ -4,7 +4,6 @@
 
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 
 namespace LangChainPipeline.Pipeline.Branches;
 
@@ -23,16 +22,35 @@ public static class BranchHash
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
-        // Serialize to JSON with consistent formatting for deterministic hashing
-        var options = new JsonSerializerOptions
+        // Build a deterministic string representation for hashing
+        // This avoids complex JSON serialization issues with polymorphic types
+        var sb = new StringBuilder();
+        sb.Append("NAME:").Append(snapshot.Name).Append('|');
+        sb.Append("EVENTS:").Append(snapshot.Events.Count).Append('|');
+        
+        foreach (var evt in snapshot.Events)
         {
-            WriteIndented = false,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never
-        };
+            sb.Append("E{");
+            sb.Append(evt.Id).Append(',');
+            sb.Append(evt.Timestamp.Ticks).Append(',');
+            sb.Append(evt.GetType().Name);
+            sb.Append("}|");
+        }
+        
+        sb.Append("VECTORS:").Append(snapshot.Vectors.Count).Append('|');
+        foreach (var vec in snapshot.Vectors)
+        {
+            sb.Append("V{");
+            sb.Append(vec.Id).Append(',');
+            sb.Append(vec.Text).Append(',');
+            if (vec.Embedding != null)
+            {
+                sb.Append(string.Join(",", vec.Embedding.Select(f => f.ToString("F6"))));
+            }
+            sb.Append("}|");
+        }
 
-        string json = JsonSerializer.Serialize(snapshot, options);
-        byte[] bytes = Encoding.UTF8.GetBytes(json);
+        byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
 
         using var sha256 = SHA256.Create();
         byte[] hashBytes = sha256.ComputeHash(bytes);
