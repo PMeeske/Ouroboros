@@ -39,6 +39,11 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
   - **Automated Code Review**: AI-assisted PR reviews with functional programming pattern checks
   - **Issue Analysis**: Automatic issue classification and implementation guidance
   - **Continuous Improvement**: Weekly code quality analysis and optimization suggestions
+- **🌟 Phase 0 — Evolution Foundations (NEW)**: Infrastructure for evolutionary metacognitive control
+  - **Feature Flags**: Modular enablement of `embodiment`, `self_model`, and `affect` capabilities
+  - **DAG Maintenance**: Snapshot integrity with SHA-256 hashing and retention policies
+  - **Global Projection Service**: System-wide state observation with epoch snapshots and metrics
+  - **CLI Commands**: `dag snapshot`, `dag show`, `dag replay`, `dag validate`, `dag retention`
 - **✨ Convenience Layer**: Simplified one-liner methods for quick orchestrator setup
 - **🔮 MeTTa Symbolic Reasoning**: Hybrid neural-symbolic AI with MeTTa integration
 - **📊 Vector Database Support**: Built-in vector storage and retrieval capabilities
@@ -188,6 +193,22 @@ dotnet run -- metta --goal "Analyze data patterns and find insights"
 
 # Run MeTTa orchestrator in plan-only mode
 dotnet run -- metta --goal "Create a research plan" --plan-only
+
+# DAG Operations (Phase 0 — Evolution Foundations)
+# Create snapshot of pipeline branches
+dotnet run -- dag --command snapshot --branch main
+
+# Show metrics and latest epoch
+dotnet run -- dag --command show
+
+# Replay snapshot from file
+dotnet run -- dag --command replay --input snapshot.json
+
+# Validate snapshot integrity
+dotnet run -- dag --command validate
+
+# Evaluate retention policy (dry run)
+dotnet run -- dag --command retention --max-age-days 30 --dry-run
 ```
 
 #### Orchestrating Complex Tasks with Small Models
@@ -1218,6 +1239,8 @@ This script checks your cluster type and provides specific guidance.
 
 ### Technical Documentation
 - [**Documentation Index**](docs/README.md) - Complete documentation catalog
+- [**Phase 0 Architecture**](docs/PHASE_0_ARCHITECTURE.md) - Evolution foundations infrastructure ⭐ **NEW**
+- [**Phase 0 Usage Guide**](docs/PHASE_0_USAGE.md) - Feature flags, DAG operations, and metrics ⭐ **NEW**
 - [**Self-Improving Agent Architecture**](docs/SELF_IMPROVING_AGENT.md) - Agent capabilities and architecture
 - [**IONOS Cloud Deployment**](docs/IONOS_DEPLOYMENT_GUIDE.md) - IONOS-specific deployment guide
 - [**Infrastructure Dependencies**](docs/INFRASTRUCTURE_DEPENDENCIES.md) - Complete infrastructure dependency mapping
