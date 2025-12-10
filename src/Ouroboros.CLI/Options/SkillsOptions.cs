@@ -3,8 +3,8 @@ using CommandLine;
 
 namespace LangChainPipeline.Options;
 
-[Verb("skills", HelpText = "Manage research-powered skills and DSL tokens.")]
-public sealed class SkillsOptions
+[Verb("skills", HelpText = "Manage research-powered skills and DSL tokens. Use --voice for voice mode.")]
+public sealed class SkillsOptions : IVoiceOptions
 {
     [Option('l', "list", HelpText = "List all registered skills.")]
     public bool List { get; set; }

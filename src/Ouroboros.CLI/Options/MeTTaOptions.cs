@@ -3,14 +3,30 @@ using CommandLine;
 
 namespace LangChainPipeline.Options;
 
-[Verb("metta", HelpText = "Run MeTTa orchestrator v3.0 with symbolic reasoning capabilities.")]
-public sealed class MeTTaOptions
+[Verb("metta", HelpText = "Run MeTTa orchestrator v3.0 with symbolic reasoning. Use --voice for voice mode.")]
+public sealed class MeTTaOptions : IVoiceOptions
 {
+    // Voice mode options
+    [Option('v', "voice", Required = false, Default = false, HelpText = "Enable voice persona mode (speak & listen).")]
+    public bool Voice { get; set; }
+
+    [Option("persona", Required = false, Default = "Ouroboros", HelpText = "Persona name for voice mode.")]
+    public string Persona { get; set; } = "Ouroboros";
+
+    [Option("embed-model", Required = false, Default = "nomic-embed-text", HelpText = "Embedding model for voice mode.")]
+    public string EmbedModel { get; set; } = "nomic-embed-text";
+
+    [Option("qdrant", Required = false, Default = "http://localhost:6334", HelpText = "Qdrant endpoint for skills.")]
+    public string QdrantEndpoint { get; set; } = "http://localhost:6334";
+
+    // Explicit interface for Endpoint
+    string IVoiceOptions.Endpoint { get => Endpoint ?? "http://localhost:11434"; set => Endpoint = value; }
+
     [Option('g', "goal", Required = true, HelpText = "Goal or task for the MeTTa orchestrator to plan and execute.")]
     public string Goal { get; set; } = string.Empty;
 
-    [Option("model", Required = false, HelpText = "Ollama chat model name", Default = "llama3")]
-    public string Model { get; set; } = "llama3";
+    [Option("model", Required = false, HelpText = "LLM model name", Default = "deepseek-v3.1:671b-cloud")]
+    public string Model { get; set; } = "deepseek-v3.1:671b-cloud";
 
     [Option("embed", Required = false, HelpText = "Ollama embedding model name", Default = "nomic-embed-text")]
     public string Embed { get; set; } = "nomic-embed-text";

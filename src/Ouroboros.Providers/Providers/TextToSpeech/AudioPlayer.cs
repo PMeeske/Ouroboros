@@ -112,17 +112,35 @@ public static class AudioPlayer
     {
         if (OperatingSystem.IsWindows())
         {
-            // Use Windows Media Player or PowerShell with System.Media.SoundPlayer for wav
-            // For mp3, use wmplayer or powershell with Windows.Media.Playback
-            return new ProcessStartInfo
+            // Use PowerShell with System.Media.SoundPlayer for WAV (fast, synchronous)
+            // For other formats, use Windows Media Player
+            string ext = Path.GetExtension(filePath).ToLowerInvariant();
+            if (ext == ".wav")
             {
-                FileName = "powershell.exe",
-                Arguments = $"-NoProfile -Command \"Add-Type -AssemblyName presentationCore; $player = New-Object System.Windows.Media.MediaPlayer; $player.Open([Uri]'{filePath}'); $player.Play(); Start-Sleep -Seconds 60; $player.Close()\"",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
+                // SoundPlayer is much faster for WAV files
+                return new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-NoProfile -Command \"Add-Type -AssemblyName System.Windows.Forms; $p = New-Object System.Media.SoundPlayer('{filePath.Replace("'", "''")}'); $p.PlaySync(); $p.Dispose()\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                };
+            }
+            else
+            {
+                // For MP3 and other formats, use a simpler approach
+                return new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-NoProfile -Command \"Add-Type -AssemblyName presentationCore; $p = New-Object System.Windows.Media.MediaPlayer; $p.Open([Uri]::new('{filePath.Replace("'", "''")}')); $p.Play(); while($p.NaturalDuration.HasTimeSpan -eq $false){{Start-Sleep -Milliseconds 100}}; Start-Sleep -Milliseconds ([int]$p.NaturalDuration.TimeSpan.TotalMilliseconds + 100); $p.Close()\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                };
+            }
         }
         else if (OperatingSystem.IsMacOS())
         {

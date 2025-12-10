@@ -3,14 +3,30 @@ using CommandLine;
 
 namespace LangChainPipeline.Options;
 
-[Verb("pipeline", HelpText = "Run a pipeline DSL.")]
-public sealed class PipelineOptions
+[Verb("pipeline", HelpText = "Run a pipeline DSL. Use --voice for voice mode.")]
+public sealed class PipelineOptions : IVoiceOptions
 {
+    // Voice mode options
+    [Option('v', "voice", Required = false, Default = false, HelpText = "Enable voice persona mode (speak & listen).")]
+    public bool Voice { get; set; }
+
+    [Option("persona", Required = false, Default = "Ouroboros", HelpText = "Persona name for voice mode.")]
+    public string Persona { get; set; } = "Ouroboros";
+
+    [Option("embed-model", Required = false, Default = "nomic-embed-text", HelpText = "Embedding model for voice mode.")]
+    public string EmbedModel { get; set; } = "nomic-embed-text";
+
+    [Option("qdrant", Required = false, Default = "http://localhost:6334", HelpText = "Qdrant endpoint for skills.")]
+    public string QdrantEndpoint { get; set; } = "http://localhost:6334";
+
+    // Explicit interface for Endpoint
+    string IVoiceOptions.Endpoint { get => Endpoint ?? "http://localhost:11434"; set => Endpoint = value; }
+
     [Option('d', "dsl", Required = true, HelpText = "Pipeline DSL string.")]
     public string Dsl { get; set; } = string.Empty;
 
-    [Option("model", Required = false, HelpText = "Ollama chat model name", Default = "deepseek-coder:33b")]
-    public string Model { get; set; } = "deepseek-coder:33b";
+    [Option("model", Required = false, HelpText = "LLM model name", Default = "deepseek-v3.1:671b-cloud")]
+    public string Model { get; set; } = "deepseek-v3.1:671b-cloud";
 
     [Option("embed", Required = false, HelpText = "Ollama embedding model name", Default = "nomic-embed-text")]
     public string Embed { get; set; } = "nomic-embed-text";

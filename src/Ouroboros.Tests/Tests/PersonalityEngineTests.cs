@@ -108,7 +108,7 @@ public class PersonalityEngineTests
     {
         var mood = _engine.DetectMoodFromInput("");
 
-        mood.Should().Be(PersonalityEngine.DetectedMood.Neutral);
+        mood.Should().Be(DetectedMood.Neutral);
     }
 
     [Fact]

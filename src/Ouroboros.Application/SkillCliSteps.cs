@@ -20,8 +20,8 @@ namespace Ouroboros.Application;
 public static class SkillCliSteps
 {
     // Shared HTTP client for web fetching
-    private static readonly Lazy<HttpClient> _httpClient = new(() => new HttpClient 
-    { 
+    private static readonly Lazy<HttpClient> _httpClient = new(() => new HttpClient
+    {
         Timeout = TimeSpan.FromSeconds(30),
         DefaultRequestHeaders = { { "User-Agent", "Ouroboros/1.0 (Research Pipeline)" } }
     });
@@ -38,7 +38,7 @@ public static class SkillCliSteps
     private static readonly Lazy<Dictionary<string, PipelineTokenInfo>> _allPipelineTokens = new(() =>
     {
         var tokens = new Dictionary<string, PipelineTokenInfo>(StringComparer.OrdinalIgnoreCase);
-        
+
         // Scan all loaded assemblies for PipelineToken attributes
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
@@ -53,7 +53,7 @@ public static class SkillCliSteps
                         {
                             var xmlDoc = method.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description
                                 ?? ExtractXmlDocSummary(method);
-                            
+
                             var info = new PipelineTokenInfo(
                                 attr.Names.FirstOrDefault() ?? method.Name,
                                 attr.Names.Skip(1).ToArray(),
@@ -61,7 +61,7 @@ public static class SkillCliSteps
                                 xmlDoc ?? $"Pipeline step from {type.Name}",
                                 method
                             );
-                            
+
                             foreach (var name in attr.Names)
                             {
                                 tokens[name] = info;
@@ -72,7 +72,7 @@ public static class SkillCliSteps
             }
             catch { /* Skip assemblies that can't be scanned */ }
         }
-        
+
         return tokens;
     });
 
@@ -88,11 +88,11 @@ public static class SkillCliSteps
     {
         var tokens = _allPipelineTokens.Value;
         var grouped = tokens.Values.Distinct().GroupBy(t => t.SourceClass);
-        
+
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("OUROBOROS PIPELINE - ALL AVAILABLE DSL TOKENS:");
         sb.AppendLine("================================================");
-        
+
         foreach (var group in grouped.OrderBy(g => g.Key))
         {
             sb.AppendLine($"\n📦 {group.Key}:");
@@ -104,7 +104,7 @@ public static class SkillCliSteps
                     sb.AppendLine($"    {token.Description}");
             }
         }
-        
+
         sb.AppendLine($"\nTotal: {tokens.Values.Distinct().Count()} pipeline tokens available");
         return sb.ToString();
     }
@@ -132,13 +132,13 @@ public static class SkillCliSteps
             try
             {
                 string content = await _httpClient.Value.GetStringAsync(targetUrl);
-                
+
                 // Extract text from HTML if needed
                 if (content.Contains("<html") || content.Contains("<HTML"))
                 {
                     content = ExtractTextFromHtml(content);
                 }
-                
+
                 Console.WriteLine($"[Fetch] ✓ Retrieved {content.Length:N0} characters");
                 s.Output = content.Length > 50000 ? content[..50000] + "\n...[truncated]" : content;
                 s.Context = $"[Fetched from {targetUrl}]\n{s.Output}";
@@ -168,16 +168,16 @@ public static class SkillCliSteps
 
             Console.WriteLine($"[ArxivSearch] Searching: \"{searchQuery}\"");
             string url = $"http://export.arxiv.org/api/query?search_query=all:{Uri.EscapeDataString(searchQuery)}&start=0&max_results=10";
-            
+
             try
             {
                 string xml = await _httpClient.Value.GetStringAsync(url);
                 var doc = XDocument.Parse(xml);
                 XNamespace atom = "http://www.w3.org/2005/Atom";
-                
+
                 var entries = doc.Descendants(atom + "entry").ToList();
                 Console.WriteLine($"[ArxivSearch] ✓ Found {entries.Count} papers");
-                
+
                 var results = new List<string>();
                 foreach (var entry in entries.Take(10))
                 {
@@ -185,15 +185,15 @@ public static class SkillCliSteps
                     string summary = entry.Element(atom + "summary")?.Value?.Trim().Replace("\n", " ") ?? "";
                     string id = entry.Element(atom + "id")?.Value ?? "";
                     string published = entry.Element(atom + "published")?.Value?[..10] ?? "";
-                    
+
                     var authors = entry.Descendants(atom + "author")
                         .Select(a => a.Element(atom + "name")?.Value)
                         .Where(n => n != null)
                         .Take(3);
-                    
+
                     results.Add($"📄 {title}\n   Authors: {string.Join(", ", authors)}\n   Published: {published}\n   ID: {id}\n   Summary: {(summary.Length > 200 ? summary[..200] + "..." : summary)}");
                 }
-                
+
                 s.Output = string.Join("\n\n", results);
                 s.Context = $"[arXiv search: {searchQuery}]\n{s.Output}";
             }
@@ -222,19 +222,19 @@ public static class SkillCliSteps
 
             Console.WriteLine($"[WikiSearch] Searching: \"{searchQuery}\"");
             string url = $"https://en.wikipedia.org/api/rest_v1/page/summary/{Uri.EscapeDataString(searchQuery.Replace(" ", "_"))}";
-            
+
             try
             {
                 string json = await _httpClient.Value.GetStringAsync(url);
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
-                
+
                 string title = root.TryGetProperty("title", out var t) ? t.GetString() ?? searchQuery : searchQuery;
                 string extract = root.TryGetProperty("extract", out var e) ? e.GetString() ?? "" : "";
                 string description = root.TryGetProperty("description", out var d) ? d.GetString() ?? "" : "";
-                
+
                 Console.WriteLine($"[WikiSearch] ✓ Found: {title}");
-                
+
                 s.Output = $"📚 {title}\n{description}\n\n{extract}";
                 s.Context = $"[Wikipedia: {title}]\n{s.Output}";
             }
@@ -247,7 +247,7 @@ public static class SkillCliSteps
                 {
                     string json = await _httpClient.Value.GetStringAsync(searchUrl);
                     using var doc = JsonDocument.Parse(json);
-                    
+
                     var results = new List<string>();
                     if (doc.RootElement.TryGetProperty("query", out var queryEl) &&
                         queryEl.TryGetProperty("search", out var searchEl))
@@ -255,12 +255,12 @@ public static class SkillCliSteps
                         foreach (var item in searchEl.EnumerateArray().Take(5))
                         {
                             string title = item.TryGetProperty("title", out var titleEl) ? titleEl.GetString() ?? "" : "";
-                            string snippet = item.TryGetProperty("snippet", out var snippetEl) ? 
+                            string snippet = item.TryGetProperty("snippet", out var snippetEl) ?
                                 Regex.Replace(snippetEl.GetString() ?? "", "<[^>]+>", "") : "";
                             results.Add($"📚 {title}\n   {snippet}");
                         }
                     }
-                    
+
                     s.Output = string.Join("\n\n", results);
                     s.Context = $"[Wikipedia search: {searchQuery}]\n{s.Output}";
                     Console.WriteLine($"[WikiSearch] ✓ Found {results.Count} results");
@@ -295,12 +295,12 @@ public static class SkillCliSteps
 
             Console.WriteLine($"[ScholarSearch] Searching: \"{searchQuery}\"");
             string url = $"https://api.semanticscholar.org/graph/v1/paper/search?query={Uri.EscapeDataString(searchQuery)}&limit=10&fields=title,authors,year,citationCount,abstract";
-            
+
             try
             {
                 string json = await _httpClient.Value.GetStringAsync(url);
                 using var doc = JsonDocument.Parse(json);
-                
+
                 var results = new List<string>();
                 if (doc.RootElement.TryGetProperty("data", out var dataEl))
                 {
@@ -310,7 +310,7 @@ public static class SkillCliSteps
                         int citations = paper.TryGetProperty("citationCount", out var c) ? c.GetInt32() : 0;
                         int year = paper.TryGetProperty("year", out var y) && y.ValueKind == JsonValueKind.Number ? y.GetInt32() : 0;
                         string abstractText = paper.TryGetProperty("abstract", out var a) ? a.GetString() ?? "" : "";
-                        
+
                         var authors = new List<string>();
                         if (paper.TryGetProperty("authors", out var authorsEl))
                         {
@@ -320,11 +320,11 @@ public static class SkillCliSteps
                                     authors.Add(name.GetString() ?? "");
                             }
                         }
-                        
+
                         results.Add($"📄 {title} ({year})\n   Authors: {string.Join(", ", authors)}\n   Citations: {citations:N0}\n   {(abstractText.Length > 150 ? abstractText[..150] + "..." : abstractText)}");
                     }
                 }
-                
+
                 Console.WriteLine($"[ScholarSearch] ✓ Found {results.Count} papers");
                 s.Output = string.Join("\n\n", results);
                 s.Context = $"[Semantic Scholar: {searchQuery}]\n{s.Output}";
@@ -336,6 +336,123 @@ public static class SkillCliSteps
             }
             return s;
         };
+
+    /// <summary>
+    /// Search the web using Google (via SerpAPI or scraping).
+    /// Usage: GoogleSearch 'machine learning tutorials' | UseOutput
+    /// </summary>
+    [PipelineToken("GoogleSearch", "Google", "WebSearch", "SearchWeb")]
+    public static Step<CliPipelineState, CliPipelineState> GoogleSearch(string? query = null)
+        => async s =>
+        {
+            string searchQuery = ParseString(query) ?? s.Prompt ?? s.Query;
+            if (string.IsNullOrWhiteSpace(searchQuery))
+            {
+                Console.WriteLine("[GoogleSearch] No query provided");
+                return s;
+            }
+
+            Console.WriteLine($"[GoogleSearch] Searching: \"{searchQuery}\"");
+
+            // Check for SerpAPI key in environment
+            string? serpApiKey = Environment.GetEnvironmentVariable("SERPAPI_KEY");
+
+            try
+            {
+                List<string> results;
+
+                if (!string.IsNullOrEmpty(serpApiKey))
+                {
+                    // Use SerpAPI for reliable Google results
+                    results = await SearchWithSerpApiAsync(searchQuery, serpApiKey);
+                }
+                else
+                {
+                    // Fallback to DuckDuckGo HTML (more reliable than scraping Google)
+                    results = await SearchWithDuckDuckGoAsync(searchQuery);
+                }
+
+                if (results.Count > 0)
+                {
+                    Console.WriteLine($"[GoogleSearch] ✓ Found {results.Count} results");
+                    s.Output = string.Join("\n\n", results);
+                    s.Context = $"[Web search: {searchQuery}]\n{s.Output}";
+                }
+                else
+                {
+                    Console.WriteLine("[GoogleSearch] No results found");
+                    s.Output = "No search results found.";
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GoogleSearch] ⚠ Failed: {ex.Message}");
+                s.Output = $"Web search failed: {ex.Message}";
+            }
+            return s;
+        };
+
+    private static async Task<List<string>> SearchWithSerpApiAsync(string query, string apiKey)
+    {
+        string url = $"https://serpapi.com/search.json?q={Uri.EscapeDataString(query)}&api_key={apiKey}&num=10";
+        string json = await _httpClient.Value.GetStringAsync(url);
+        using var doc = JsonDocument.Parse(json);
+
+        var results = new List<string>();
+        if (doc.RootElement.TryGetProperty("organic_results", out var organicEl))
+        {
+            foreach (var result in organicEl.EnumerateArray().Take(10))
+            {
+                string title = result.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
+                string link = result.TryGetProperty("link", out var l) ? l.GetString() ?? "" : "";
+                string snippet = result.TryGetProperty("snippet", out var s) ? s.GetString() ?? "" : "";
+                results.Add($"🔍 {title}\n   {link}\n   {snippet}");
+            }
+        }
+        return results;
+    }
+
+    private static async Task<List<string>> SearchWithDuckDuckGoAsync(string query)
+    {
+        string url = $"https://html.duckduckgo.com/html/?q={Uri.EscapeDataString(query)}";
+        string html = await _httpClient.Value.GetStringAsync(url);
+
+        var results = new List<string>();
+
+        // Parse DuckDuckGo HTML results
+        var resultMatches = Regex.Matches(html, @"<a[^>]+class=""result__a""[^>]*href=""([^""]+)""[^>]*>([^<]+)</a>.*?<a[^>]+class=""result__snippet""[^>]*>([^<]*(?:<[^>]+>[^<]*)*)</a>",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+        foreach (Match match in resultMatches.Take(10))
+        {
+            string link = System.Net.WebUtility.UrlDecode(match.Groups[1].Value);
+            // Extract actual URL from DuckDuckGo redirect
+            var uddgMatch = Regex.Match(link, @"uddg=([^&]+)");
+            if (uddgMatch.Success)
+                link = System.Net.WebUtility.UrlDecode(uddgMatch.Groups[1].Value);
+
+            string title = System.Net.WebUtility.HtmlDecode(match.Groups[2].Value.Trim());
+            string snippet = Regex.Replace(match.Groups[3].Value, "<[^>]+>", "").Trim();
+            snippet = System.Net.WebUtility.HtmlDecode(snippet);
+
+            if (!string.IsNullOrEmpty(title))
+                results.Add($"🔍 {title}\n   {link}\n   {snippet}");
+        }
+
+        // Fallback: simpler parsing if the above didn't work
+        if (results.Count == 0)
+        {
+            var simpleMatches = Regex.Matches(html, @"<a[^>]+class=""[^""]*result[^""]*""[^>]*>([^<]+)</a>", RegexOptions.IgnoreCase);
+            foreach (Match match in simpleMatches.Take(10))
+            {
+                string title = System.Net.WebUtility.HtmlDecode(match.Groups[1].Value.Trim());
+                if (!string.IsNullOrEmpty(title) && title.Length > 10)
+                    results.Add($"🔍 {title}");
+            }
+        }
+
+        return results;
+    }
 
     /// <summary>
     /// Search GitHub for repositories.
@@ -354,16 +471,16 @@ public static class SkillCliSteps
 
             Console.WriteLine($"[GithubSearch] Searching: \"{searchQuery}\"");
             string url = $"https://api.github.com/search/repositories?q={Uri.EscapeDataString(searchQuery)}&sort=stars&per_page=10";
-            
+
             try
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
                 request.Headers.Add("Accept", "application/vnd.github.v3+json");
-                
+
                 var response = await _httpClient.Value.SendAsync(request);
                 string json = await response.Content.ReadAsStringAsync();
                 using var doc = JsonDocument.Parse(json);
-                
+
                 var results = new List<string>();
                 if (doc.RootElement.TryGetProperty("items", out var itemsEl))
                 {
@@ -374,11 +491,11 @@ public static class SkillCliSteps
                         int stars = repo.TryGetProperty("stargazers_count", out var st) ? st.GetInt32() : 0;
                         string lang = repo.TryGetProperty("language", out var l) ? l.GetString() ?? "" : "";
                         string repoUrl = repo.TryGetProperty("html_url", out var u) ? u.GetString() ?? "" : "";
-                        
+
                         results.Add($"⭐ {name} ({stars:N0} stars)\n   Language: {lang}\n   {desc}\n   {repoUrl}");
                     }
                 }
-                
+
                 Console.WriteLine($"[GithubSearch] ✓ Found {results.Count} repositories");
                 s.Output = string.Join("\n\n", results);
                 s.Context = $"[GitHub: {searchQuery}]\n{s.Output}";
@@ -407,15 +524,15 @@ public static class SkillCliSteps
             }
 
             Console.WriteLine($"[NewsSearch] Searching: \"{searchQuery}\"");
-            
+
             // Try Google News RSS as fallback (no API key needed)
             string url = $"https://news.google.com/rss/search?q={Uri.EscapeDataString(searchQuery)}&hl=en-US&gl=US&ceid=US:en";
-            
+
             try
             {
                 string xml = await _httpClient.Value.GetStringAsync(url);
                 var doc = XDocument.Parse(xml);
-                
+
                 var results = new List<string>();
                 foreach (var item in doc.Descendants("item").Take(10))
                 {
@@ -423,10 +540,10 @@ public static class SkillCliSteps
                     string link = item.Element("link")?.Value ?? "";
                     string pubDate = item.Element("pubDate")?.Value ?? "";
                     string source = item.Element("source")?.Value ?? "";
-                    
+
                     results.Add($"📰 {title}\n   Source: {source} | {pubDate}\n   {link}");
                 }
-                
+
                 Console.WriteLine($"[NewsSearch] ✓ Found {results.Count} articles");
                 s.Output = string.Join("\n\n", results);
                 s.Context = $"[News: {searchQuery}]\n{s.Output}";
@@ -449,26 +566,26 @@ public static class SkillCliSteps
         {
             string? filterStr = ParseString(filter);
             var tokens = _allPipelineTokens.Value.Values.Distinct().ToList();
-            
+
             if (!string.IsNullOrEmpty(filterStr))
             {
-                tokens = tokens.Where(t => 
+                tokens = tokens.Where(t =>
                     t.PrimaryName.Contains(filterStr, StringComparison.OrdinalIgnoreCase) ||
                     t.SourceClass.Contains(filterStr, StringComparison.OrdinalIgnoreCase) ||
                     t.Description.Contains(filterStr, StringComparison.OrdinalIgnoreCase)
                 ).ToList();
             }
-            
+
             Console.WriteLine($"[ListAllTokens] {tokens.Count} pipeline tokens available:");
-            
+
             var grouped = tokens.GroupBy(t => t.SourceClass).OrderBy(g => g.Key);
             var output = new List<string>();
-            
+
             foreach (var group in grouped)
             {
                 Console.WriteLine($"\n  📦 {group.Key}:");
                 output.Add($"\n📦 {group.Key}:");
-                
+
                 foreach (var token in group.OrderBy(t => t.PrimaryName))
                 {
                     string aliases = token.Aliases.Length > 0 ? $" ({string.Join(", ", token.Aliases.Take(2))})" : "";
@@ -476,7 +593,7 @@ public static class SkillCliSteps
                     output.Add($"  • {token.PrimaryName}{aliases}: {token.Description}");
                 }
             }
-            
+
             s.Output = string.Join("\n", output);
             s.Context = BuildPipelineContext();
             return Task.FromResult(s);
@@ -491,59 +608,59 @@ public static class SkillCliSteps
         => async s =>
         {
             string searchTopic = ParseString(topic) ?? s.Prompt ?? s.Query ?? "self-improving AI";
-            
+
             Console.WriteLine("╔══════════════════════════════════════════════════════════════╗");
             Console.WriteLine("║    🌀 OUROBOROS EMERGENCE CYCLE                              ║");
             Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
             Console.WriteLine($"\n  Topic: {searchTopic}\n");
-            
+
             var allResults = new System.Text.StringBuilder();
-            
+
             // Phase 1: INGEST - Fetch from multiple sources
             Console.WriteLine("  ═══════════════════════════════════════════════════════════");
             Console.WriteLine("  📥 PHASE 1: INGEST - Multi-Source Research Fetch");
             Console.WriteLine("  ═══════════════════════════════════════════════════════════\n");
-            
+
             // arXiv
             Console.WriteLine("  🔍 Searching arXiv...");
             var arxivState = await ArxivSearch(searchTopic)(CloneState(s));
             allResults.AppendLine("=== arXiv Papers ===");
             allResults.AppendLine(arxivState.Output ?? "No results");
-            
+
             await Task.Delay(500);
-            
+
             // Wikipedia
             Console.WriteLine("  🔍 Searching Wikipedia...");
             var wikiState = await WikiSearch(searchTopic)(CloneState(s));
             allResults.AppendLine("\n=== Wikipedia ===");
             allResults.AppendLine(wikiState.Output ?? "No results");
-            
+
             await Task.Delay(500);
-            
+
             // Semantic Scholar
             Console.WriteLine("  🔍 Searching Semantic Scholar...");
             var scholarState = await ScholarSearch(searchTopic)(CloneState(s));
             allResults.AppendLine("\n=== Semantic Scholar ===");
             allResults.AppendLine(scholarState.Output ?? "No results");
-            
+
             // Phase 2: HYPOTHESIZE
             Console.WriteLine("\n  ═══════════════════════════════════════════════════════════");
             Console.WriteLine("  🧠 PHASE 2: HYPOTHESIZE - Generate Insights");
             Console.WriteLine("  ═══════════════════════════════════════════════════════════\n");
-            
+
             if (s.Llm?.InnerModel != null)
             {
                 string hypothesisPrompt = $"""
                     Based on this research about "{searchTopic}", generate 3 key hypotheses:
-                    
+
                     {allResults.ToString()[..Math.Min(4000, allResults.Length)]}
-                    
-                    Format: 
+
+                    Format:
                     1. [Hypothesis] - [Confidence: X%]
                     2. [Hypothesis] - [Confidence: X%]
                     3. [Hypothesis] - [Confidence: X%]
                     """;
-                
+
                 try
                 {
                     string hypotheses = await s.Llm.InnerModel.GenerateTextAsync(hypothesisPrompt);
@@ -556,35 +673,35 @@ public static class SkillCliSteps
                     Console.WriteLine("  [LLM unavailable - skipping hypothesis generation]");
                 }
             }
-            
+
             // Phase 3: EXPLORE
             Console.WriteLine("\n  ═══════════════════════════════════════════════════════════");
             Console.WriteLine("  🔮 PHASE 3: EXPLORE - Identify Opportunities");
             Console.WriteLine("  ═══════════════════════════════════════════════════════════\n");
-            
+
             var opportunities = new[]
             {
                 $"Deep dive into recent {searchTopic} breakthroughs (Novelty: 85%)",
                 $"Cross-domain application of {searchTopic} to adjacent fields (Info Gain: 78%)",
                 $"Identify gaps in current {searchTopic} research (Novelty: 72%)"
             };
-            
+
             foreach (var opp in opportunities)
             {
                 Console.WriteLine($"  🌟 {opp}");
             }
             allResults.AppendLine("\n=== Exploration Opportunities ===");
             allResults.AppendLine(string.Join("\n", opportunities));
-            
+
             // Phase 4: LEARN
             Console.WriteLine("\n  ═══════════════════════════════════════════════════════════");
             Console.WriteLine("  📚 PHASE 4: LEARN - Extract Skills");
             Console.WriteLine("  ═══════════════════════════════════════════════════════════\n");
-            
+
             // Create a new skill from this research
             string skillName = string.Join("", searchTopic.Split(' ').Select(w =>
                 w.Length > 0 ? char.ToUpperInvariant(w[0]) + (w.Length > 1 ? w[1..].ToLowerInvariant() : "") : "")) + "Analysis";
-            
+
             var newSkill = new Skill(
                 skillName,
                 $"Research analysis for '{searchTopic}' domain",
@@ -598,18 +715,18 @@ public static class SkillCliSteps
                 },
                 0.80, 1, DateTime.UtcNow, DateTime.UtcNow
             );
-            
+
             _registry.Value.RegisterSkill(newSkill);
             Console.WriteLine($"  ✅ New skill registered: UseSkill_{skillName}");
             Console.WriteLine($"     Success rate: 80% | Steps: 4");
-            
+
             allResults.AppendLine($"\n=== Learned Skill ===");
             allResults.AppendLine($"UseSkill_{skillName}: {newSkill.Description}");
-            
+
             Console.WriteLine("\n╔══════════════════════════════════════════════════════════════╗");
             Console.WriteLine("║    ✅ EMERGENCE CYCLE COMPLETE                               ║");
             Console.WriteLine("╚══════════════════════════════════════════════════════════════╝\n");
-            
+
             s.Output = allResults.ToString();
             s.Context = $"[Emergence cycle: {searchTopic}]\n{s.Output}";
             return s;
@@ -631,7 +748,7 @@ public static class SkillCliSteps
             }
             if (skills.Count > 5)
                 Console.WriteLine($"  ... and {skills.Count - 5} more");
-            
+
             s.Context = string.Join("\n", skills.Select(sk => $"- {sk.Name}: {sk.Description}"));
             return Task.FromResult(s);
         };
@@ -745,23 +862,23 @@ public static class SkillCliSteps
             }
 
             Console.WriteLine($"[FetchSkill] Fetching research on: \"{searchQuery}\"...");
-            
+
             using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
             string url = $"http://export.arxiv.org/api/query?search_query=all:{Uri.EscapeDataString(searchQuery)}&start=0&max_results=5";
-            
+
             try
             {
                 string xml = await httpClient.GetStringAsync(url);
                 var doc = System.Xml.Linq.XDocument.Parse(xml);
                 System.Xml.Linq.XNamespace atom = "http://www.w3.org/2005/Atom";
                 var entries = doc.Descendants(atom + "entry").Take(5).ToList();
-                
+
                 Console.WriteLine($"[FetchSkill] Found {entries.Count} papers");
-                
+
                 // Extract skill from query pattern
                 string skillName = string.Join("", searchQuery.Split(' ').Select(w =>
                     w.Length > 0 ? char.ToUpperInvariant(w[0]) + (w.Length > 1 ? w[1..].ToLowerInvariant() : "") : "")) + "Analysis";
-                
+
                 var newSkill = new Skill(
                     skillName,
                     $"Analysis methodology derived from '{searchQuery}' research",
@@ -775,10 +892,10 @@ public static class SkillCliSteps
                     0.75, 0, DateTime.UtcNow, DateTime.UtcNow
                 );
                 _registry.Value.RegisterSkill(newSkill);
-                
+
                 Console.WriteLine($"[FetchSkill] ✅ New skill registered: UseSkill_{skillName}");
                 s.Output = $"Learned new skill: UseSkill_{skillName} from {entries.Count} papers";
-                s.Context = string.Join("\n", entries.Select(e => 
+                s.Context = string.Join("\n", entries.Select(e =>
                     e.Element(atom + "title")?.Value?.Trim() ?? "Untitled"));
             }
             catch (Exception ex)
@@ -786,7 +903,7 @@ public static class SkillCliSteps
                 Console.WriteLine($"[FetchSkill] ⚠ Failed: {ex.Message}");
                 s.Output = $"Failed to fetch research: {ex.Message}";
             }
-            
+
             return s;
         };
 
@@ -800,7 +917,7 @@ public static class SkillCliSteps
         {
             var skills = _registry.Value.GetAllSkills();
             Console.WriteLine($"[ListSkills] {skills.Count} registered skills:");
-            
+
             var output = new List<string>();
             foreach (var skill in skills)
             {
@@ -808,7 +925,7 @@ public static class SkillCliSteps
                 Console.WriteLine($"  • {line}");
                 output.Add(line);
             }
-            
+
             s.Output = string.Join("\n", output);
             return Task.FromResult(s);
         };
@@ -841,7 +958,7 @@ public static class SkillCliSteps
         {
             var skill = _registry.Value.GetAllSkills()
                 .FirstOrDefault(sk => sk.Name.Equals(skillName, StringComparison.OrdinalIgnoreCase));
-            
+
             if (skill == null)
             {
                 Console.WriteLine($"[UseSkill] ⚠ Skill '{skillName}' not found");
@@ -855,15 +972,15 @@ public static class SkillCliSteps
             // Build a prompt that applies the skill's methodology
             var stepDescriptions = skill.Steps.Select(step => $"- {step.Action}: {step.ExpectedOutcome}");
             string methodology = string.Join("\n", stepDescriptions);
-            
+
             string skillPrompt = $"""
                 Apply the "{skill.Name}" methodology to the following input.
-                
+
                 Methodology steps:
                 {methodology}
-                
+
                 Input: {input}
-                
+
                 Execute each step systematically and provide the final result.
                 """;
 
@@ -871,33 +988,33 @@ public static class SkillCliSteps
             {
                 // Execute through the LLM
                 string result = await s.Llm.InnerModel.GenerateTextAsync(skillPrompt);
-                
+
                 // Record skill execution for learning
                 _registry.Value.RecordSkillExecution(skill.Name, !string.IsNullOrWhiteSpace(result));
-                
+
                 if (string.IsNullOrWhiteSpace(result))
                 {
                     Console.WriteLine($"[UseSkill_{skill.Name}] ⚠ LLM returned empty response (is Ollama running?)");
-                    
+
                     // Provide simulated output for demo purposes
                     result = $"""
                         [Simulated {skill.Name} Analysis]
-                        
+
                         Applied methodology to: {input}
-                        
+
                         Steps executed:
                         {methodology}
-                        
+
                         Note: LLM unavailable - this is a placeholder response.
                         Start Ollama with 'ollama serve' for full functionality.
                         """;
                 }
-                
+
                 Console.WriteLine($"[UseSkill_{skill.Name}] ✓ Complete");
                 Console.WriteLine($"\n--- {skill.Name} Result ---");
                 Console.WriteLine(result.Length > 500 ? result[..500] + "..." : result);
                 Console.WriteLine("----------------------------\n");
-                
+
                 s.Output = result;
                 s.Context = $"[{skill.Name}] {result}";
             }
@@ -1004,16 +1121,16 @@ public static class SkillCliSteps
         // Remove script and style elements
         html = Regex.Replace(html, @"<script[^>]*>[\s\S]*?</script>", "", RegexOptions.IgnoreCase);
         html = Regex.Replace(html, @"<style[^>]*>[\s\S]*?</style>", "", RegexOptions.IgnoreCase);
-        
+
         // Remove HTML tags
         html = Regex.Replace(html, @"<[^>]+>", " ");
-        
+
         // Decode HTML entities
         html = System.Net.WebUtility.HtmlDecode(html);
-        
+
         // Collapse whitespace
         html = Regex.Replace(html, @"\s+", " ").Trim();
-        
+
         return html;
     }
 
@@ -1025,14 +1142,14 @@ public static class SkillCliSteps
         // Try to get from XML documentation attribute or fallback to method name
         var docAttr = method.GetCustomAttributes()
             .FirstOrDefault(a => a.GetType().Name.Contains("Documentation") || a.GetType().Name.Contains("Summary"));
-        
+
         if (docAttr != null)
         {
             var descProp = docAttr.GetType().GetProperty("Description") ?? docAttr.GetType().GetProperty("Summary");
             if (descProp != null)
                 return descProp.GetValue(docAttr)?.ToString();
         }
-        
+
         // Fallback: generate description from method name
         var name = method.Name;
         // Insert spaces before capitals: "MyMethodName" -> "My Method Name"

@@ -80,12 +80,16 @@ public class DynamicToolFactory
             // Extract code from markdown if present
             string code = ExtractCode(codeResult);
 
+            // Ensure required using statements are present
+            code = EnsureRequiredUsings(code);
+
             // Compile the tool
             var compileResult = CompileTool(code, className);
             if (!compileResult.IsSuccess)
             {
                 // Try to fix compilation errors with LLM
-                string fixPrompt = $@"The following C# code has compilation errors. Fix them and return ONLY the corrected code:
+                string fixPrompt = $@"The following C# code has compilation errors. Fix them and return ONLY the corrected code.
+IMPORTANT: Make sure to include 'using LangChainPipeline.Core.Monads;' for the Result type.
 
 ERRORS:
 {compileResult.Error}
@@ -96,6 +100,7 @@ CODE:
 ```";
                 string fixedCode = await _llm.InnerModel.GenerateTextAsync(fixPrompt, ct);
                 fixedCode = ExtractCode(fixedCode);
+                fixedCode = EnsureRequiredUsings(fixedCode); // Ensure usings are present
                 compileResult = CompileTool(fixedCode, className);
 
                 if (!compileResult.IsSuccess)
@@ -187,6 +192,63 @@ CODE:
     }
 
     /// <summary>
+    /// Creates a Google Search tool that uses SerpAPI (if key available) or DuckDuckGo fallback.
+    /// </summary>
+    /// <returns>A Google search tool.</returns>
+    public ITool CreateGoogleSearchTool()
+    {
+        return CreateSimpleTool(
+            "google_search",
+            "Search the web using Google and return results with titles, URLs, and snippets",
+            async (query) =>
+            {
+                using var http = new HttpClient();
+                http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                http.Timeout = TimeSpan.FromSeconds(30);
+
+                string? serpApiKey = Environment.GetEnvironmentVariable("SERPAPI_KEY");
+                var results = new List<string>();
+
+                try
+                {
+                    if (!string.IsNullOrEmpty(serpApiKey))
+                    {
+                        // Use SerpAPI for reliable Google results
+                        string url = $"https://serpapi.com/search.json?q={Uri.EscapeDataString(query)}&api_key={serpApiKey}&num=10";
+                        string json = await http.GetStringAsync(url);
+                        using var doc = JsonDocument.Parse(json);
+
+                        if (doc.RootElement.TryGetProperty("organic_results", out var organicEl))
+                        {
+                            foreach (var result in organicEl.EnumerateArray().Take(10))
+                            {
+                                string title = result.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
+                                string link = result.TryGetProperty("link", out var l) ? l.GetString() ?? "" : "";
+                                string snippet = result.TryGetProperty("snippet", out var s) ? s.GetString() ?? "" : "";
+                                results.Add($"🔍 {title}\n   URL: {link}\n   {snippet}");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Fallback to DuckDuckGo HTML
+                        string url = $"https://html.duckduckgo.com/html/?q={Uri.EscapeDataString(query)}";
+                        string html = await http.GetStringAsync(url);
+                        results = ExtractSearchResults(html, "duckduckgo");
+                    }
+
+                    return results.Count > 0
+                        ? string.Join("\n\n", results.Take(8))
+                        : "No search results found.";
+                }
+                catch (Exception ex)
+                {
+                    return $"Google search failed: {ex.Message}";
+                }
+            });
+    }
+
+    /// <summary>
     /// Creates a URL fetcher tool.
     /// </summary>
     /// <returns>A URL fetcher tool.</returns>
@@ -274,13 +336,14 @@ The Result type is: Result<TSuccess, TError> with static methods:
 - Result<string, string>.Success(string value)
 - Result<string, string>.Failure(string error)
 
-Here's the template:
+IMPORTANT: You MUST include these exact using statements at the top:
 
 ```csharp
 using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using LangChainPipeline.Core.Monads;
 using Ouroboros.Tools;
 
 namespace Ouroboros.DynamicTools
@@ -448,6 +511,77 @@ Generate ONLY the complete C# code, no explanations.";
             System.Text.RegularExpressions.RegexOptions.Singleline);
 
         return match.Success ? match.Groups[1].Value.Trim() : response.Trim();
+    }
+
+    /// <summary>
+    /// Ensures that required using statements are present in the generated code.
+    /// </summary>
+    private static string EnsureRequiredUsings(string code)
+    {
+        var requiredUsings = new[]
+        {
+            "using System;",
+            "using System.Threading;",
+            "using System.Threading.Tasks;",
+            "using LangChainPipeline.Core.Monads;",
+            "using Ouroboros.Tools;",
+        };
+
+        var sb = new StringBuilder();
+        var existingUsings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Extract existing using statements
+        var lines = code.Split('\n');
+        var usingLines = new List<string>();
+        var codeStart = 0;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var trimmed = lines[i].Trim();
+            if (trimmed.StartsWith("using ") && trimmed.EndsWith(";"))
+            {
+                existingUsings.Add(trimmed);
+                usingLines.Add(lines[i]);
+                codeStart = i + 1;
+            }
+            else if (!string.IsNullOrWhiteSpace(trimmed) && !trimmed.StartsWith("//"))
+            {
+                // Found non-using, non-empty line
+                break;
+            }
+            else
+            {
+                codeStart = i + 1;
+            }
+        }
+
+        // Add all existing usings
+        foreach (var u in usingLines)
+        {
+            sb.AppendLine(u);
+        }
+
+        // Add missing required usings
+        foreach (var required in requiredUsings)
+        {
+            if (!existingUsings.Contains(required))
+            {
+                sb.AppendLine(required);
+            }
+        }
+
+        // Add the rest of the code
+        if (usingLines.Count > 0)
+        {
+            sb.AppendLine();
+        }
+
+        for (int i = codeStart; i < lines.Length; i++)
+        {
+            sb.AppendLine(lines[i]);
+        }
+
+        return sb.ToString().TrimEnd();
     }
 
     private static List<string> ExtractSearchResults(string html, string provider)

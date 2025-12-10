@@ -366,10 +366,11 @@ Write-Output 'OK'
             volume = Math.Clamp(volume, 0, 100);
 
             // Escape for PowerShell double-quoted string
+            // Order matters: escape backticks FIRST, then use backticks to escape other chars
             string speechContent = text
-                .Replace("\"", "`\"")
-                .Replace("$", "`$")
-                .Replace("`", "``");
+                .Replace("`", "``")      // Escape existing backticks first
+                .Replace("\"", "`\"")    // Then escape double quotes
+                .Replace("$", "`$");     // Then escape dollar signs
 
             // Use SAPI COM object which is more reliable than System.Speech in PowerShell
             // Select English voice explicitly to avoid using system default (which may be German)

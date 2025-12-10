@@ -39,9 +39,9 @@ namespace LangChainPipeline.Features
         public static async System.Threading.Tasks.Task FeatureSetupAsync()
         {
             testRunner = TechTalk.SpecFlow.TestRunnerManager.GetTestRunnerForAssembly(null, TechTalk.SpecFlow.xUnit.SpecFlowPlugin.XUnitParallelWorkerTracker.Instance.GetWorkerId());
-            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Result Monad", "    As a developer\n    I want to handle computation results with explicit success" +
-                    " or failure states\n    So that I can write robust error-handling code following " +
-                    "monadic principles", ProgrammingLanguage.CSharp, featureTags);
+            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Result Monad", "    As a developer\r\n    I want to handle computation results with explicit succes" +
+                    "s or failure states\r\n    So that I can write robust error-handling code followin" +
+                    "g monadic principles", ProgrammingLanguage.CSharp, featureTags);
             await testRunner.OnFeatureStartAsync(featureInfo);
         }
         

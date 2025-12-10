@@ -6,9 +6,25 @@ namespace LangChainPipeline.Options;
 /// <summary>
 /// Options for the DSL assistant command (GitHub Copilot-like behavior).
 /// </summary>
-[Verb("assist", HelpText = "AI-powered DSL assistant with GitHub Copilot-like suggestions")]
-public class AssistOptions : BaseModelOptions
+[Verb("assist", HelpText = "AI-powered DSL assistant. Use --voice for voice mode.")]
+public class AssistOptions : BaseModelOptions, IVoiceOptions
 {
+    // Voice mode options
+    [Option('v', "voice", Required = false, Default = false, HelpText = "Enable voice persona mode (speak & listen).")]
+    public bool Voice { get; set; }
+
+    [Option("persona", Required = false, Default = "Ouroboros", HelpText = "Persona name for voice mode.")]
+    public string Persona { get; set; } = "Ouroboros";
+
+    [Option("embed-model", Required = false, Default = "nomic-embed-text", HelpText = "Embedding model for voice mode.")]
+    public string EmbedModel { get; set; } = "nomic-embed-text";
+
+    [Option("qdrant", Required = false, Default = "http://localhost:6334", HelpText = "Qdrant endpoint for skills.")]
+    public string QdrantEndpoint { get; set; } = "http://localhost:6334";
+
+    // Explicit interface for Endpoint
+    string IVoiceOptions.Endpoint { get => Endpoint ?? "http://localhost:11434"; set => Endpoint = value; }
+
     [Option('m', "mode", Required = false, Default = "suggest", HelpText = "Assistant mode: suggest, complete, validate, explain, build")]
     public string Mode { get; set; } = "suggest";
 
@@ -36,8 +52,8 @@ public class AssistOptions : BaseModelOptions
 /// </summary>
 public abstract class BaseModelOptions
 {
-    [Option("model", Required = false, Default = "llama3", HelpText = "Model to use")]
-    public string Model { get; set; } = "llama3";
+    [Option("model", Required = false, Default = "deepseek-v3.1:671b-cloud", HelpText = "Model to use")]
+    public string Model { get; set; } = "deepseek-v3.1:671b-cloud";
 
     [Option("embed", Required = false, Default = "nomic-embed-text", HelpText = "Embedding model")]
     public string Embed { get; set; } = "nomic-embed-text";

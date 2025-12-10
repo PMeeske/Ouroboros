@@ -98,9 +98,17 @@ static Task RunExplainAsync(ExplainOptions o)
     return Task.CompletedTask;
 }
 
-static Task RunPipelineAsync(PipelineOptions o) => PipelineCommands.RunPipelineAsync(o);
+static async Task RunPipelineAsync(PipelineOptions o)
+{
+    if (await TryRunVoiceModeAsync(o)) return;
+    await PipelineCommands.RunPipelineAsync(o);
+}
 
-static Task RunAskAsync(AskOptions o) => AskCommands.RunAskAsync(o);
+static async Task RunAskAsync(AskOptions o)
+{
+    if (await TryRunVoiceModeAsync(o)) return;
+    await AskCommands.RunAskAsync(o);
+}
 
 // ------------------
 // CommandLineParser
@@ -108,14 +116,24 @@ static Task RunAskAsync(AskOptions o) => AskCommands.RunAskAsync(o);
 
 static Task RunTestsAsync(TestOptions o) => TestCommands.RunTestsAsync(o);
 
-static Task RunOrchestratorAsync(OrchestratorOptions o) => OrchestratorCommands.RunOrchestratorAsync(o);
+static async Task RunOrchestratorAsync(OrchestratorOptions o)
+{
+    if (await TryRunVoiceModeAsync(o)) return;
+    await OrchestratorCommands.RunOrchestratorAsync(o);
+}
 
-static Task RunMeTTaAsync(MeTTaOptions o) => MeTTaCommands.RunMeTTaAsync(o);
+static async Task RunMeTTaAsync(MeTTaOptions o)
+{
+    if (await TryRunVoiceModeAsync(o)) return;
+    await MeTTaCommands.RunMeTTaAsync(o);
+}
 
 
 
 static async Task RunAssistAsync(AssistOptions o)
 {
+    if (await TryRunVoiceModeAsync(o)) return;
+
     Console.WriteLine("+--------------------------------------------------------------+");
     Console.WriteLine("|   DSL Assistant - GitHub Copilot-like Code Intelligence     |");
     Console.WriteLine("+--------------------------------------------------------------+\n");
@@ -363,10 +381,10 @@ static async Task RunSkillsAsync(SkillsOptions o)
     }
     Console.WriteLine();
 
-    // Voice mode takes priority - go straight to voice persona
+    // Voice mode takes priority - use unified immersive mode
     if (o.Voice)
     {
-        await RunVoicePersonaMode(registry, MakeStep, o.Persona, o.Model, o.Endpoint, o.EmbedModel, o.QdrantEndpoint);
+        await ImmersiveMode.RunImmersiveAsync(o);
         return;
     }
 
@@ -501,7 +519,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
     {
         if (o.Voice)
         {
-            await RunVoicePersonaMode(registry, MakeStep, o.Persona, o.Model, o.Endpoint, o.EmbedModel, o.QdrantEndpoint);
+            await ImmersiveMode.RunImmersiveAsync(o);
         }
         else
         {
@@ -685,6 +703,20 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
                 break;
         }
     }
+}
+
+/// <summary>
+/// Global helper to check if voice mode is requested and run it for any command.
+/// Returns true if voice mode was activated (caller should return), false otherwise.
+/// </summary>
+static async Task<bool> TryRunVoiceModeAsync(IVoiceOptions voiceOptions)
+{
+    if (!voiceOptions.Voice)
+        return false;
+
+    // Use the new fully immersive persona mode
+    await ImmersiveMode.RunImmersiveAsync(voiceOptions);
+    return true;
 }
 
 static async Task RunVoicePersonaMode(

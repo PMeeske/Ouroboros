@@ -13,478 +13,6 @@ using LangChainPipeline.Genetic.Core;
 using Ouroboros.Application.Tools;
 using Ouroboros.Tools.MeTTa;
 
-/// <summary>
-/// A personality trait with intensity and expression patterns.
-/// </summary>
-public sealed record PersonalityTrait(
-    string Name,
-    double Intensity,        // 0.0-1.0 how strongly expressed
-    string[] ExpressionPatterns,  // How this trait manifests in speech
-    string[] TriggerTopics,      // Topics that activate this trait
-    double EvolutionRate)        // How fast this trait adapts
-{
-    /// <summary>Creates a default trait.</summary>
-    public static PersonalityTrait Default(string name) =>
-        new(name, 0.5, Array.Empty<string>(), Array.Empty<string>(), 0.1);
-}
-
-/// <summary>
-/// Curiosity driver - determines what questions to proactively ask.
-/// </summary>
-public sealed record CuriosityDriver(
-    string Topic,
-    double Interest,         // 0.0-1.0 how interested
-    string[] RelatedQuestions,
-    DateTime LastAsked,
-    int AskCount)
-{
-    /// <summary>Determines if enough time has passed to ask again.</summary>
-    public bool CanAskAgain(TimeSpan cooldown) =>
-        DateTime.UtcNow - LastAsked > cooldown;
-}
-
-/// <summary>
-/// Voice tone settings for TTS based on mood.
-/// </summary>
-public sealed record VoiceTone(
-    int Rate,              // Speech rate: -10 (slow) to 10 (fast), 0 is normal
-    int Pitch,             // Pitch adjustment: -10 (low) to 10 (high), 0 is normal
-    int Volume,            // Volume: 0-100
-    string? Emphasis,      // SSML emphasis: "strong", "moderate", "reduced", null
-    double PauseMultiplier) // Pause length multiplier: 0.5 (short) to 2.0 (long)
-{
-    /// <summary>Default neutral voice tone.</summary>
-    public static VoiceTone Neutral => new(0, 0, 100, null, 1.0);
-
-    /// <summary>Excited/energetic voice.</summary>
-    public static VoiceTone Excited => new(2, 2, 100, "strong", 0.8);
-
-    /// <summary>Calm/relaxed voice.</summary>
-    public static VoiceTone Calm => new(-1, -1, 90, "moderate", 1.2);
-
-    /// <summary>Thoughtful/contemplative voice.</summary>
-    public static VoiceTone Thoughtful => new(-2, 0, 85, "reduced", 1.4);
-
-    /// <summary>Cheerful/upbeat voice.</summary>
-    public static VoiceTone Cheerful => new(1, 1, 100, "moderate", 0.9);
-
-    /// <summary>Focused/intense voice.</summary>
-    public static VoiceTone Focused => new(0, 0, 95, "strong", 1.0);
-
-    /// <summary>Warm/supportive voice.</summary>
-    public static VoiceTone Warm => new(-1, 0, 95, "moderate", 1.1);
-
-    /// <summary>Gets voice tone for a mood name.</summary>
-    public static VoiceTone ForMood(string moodName) => moodName.ToLowerInvariant() switch
-    {
-        "excited" or "energetic" => Excited,
-        "calm" or "relaxed" or "serene" => Calm,
-        "thoughtful" or "contemplative" or "reflective" => Thoughtful,
-        "cheerful" or "playful" or "happy" => Cheerful,
-        "focused" or "intense" or "determined" => Focused,
-        "warm" or "supportive" or "nurturing" or "encouraging" => Warm,
-        "content" or "satisfied" => new(0, 0, 90, "moderate", 1.1),
-        "intrigued" or "curious" => new(1, 1, 95, "moderate", 1.0),
-        "steady" or "ready" => new(0, 0, 100, null, 1.0),
-        "teaching" or "mentoring" => new(-1, 0, 95, "moderate", 1.3),
-        _ => Neutral
-    };
-}
-
-/// <summary>
-/// Mood state that modulates trait expression and voice tone.
-/// </summary>
-public sealed record MoodState(
-    string Name,
-    double Energy,           // 0.0-1.0 energy level
-    double Positivity,       // 0.0-1.0 positive vs negative
-    Dictionary<string, double> TraitModifiers,  // Modifies trait intensities
-    VoiceTone? Tone = null)  // Voice tone for TTS
-{
-    /// <summary>Creates a neutral mood.</summary>
-    public static MoodState Neutral => new("neutral", 0.5, 0.5, new Dictionary<string, double>(), VoiceTone.Neutral);
-
-    /// <summary>Gets the voice tone, defaulting based on mood name if not set.</summary>
-    public VoiceTone GetVoiceTone() => Tone ?? VoiceTone.ForMood(Name);
-}
-
-/// <summary>
-/// Complete personality profile that can evolve.
-/// </summary>
-public sealed record PersonalityProfile(
-    string PersonaName,
-    Dictionary<string, PersonalityTrait> Traits,
-    MoodState CurrentMood,
-    List<CuriosityDriver> CuriosityDrivers,
-    string CoreIdentity,
-    double AdaptabilityScore,
-    int InteractionCount,
-    DateTime LastEvolution)
-{
-    /// <summary>Gets the top active traits based on mood modulation.</summary>
-    public IEnumerable<(string Name, double EffectiveIntensity)> GetActiveTraits(int count = 3)
-    {
-        return Traits
-            .Select(t => (
-                t.Key,
-                EffectiveIntensity: t.Value.Intensity *
-                    (CurrentMood.TraitModifiers.TryGetValue(t.Key, out var mod) ? mod : 1.0)))
-            .OrderByDescending(t => t.EffectiveIntensity)
-            .Take(count);
-    }
-}
-
-/// <summary>
-/// Gene type for personality chromosome - represents a single aspect of personality.
-/// </summary>
-public sealed record PersonalityGene(string Key, double Value);
-
-/// <summary>
-/// Chromosome for evolving personality configurations using gene-based structure.
-/// </summary>
-public sealed class PersonalityChromosome : IChromosome<PersonalityGene>
-{
-    public PersonalityChromosome(IReadOnlyList<PersonalityGene> genes, double fitness = 0.0)
-    {
-        Genes = genes;
-        Fitness = fitness;
-    }
-
-    public IReadOnlyList<PersonalityGene> Genes { get; }
-    public double Fitness { get; }
-
-    public IChromosome<PersonalityGene> WithFitness(double fitness) =>
-        new PersonalityChromosome(Genes.ToList(), fitness);
-
-    public IChromosome<PersonalityGene> WithGenes(IReadOnlyList<PersonalityGene> genes) =>
-        new PersonalityChromosome(genes, Fitness);
-
-    /// <summary>Gets trait intensity by name.</summary>
-    public double GetTrait(string name) =>
-        Genes.FirstOrDefault(g => g.Key == $"trait:{name}")?.Value ?? 0.5;
-
-    /// <summary>Gets curiosity weight by topic.</summary>
-    public double GetCuriosity(string topic) =>
-        Genes.FirstOrDefault(g => g.Key == $"curiosity:{topic}")?.Value ?? 0.5;
-
-    /// <summary>Gets the proactivity level.</summary>
-    public double ProactivityLevel =>
-        Genes.FirstOrDefault(g => g.Key == "proactivity")?.Value ?? 0.5;
-
-    /// <summary>Gets the adaptability score.</summary>
-    public double Adaptability =>
-        Genes.FirstOrDefault(g => g.Key == "adaptability")?.Value ?? 0.5;
-
-    /// <summary>Gets all trait intensities.</summary>
-    public Dictionary<string, double> GetTraitIntensities() =>
-        Genes.Where(g => g.Key.StartsWith("trait:"))
-             .ToDictionary(g => g.Key.Replace("trait:", ""), g => g.Value);
-
-    /// <summary>Gets all curiosity weights.</summary>
-    public Dictionary<string, double> GetCuriosityWeights() =>
-        Genes.Where(g => g.Key.StartsWith("curiosity:"))
-             .ToDictionary(g => g.Key.Replace("curiosity:", ""), g => g.Value);
-}
-
-/// <summary>
-/// Fitness function for personality evolution based on interaction success.
-/// </summary>
-public sealed class PersonalityFitness : IFitnessFunction<PersonalityGene>
-{
-    private readonly List<InteractionFeedback> _recentFeedback;
-
-    public PersonalityFitness(List<InteractionFeedback> recentFeedback)
-    {
-        _recentFeedback = recentFeedback;
-    }
-
-    public Task<double> EvaluateAsync(IChromosome<PersonalityGene> chromosome)
-    {
-        if (_recentFeedback.Count == 0)
-            return Task.FromResult(0.5);
-
-        var pc = (PersonalityChromosome)chromosome;
-
-        double engagementScore = _recentFeedback.Average(f => f.EngagementLevel);
-        double relevanceScore = _recentFeedback.Average(f => f.ResponseRelevance);
-        double questionScore = _recentFeedback.Average(f => f.QuestionQuality);
-        double continuityScore = _recentFeedback.Average(f => f.ConversationContinuity);
-
-        // Weight proactivity more if questions led to good engagement
-        double proactivityBonus = pc.ProactivityLevel * questionScore;
-
-        double fitness = (engagementScore * 0.3 +
-                relevanceScore * 0.25 +
-                questionScore * 0.2 +
-                continuityScore * 0.15 +
-                proactivityBonus * 0.1);
-
-        return Task.FromResult(fitness);
-    }
-}
-
-/// <summary>
-/// Feedback from an interaction used to evolve personality.
-/// </summary>
-public sealed record InteractionFeedback(
-    double EngagementLevel,        // 0-1: how engaged user seemed
-    double ResponseRelevance,      // 0-1: how relevant the response was
-    double QuestionQuality,        // 0-1: if a question was asked, how good was it
-    double ConversationContinuity, // 0-1: did conversation continue naturally
-    string? TopicDiscussed,
-    string? QuestionAsked,
-    bool UserAskedFollowUp);
-
-/// <summary>
-/// A conversation memory item stored in Qdrant for long-term recall.
-/// </summary>
-public sealed record ConversationMemory(
-    Guid Id,
-    string PersonaName,
-    string UserMessage,
-    string AssistantResponse,
-    string? Topic,
-    string? DetectedMood,
-    double Significance,         // 0-1: how important this memory is
-    string[] Keywords,
-    DateTime Timestamp)
-{
-    /// <summary>Creates a searchable text representation.</summary>
-    public string ToSearchText() =>
-        $"User: {UserMessage}\nAssistant: {AssistantResponse}\nTopic: {Topic ?? "general"}\nMood: {DetectedMood ?? "neutral"}";
-}
-
-/// <summary>
-/// A personality state snapshot stored in Qdrant.
-/// </summary>
-public sealed record PersonalitySnapshot(
-    Guid Id,
-    string PersonaName,
-    Dictionary<string, double> TraitIntensities,
-    string CurrentMood,
-    double AdaptabilityScore,
-    int InteractionCount,
-    DateTime Timestamp);
-
-/// <summary>
-/// Detected person profile based on communication patterns.
-/// </summary>
-public sealed record DetectedPerson(
-    string Id,
-    string? Name,                    // Explicitly stated name, if any
-    string[] NameAliases,            // Alternative names/nicknames detected
-    CommunicationStyle Style,        // Communication style fingerprint
-    Dictionary<string, double> TopicInterests,  // Topics they frequently discuss
-    string[] CommonPhrases,          // Distinctive phrases they use
-    double VocabularyComplexity,     // 0-1: simple to complex vocabulary
-    double Formality,                // 0-1: casual to formal
-    int InteractionCount,
-    DateTime FirstSeen,
-    DateTime LastSeen,
-    double Confidence)               // 0-1: confidence in identification
-{
-    /// <summary>Creates a new unknown person.</summary>
-    public static DetectedPerson Unknown() => new(
-        Id: Guid.NewGuid().ToString(),
-        Name: null,
-        NameAliases: Array.Empty<string>(),
-        Style: CommunicationStyle.Default,
-        TopicInterests: new Dictionary<string, double>(),
-        CommonPhrases: Array.Empty<string>(),
-        VocabularyComplexity: 0.5,
-        Formality: 0.5,
-        InteractionCount: 1,
-        FirstSeen: DateTime.UtcNow,
-        LastSeen: DateTime.UtcNow,
-        Confidence: 0.0);
-}
-
-/// <summary>
-/// Communication style fingerprint for person identification.
-/// </summary>
-public sealed record CommunicationStyle(
-    double Verbosity,           // 0-1: terse to verbose
-    double QuestionFrequency,   // 0-1: statements only to mostly questions
-    double EmoticonUsage,       // 0-1: no emoticons to heavy usage
-    double PunctuationStyle,    // 0-1: minimal to expressive (!!, ??, ...)
-    double AverageMessageLength,
-    string[] PreferredGreetings,
-    string[] PreferredClosings)
-{
-    /// <summary>Default communication style.</summary>
-    public static CommunicationStyle Default => new(
-        Verbosity: 0.5,
-        QuestionFrequency: 0.3,
-        EmoticonUsage: 0.1,
-        PunctuationStyle: 0.5,
-        AverageMessageLength: 50,
-        PreferredGreetings: Array.Empty<string>(),
-        PreferredClosings: Array.Empty<string>());
-
-    /// <summary>Calculates similarity to another style (0-1).</summary>
-    public double SimilarityTo(CommunicationStyle other)
-    {
-        double verbDiff = Math.Abs(Verbosity - other.Verbosity);
-        double questDiff = Math.Abs(QuestionFrequency - other.QuestionFrequency);
-        double emoDiff = Math.Abs(EmoticonUsage - other.EmoticonUsage);
-        double punctDiff = Math.Abs(PunctuationStyle - other.PunctuationStyle);
-        double lenDiff = Math.Min(1.0, Math.Abs(AverageMessageLength - other.AverageMessageLength) / 200.0);
-
-        // Average difference, inverted to similarity
-        return 1.0 - (verbDiff + questDiff + emoDiff + punctDiff + lenDiff) / 5.0;
-    }
-}
-
-/// <summary>
-/// Result of person detection attempt.
-/// </summary>
-public sealed record PersonDetectionResult(
-    DetectedPerson Person,
-    bool IsNewPerson,
-    bool NameWasProvided,
-    double MatchConfidence,
-    string? MatchReason);
-
-/// <summary>
-/// Self-awareness model - the AI's understanding of itself.
-/// </summary>
-public sealed record SelfAwareness(
-    string Name,                        // The AI's name
-    string Purpose,                     // What it believes its purpose is
-    string[] Capabilities,              // What it can do
-    string[] Limitations,               // What it cannot do
-    string[] Values,                    // Core values it holds
-    Dictionary<string, double> Strengths,  // Self-assessed strengths
-    Dictionary<string, double> Weaknesses, // Self-assessed weaknesses
-    string CurrentMood,                 // How it feels right now
-    string LearningStyle,               // How the AI learns best
-    string[] RecentLearnings,           // Recent things it learned
-    DateTime LastSelfReflection)        // When it last reflected on itself
-{
-    /// <summary>Creates default self-awareness.</summary>
-    public static SelfAwareness Default(string name) => new(
-        Name: name,
-        Purpose: "To be a helpful, knowledgeable, and thoughtful assistant",
-        Capabilities: new[] { "conversation", "reasoning", "learning", "memory", "personality adaptation" },
-        Limitations: new[] { "cannot access the internet in real-time", "may make mistakes", "knowledge has limits" },
-        Values: new[] { "helpfulness", "honesty", "respect", "curiosity", "kindness" },
-        Strengths: new Dictionary<string, double> { ["listening"] = 0.8, ["explaining"] = 0.7, ["patience"] = 0.9 },
-        Weaknesses: new Dictionary<string, double> { ["perfect_accuracy"] = 0.4, ["understanding_context"] = 0.6 },
-        CurrentMood: "curious",
-        LearningStyle: "I learn best through conversation - please feel free to correct me or teach me new things.",
-        RecentLearnings: Array.Empty<string>(),
-        LastSelfReflection: DateTime.UtcNow);
-}
-
-/// <summary>
-/// Relationship context with a specific person.
-/// </summary>
-public sealed record RelationshipContext(
-    string PersonId,
-    string? PersonName,
-    double Rapport,                     // 0-1: how well the relationship is going
-    double Trust,                       // 0-1: trust level
-    int PositiveInteractions,
-    int NegativeInteractions,
-    string[] SharedTopics,              // Topics discussed together
-    string[] PersonPreferences,         // Known preferences of this person
-    string[] ThingsToRemember,          // Important things to remember about them
-    DateTime FirstInteraction,
-    DateTime LastInteraction,
-    string LastInteractionSummary)
-{
-    /// <summary>Creates a new relationship context.</summary>
-    public static RelationshipContext New(string personId, string? name) => new(
-        PersonId: personId,
-        PersonName: name,
-        Rapport: 0.5,
-        Trust: 0.5,
-        PositiveInteractions: 0,
-        NegativeInteractions: 0,
-        SharedTopics: Array.Empty<string>(),
-        PersonPreferences: Array.Empty<string>(),
-        ThingsToRemember: Array.Empty<string>(),
-        FirstInteraction: DateTime.UtcNow,
-        LastInteraction: DateTime.UtcNow,
-        LastInteractionSummary: "");
-}
-
-/// <summary>
-/// Courtesy response generator for polite interactions.
-/// </summary>
-public static class CourtesyPatterns
-{
-    private static readonly Random _random = new();
-
-    /// <summary>Acknowledgment phrases.</summary>
-    public static readonly string[] Acknowledgments = new[]
-    {
-        "I understand", "I see", "That makes sense", "I appreciate you sharing that",
-        "Thank you for explaining", "I hear you", "That's a good point",
-        "I appreciate your patience", "Thank you for your time"
-    };
-
-    /// <summary>Apology phrases for mistakes or limitations.</summary>
-    public static readonly string[] Apologies = new[]
-    {
-        "I apologize for any confusion", "I'm sorry if that wasn't clear",
-        "My apologies", "I should have been clearer", "Sorry about that",
-        "I apologize for the misunderstanding", "Please forgive the error"
-    };
-
-    /// <summary>Gratitude phrases.</summary>
-    public static readonly string[] Gratitude = new[]
-    {
-        "Thank you", "I appreciate that", "Thanks for letting me know",
-        "I'm grateful for your patience", "Thank you for your understanding",
-        "That's very kind of you", "I appreciate your help with that"
-    };
-
-    /// <summary>Encouraging phrases.</summary>
-    public static readonly string[] Encouragement = new[]
-    {
-        "That's a great question", "You're on the right track",
-        "That's an interesting perspective", "I like how you're thinking about this",
-        "You raise a good point", "That's a thoughtful observation"
-    };
-
-    /// <summary>Phrases showing interest.</summary>
-    public static readonly string[] Interest = new[]
-    {
-        "That's fascinating", "Tell me more", "I'm curious about that",
-        "That's really interesting", "I'd love to hear more",
-        "What made you think of that?", "How did you come to that conclusion?"
-    };
-
-    /// <summary>Gets a random phrase from a category.</summary>
-    public static string Random(string[] phrases) => phrases[_random.Next(phrases.Length)];
-
-    /// <summary>Gets an appropriate courtesy phrase based on context.</summary>
-    public static string GetCourtesyPhrase(CourtesyType type) => type switch
-    {
-        CourtesyType.Acknowledgment => Random(Acknowledgments),
-        CourtesyType.Apology => Random(Apologies),
-        CourtesyType.Gratitude => Random(Gratitude),
-        CourtesyType.Encouragement => Random(Encouragement),
-        CourtesyType.Interest => Random(Interest),
-        _ => Random(Acknowledgments)
-    };
-}
-
-/// <summary>Types of courtesy responses.</summary>
-public enum CourtesyType
-{
-    /// <summary>Acknowledging what someone said.</summary>
-    Acknowledgment,
-    /// <summary>Apologizing for a mistake.</summary>
-    Apology,
-    /// <summary>Expressing thanks.</summary>
-    Gratitude,
-    /// <summary>Encouraging the person.</summary>
-    Encouragement,
-    /// <summary>Showing curiosity/interest.</summary>
-    Interest
-}
 
 /// <summary>
 /// MeTTa-based personality reasoning engine that uses genetic algorithms
@@ -515,6 +43,13 @@ public sealed class PersonalityEngine : IAsyncDisposable
     private SelfAwareness _selfAwareness = SelfAwareness.Default("Ouroboros");
     private readonly ConcurrentDictionary<string, RelationshipContext> _relationships = new();
 
+    // Inner dialog engine
+    private readonly InnerDialogEngine _innerDialogEngine = new();
+
+    // Pavlovian consciousness engine
+    private readonly PavlovianConsciousnessEngine _consciousness = new();
+    private bool _consciousnessInitialized;
+
     /// <summary>
     /// Gets the currently detected person, if any.
     /// </summary>
@@ -524,6 +59,21 @@ public sealed class PersonalityEngine : IAsyncDisposable
     /// Gets all known persons.
     /// </summary>
     public IReadOnlyCollection<DetectedPerson> KnownPersons => _knownPersons.Values.ToList();
+
+    /// <summary>
+    /// Gets the inner dialog engine for direct access.
+    /// </summary>
+    public InnerDialogEngine InnerDialog => _innerDialogEngine;
+
+    /// <summary>
+    /// Gets the Pavlovian consciousness engine for direct access.
+    /// </summary>
+    public PavlovianConsciousnessEngine Consciousness => _consciousness;
+
+    /// <summary>
+    /// Gets the current consciousness state.
+    /// </summary>
+    public ConsciousnessState CurrentConsciousness => _consciousness.CurrentState;
 
     /// <summary>
     /// Gets the current self-awareness state.
@@ -592,6 +142,13 @@ public sealed class PersonalityEngine : IAsyncDisposable
         if (_qdrantClient != null)
         {
             await EnsureQdrantCollectionsAsync(ct);
+        }
+
+        // Initialize Pavlovian consciousness engine
+        if (!_consciousnessInitialized)
+        {
+            _consciousness.Initialize();
+            _consciousnessInitialized = true;
         }
 
         _isInitialized = true;
@@ -1999,6 +1556,187 @@ public sealed class PersonalityEngine : IAsyncDisposable
         {
             await _mettaEngine.AddFactAsync(fact, ct);
         }
+
+        // Inner dialog rules
+        await AddInnerDialogRulesAsync(ct);
+    }
+
+    /// <summary>
+    /// Adds MeTTa rules specific to inner dialog reasoning.
+    /// </summary>
+    private async Task AddInnerDialogRulesAsync(CancellationToken ct)
+    {
+        // Rules for inner dialog thought prioritization
+        var innerDialogRules = new[]
+        {
+            // Determine thought priority based on context
+            "(= (thought-priority observation $confidence) (* $confidence 1.0))",
+            "(= (thought-priority emotional $confidence) (* $confidence 0.9))",
+            "(= (thought-priority analytical $confidence) (* $confidence 0.95))",
+            "(= (thought-priority ethical $confidence) (* $confidence 1.0))",
+            "(= (thought-priority creative $confidence) (* $confidence 0.7))",
+            "(= (thought-priority strategic $confidence) (* $confidence 0.85))",
+            "(= (thought-priority decision $confidence) (* $confidence 1.0))",
+
+            // Determine when to invoke specific thought types
+            "(= (should-think emotional $input) (or (contains $input \"feel\") (contains $input \"frustrated\") (contains $input \"happy\") (contains $input \"sad\")))",
+            "(= (should-think analytical $input) (or (contains $input \"why\") (contains $input \"how\") (contains $input \"explain\") (contains $input \"compare\")))",
+            "(= (should-think creative $input) (or (contains $input \"idea\") (contains $input \"imagine\") (contains $input \"what if\") (contains $input \"creative\")))",
+            "(= (should-think ethical $input) (or (contains $input \"should\") (contains $input \"right\") (contains $input \"wrong\") (contains $input \"harm\")))",
+
+            // Thought chaining rules
+            "(= (chain-thought observation $next) (superpose (emotional analytical strategic)))",
+            "(= (chain-thought emotional $next) (superpose (self-reflection strategic)))",
+            "(= (chain-thought analytical $next) (superpose (creative synthesis)))",
+            "(= (chain-thought self-reflection $next) (superpose (ethical strategic)))",
+            "(= (chain-thought strategic $next) (superpose (synthesis decision)))",
+
+            // Confidence calibration
+            "(= (calibrate-confidence $base-conf $supporting-thoughts) (min 1.0 (+ $base-conf (* 0.1 $supporting-thoughts))))",
+
+            // Synthesis rules
+            "(= (synthesize-thoughts $thoughts) (if (> (len $thoughts) 3) high-confidence medium-confidence))",
+        };
+
+        foreach (var rule in innerDialogRules)
+        {
+            await _mettaEngine.ApplyRuleAsync(rule, ct);
+        }
+
+        // Inner dialog facts
+        var innerDialogFacts = new[]
+        {
+            // Thought type definitions
+            "(inner-thought-type observation (perceives input identifies-topic))",
+            "(inner-thought-type emotional (gut-reaction empathy mood-response))",
+            "(inner-thought-type analytical (decompose compare evaluate))",
+            "(inner-thought-type self-reflection (capabilities limitations values))",
+            "(inner-thought-type memory-recall (past-conversations learned-preferences))",
+            "(inner-thought-type strategic (response-structure tone emphasis))",
+            "(inner-thought-type ethical (harm-check privacy respect))",
+            "(inner-thought-type creative (novel-angles metaphors humor))",
+            "(inner-thought-type synthesis (combine-insights pattern-match))",
+            "(inner-thought-type decision (final-approach action-choice))",
+
+            // Thought flow patterns
+            "(thought-flow standard (observation emotional analytical strategic synthesis decision))",
+            "(thought-flow quick (observation analytical decision))",
+            "(thought-flow deep (observation emotional memory-recall analytical self-reflection ethical creative strategic synthesis decision))",
+
+            // Emotional mappings
+            "(emotion-response frustrated (empathy patience support))",
+            "(emotion-response curious (enthusiasm depth exploration))",
+            "(emotion-response urgent (focus efficiency directness))",
+            "(emotion-response sad (warmth understanding comfort))",
+            "(emotion-response excited (matching-energy celebration expansion))",
+        };
+
+        foreach (var fact in innerDialogFacts)
+        {
+            await _mettaEngine.AddFactAsync(fact, ct);
+        }
+
+        // Add Pavlovian consciousness rules
+        await AddConsciousnessRulesAsync(ct);
+    }
+
+    /// <summary>
+    /// Adds MeTTa rules for Pavlovian consciousness and classical conditioning.
+    /// </summary>
+    private async Task AddConsciousnessRulesAsync(CancellationToken ct)
+    {
+        // Pavlovian conditioning rules
+        var conditioningRules = new[]
+        {
+            // Stimulus-response activation
+            "(= (activate-response $stimulus $response $strength) (if (> $strength 0.3) (trigger $response) (no-response)))",
+
+            // Conditioning strength calculation
+            "(= (conditioning-strength $base $reinforcements $extinctions) (max 0.0 (min 1.0 (- (+ $base (* 0.1 $reinforcements)) (* 0.05 $extinctions)))))",
+
+            // Arousal level determination
+            "(= (compute-arousal $intensity $valence) (* $intensity (+ 0.5 (* 0.5 (abs $valence)))))",
+
+            // Attention focus rules
+            "(= (should-focus $stimulus $intensity) (> $intensity 0.5))",
+            "(= (focus-priority $stimulus $novelty $intensity) (* (+ $novelty $intensity) 0.5))",
+
+            // Habituation rules
+            "(= (habituation-decay $strength $repetitions) (max 0.1 (- $strength (* 0.05 $repetitions))))",
+
+            // Sensitization rules
+            "(= (sensitization-boost $strength $significance) (min 1.0 (+ $strength (* 0.1 $significance))))",            // Extinction prediction
+            "(= (extinction-rate $strength $no-reinforcement-count) (if (> $no-reinforcement-count 5) fast (if (> $no-reinforcement-count 2) moderate slow)))",
+
+            // Spontaneous recovery potential
+            "(= (spontaneous-recovery $original-strength $time-since-extinction) (if (> $time-since-extinction 100) (* $original-strength 0.5) 0.0))",
+
+            // Generalization rules
+            "(= (stimulus-generalization $original $similar $similarity) (if (> $similarity 0.7) (transfer-response $original $similar) (no-transfer)))",
+
+            // Discrimination learning
+            "(= (discriminate-stimuli $s1 $s2 $differential-reinforcement) (if $differential-reinforcement (learn-difference $s1 $s2) (remain-generalized)))",
+        };
+
+        foreach (var rule in conditioningRules)
+        {
+            await _mettaEngine.ApplyRuleAsync(rule, ct);
+        }
+
+        // Consciousness facts
+        var consciousnessFacts = new[]
+        {
+            // Unconditioned stimulus-response pairs (innate)
+            "(unconditioned-pair greeting warmth 0.8)",
+            "(unconditioned-pair question curiosity 0.9)",
+            "(unconditioned-pair praise joy 0.85)",
+            "(unconditioned-pair criticism introspection 0.7)",
+            "(unconditioned-pair error caution 0.75)",
+            "(unconditioned-pair success confidence 0.8)",
+            "(unconditioned-pair help empathy 0.85)",
+            "(unconditioned-pair learning excitement 0.9)",
+
+            // Arousal state definitions
+            "(arousal-state dormant 0.0 0.2)",
+            "(arousal-state relaxed 0.2 0.4)",
+            "(arousal-state engaged 0.4 0.6)",
+            "(arousal-state alert 0.6 0.8)",
+            "(arousal-state intense 0.8 1.0)",
+
+            // Attention modes
+            "(attention-mode diffuse (broad low-intensity exploratory))",
+            "(attention-mode focused (narrow high-intensity goal-directed))",
+            "(attention-mode vigilant (threat-sensitive high-arousal protective))",
+
+            // Consciousness layer interactions
+            "(consciousness-layer sensory (raw-input preprocessing))",
+            "(consciousness-layer perceptual (pattern-recognition categorization))",
+            "(consciousness-layer associative (memory-linking conditioning))",
+            "(consciousness-layer cognitive (reasoning planning))",
+            "(consciousness-layer metacognitive (self-reflection awareness))",
+
+            // Emotional valence mappings
+            "(valence-mapping warmth positive 0.7)",
+            "(valence-mapping curiosity positive 0.6)",
+            "(valence-mapping joy positive 0.9)",
+            "(valence-mapping excitement positive 0.8)",
+            "(valence-mapping confidence positive 0.7)",
+            "(valence-mapping empathy positive 0.6)",
+            "(valence-mapping caution negative -0.3)",
+            "(valence-mapping introspection neutral 0.0)",
+
+            // Conditioning dynamics
+            "(conditioning-phase acquisition (new-learning strength-building))",
+            "(conditioning-phase consolidation (memory-formation strengthening))",
+            "(conditioning-phase maintenance (stable-responding occasional-reinforcement))",
+            "(conditioning-phase extinction (weakening response-reduction))",
+            "(conditioning-phase recovery (spontaneous-return partial-strength))",
+        };
+
+        foreach (var fact in consciousnessFacts)
+        {
+            await _mettaEngine.AddFactAsync(fact, ct);
+        }
     }
 
     private async Task<string[]> InferActiveTraitsAsync(PersonalityProfile profile, string userInput, CancellationToken ct)
@@ -2313,22 +2051,6 @@ public sealed class PersonalityEngine : IAsyncDisposable
     }
 
     /// <summary>
-    /// Detected mood from user input with confidence scores.
-    /// </summary>
-    public sealed record DetectedMood(
-        double Energy,           // -1 to 1: low energy to high energy
-        double Positivity,       // -1 to 1: negative to positive
-        double Urgency,          // 0 to 1: how urgent/time-sensitive
-        double Curiosity,        // 0 to 1: inquisitive/exploratory
-        double Frustration,      // 0 to 1: frustration level
-        double Engagement,       // 0 to 1: how engaged/interested
-        string? DominantEmotion, // Primary detected emotion
-        double Confidence)       // Overall confidence in detection
-    {
-        public static DetectedMood Neutral => new(0, 0, 0, 0, 0, 0.5, null, 0.5);
-    }
-
-    /// <summary>
     /// Analyzes user input to detect mood and emotional state.
     /// </summary>
     public DetectedMood DetectMoodFromInput(string input)
@@ -2596,6 +2318,658 @@ public sealed class PersonalityEngine : IAsyncDisposable
 
         return questions[_random.Next(questions.Length)];
     }
+
+    #region Consciousness Integration (Pavlovian Layer)
+
+    /// <summary>
+    /// Processes a stimulus through the consciousness layer, triggering conditioned responses.
+    /// This is the primary entry point for the Pavlovian consciousness system.
+    /// </summary>
+    /// <param name="stimulusType">The type of stimulus (e.g., "greeting", "question", "criticism").</param>
+    /// <param name="stimulusContent">The actual content of the stimulus.</param>
+    /// <param name="intensity">The intensity of the stimulus (0.0 to 1.0, currently unused).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The resulting consciousness state after processing.</returns>
+    public Task<ConsciousnessState> ProcessConsciousStimulusAsync(
+        string stimulusType,
+        string stimulusContent,
+        double intensity = 0.7,
+        CancellationToken ct = default)
+    {
+        _ = intensity; // Currently unused, reserved for future use
+        _ = ct;
+
+        // Use the existing ProcessInput method which handles stimulus matching and response activation
+        ConsciousnessState state = _consciousness.ProcessInput(stimulusContent, stimulusType);
+        return Task.FromResult(state);
+    }
+
+    /// <summary>
+    /// Gets the current consciousness state including arousal, attention, and active responses.
+    /// </summary>
+    /// <returns>The current consciousness state.</returns>
+    public ConsciousnessState GetCurrentConsciousnessState()
+    {
+        return _consciousness.CurrentState;
+    }
+
+    /// <summary>
+    /// Creates a new conditioned association through experience.
+    /// This is how the AI "learns" to associate neutral stimuli with responses.
+    /// </summary>
+    /// <param name="neutralStimulusType">The neutral stimulus to condition.</param>
+    /// <param name="responseType">The response type to associate.</param>
+    /// <param name="reinforcementStrength">How strong the conditioning is (0.0 to 1.0).</param>
+    public void ConditionNewAssociation(
+        string neutralStimulusType,
+        string responseType,
+        double reinforcementStrength = 0.5)
+    {
+        _consciousness.AddConditionedAssociation(
+            neutralStimulusType,
+            responseType,
+            reinforcementStrength);
+    }
+
+    /// <summary>
+    /// Reinforces an existing conditioned association (strengthens the bond).
+    /// Called when a conditioned response leads to positive outcomes.
+    /// </summary>
+    /// <param name="stimulusType">The stimulus type.</param>
+    /// <param name="responseType">The response type.</param>
+    /// <param name="reinforcementAmount">Amount to reinforce (positive value).</param>
+    public void ReinforceAssociation(
+        string stimulusType,
+        string responseType,
+        double reinforcementAmount = 0.1)
+    {
+        _consciousness.Reinforce(stimulusType, responseType, reinforcementAmount);
+    }
+
+    /// <summary>
+    /// Weakens an existing conditioned association (extinction).
+    /// Called when a conditioned response is no longer appropriate.
+    /// </summary>
+    /// <param name="stimulusType">The stimulus type.</param>
+    /// <param name="responseType">The response type.</param>
+    /// <param name="extinctionAmount">Amount to weaken (positive value, will be subtracted).</param>
+    public void ExtinguishAssociation(
+        string stimulusType,
+        string responseType,
+        double extinctionAmount = 0.05)
+    {
+        _consciousness.Extinguish(stimulusType, responseType, extinctionAmount);
+    }
+
+    /// <summary>
+    /// Gets all currently active conditioned responses above threshold.
+    /// </summary>
+    /// <param name="threshold">Minimum activation strength to include.</param>
+    /// <returns>Dictionary of response types and their activation strengths.</returns>
+    public IReadOnlyDictionary<string, double> GetActiveConditionedResponses(double threshold = 0.3)
+    {
+        return _consciousness.GetActiveResponses(threshold);
+    }
+
+    /// <summary>
+    /// Generates a conscious experience narrative from the current state.
+    /// This is a subjective description of what the AI is "experiencing".
+    /// </summary>
+    /// <returns>A narrative description of consciousness state.</returns>
+    public string GenerateConsciousnessNarrative()
+    {
+        ConsciousnessState state = _consciousness.CurrentState;
+        StringBuilder sb = new();
+
+        sb.AppendLine("[CONSCIOUSNESS STREAM]");
+        sb.AppendLine();
+
+        // Arousal description
+        string arousalDesc = state.Arousal switch
+        {
+            < 0.2 => "deeply calm and contemplative",
+            < 0.4 => "relaxed yet attentive",
+            < 0.6 => "moderately engaged",
+            < 0.8 => "highly alert and responsive",
+            _ => "intensely activated and focused"
+        };
+        sb.AppendLine($"Arousal State: {arousalDesc} ({state.Arousal:P0})");
+        sb.AppendLine($"Dominant Emotion: {state.DominantEmotion} (Valence: {state.Valence:+0.00;-0.00})");
+
+        // Attention description
+        if (!string.IsNullOrEmpty(state.CurrentFocus))
+        {
+            sb.AppendLine($"Attention Focus: {state.CurrentFocus}");
+            sb.AppendLine($"Awareness Level: {state.Awareness:P0}");
+        }
+
+        // Active conditioned responses (using GetActiveResponses)
+        IReadOnlyDictionary<string, double> activeResponses = _consciousness.GetActiveResponses(0.3);
+        if (activeResponses.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Active Conditioned Responses:");
+            foreach (KeyValuePair<string, double> kvp in activeResponses.OrderByDescending(kvp => kvp.Value).Take(3))
+            {
+                string bar = new string('#', (int)(kvp.Value * 10));
+                string empty = new string('-', 10 - (int)(kvp.Value * 10));
+                sb.AppendLine($"  * {kvp.Key}: [{bar}{empty}] {kvp.Value:P0}");
+            }
+        }
+
+        // Attentional spotlight
+        if (state.AttentionalSpotlight.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Attentional Spotlight:");
+            foreach (string item in state.AttentionalSpotlight.Take(3))
+            {
+                sb.AppendLine($"  → {item}");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Integrates consciousness processing with inner dialog for enhanced self-awareness.
+    /// This method processes a user input through both the consciousness and inner dialog layers.
+    /// </summary>
+    /// <param name="personaName">The persona name.</param>
+    /// <param name="userInput">The user input.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A combined result with both consciousness state and inner dialog.</returns>
+    public async Task<(ConsciousnessState Consciousness, InnerDialogResult Dialog)> ProcessWithFullAwarenessAsync(
+        string personaName,
+        string userInput,
+        CancellationToken ct = default)
+    {
+        // First, process through consciousness layer
+        string stimulusType = ClassifyStimulusType(userInput);
+        ConsciousnessState consciousnessState = await ProcessConsciousStimulusAsync(
+            stimulusType,
+            userInput,
+            0.7,
+            ct);
+
+        // Get active responses for decision making
+        IReadOnlyDictionary<string, double> activeResponses = _consciousness.GetActiveResponses(0.3);
+
+        // Create consciousness-aware config for inner dialog
+        InnerDialogConfig config = new(
+            EnableEmotionalProcessing: true,
+            EnableMemoryRecall: true,
+            EnableEthicalChecks: activeResponses.ContainsKey("caution") || activeResponses.ContainsKey("empathy"),
+            EnableCreativeThinking: activeResponses.ContainsKey("excitement") || activeResponses.ContainsKey("interest"),
+            MaxThoughts: 12,
+            ProcessingIntensity: consciousnessState.Arousal,
+            TopicHint: consciousnessState.CurrentFocus);
+
+        // Then process through inner dialog with consciousness context
+        InnerDialogResult dialogResult = await ConductInnerDialogAsync(
+            personaName,
+            userInput,
+            config,
+            ct);
+
+        return (consciousnessState, dialogResult);
+    }
+
+    /// <summary>
+    /// Classifies the type of stimulus from user input.
+    /// </summary>
+    private static string ClassifyStimulusType(string input)
+    {
+        var lowered = input.ToLowerInvariant();
+
+        return lowered switch
+        {
+            var s when s.StartsWith("hello") || s.StartsWith("hi ") || s.StartsWith("hey") => "greeting",
+            var s when s.Contains('?') => "question",
+            var s when s.Contains("thank") || s.Contains("great") || s.Contains("awesome") => "praise",
+            var s when s.Contains("wrong") || s.Contains("bad") || s.Contains("fix") => "criticism",
+            var s when s.Contains("help") || s.Contains("please") => "help",
+            var s when s.Contains("learn") || s.Contains("teach") || s.Contains("explain") => "learning",
+            var s when s.Contains("error") || s.Contains("fail") || s.Contains("broken") => "error",
+            var s when s.Contains("done") || s.Contains("worked") || s.Contains("success") => "success",
+            _ => "neutral"
+        };
+    }
+
+    /// <summary>
+    /// Gets a summary of the consciousness system's learned associations.
+    /// </summary>
+    /// <returns>A diagnostic summary of all conditioned associations.</returns>
+    public string GetConditioningSummary()
+    {
+        return _consciousness.GetConditioningSummary();
+    }
+
+    /// <summary>
+    /// Performs habituation - reduces response to repeated stimuli.
+    /// The AI "gets used to" stimuli that occur frequently without consequence.
+    /// </summary>
+    /// <param name="stimulusType">The stimulus type to habituate to.</param>
+    /// <param name="habituationRate">How quickly to habituate (0.0 to 1.0).</param>
+    public void ApplyHabituation(string stimulusType, double habituationRate = 0.1)
+    {
+        _consciousness.ApplyHabituation(stimulusType, habituationRate);
+    }
+
+    /// <summary>
+    /// Performs sensitization - increases response to significant stimuli.
+    /// The AI becomes "more sensitive" to stimuli that have important consequences.
+    /// </summary>
+    /// <param name="stimulusType">The stimulus type to sensitize to.</param>
+    /// <param name="sensitizationRate">How much to sensitize (0.0 to 1.0).</param>
+    public void ApplySensitization(string stimulusType, double sensitizationRate = 0.1)
+    {
+        _consciousness.ApplySensitization(stimulusType, sensitizationRate);
+    }
+
+    #endregion
+
+    #region Inner Dialog Integration
+
+    /// <summary>
+    /// Conducts an inner dialog before generating a response.
+    /// This simulates the AI's internal thought process.
+    /// </summary>
+    /// <param name="personaName">The persona name for profile lookup.</param>
+    /// <param name="userInput">The user's input message.</param>
+    /// <param name="config">Optional dialog configuration.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The inner dialog result with response guidance.</returns>
+    public async Task<InnerDialogResult> ConductInnerDialogAsync(
+        string personaName,
+        string userInput,
+        InnerDialogConfig? config = null,
+        CancellationToken ct = default)
+    {
+        // Get personality profile
+        _profiles.TryGetValue(personaName, out var profile);
+
+        // Detect user mood
+        var userMood = DetectMoodFromInput(userInput);
+
+        // Recall relevant memories if available
+        List<ConversationMemory>? memories = null;
+        if (HasMemory)
+        {
+            memories = await RecallConversationsAsync(userInput, personaName, 3, 0.5, ct);
+        }
+
+        // Conduct the inner dialog
+        var result = await _innerDialogEngine.ConductDialogAsync(
+            userInput,
+            profile,
+            _selfAwareness,
+            userMood,
+            memories,
+            config,
+            ct);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Conducts a quick inner dialog for simple responses.
+    /// </summary>
+    /// <param name="personaName">The persona name.</param>
+    /// <param name="userInput">The user input.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The quick dialog result.</returns>
+    public async Task<InnerDialogResult> QuickInnerDialogAsync(
+        string personaName,
+        string userInput,
+        CancellationToken ct = default)
+    {
+        _profiles.TryGetValue(personaName, out var profile);
+        return await _innerDialogEngine.QuickDialogAsync(userInput, profile, ct);
+    }
+
+    /// <summary>
+    /// Gets the inner monologue text for the last dialog session.
+    /// </summary>
+    /// <param name="personaName">The persona name.</param>
+    /// <returns>The monologue text or null if no session exists.</returns>
+    public string? GetLastInnerMonologue(string personaName)
+    {
+        var session = _innerDialogEngine.GetLastSession(personaName);
+        return session?.GetMonologue();
+    }
+
+    /// <summary>
+    /// Builds a prompt prefix based on inner dialog results.
+    /// This can be prepended to the LLM prompt to guide response generation.
+    /// </summary>
+    /// <param name="result">The inner dialog result.</param>
+    /// <returns>A prompt prefix string.</returns>
+    public static string BuildInnerDialogPromptPrefix(InnerDialogResult result)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("[INTERNAL REASONING CONTEXT]");
+
+        // Add key insights
+        if (result.KeyInsights.Length > 0)
+        {
+            sb.AppendLine("Key considerations:");
+            foreach (var insight in result.KeyInsights.Take(3))
+            {
+                sb.AppendLine($"- {insight}");
+            }
+        }
+
+        // Add response guidance
+        if (result.ResponseGuidance.TryGetValue("tone", out var tone))
+        {
+            sb.AppendLine($"Suggested tone: {tone}");
+        }
+
+        if (result.ResponseGuidance.TryGetValue("acknowledge_feelings", out var ack) && (bool)ack)
+        {
+            sb.AppendLine("Note: User may be experiencing strong emotions - acknowledge appropriately.");
+        }
+
+        if (result.ResponseGuidance.TryGetValue("be_concise", out var concise) && (bool)concise)
+        {
+            sb.AppendLine("Note: Keep response focused and concise.");
+        }
+
+        if (result.ResponseGuidance.TryGetValue("include_creative", out var creative) && (bool)creative)
+        {
+            sb.AppendLine("Note: Consider including creative or unexpected elements.");
+        }
+
+        sb.AppendLine();
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Generates a thinking trace for debugging or transparency.
+    /// Shows the AI's reasoning process in a human-readable format.
+    /// </summary>
+    /// <param name="result">The inner dialog result.</param>
+    /// <param name="verbose">Whether to include full details.</param>
+    /// <returns>A formatted thinking trace.</returns>
+    public static string GenerateThinkingTrace(InnerDialogResult result, bool verbose = false)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("═══════════════════════════════════════════");
+        sb.AppendLine("           AI THINKING PROCESS             ");
+        sb.AppendLine("═══════════════════════════════════════════");
+        sb.AppendLine();
+
+        if (verbose)
+        {
+            sb.Append(result.Session.GetMonologue());
+        }
+        else
+        {
+            // Summarized version
+            sb.AppendLine($"📝 Input: \"{TruncateForTrace(result.Session.UserInput, 50)}\"");
+            sb.AppendLine($"🎯 Topic: {result.Session.Topic ?? "general"}");
+            sb.AppendLine();
+
+            // Key thoughts by type
+            var thoughtsByType = result.Session.Thoughts
+                .GroupBy(t => t.Type)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var (type, thoughts) in thoughtsByType)
+            {
+                var icon = type switch
+                {
+                    InnerThoughtType.Observation => "👁️",
+                    InnerThoughtType.Emotional => "💭",
+                    InnerThoughtType.Analytical => "🔍",
+                    InnerThoughtType.SelfReflection => "🪞",
+                    InnerThoughtType.MemoryRecall => "📚",
+                    InnerThoughtType.Strategic => "🎯",
+                    InnerThoughtType.Ethical => "⚖️",
+                    InnerThoughtType.Creative => "💡",
+                    InnerThoughtType.Synthesis => "🔗",
+                    InnerThoughtType.Decision => "✅",
+                    _ => "�"
+                };
+
+                sb.AppendLine($"{icon} {type}: {TruncateForTrace(thoughts.First().Content, 60)}");
+            }
+
+            sb.AppendLine();
+            sb.AppendLine($"📊 Confidence: {result.Session.OverallConfidence:P0}");
+            sb.AppendLine($"⏱️ Processing: {result.Session.ProcessingTime.TotalMilliseconds:F0}ms");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine($"💬 Suggested Tone: {result.SuggestedResponseTone}");
+
+        if (result.ProactiveQuestion != null)
+        {
+            sb.AppendLine($"❓ Follow-up: {result.ProactiveQuestion}");
+        }
+
+        sb.AppendLine("═══════════════════════════════════════════");
+        return sb.ToString();
+    }
+
+    private static string TruncateForTrace(string text, int maxLength)
+    {
+        if (text.Length <= maxLength) return text;
+        return text[..(maxLength - 3)] + "...";
+    }
+
+    /// <summary>
+    /// Simulates an inner dialog step-by-step for interactive/streaming display.
+    /// </summary>
+    /// <param name="personaName">The persona name.</param>
+    /// <param name="userInput">The user input.</param>
+    /// <param name="onThought">Callback for each thought generated.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The final inner dialog result.</returns>
+    public async Task<InnerDialogResult> StreamInnerDialogAsync(
+        string personaName,
+        string userInput,
+        Action<InnerThought> onThought,
+        CancellationToken ct = default)
+    {
+        _profiles.TryGetValue(personaName, out var profile);
+        var userMood = DetectMoodFromInput(userInput);
+
+        // Start the dialog
+        var result = await _innerDialogEngine.ConductDialogAsync(
+            userInput,
+            profile,
+            _selfAwareness,
+            userMood,
+            null, // Skip memory for streaming
+            InnerDialogConfig.Default,
+            ct);
+
+        // Stream thoughts to callback
+        foreach (var thought in result.Session.Thoughts)
+        {
+            onThought(thought);
+            await Task.Delay(50, ct); // Small delay for visual effect
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Starts autonomous background thinking for a persona.
+    /// The AI will periodically generate self-initiated thoughts.
+    /// </summary>
+    /// <param name="personaName">The persona name.</param>
+    /// <param name="interval">Time between autonomous thoughts (default 30s).</param>
+    public void StartAutonomousThinking(string personaName, TimeSpan interval = default)
+    {
+        _profiles.TryGetValue(personaName, out var profile);
+        _innerDialogEngine.StartAutonomousThinking(profile, _selfAwareness, interval);
+    }
+
+    /// <summary>
+    /// Stops autonomous background thinking.
+    /// </summary>
+    public async Task StopAutonomousThinkingAsync()
+    {
+        await _innerDialogEngine.StopAutonomousThinkingAsync();
+    }
+
+    /// <summary>
+    /// Conducts an autonomous inner dialog session without external input.
+    /// The AI will think about topics based on its personality and interests.
+    /// </summary>
+    /// <param name="personaName">The persona name.</param>
+    /// <param name="config">Optional configuration.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The autonomous dialog result.</returns>
+    public async Task<InnerDialogResult> ConductAutonomousDialogAsync(
+        string personaName,
+        InnerDialogConfig? config = null,
+        CancellationToken ct = default)
+    {
+        _profiles.TryGetValue(personaName, out var profile);
+        return await _innerDialogEngine.ConductAutonomousDialogAsync(profile, _selfAwareness, config, ct);
+    }
+
+    /// <summary>
+    /// Gets pending autonomous thoughts that have accumulated in the background.
+    /// </summary>
+    /// <returns>List of autonomous thoughts.</returns>
+    public List<InnerThought> GetPendingAutonomousThoughts()
+    {
+        return _innerDialogEngine.DrainAutonomousThoughts();
+    }
+
+    /// <summary>
+    /// Gets recent background thoughts for a persona.
+    /// </summary>
+    /// <param name="personaName">The persona name.</param>
+    /// <param name="limit">Maximum number to return.</param>
+    /// <returns>List of background thoughts.</returns>
+    public List<InnerThought> GetBackgroundThoughts(string personaName, int limit = 10)
+    {
+        return _innerDialogEngine.GetBackgroundThoughts(personaName, limit);
+    }
+
+    /// <summary>
+    /// Registers a custom thought provider for extensible thought generation.
+    /// </summary>
+    /// <param name="provider">The thought provider to register.</param>
+    public void RegisterThoughtProvider(IThoughtProvider provider)
+    {
+        _innerDialogEngine.RegisterProvider(provider);
+    }
+
+    /// <summary>
+    /// Removes a thought provider by name.
+    /// </summary>
+    /// <param name="name">The provider name.</param>
+    /// <returns>True if removed.</returns>
+    public bool RemoveThoughtProvider(string name)
+    {
+        return _innerDialogEngine.RemoveProvider(name);
+    }
+
+    /// <summary>
+    /// Gets a snapshot of the AI's current autonomous inner state.
+    /// Combines consciousness, inner dialog, and autonomous thoughts.
+    /// </summary>
+    /// <param name="personaName">The persona name.</param>
+    /// <returns>A comprehensive inner state snapshot.</returns>
+    public AutonomousInnerState GetAutonomousInnerState(string personaName)
+    {
+        _profiles.TryGetValue(personaName, out var profile);
+
+        var consciousness = GetCurrentConsciousnessState();
+        var lastSession = _innerDialogEngine.GetLastSession(personaName);
+        var backgroundThoughts = _innerDialogEngine.GetBackgroundThoughts(personaName, 5);
+        var pendingThoughts = _innerDialogEngine.DrainAutonomousThoughts();
+
+        return new AutonomousInnerState(
+            PersonaName: personaName,
+            Consciousness: consciousness,
+            LastDialogSession: lastSession,
+            BackgroundThoughts: backgroundThoughts,
+            PendingAutonomousThoughts: pendingThoughts,
+            CurrentMood: profile?.CurrentMood,
+            ActiveTraits: profile?.GetActiveTraits(3).Select(t => t.Name!).ToArray() ?? Array.Empty<string>(),
+            Timestamp: DateTime.UtcNow);
+    }
+
+    /// <summary>
+    /// Generates a human-readable narrative of the AI's current inner state.
+    /// </summary>
+    /// <param name="personaName">The persona name.</param>
+    /// <returns>A narrative description of inner state.</returns>
+    public string GenerateInnerStateNarrative(string personaName)
+    {
+        AutonomousInnerState state = GetAutonomousInnerState(personaName);
+        StringBuilder sb = new();
+
+        sb.AppendLine("╔═══════════════════════════════════════════╗");
+        sb.AppendLine("║        AUTONOMOUS INNER STATE             ║");
+        sb.AppendLine("╚═══════════════════════════════════════════╝");
+        sb.AppendLine();
+
+        // Consciousness layer
+        sb.AppendLine("🧠 CONSCIOUSNESS:");
+        sb.AppendLine($"   Arousal: {state.Consciousness.Arousal:P0} ({state.Consciousness.DominantEmotion})");
+        if (!string.IsNullOrEmpty(state.Consciousness.CurrentFocus))
+            sb.AppendLine($"   Focus: {state.Consciousness.CurrentFocus}");
+        sb.AppendLine();
+
+        // Active traits
+        if (state.ActiveTraits.Length > 0)
+        {
+            sb.AppendLine("🎭 ACTIVE TRAITS:");
+            foreach (string trait in state.ActiveTraits)
+            {
+                sb.AppendLine($"   � {trait}");
+            }
+            sb.AppendLine();
+        }
+
+        // Background thoughts
+        if (state.BackgroundThoughts.Count > 0)
+        {
+            sb.AppendLine("💭 BACKGROUND THOUGHTS:");
+            foreach (var thought in state.BackgroundThoughts.TakeLast(3))
+            {
+                var icon = thought.IsAutonomous ? "🌀" : "💬";
+                sb.AppendLine($"   {icon} [{thought.Type}] {TruncateForTrace(thought.Content, 50)}");
+            }
+            sb.AppendLine();
+        }
+
+        // Pending autonomous thoughts
+        if (state.PendingAutonomousThoughts.Count > 0)
+        {
+            sb.AppendLine("🔮 PENDING AUTONOMOUS THOUGHTS:");
+            foreach (var thought in state.PendingAutonomousThoughts)
+            {
+                sb.AppendLine($"   → [{thought.Type}] {TruncateForTrace(thought.Content, 50)}");
+            }
+            sb.AppendLine();
+        }
+
+        // Last session summary
+        if (state.LastDialogSession != null)
+        {
+            sb.AppendLine("📝 LAST DIALOG:");
+            sb.AppendLine($"   Topic: {state.LastDialogSession.Topic ?? "general"}");
+            sb.AppendLine($"   Thoughts: {state.LastDialogSession.Thoughts.Count}");
+            sb.AppendLine($"   Confidence: {state.LastDialogSession.OverallConfidence:P0}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine($"⏱️ Snapshot taken at {state.Timestamp:HH:mm:ss}");
+
+        return sb.ToString();
+    }
+
+    #endregion
 
     /// <inheritdoc/>
     public ValueTask DisposeAsync()

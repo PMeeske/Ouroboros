@@ -3,14 +3,30 @@ using CommandLine;
 
 namespace LangChainPipeline.Options;
 
-[Verb("orchestrator", HelpText = "Run smart model orchestrator with intelligent model and tool selection.")]
-public sealed class OrchestratorOptions
+[Verb("orchestrator", HelpText = "Run smart model orchestrator. Use --voice for voice mode.")]
+public sealed class OrchestratorOptions : IVoiceOptions
 {
+    // Voice mode options
+    [Option('v', "voice", Required = false, Default = false, HelpText = "Enable voice persona mode (speak & listen).")]
+    public bool Voice { get; set; }
+
+    [Option("persona", Required = false, Default = "Ouroboros", HelpText = "Persona name for voice mode.")]
+    public string Persona { get; set; } = "Ouroboros";
+
+    [Option("embed-model", Required = false, Default = "nomic-embed-text", HelpText = "Embedding model for voice mode.")]
+    public string EmbedModel { get; set; } = "nomic-embed-text";
+
+    [Option("qdrant", Required = false, Default = "http://localhost:6334", HelpText = "Qdrant endpoint for skills.")]
+    public string QdrantEndpoint { get; set; } = "http://localhost:6334";
+
+    // Explicit interface for Endpoint
+    string IVoiceOptions.Endpoint { get => Endpoint ?? "http://localhost:11434"; set => Endpoint = value; }
+
     [Option('g', "goal", Required = true, HelpText = "Goal or task for the orchestrator to accomplish.")]
     public string Goal { get; set; } = string.Empty;
 
-    [Option("model", Required = false, HelpText = "Primary Ollama chat model name", Default = "llama3")]
-    public string Model { get; set; } = "llama3";
+    [Option("model", Required = false, HelpText = "Primary LLM model name", Default = "deepseek-v3.1:671b-cloud")]
+    public string Model { get; set; } = "deepseek-v3.1:671b-cloud";
 
     [Option("coder-model", Required = false, HelpText = "Model for code/refactor tasks.", Default = "codellama")]
     public string? CoderModel { get; set; }
