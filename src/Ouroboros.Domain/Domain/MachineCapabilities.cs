@@ -3,7 +3,7 @@ namespace LangChainPipeline.Domain;
 
 public static class MachineCapabilities
 {
-    public static int CpuCores => Environment.ProcessorCount;
+    public static int CpuCores => global::System.Environment.ProcessorCount;
 
     public static long TotalMemoryMb
     {
@@ -25,7 +25,7 @@ public static class MachineCapabilities
         get
         {
             // You can read env vars or defaults
-            string? env = Environment.GetEnvironmentVariable("OLLAMA_NUM_GPU");
+            string? env = global::System.Environment.GetEnvironmentVariable("OLLAMA_NUM_GPU");
             if (int.TryParse(env, out int gpus)) return gpus;
             return 0; // assume CPU only if unknown
         }
