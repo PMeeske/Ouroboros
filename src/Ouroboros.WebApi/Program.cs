@@ -3,6 +3,7 @@
 // </copyright>
 
 using System.Diagnostics;
+using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Agent.MetaAI.SelfModel;
 using Microsoft.OpenApi.Models;
 using Ouroboros.WebApi.Models;
@@ -26,14 +27,27 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddSingleton<IPipelineService, PipelineService>();
 
 // Register self-model components (Phase 2)
-builder.Services.AddSingleton<IIdentityGraph>(sp => new IdentityGraph(
-    Guid.NewGuid(),
-    "OuroborosAgent",
-    sp.GetService<ICapabilityRegistry>() ?? throw new InvalidOperationException("ICapabilityRegistry not registered"),
-    Path.Combine(Path.GetTempPath(), "ouroboros_identity.json")));
-
+// Note: These services are optional. If ICapabilityRegistry is not available, 
+// create a mock implementation or make the service optional.
 builder.Services.AddSingleton<IGlobalWorkspace>(sp => new GlobalWorkspace());
 builder.Services.AddSingleton<IPredictiveMonitor>(sp => new PredictiveMonitor());
+
+// Identity graph with a mock capability registry
+builder.Services.AddSingleton<IIdentityGraph>(sp =>
+{
+    // Create a simple capability registry
+    var registry = new CapabilityRegistry(
+        new MockChatModel(),
+        new ToolRegistry(),
+        new CapabilityRegistryConfig());
+    
+    return new IdentityGraph(
+        Guid.NewGuid(),
+        "OuroborosAgent",
+        registry,
+        Path.Combine(Path.GetTempPath(), "ouroboros_identity.json"));
+});
+
 builder.Services.AddSingleton<ISelfModelService, SelfModelService>();
 
 // Add CORS for development
@@ -287,3 +301,12 @@ app.MapPost("/api/self/explain", async (SelfExplainRequest request, ISelfModelSe
 .Produces<ApiResponse<SelfExplainResponse>>(400);
 
 app.Run();
+
+// Mock chat model for self-model initialization
+internal sealed class MockChatModel : IChatCompletionModel
+{
+    public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
+    {
+        return Task.FromResult("Mock response");
+    }
+}

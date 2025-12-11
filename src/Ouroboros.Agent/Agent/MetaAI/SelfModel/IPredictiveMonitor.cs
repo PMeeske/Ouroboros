@@ -120,6 +120,7 @@ public interface IPredictiveMonitor
     /// </summary>
     /// <param name="metricName">Metric to check</param>
     /// <param name="observedValue">Observed value</param>
+    /// <param name="ct">Cancellation token</param>
     /// <returns>Anomaly detection result</returns>
     Task<AnomalyDetection> DetectAnomalyAsync(
         string metricName,
