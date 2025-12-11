@@ -3,7 +3,11 @@
 // </copyright>
 
 using System.Diagnostics;
+using LangChainPipeline.Agent.MetaAI;
+using LangChainPipeline.Agent.MetaAI.SelfModel;
 using Microsoft.OpenApi.Models;
+using Ouroboros.WebApi.Models;
+using Ouroboros.WebApi.Services;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +25,30 @@ builder.Services.AddSwaggerGen(c =>
 
 // Register pipeline service
 builder.Services.AddSingleton<IPipelineService, PipelineService>();
+
+// Register self-model components (Phase 2)
+// Note: These services are optional. If ICapabilityRegistry is not available, 
+// create a mock implementation or make the service optional.
+builder.Services.AddSingleton<IGlobalWorkspace>(sp => new GlobalWorkspace());
+builder.Services.AddSingleton<IPredictiveMonitor>(sp => new PredictiveMonitor());
+
+// Identity graph with a mock capability registry
+builder.Services.AddSingleton<IIdentityGraph>(sp =>
+{
+    // Create a simple capability registry
+    var registry = new CapabilityRegistry(
+        new MockChatModel(),
+        new ToolRegistry(),
+        new CapabilityRegistryConfig());
+    
+    return new IdentityGraph(
+        Guid.NewGuid(),
+        "OuroborosAgent",
+        registry,
+        Path.Combine(Path.GetTempPath(), "ouroboros_identity.json"));
+});
+
+builder.Services.AddSingleton<ISelfModelService, SelfModelService>();
 
 // Add CORS for development
 builder.Services.AddCors(options =>
@@ -85,6 +113,10 @@ app.MapGet("/", () => Results.Ok(new
         "/ready - Readiness check endpoint",
         "/api/ask - Ask a question to the AI",
         "/api/pipeline - Execute a pipeline DSL",
+        "/api/self/state - Get agent identity state",
+        "/api/self/forecast - Get forecasts and predictions",
+        "/api/self/commitments - Get active commitments",
+        "/api/self/explain - Generate self-explanation from DAG",
         "/swagger - API documentation"
     },
 }))
@@ -158,4 +190,123 @@ app.MapPost("/api/pipeline", async (PipelineRequest request, IPipelineService se
 .Produces<ApiResponse<PipelineResponse>>(200)
 .Produces<ApiResponse<PipelineResponse>>(400);
 
+// Phase 2 Self-Model Endpoints
+
+// Get agent identity state
+app.MapGet("/api/self/state", async (ISelfModelService service, CancellationToken ct) =>
+{
+    try
+    {
+        Stopwatch sw = Stopwatch.StartNew();
+        SelfStateResponse state = await service.GetStateAsync(ct);
+        sw.Stop();
+
+        return Results.Ok(ApiResponse<SelfStateResponse>.Ok(state, sw.ElapsedMilliseconds));
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(ApiResponse<SelfStateResponse>.Fail($"Error: {ex.Message}"));
+    }
+})
+.WithName("GetSelfState")
+.WithTags("Self-Model")
+.WithOpenApi(op =>
+{
+    op.Summary = "Get current agent identity state";
+    op.Description = "Returns the agent's complete identity state including capabilities, resources, commitments, and performance metrics.";
+    return op;
+})
+.Produces<ApiResponse<SelfStateResponse>>(200)
+.Produces<ApiResponse<SelfStateResponse>>(400);
+
+// Get forecasts and predictions
+app.MapGet("/api/self/forecast", async (ISelfModelService service, CancellationToken ct) =>
+{
+    try
+    {
+        Stopwatch sw = Stopwatch.StartNew();
+        SelfForecastResponse forecasts = await service.GetForecastsAsync(ct);
+        sw.Stop();
+
+        return Results.Ok(ApiResponse<SelfForecastResponse>.Ok(forecasts, sw.ElapsedMilliseconds));
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(ApiResponse<SelfForecastResponse>.Fail($"Error: {ex.Message}"));
+    }
+})
+.WithName("GetSelfForecasts")
+.WithTags("Self-Model")
+.WithOpenApi(op =>
+{
+    op.Summary = "Get agent forecasts and predictions";
+    op.Description = "Returns pending forecasts, calibration metrics, and recent anomalies detected by the predictive monitor.";
+    return op;
+})
+.Produces<ApiResponse<SelfForecastResponse>>(200)
+.Produces<ApiResponse<SelfForecastResponse>>(400);
+
+// Get active commitments
+app.MapGet("/api/self/commitments", async (ISelfModelService service, CancellationToken ct) =>
+{
+    try
+    {
+        Stopwatch sw = Stopwatch.StartNew();
+        List<CommitmentDto> commitments = await service.GetCommitmentsAsync(ct);
+        sw.Stop();
+
+        return Results.Ok(ApiResponse<List<CommitmentDto>>.Ok(commitments, sw.ElapsedMilliseconds));
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(ApiResponse<List<CommitmentDto>>.Fail($"Error: {ex.Message}"));
+    }
+})
+.WithName("GetSelfCommitments")
+.WithTags("Self-Model")
+.WithOpenApi(op =>
+{
+    op.Summary = "Get active agent commitments";
+    op.Description = "Returns all active commitments with their status, progress, and priority.";
+    return op;
+})
+.Produces<ApiResponse<List<CommitmentDto>>>(200)
+.Produces<ApiResponse<List<CommitmentDto>>>(400);
+
+// Generate self-explanation
+app.MapPost("/api/self/explain", async (SelfExplainRequest request, ISelfModelService service, CancellationToken ct) =>
+{
+    try
+    {
+        Stopwatch sw = Stopwatch.StartNew();
+        SelfExplainResponse explanation = await service.ExplainAsync(request, ct);
+        sw.Stop();
+
+        return Results.Ok(ApiResponse<SelfExplainResponse>.Ok(explanation, sw.ElapsedMilliseconds));
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(ApiResponse<SelfExplainResponse>.Fail($"Error: {ex.Message}"));
+    }
+})
+.WithName("SelfExplain")
+.WithTags("Self-Model")
+.WithOpenApi(op =>
+{
+    op.Summary = "Generate self-explanation from execution DAG";
+    op.Description = "Generates a narrative explanation of the agent's execution history and current state based on the execution DAG.";
+    return op;
+})
+.Produces<ApiResponse<SelfExplainResponse>>(200)
+.Produces<ApiResponse<SelfExplainResponse>>(400);
+
 app.Run();
+
+// Mock chat model for self-model initialization
+internal sealed class MockChatModel : IChatCompletionModel
+{
+    public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
+    {
+        return Task.FromResult("Mock response");
+    }
+}

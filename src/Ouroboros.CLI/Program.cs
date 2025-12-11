@@ -51,9 +51,10 @@ return;
 
 static async Task ParseAndRunAsync(string[] args)
 {
-    // CommandLineParser verbs
-    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions, AssistOptions, SkillsOptions>(args)
+    // CommandLineParser verbs - OuroborosOptions is the default (isDefault: true)
+    await Parser.Default.ParseArguments<OuroborosOptions, AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions, AssistOptions, SkillsOptions, NetworkOptions, DagOptions, EnvironmentOptions, AffectOptions, PolicyOptions, MaintenanceOptions>(args)
         .MapResult(
+            (OuroborosOptions o) => RunOuroborosAsync(o),
             (AskOptions o) => RunAskAsync(o),
             (PipelineOptions o) => RunPipelineAsync(o),
             (ListTokensOptions _) => RunListTokensAsync(),
@@ -63,6 +64,12 @@ static async Task ParseAndRunAsync(string[] args)
             (MeTTaOptions o) => RunMeTTaAsync(o),
             (AssistOptions o) => RunAssistAsync(o),
             (SkillsOptions o) => RunSkillsAsync(o),
+            (NetworkOptions o) => RunNetworkAsync(o),
+            (DagOptions o) => RunDagAsync(o),
+            (EnvironmentOptions o) => RunEnvironmentAsync(o),
+            (AffectOptions o) => RunAffectAsync(o),
+            (PolicyOptions o) => RunPolicyAsync(o),
+            (MaintenanceOptions o) => RunMaintenanceAsync(o),
             _ => Task.CompletedTask
         );
 }
@@ -98,11 +105,9 @@ static Task RunExplainAsync(ExplainOptions o)
     return Task.CompletedTask;
 }
 
-static async Task RunPipelineAsync(PipelineOptions o)
-{
-    if (await TryRunVoiceModeAsync(o)) return;
-    await PipelineCommands.RunPipelineAsync(o);
-}
+static Task RunOuroborosAsync(OuroborosOptions o) => OuroborosCommands.RunOuroborosAsync(o);
+
+static Task RunPipelineAsync(PipelineOptions o) => PipelineCommands.RunPipelineAsync(o);
 
 static async Task RunAskAsync(AskOptions o)
 {
@@ -122,11 +127,21 @@ static async Task RunOrchestratorAsync(OrchestratorOptions o)
     await OrchestratorCommands.RunOrchestratorAsync(o);
 }
 
-static async Task RunMeTTaAsync(MeTTaOptions o)
-{
-    if (await TryRunVoiceModeAsync(o)) return;
-    await MeTTaCommands.RunMeTTaAsync(o);
-}
+static Task RunMeTTaAsync(MeTTaOptions o) => MeTTaCommands.RunMeTTaAsync(o);
+
+static Task RunNetworkAsync(NetworkOptions o) => NetworkCommands.RunAsync(o);
+
+static Task RunDagAsync(DagOptions o) => DagCommands.RunDagAsync(o);
+
+static Task RunSelfAsync(SelfOptions o) => SelfCommands.RunSelfAsync(o);
+
+static Task RunEnvironmentAsync(EnvironmentOptions o) => EnvironmentCommands.RunEnvironmentCommandAsync(o);
+
+static Task RunAffectAsync(AffectOptions o) => AffectCommands.RunAffectAsync(o);
+
+static Task RunPolicyAsync(PolicyOptions o) => PolicyCommands.RunPolicyAsync(o);
+
+static Task RunMaintenanceAsync(MaintenanceOptions o) => MaintenanceCommands.RunMaintenanceAsync(o);
 
 
 

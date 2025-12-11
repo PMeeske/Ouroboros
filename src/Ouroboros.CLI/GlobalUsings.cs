@@ -14,3 +14,4 @@ global using LangChainPipeline.Domain.Vectors;
 global using LangChainPipeline.Providers;
 global using Ouroboros.Tools;
 global using LangChainPipeline.Pipeline.Branches;
+global using Ouroboros.CLI.Options;

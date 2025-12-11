@@ -30,6 +30,8 @@
     <ProjectReference Include="..\Ouroboros.Providers\Ouroboros.Providers.csproj" />
     <ProjectReference Include="..\Ouroboros.Agent\Ouroboros.Agent.csproj" />
     <ProjectReference Include="..\Ouroboros.Roslynator\Ouroboros.Roslynator.csproj" />
+    <ProjectReference Include="..\Ouroboros.Network\Ouroboros.Network.csproj" />
+    <ProjectReference Include="..\Ouroboros.Examples\Ouroboros.Examples.csproj" />
   </ItemGroup>
 
   <ItemGroup>

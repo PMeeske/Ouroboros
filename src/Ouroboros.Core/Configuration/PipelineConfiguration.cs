@@ -33,6 +33,11 @@ public class PipelineConfiguration
     /// Gets or sets observability and logging configuration.
     /// </summary>
     public ObservabilityConfiguration Observability { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets feature flags for evolutionary metacognitive control.
+    /// </summary>
+    public FeatureFlags Features { get; set; } = new();
 }
 
 /// <summary>
