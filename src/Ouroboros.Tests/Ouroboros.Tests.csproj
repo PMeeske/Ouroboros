@@ -31,6 +31,7 @@
     <ProjectReference Include="..\Ouroboros.Application\Ouroboros.Application.csproj" />
     <ProjectReference Include="..\Ouroboros.Genetic\Ouroboros.Genetic.csproj" />
     <ProjectReference Include="..\Ouroboros.Network\Ouroboros.Network.csproj" />
+    <ProjectReference Include="..\Ouroboros.Examples\Ouroboros.Examples.csproj" />
   </ItemGroup>
 
   <!-- Exclude legacy xUnit tests in Tests folder now covered by SpecFlow -->

@@ -9,4 +9,6 @@ namespace LangChainPipeline.Domain.Events;
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
 [JsonDerivedType(typeof(IngestBatch), typeDiscriminator: "Ingest")]
 [JsonDerivedType(typeof(ReasoningStep), typeDiscriminator: "Reasoning")]
+[JsonDerivedType(typeof(EnvironmentStepEvent), typeDiscriminator: "EnvironmentStep")]
+[JsonDerivedType(typeof(EpisodeEvent), typeDiscriminator: "Episode")]
 public abstract record PipelineEvent(Guid Id, string Kind, DateTime Timestamp);

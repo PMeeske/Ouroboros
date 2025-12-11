@@ -52,7 +52,7 @@ return;
 static async Task ParseAndRunAsync(string[] args)
 {
     // CommandLineParser verbs
-    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions, AssistOptions, SkillsOptions, NetworkOptions, DagOptions>(args)
+    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions, AssistOptions, SkillsOptions, NetworkOptions, DagOptions, EnvironmentOptions>(args)
         .MapResult(
             (AskOptions o) => RunAskAsync(o),
             (PipelineOptions o) => RunPipelineAsync(o),
@@ -65,6 +65,7 @@ static async Task ParseAndRunAsync(string[] args)
             (SkillsOptions o) => RunSkillsAsync(o),
             (NetworkOptions o) => RunNetworkAsync(o),
             (DagOptions o) => RunDagAsync(o),
+            (EnvironmentOptions o) => RunEnvironmentAsync(o),
             _ => Task.CompletedTask
         );
 }
@@ -117,6 +118,8 @@ static Task RunMeTTaAsync(MeTTaOptions o) => MeTTaCommands.RunMeTTaAsync(o);
 static Task RunNetworkAsync(NetworkOptions o) => NetworkCommands.RunAsync(o);
 
 static Task RunDagAsync(DagOptions o) => DagCommands.RunDagAsync(o);
+
+static Task RunEnvironmentAsync(EnvironmentOptions o) => EnvironmentCommands.RunEnvironmentCommandAsync(o);
 
 
 
