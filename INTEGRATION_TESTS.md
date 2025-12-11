@@ -4,7 +4,64 @@ This document provides guidance on running integration tests for the Ouroboros p
 
 ## Overview
 
-Integration tests verify the functionality of components against real external services (like GitHub API). These tests are separate from unit tests and require proper configuration to run.
+Integration tests verify the functionality of components against real external services (like GitHub API) and complex internal systems (like CLI interactive modes). These tests are separate from unit tests and may require proper configuration to run.
+
+## CLI Interactive Mode Integration Tests
+
+Location: `src/Ouroboros.Tests/IntegrationTests/CliInteractiveModeIntegrationTests.cs`
+
+These tests verify the CLI interactive mode functionality including:
+- **MeTTa REPL mode**: Symbolic reasoning, fact/rule management, and plan constraint checking
+- **Skills REPL mode**: Skill registration, search, and command parsing
+
+### Test Categories
+
+**MeTTa Interactive Mode Tests:**
+- Engine initialization and lifecycle
+- Query execution through in-memory MeTTa engine
+- Fact addition to knowledge base
+- Rule application and reasoning
+- Knowledge base reset functionality
+- Plan constraint validation
+- Unsafe operation detection in read-only context
+- Best plan selection from multiple candidates
+
+**Skills Interactive Mode Tests:**
+- Skill registry initialization and persistence
+- Skill registration and retrieval
+- Skill search functionality
+- Command parsing for skills REPL commands
+
+**Command Parsing Tests:**
+- Basic command parsing (help, query, exit, etc.)
+- Whitespace handling
+- Empty input handling
+
+**Plan Action Tests:**
+- FileSystem action MeTTa atom conversion
+- Network action MeTTa atom conversion
+- Tool action MeTTa atom conversion
+- Safe context MeTTa atom conversion
+
+### Running CLI Interactive Mode Tests
+
+```bash
+# Run all CLI interactive mode integration tests
+dotnet test --filter "FullyQualifiedName~CliInteractiveModeIntegrationTests"
+
+# Run only MeTTa-related tests
+dotnet test --filter "FullyQualifiedName~CliInteractiveModeIntegrationTests.MeTTa"
+
+# Run only Skills-related tests
+dotnet test --filter "FullyQualifiedName~CliInteractiveModeIntegrationTests.Skills"
+```
+
+### No External Dependencies Required
+
+Unlike GitHub integration tests, CLI interactive mode tests use in-memory implementations:
+- **In-memory MeTTa engine**: No Docker or external MeTTa installation required
+- **JSON-based skill storage**: Temporary files in system temp directory
+- All tests clean up after themselves
 
 ## GitHub Tools Integration Tests
 
