@@ -31,6 +31,13 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
   - **Capability Registry**: Agent understands its own capabilities and limitations
   - **Goal Hierarchy**: Hierarchical goal decomposition with value alignment
   - **Self-Evaluator**: Autonomous performance assessment and improvement planning
+- **🌐 Phase 2 — Integrated Self-Model (NEW)**: Persistent self-model with global workspace and predictive monitoring
+  - **Identity Graph**: Tracks capabilities, resources, commitments, and performance metrics
+  - **Global Workspace**: Shared working memory with attention-based priority management
+  - **Predictive Monitoring**: Forecast tracking, calibration metrics, and anomaly detection
+  - **Self-Explanation**: Generate narratives from execution DAG for transparency
+  - **API Endpoints**: `/api/self/state`, `/api/self/forecast`, `/api/self/commitments`, `/api/self/explain`
+  - **CLI Commands**: `self state`, `self forecast`, `self commitments`, `self explain`
 - **🎯 Epic Branch Orchestration (NEW)**: Automated epic management with agent assignment and dedicated branches
   - **Auto Agent Assignment**: Each sub-issue gets its own dedicated agent
   - **Dedicated Branches**: Isolated work tracking with immutable pipeline branches
@@ -596,6 +603,9 @@ src/
 The `src/Ouroboros.Examples/Examples/` directory contains comprehensive demonstrations:
 
 - **`MonadicExamples.cs`**: Core monadic operations
+- **`Phase2SelfModelExample.cs`**: Identity graph, global workspace, and predictive monitoring (Phase 2)
+- **`Phase2MetacognitionExample.cs`**: Capability registry, goal hierarchy, and self-evaluation (Phase 2)
+- **`Phase3EmergentIntelligenceExample.cs`**: Curiosity engine, hypothesis testing, and research skills (Phase 3)
 - **`ConversationalKleisliExamples.cs`**: Memory-integrated conversations
 - **`HybridStepExamples.cs`**: Sync/async step combinations
 - **`FunctionalReasoningExamples.cs`**: AI reasoning workflows
@@ -635,6 +645,67 @@ await orchestrator.ExecuteSubIssueAsync(120, 121, workFunc);
 - 📗 [Integration Guide](docs/Epic120Integration.md) - Practical usage patterns
 - 📙 [Implementation Summary](docs/ImplementationSummary.md) - Architecture overview
 - 💻 [Example Code](src/Ouroboros.Examples/Examples/Epic120Example.cs) - Working example
+
+### Phase 2: Integrated Self-Model ⭐ NEW
+
+The **Integrated Self-Model** provides agents with persistent identity, global workspace, and predictive monitoring capabilities for enhanced self-awareness and adaptation.
+
+**Key Components:**
+- 🆔 **Identity Graph**: Tracks capabilities, resources, commitments, and performance
+- 🧠 **Global Workspace**: Shared working memory with attention-based priority management
+- 📈 **Predictive Monitor**: Forecast tracking with calibration and anomaly detection
+- 📝 **Self-Explanation**: Generate narratives from execution DAG
+
+**API Endpoints:**
+```bash
+GET  /api/self/state         # Get current agent identity state
+GET  /api/self/forecast      # Get forecasts and predictions  
+GET  /api/self/commitments   # Get active commitments
+POST /api/self/explain       # Generate self-explanation from DAG
+```
+
+**CLI Commands:**
+```bash
+ouroboros self state              # Display current self-model state
+ouroboros self forecast           # Show forecasts and predictions
+ouroboros self commitments        # List active commitments
+ouroboros self explain            # Generate explanations from DAG
+```
+
+**Quick Start:**
+```csharp
+// Initialize self-model components
+var identityGraph = new IdentityGraph(agentId, "MyAgent", capabilityRegistry);
+var globalWorkspace = new GlobalWorkspace();
+var predictiveMonitor = new PredictiveMonitor();
+
+// Track commitments
+var commitment = identityGraph.CreateCommitment(
+    "Process user requests",
+    deadline: DateTime.UtcNow.AddHours(8),
+    priority: 0.8);
+
+// Manage attention in global workspace
+globalWorkspace.AddItem(
+    "High priority user query",
+    WorkspacePriority.High,
+    "UserInterface");
+
+// Create forecasts
+var forecast = predictiveMonitor.CreateForecast(
+    "Response time forecast",
+    "response_time_ms",
+    predictedValue: 250.0,
+    confidence: 0.85,
+    targetTime: DateTime.UtcNow.AddHours(1));
+
+// Detect anomalies
+var anomaly = await predictiveMonitor.DetectAnomalyAsync("cpu_usage", 95.0);
+```
+
+**Documentation:**
+- 💻 [Example Code](src/Ouroboros.Examples/Examples/Phase2SelfModelExample.cs) - Complete working example
+- 🧪 [Tests](src/Ouroboros.Tests/Tests/SelfModel/) - 27 comprehensive unit tests
 
 ## 🔗 Key Features Details
 
