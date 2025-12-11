@@ -1221,7 +1221,24 @@ User: goodbye
                 _dynamicTools = _dynamicTools.WithTool(tool);
             }
 
-            Console.WriteLine($"  [OK] Dynamic Tool Factory ready (4 built-in + {systemTools.Count} system access tools)");
+            // Register perception tools for proactive screen/camera monitoring
+            var perceptionTools = PerceptionTools.CreateAllTools().ToList();
+            foreach (var tool in perceptionTools)
+            {
+                _dynamicTools = _dynamicTools.WithTool(tool);
+            }
+
+            // Subscribe to perception events for proactive responses
+            PerceptionTools.OnScreenChanged += async (msg) =>
+            {
+                await Console.Out.WriteLineAsync($"\n🖥️ [Screen Change Detected] {msg}");
+            };
+            PerceptionTools.OnUserActivity += async (msg) =>
+            {
+                await Console.Out.WriteLineAsync($"\n👤 [User Activity] {msg}");
+            };
+
+            Console.WriteLine($"  [OK] Dynamic Tool Factory ready (4 built-in + {systemTools.Count} system + {perceptionTools.Count} perception tools)");
 
             // Initialize pipeline execution state
             var vectorStore = new TrackedVectorStore();
