@@ -21,6 +21,13 @@ public static class PipelineCommands
 {
     public static async Task RunPipelineAsync(PipelineOptions o)
     {
+        // Voice mode integration
+        if (o.Voice)
+        {
+            await RunPipelineVoiceModeAsync(o);
+            return;
+        }
+
         if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase)) Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
         if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
         ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
@@ -187,5 +194,101 @@ public static class PipelineCommands
         {
             Console.WriteLine($"Pipeline failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Runs the pipeline in voice mode with conversational interaction.
+    /// </summary>
+    private static async Task RunPipelineVoiceModeAsync(PipelineOptions o)
+    {
+        var voiceService = VoiceModeExtensions.CreateVoiceService(
+            voice: true,
+            persona: o.Persona,
+            voiceOnly: o.VoiceOnly,
+            localTts: o.LocalTts,
+            voiceLoop: o.VoiceLoop,
+            model: o.Model,
+            endpoint: o.Endpoint ?? "http://localhost:11434");
+
+        await voiceService.InitializeAsync();
+        voiceService.PrintHeader("PIPELINE DSL");
+
+        // Build context for available tokens
+        var allTokens = SkillCliSteps.GetAllPipelineTokens();
+        var tokenList = allTokens.Keys.Take(10).ToList();
+
+        await voiceService.SayAsync($"Pipeline mode ready! I know {allTokens.Count} DSL tokens. Try something like 'SetPrompt hello | UseDraft' or say 'tokens' to see available steps.");
+
+        // Initial DSL if provided
+        if (!string.IsNullOrWhiteSpace(o.Dsl))
+        {
+            ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
+            await voiceService.SayAsync($"Running your pipeline: {o.Dsl}");
+            await RunPipelineDslAsync(o.Dsl, o.Model, o.Embed, o.Source, o.K, o.Trace, settings, o);
+            await voiceService.SayAsync("Pipeline complete!");
+
+            if (!o.VoiceLoop)
+            {
+                voiceService.Dispose();
+                return;
+            }
+        }
+
+        // Voice loop
+        bool running = true;
+        while (running)
+        {
+            var input = await voiceService.GetInputAsync("\n  Pipeline: ");
+            if (string.IsNullOrWhiteSpace(input)) continue;
+
+            if (IsExitCommand(input))
+            {
+                await voiceService.SayAsync("Goodbye! Your pipelines will be here when you return.");
+                running = false;
+                continue;
+            }
+
+            if (input.Equals("help", StringComparison.OrdinalIgnoreCase))
+            {
+                await voiceService.SayAsync("Enter a pipeline DSL like 'SetPrompt hello | UseDraft | UseOutput'. Use pipe symbols to chain steps. Say 'tokens' to see available steps.");
+                continue;
+            }
+
+            if (input.Equals("tokens", StringComparison.OrdinalIgnoreCase))
+            {
+                var samples = string.Join(", ", tokenList);
+                await voiceService.SayAsync($"Available tokens include: {samples}, and {allTokens.Count - 10} more.");
+                continue;
+            }
+
+            // Check if it looks like a pipeline (contains | or starts with capital letter token)
+            if (input.Contains('|') || allTokens.ContainsKey(input.Split(' ')[0]))
+            {
+                try
+                {
+                    ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
+                    await voiceService.SayAsync($"Executing pipeline...");
+                    await RunPipelineDslAsync(input, o.Model, o.Embed, o.Source, o.K, o.Trace, settings, o);
+                    await voiceService.SayAsync("Pipeline complete!");
+                }
+                catch (Exception ex)
+                {
+                    await voiceService.SayAsync($"Pipeline error: {ex.Message}");
+                }
+            }
+            else
+            {
+                await voiceService.SayAsync("That doesn't look like a pipeline. Try 'SetPrompt hello | UseDraft' or say 'tokens' for help.");
+            }
+        }
+
+        voiceService.Dispose();
+    }
+
+    private static bool IsExitCommand(string input)
+    {
+        var exitWords = new[] { "exit", "quit", "goodbye", "bye", "later", "see you", "q!" };
+        return exitWords.Any(w => input.Equals(w, StringComparison.OrdinalIgnoreCase) ||
+                                  input.StartsWith(w + " ", StringComparison.OrdinalIgnoreCase));
     }
 }

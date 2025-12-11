@@ -75,4 +75,20 @@ public sealed class AskOptions
 
     [Option("endpoint-type", Required = false, HelpText = "Endpoint type: auto|openai|ollama-cloud|litellm|github-models (overrides CHAT_ENDPOINT_TYPE env var)")]
     public string? EndpointType { get; set; }
+
+    // Voice mode options
+    [Option('v', "voice", Required = false, HelpText = "Enable voice mode (speak & listen)", Default = false)]
+    public bool Voice { get; set; }
+
+    [Option("persona", Required = false, HelpText = "Persona for voice mode: Ouroboros, Aria, Echo, Sage, Atlas", Default = "Ouroboros")]
+    public string Persona { get; set; } = "Ouroboros";
+
+    [Option("voice-only", Required = false, HelpText = "Voice-only mode (no text output)", Default = false)]
+    public bool VoiceOnly { get; set; }
+
+    [Option("local-tts", Required = false, HelpText = "Prefer local TTS (Windows SAPI) over cloud", Default = true)]
+    public bool LocalTts { get; set; } = true;
+
+    [Option("voice-loop", Required = false, HelpText = "Continue voice conversation after command", Default = false)]
+    public bool VoiceLoop { get; set; }
 }

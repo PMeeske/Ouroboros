@@ -51,9 +51,10 @@ return;
 
 static async Task ParseAndRunAsync(string[] args)
 {
-    // CommandLineParser verbs
-    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions, AssistOptions, SkillsOptions, NetworkOptions, DagOptions, EnvironmentOptions, AffectOptions, PolicyOptions, MaintenanceOptions>(args)
+    // CommandLineParser verbs - OuroborosOptions is the default (isDefault: true)
+    await Parser.Default.ParseArguments<OuroborosOptions, AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions, AssistOptions, SkillsOptions, NetworkOptions, DagOptions, EnvironmentOptions, AffectOptions, PolicyOptions, MaintenanceOptions>(args)
         .MapResult(
+            (OuroborosOptions o) => RunOuroborosAsync(o),
             (AskOptions o) => RunAskAsync(o),
             (PipelineOptions o) => RunPipelineAsync(o),
             (ListTokensOptions _) => RunListTokensAsync(),
@@ -103,6 +104,8 @@ static Task RunExplainAsync(ExplainOptions o)
     Console.WriteLine(PipelineDsl.Explain(o.Dsl));
     return Task.CompletedTask;
 }
+
+static Task RunOuroborosAsync(OuroborosOptions o) => OuroborosCommands.RunOuroborosAsync(o);
 
 static Task RunPipelineAsync(PipelineOptions o) => PipelineCommands.RunPipelineAsync(o);
 

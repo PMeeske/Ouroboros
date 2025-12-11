@@ -16,6 +16,12 @@ public static class AskCommands
 {
     public static async Task RunAskAsync(AskOptions o)
     {
+        // Voice mode integration
+        if (o.Voice)
+        {
+            await RunAskVoiceModeAsync(o);
+            return;
+        }
         if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase)) Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
         if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
         ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
@@ -307,5 +313,96 @@ public static class AskCommands
         {
             Console.WriteLine($"[INFO] Using local backend: Ollama ({model})");
         }
+    }
+
+    /// <summary>
+    /// Runs the ask command in voice mode with conversational interaction.
+    /// </summary>
+    private static async Task RunAskVoiceModeAsync(AskOptions o)
+    {
+        var voiceService = VoiceModeExtensions.CreateVoiceService(
+            voice: true,
+            persona: o.Persona,
+            voiceOnly: o.VoiceOnly,
+            localTts: o.LocalTts,
+            voiceLoop: o.VoiceLoop,
+            model: o.Model,
+            endpoint: o.Endpoint ?? "http://localhost:11434");
+
+        await voiceService.InitializeAsync();
+        voiceService.PrintHeader("ASK");
+
+        // Build the pipeline once
+        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
+        var pipeline = CreateSemanticCliPipeline(o.Rag, o.Model, o.Embed, o.K, settings, o);
+
+        await voiceService.SayAsync("Hey! I'm ready to answer your questions. What would you like to know?");
+
+        // Initial question if provided
+        if (!string.IsNullOrWhiteSpace(o.Question))
+        {
+            try
+            {
+                var result = await pipeline.Catch().Invoke(o.Question);
+                result.Match(
+                    success => voiceService.SayAsync(success).Wait(),
+                    error => voiceService.SayAsync($"Hmm, I ran into an issue: {error.Message}").Wait());
+            }
+            catch (Exception ex)
+            {
+                await voiceService.SayAsync($"Sorry, something went wrong: {ex.Message}");
+            }
+
+            if (!o.VoiceLoop)
+            {
+                voiceService.Dispose();
+                return;
+            }
+        }
+
+        // Voice loop
+        bool running = true;
+        while (running)
+        {
+            var input = await voiceService.GetInputAsync("\n  You: ");
+            if (string.IsNullOrWhiteSpace(input)) continue;
+
+            // Exit commands
+            if (IsExitCommand(input))
+            {
+                await voiceService.SayAsync("Goodbye! Feel free to ask me anything next time.");
+                running = false;
+                continue;
+            }
+
+            // Help
+            if (input.Equals("help", StringComparison.OrdinalIgnoreCase))
+            {
+                await voiceService.SayAsync("Just ask me any question! I can use RAG for context if you started with the rag flag. Say exit or goodbye to leave.");
+                continue;
+            }
+
+            // Process question
+            try
+            {
+                var result = await pipeline.Catch().Invoke(input);
+                result.Match(
+                    success => voiceService.SayAsync(success).Wait(),
+                    error => voiceService.SayAsync($"I couldn't figure that out: {error.Message}").Wait());
+            }
+            catch (Exception ex)
+            {
+                await voiceService.SayAsync($"Oops, something went wrong: {ex.Message}");
+            }
+        }
+
+        voiceService.Dispose();
+    }
+
+    private static bool IsExitCommand(string input)
+    {
+        var exitWords = new[] { "exit", "quit", "goodbye", "bye", "later", "see you", "q!" };
+        return exitWords.Any(w => input.Equals(w, StringComparison.OrdinalIgnoreCase) ||
+                                  input.StartsWith(w + " ", StringComparison.OrdinalIgnoreCase));
     }
 }
