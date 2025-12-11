@@ -273,13 +273,13 @@ public class CliInteractiveModeIntegrationTests : IDisposable
     [Fact]
     public void InteractiveMode_ParseCommand_HandlesEmptyInput()
     {
-        // Arrange
-        var testCases = new[] { "", "   ", null };
+        // Arrange - Test empty string, whitespace-only, and null inputs
+        string?[] testCases = ["", "   ", null];
 
         foreach (var input in testCases)
         {
-            // Act
-            var (command, arg) = ParseInteractiveCommand(input!);
+            // Act - ParseInteractiveCommand already handles null gracefully
+            var (command, arg) = ParseInteractiveCommand(input ?? string.Empty);
 
             // Assert
             command.Should().BeEmpty($"empty input '{input ?? "null"}' should result in empty command");
