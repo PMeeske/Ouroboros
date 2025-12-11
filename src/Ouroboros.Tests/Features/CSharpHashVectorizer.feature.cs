@@ -39,8 +39,9 @@ namespace LangChainPipeline.Features
         public static async System.Threading.Tasks.Task FeatureSetupAsync()
         {
             testRunner = TechTalk.SpecFlow.TestRunnerManager.GetTestRunnerForAssembly(null, TechTalk.SpecFlow.xUnit.SpecFlowPlugin.XUnitParallelWorkerTracker.Instance.GetWorkerId());
-            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "CSharp Hash Vectorizer", "    As a developer\n    I want to vectorize C# code using hash-based feature extra" +
-                    "ction\n    So that I can perform semantic search and similarity analysis on code", ProgrammingLanguage.CSharp, featureTags);
+            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "CSharp Hash Vectorizer", "    As a developer\r\n    I want to vectorize C# code using hash-based feature extr" +
+                    "action\r\n    So that I can perform semantic search and similarity analysis on cod" +
+                    "e", ProgrammingLanguage.CSharp, featureTags);
             await testRunner.OnFeatureStartAsync(featureInfo);
         }
         
