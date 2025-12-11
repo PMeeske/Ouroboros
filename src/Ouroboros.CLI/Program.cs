@@ -52,7 +52,7 @@ return;
 static async Task ParseAndRunAsync(string[] args)
 {
     // CommandLineParser verbs
-    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions, AssistOptions, SkillsOptions, NetworkOptions, DagOptions, EnvironmentOptions, AffectOptions>(args)
+    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions, AssistOptions, SkillsOptions, NetworkOptions, DagOptions, EnvironmentOptions, AffectOptions, PolicyOptions, MaintenanceOptions>(args)
         .MapResult(
             (AskOptions o) => RunAskAsync(o),
             (PipelineOptions o) => RunPipelineAsync(o),
@@ -67,6 +67,8 @@ static async Task ParseAndRunAsync(string[] args)
             (DagOptions o) => RunDagAsync(o),
             (EnvironmentOptions o) => RunEnvironmentAsync(o),
             (AffectOptions o) => RunAffectAsync(o),
+            (PolicyOptions o) => RunPolicyAsync(o),
+            (MaintenanceOptions o) => RunMaintenanceAsync(o),
             _ => Task.CompletedTask
         );
 }
@@ -123,6 +125,10 @@ static Task RunDagAsync(DagOptions o) => DagCommands.RunDagAsync(o);
 static Task RunEnvironmentAsync(EnvironmentOptions o) => EnvironmentCommands.RunEnvironmentCommandAsync(o);
 
 static Task RunAffectAsync(AffectOptions o) => AffectCommands.RunAffectAsync(o);
+
+static Task RunPolicyAsync(PolicyOptions o) => PolicyCommands.RunPolicyAsync(o);
+
+static Task RunMaintenanceAsync(MaintenanceOptions o) => MaintenanceCommands.RunMaintenanceAsync(o);
 
 
 
