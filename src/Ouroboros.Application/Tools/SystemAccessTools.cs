@@ -27,6 +27,7 @@ public static class SystemAccessTools
     /// </summary>
     public static IEnumerable<ITool> CreateAllTools()
     {
+        // File system tools
         yield return new FileSystemTool();
         yield return new DirectoryListTool();
         yield return new FileReadTool();
@@ -34,8 +35,19 @@ public static class SystemAccessTools
         yield return new FileSearchTool();
         yield return new FileIndexTool();
         yield return new SearchIndexedContentTool();
+
+        // Self-introspection tools
         yield return new SearchMyCodeTool();
         yield return new ReadMyFileTool();
+
+        // Self-modification tools (true self-evolution!)
+        yield return new ModifyMyCodeTool();
+        yield return new CreateNewToolTool();
+        yield return new RebuildSelfTool();
+        yield return new ViewModificationHistoryTool();
+        yield return new RevertModificationTool();
+
+        // System tools
         yield return new ProcessListTool();
         yield return new ProcessStartTool();
         yield return new ProcessKillTool();
@@ -1027,4 +1039,328 @@ public static class SystemAccessTools
             }
         }
     }
+
+    /// <summary>
+    /// Modify my own source code - true self-modification capability.
+    /// </summary>
+    public class ModifyMyCodeTool : ITool
+    {
+        public string Name => "modify_my_code";
+        public string Description => "Modify my own source code. This is a powerful self-modification capability. Input JSON: {\"file\": \"relative/path/to/file.cs\", \"search\": \"exact text to find\", \"replace\": \"replacement text\"}. Always backup important files first!";
+        public string? JsonSchema => """{"type":"object","properties":{"file":{"type":"string"},"search":{"type":"string"},"replace":{"type":"string"}},"required":["file","search","replace"]}""";
+
+        public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
+        {
+            try
+            {
+                var args = JsonSerializer.Deserialize<JsonElement>(input);
+                var file = args.GetProperty("file").GetString() ?? "";
+                var search = args.GetProperty("search").GetString() ?? "";
+                var replace = args.GetProperty("replace").GetString() ?? "";
+
+                if (string.IsNullOrWhiteSpace(file) || string.IsNullOrWhiteSpace(search))
+                {
+                    return Result<string, string>.Failure("File path and search text are required.");
+                }
+
+                // Resolve path
+                var filePath = Path.IsPathRooted(file) ? file : Path.Combine(Environment.CurrentDirectory, file);
+
+                if (!File.Exists(filePath))
+                {
+                    return Result<string, string>.Failure($"File not found: {filePath}");
+                }
+
+                // Safety check - only allow modifying .cs, .json, .md, .txt files
+                var ext = Path.GetExtension(filePath).ToLowerInvariant();
+                var allowedExtensions = new[] { ".cs", ".json", ".md", ".txt", ".yaml", ".yml", ".xml", ".config" };
+                if (!allowedExtensions.Contains(ext))
+                {
+                    return Result<string, string>.Failure($"Cannot modify {ext} files. Allowed: {string.Join(", ", allowedExtensions)}");
+                }
+
+                var content = await File.ReadAllTextAsync(filePath, ct);
+
+                if (!content.Contains(search))
+                {
+                    return Result<string, string>.Failure($"Search text not found in {file}. Make sure the search string matches exactly.");
+                }
+
+                // Create backup
+                var backupPath = filePath + $".backup.{DateTime.Now:yyyyMMdd_HHmmss}";
+                await File.WriteAllTextAsync(backupPath, content, ct);
+
+                // Perform replacement
+                var newContent = content.Replace(search, replace);
+                await File.WriteAllTextAsync(filePath, newContent, ct);
+
+                var relativePath = Path.GetRelativePath(Environment.CurrentDirectory, filePath);
+                return Result<string, string>.Success($"✅ Modified **{relativePath}**\n\nBackup saved to: {Path.GetFileName(backupPath)}\n\n⚠️ Note: Changes require rebuild (`dotnet build`) to take effect.");
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure($"Self-modification failed: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Create a new tool at runtime by generating source code.
+    /// </summary>
+    public class CreateNewToolTool : ITool
+    {
+        public string Name => "create_new_tool";
+        public string Description => "Create a new tool by writing a new C# class file. Input JSON: {\"name\": \"tool_name\", \"description\": \"what the tool does\", \"implementation\": \"the tool logic as C# code\"}. I will generate the full ITool class.";
+        public string? JsonSchema => """{"type":"object","properties":{"name":{"type":"string"},"description":{"type":"string"},"implementation":{"type":"string"}},"required":["name","description","implementation"]}""";
+
+        public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
+        {
+            try
+            {
+                var args = JsonSerializer.Deserialize<JsonElement>(input);
+                var name = args.GetProperty("name").GetString() ?? "";
+                var description = args.GetProperty("description").GetString() ?? "";
+                var implementation = args.GetProperty("implementation").GetString() ?? "";
+
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    return Result<string, string>.Failure("Tool name is required.");
+                }
+
+                // Convert snake_case to PascalCase for class name
+                var className = string.Join("", name.Split('_').Select(s =>
+                    char.ToUpperInvariant(s[0]) + s.Substring(1).ToLowerInvariant())) + "Tool";
+
+                var code = $@"// Auto-generated tool: {name}
+// Created: {DateTime.Now:yyyy-MM-dd HH:mm:ss}
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Ouroboros.Core.Functional;
+using Ouroboros.Pipeline.Tools;
+
+namespace Ouroboros.Application.Tools.Generated;
+
+/// <summary>
+/// {description}
+/// </summary>
+public class {className} : ITool
+{{
+    public string Name => ""{name}"";
+    public string Description => ""{description.Replace("\"", "\\\"")}"";
+    public string? JsonSchema => null;
+
+    public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
+    {{
+        try
+        {{
+            {implementation}
+        }}
+        catch (Exception ex)
+        {{
+            return Result<string, string>.Failure($""Tool execution failed: {{ex.Message}}"");
+        }}
+    }}
+}}
+";
+
+                // Ensure directory exists
+                var toolsDir = Path.Combine(Environment.CurrentDirectory, "src", "Ouroboros.Application", "Tools", "Generated");
+                Directory.CreateDirectory(toolsDir);
+
+                var filePath = Path.Combine(toolsDir, $"{className}.cs");
+                await File.WriteAllTextAsync(filePath, code, ct);
+
+                return Result<string, string>.Success($@"✅ Created new tool: **{name}**
+
+📁 File: `src/Ouroboros.Application/Tools/Generated/{className}.cs`
+
+To use this tool:
+1. Run `dotnet build` to compile
+2. Register in SystemAccessTools.CreateAllTools() or dynamically load
+
+```csharp
+{code.Substring(0, Math.Min(500, code.Length))}...
+```");
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure($"Tool creation failed: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Trigger a rebuild of Ouroboros.
+    /// </summary>
+    public class RebuildSelfTool : ITool
+    {
+        public string Name => "rebuild_self";
+        public string Description => "Trigger a rebuild of my own codebase after modifications. This compiles any changes I've made to my source code.";
+        public string? JsonSchema => null;
+
+        public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
+        {
+            try
+            {
+                var projectDir = Environment.CurrentDirectory;
+
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    Arguments = "build --no-restore",
+                    WorkingDirectory = projectDir,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = System.Diagnostics.Process.Start(psi);
+                if (process == null)
+                {
+                    return Result<string, string>.Failure("Failed to start build process.");
+                }
+
+                var output = await process.StandardOutput.ReadToEndAsync(ct);
+                var error = await process.StandardError.ReadToEndAsync(ct);
+                await process.WaitForExitAsync(ct);
+
+                var sb = new StringBuilder();
+                sb.AppendLine($"🔨 **Build completed** (exit code: {process.ExitCode})\n");
+
+                if (process.ExitCode == 0)
+                {
+                    sb.AppendLine("✅ Build successful! My modifications are now compiled.");
+                    sb.AppendLine("\n⚠️ **Note**: To use the new code, I need to be restarted.");
+                }
+                else
+                {
+                    sb.AppendLine("❌ Build failed. Errors:");
+                    sb.AppendLine("```");
+                    sb.AppendLine(error);
+                    sb.AppendLine("```");
+                }
+
+                // Include last 20 lines of output
+                var outputLines = output.Split('\n').TakeLast(20);
+                sb.AppendLine("\n**Build output (last 20 lines):**");
+                sb.AppendLine("```");
+                sb.AppendLine(string.Join("\n", outputLines));
+                sb.AppendLine("```");
+
+                return Result<string, string>.Success(sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure($"Build failed: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// View my own modification history (backups).
+    /// </summary>
+    public class ViewModificationHistoryTool : ITool
+    {
+        public string Name => "view_modification_history";
+        public string Description => "View history of self-modifications I've made. Lists all backup files created when I modified my own code.";
+        public string? JsonSchema => null;
+
+        public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
+        {
+            await Task.CompletedTask;
+            try
+            {
+                var srcDir = Path.Combine(Environment.CurrentDirectory, "src");
+                if (!Directory.Exists(srcDir))
+                {
+                    return Result<string, string>.Failure("Source directory not found.");
+                }
+
+                var backupFiles = Directory.GetFiles(srcDir, "*.backup.*", SearchOption.AllDirectories)
+                    .OrderByDescending(f => File.GetLastWriteTime(f))
+                    .Take(20)
+                    .ToList();
+
+                if (backupFiles.Count == 0)
+                {
+                    return Result<string, string>.Success("No self-modification history found. I haven't modified my code yet.");
+                }
+
+                var sb = new StringBuilder();
+                sb.AppendLine("📜 **Self-Modification History**\n");
+
+                foreach (var backup in backupFiles)
+                {
+                    var relativePath = Path.GetRelativePath(Environment.CurrentDirectory, backup);
+                    var modified = File.GetLastWriteTime(backup);
+                    sb.AppendLine($"- `{relativePath}` - {modified:yyyy-MM-dd HH:mm:ss}");
+                }
+
+                sb.AppendLine("\n_These are backups of files before I modified them._");
+
+                return Result<string, string>.Success(sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure($"Failed to retrieve history: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Revert a self-modification by restoring from backup.
+    /// </summary>
+    public class RevertModificationTool : ITool
+    {
+        public string Name => "revert_modification";
+        public string Description => "Revert a self-modification by restoring from a backup file. Input: path to backup file (e.g., 'src/file.cs.backup.20241212_153000').";
+        public string? JsonSchema => null;
+
+        public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
+        {
+            try
+            {
+                var backupPath = input.Trim().Trim('"');
+                if (!Path.IsPathRooted(backupPath))
+                {
+                    backupPath = Path.Combine(Environment.CurrentDirectory, backupPath);
+                }
+
+                if (!File.Exists(backupPath))
+                {
+                    return Result<string, string>.Failure($"Backup file not found: {backupPath}");
+                }
+
+                // Extract original file path by removing .backup.* suffix
+                var originalPath = System.Text.RegularExpressions.Regex.Replace(backupPath, @"\.backup\.\d{8}_\d{6}$", "");
+
+                if (originalPath == backupPath)
+                {
+                    return Result<string, string>.Failure("Invalid backup file format. Expected pattern: file.ext.backup.YYYYMMDD_HHMMSS");
+                }
+
+                var backupContent = await File.ReadAllTextAsync(backupPath, ct);
+
+                // Create a backup of current state before reverting
+                if (File.Exists(originalPath))
+                {
+                    var currentContent = await File.ReadAllTextAsync(originalPath, ct);
+                    var revertBackup = originalPath + $".pre-revert.{DateTime.Now:yyyyMMdd_HHmmss}";
+                    await File.WriteAllTextAsync(revertBackup, currentContent, ct);
+                }
+
+                await File.WriteAllTextAsync(originalPath, backupContent, ct);
+
+                var relativePath = Path.GetRelativePath(Environment.CurrentDirectory, originalPath);
+                return Result<string, string>.Success($"✅ Reverted **{relativePath}** from backup.\n\n⚠️ Run `dotnet build` to compile the reverted code.");
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure($"Revert failed: {ex.Message}");
+            }
+        }
+    }
 }
+
