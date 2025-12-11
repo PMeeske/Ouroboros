@@ -19,18 +19,22 @@ public static class Phase5GovernanceExample
     /// </summary>
     public static async Task RunAsync()
     {
-        ConsoleHelper.WriteHeader("Phase 5: Governance, Safety, and Ops Example");
+        Console.WriteLine("=== Phase 5: Governance, Safety, and Ops Example ===\n");
+        Console.WriteLine("This example demonstrates:");
+        Console.WriteLine("1. Policy Engine - declarative governance with quotas and thresholds");
+        Console.WriteLine("2. Maintenance Scheduler - automated operations and anomaly detection");
+        Console.WriteLine("3. Human Approval Workflow - multi-approver gates\n");
 
         await DemonstratePolicyEngine();
         await DemonstrateMaintenanceScheduler();
         await DemonstrateApprovalWorkflow();
 
-        ConsoleHelper.WriteSuccess("Phase 5 governance example completed!");
+        Console.WriteLine("\n✓ Phase 5 governance example completed!");
     }
 
     private static async Task DemonstratePolicyEngine()
     {
-        ConsoleHelper.WriteSubHeader("1. Policy Engine Demo");
+        Console.WriteLine("\n--- 1. Policy Engine Demo ---\n");
 
         // Create a policy engine
         var policyEngine = new PolicyEngine();
@@ -139,7 +143,7 @@ public static class Phase5GovernanceExample
 
     private static async Task DemonstrateMaintenanceScheduler()
     {
-        ConsoleHelper.WriteSubHeader("2. Maintenance Scheduler Demo");
+        Console.WriteLine("\n--- 2. Maintenance Scheduler Demo ---\n");
 
         var scheduler = new MaintenanceScheduler();
 
@@ -238,7 +242,7 @@ public static class Phase5GovernanceExample
 
     private static async Task DemonstrateApprovalWorkflow()
     {
-        ConsoleHelper.WriteSubHeader("3. Human Approval Workflow Demo");
+        Console.WriteLine("\n--- 3. Human Approval Workflow Demo ---\n");
 
         var policyEngine = new PolicyEngine();
 
