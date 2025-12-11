@@ -25,8 +25,8 @@ public sealed class OuroborosOptions
     [Option('m', "model", Required = false, HelpText = "LLM model name", Default = "deepseek-v3.1:671b-cloud")]
     public string Model { get; set; } = "deepseek-v3.1:671b-cloud";
 
-    [Option("endpoint", Required = false, HelpText = "LLM endpoint URL", Default = "https://api.ollama.com")]
-    public string Endpoint { get; set; } = "https://api.ollama.com";
+    [Option("endpoint", Required = false, HelpText = "LLM endpoint URL", Default = "http://localhost:11434")]
+    public string Endpoint { get; set; } = "http://localhost:11434";
 
     [Option("embed-model", Required = false, HelpText = "Embedding model name", Default = "nomic-embed-text")]
     public string EmbedModel { get; set; } = "nomic-embed-text";

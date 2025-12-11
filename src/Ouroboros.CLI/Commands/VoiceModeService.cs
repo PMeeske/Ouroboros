@@ -137,9 +137,10 @@ public sealed class VoiceModeService : IDisposable
         {
             try
             {
-                _localTts = new LocalWindowsTtsService(voiceName: null, rate: 1, volume: 100, useEnhancedProsody: true);
+                // Use Microsoft Zira (female voice) by default
+                _localTts = new LocalWindowsTtsService(voiceName: "Microsoft Zira Desktop", rate: 1, volume: 100, useEnhancedProsody: true);
                 _ttsService = _localTts;
-                Console.WriteLine("  [OK] TTS initialized (Windows SAPI - local/offline)");
+                Console.WriteLine("  [OK] TTS initialized (Windows SAPI - Microsoft Zira)");
             }
             catch (Exception ex)
             {
@@ -314,53 +315,102 @@ public sealed class VoiceModeService : IDisposable
     }
 
     /// <summary>
-    /// Gets input from either voice or keyboard.
+    /// Gets input from either voice or keyboard simultaneously using Rx.
+    /// Uses non-blocking keyboard polling and parallel voice recording.
     /// </summary>
     public async Task<string?> GetInputAsync(string prompt = "You: ", CancellationToken ct = default)
     {
         Console.Write(prompt);
 
-        // If STT available, run parallel input
-        if (_sttService != null && MicrophoneRecorder.IsRecordingAvailable())
+        // If no STT or no mic, keyboard only
+        if (_sttService == null || !MicrophoneRecorder.IsRecordingAvailable())
         {
-            using var inputCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            var keyboardTask = Task.Run(() =>
-            {
-                var line = Console.ReadLine();
-                inputCts.Cancel();
-                return line;
-            }, ct);
-
-            var voiceTask = Task.Run(async () =>
-            {
-                var result = await ListenAsync(inputCts.Token);
-                if (!string.IsNullOrWhiteSpace(result))
-                {
-                    inputCts.Cancel();
-                }
-                return result;
-            }, ct);
-
-            var completedTask = await Task.WhenAny(keyboardTask, voiceTask);
-
-            if (completedTask == keyboardTask)
-            {
-                return await keyboardTask;
-            }
-            else
-            {
-                var voiceResult = await voiceTask;
-                if (!string.IsNullOrWhiteSpace(voiceResult))
-                {
-                    Console.WriteLine(voiceResult); // Echo voice input
-                    return voiceResult;
-                }
-                return await keyboardTask;
-            }
+            return await Task.Run(() => Console.ReadLine(), ct);
         }
 
-        // Fallback to keyboard only
-        return Console.ReadLine();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var inputBuffer = new System.Text.StringBuilder();
+        string? finalResult = null;
+
+        // Keyboard observable - polls Console.KeyAvailable every 50ms
+        var keyboardStream = Observable
+            .Interval(TimeSpan.FromMilliseconds(50))
+            .TakeWhile(_ => !cts.Token.IsCancellationRequested)
+            .Select(_ =>
+            {
+                try
+                {
+                    while (Console.KeyAvailable)
+                    {
+                        var key = Console.ReadKey(intercept: false);
+                        if (key.Key == ConsoleKey.Enter)
+                        {
+                            var result = inputBuffer.ToString();
+                            inputBuffer.Clear();
+                            return result;
+                        }
+                        else if (key.Key == ConsoleKey.Backspace && inputBuffer.Length > 0)
+                        {
+                            inputBuffer.Length--;
+                            Console.Write(" \b");
+                        }
+                        else if (!char.IsControl(key.KeyChar))
+                        {
+                            inputBuffer.Append(key.KeyChar);
+                        }
+                    }
+                }
+                catch (InvalidOperationException)
+                {
+                    // Console redirected - fall through
+                }
+                return (string?)null;
+            })
+            .Where(s => s != null)
+            .Take(1);
+
+        // Voice observable - starts recording after 500ms delay, gives keyboard priority
+        var voiceStream = Observable
+            .Timer(TimeSpan.FromMilliseconds(500))
+            .SelectMany(_ => Observable.FromAsync(async token =>
+            {
+                if (cts.Token.IsCancellationRequested) return null;
+                try
+                {
+                    return await ListenAsync(cts.Token);
+                }
+                catch
+                {
+                    return null;
+                }
+            }))
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Do(s => Console.WriteLine($"\n  🎤 [{s}]"))
+            .Take(1);
+
+        // Race both streams - first valid input wins
+        var resultObservable = keyboardStream
+            .Merge(voiceStream)
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Take(1)
+            .Timeout(TimeSpan.FromMinutes(5))
+            .Finally(() => cts.Cancel());
+
+        try
+        {
+            finalResult = await resultObservable.FirstOrDefaultAsync();
+        }
+        catch (TimeoutException)
+        {
+            finalResult = null;
+        }
+        catch (InvalidOperationException)
+        {
+            // Sequence contains no elements - both streams completed without result
+            finalResult = null;
+        }
+
+        return finalResult;
     }
 
     /// <summary>
