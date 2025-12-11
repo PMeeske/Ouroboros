@@ -9,19 +9,19 @@ namespace Ouroboros.CLI.Options;
 /// <summary>
 /// Command-line options for self-model operations.
 /// </summary>
-[Verb("self", HelpText = "Agent self-model operations (state, forecast, commitments, explain)")]
+[Verb("self", HelpText = "Agent self-model operations (state, forecast, commitments, explain, query, plan)")]
 public sealed class SelfOptions
 {
     /// <summary>
     /// Gets or sets the self-model command to execute.
     /// </summary>
-    [Value(0, Required = true, MetaName = "command", HelpText = "Command: state, forecast, commitments, explain")]
+    [Value(0, Required = true, MetaName = "command", HelpText = "Command: state, forecast, commitments, explain, query, plan")]
     public required string Command { get; set; }
 
     /// <summary>
-    /// Gets or sets optional event ID for explain command.
+    /// Gets or sets optional event ID for explain command, or MeTTa query for query command.
     /// </summary>
-    [Option('e', "event", Required = false, HelpText = "Event ID to explain (for explain command)")]
+    [Option('e', "event", Required = false, HelpText = "Event ID to explain (for explain command) or MeTTa query string (for query command)")]
     public string? EventId { get; set; }
 
     /// <summary>
@@ -41,6 +41,12 @@ public sealed class SelfOptions
     /// </summary>
     [Option('v', "verbose", Required = false, HelpText = "Enable verbose output")]
     public bool Verbose { get; set; }
+
+    /// <summary>
+    /// Gets or sets the interactive mode flag.
+    /// </summary>
+    [Option('i', "interactive", Required = false, HelpText = "Start interactive MeTTa REPL mode (for query and plan commands)")]
+    public bool Interactive { get; set; }
 
     /// <summary>
     /// Gets or sets the output path for saving results.
