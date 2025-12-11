@@ -45,6 +45,16 @@ public class AssistOptions : BaseModelOptions, IVoiceOptions
 
     [Option("stream", Required = false, Default = false, HelpText = "Stream responses as they are generated")]
     public bool Stream { get; set; }
+
+    // Additional voice mode options
+    [Option("voice-only", Required = false, HelpText = "Voice-only mode (no text output)", Default = false)]
+    public bool VoiceOnly { get; set; }
+
+    [Option("local-tts", Required = false, HelpText = "Prefer local TTS (Windows SAPI) over cloud", Default = true)]
+    public bool LocalTts { get; set; } = true;
+
+    [Option("voice-loop", Required = false, HelpText = "Continue voice conversation after command", Default = false)]
+    public bool VoiceLoop { get; set; }
 }
 
 /// <summary>

@@ -48,4 +48,14 @@ public sealed class SkillsOptions : IVoiceOptions
 
     [Option("embed-model", Default = "nomic-embed-text", HelpText = "Embedding model for semantic skill search.")]
     public string EmbedModel { get; set; } = "nomic-embed-text";
+
+    // Additional voice mode options
+    [Option("voice-only", Required = false, HelpText = "Voice-only mode (no text output)", Default = false)]
+    public bool VoiceOnly { get; set; }
+
+    [Option("local-tts", Required = false, HelpText = "Prefer local TTS (Windows SAPI) over cloud", Default = true)]
+    public bool LocalTts { get; set; } = true;
+
+    [Option("voice-loop", Required = false, HelpText = "Continue voice conversation after command", Default = false)]
+    public bool VoiceLoop { get; set; }
 }

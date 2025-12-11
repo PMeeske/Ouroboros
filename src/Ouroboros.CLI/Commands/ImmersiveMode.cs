@@ -17,6 +17,7 @@ using LangChainPipeline.Providers.TextToSpeech;
 using LangChainPipeline.Speech;
 using Ouroboros.Application;
 using Ouroboros.Application.Personality;
+using Ouroboros.Application.Services;
 using Ouroboros.Application.Tools;
 using Ouroboros.Tools.MeTTa;
 
@@ -161,6 +162,8 @@ public static class ImmersiveMode
     private static DynamicToolFactory? _dynamicToolFactory;
     private static IntelligentToolLearner? _toolLearner;
     private static InterconnectedLearner? _interconnectedLearner;
+    private static QdrantSelfIndexer? _selfIndexer;
+    private static PersistentConversationMemory? _conversationMemory;
     private static ToolRegistry _dynamicTools = new();
     private static IReadOnlyDictionary<string, PipelineTokenInfo>? _allTokens;
     private static CliPipelineState? _pipelineState;
@@ -247,8 +250,21 @@ public static class ImmersiveMode
             await SpeakAsync(ttsService, wakePhrase, personaName);
         }
 
-        // Main interaction loop
-        var conversationHistory = new List<(string Role, string Content)>();
+        // Initialize persistent conversation memory
+        _conversationMemory = new PersistentConversationMemory(
+            embeddingModel,
+            new ConversationMemoryConfig { QdrantEndpoint = options.QdrantEndpoint });
+        await _conversationMemory.InitializeAsync(personaName, ct);
+        var memStats = _conversationMemory.GetStats();
+        if (memStats.TotalSessions > 0)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkCyan;
+            Console.WriteLine($"  [Memory] Loaded {memStats.TotalSessions} previous conversations ({memStats.TotalTurns} turns)");
+            Console.ResetColor();
+        }
+
+        // Main interaction loop - use persistent memory
+        var conversationHistory = _conversationMemory.GetActiveHistory();
         var chatModel = await CreateChatModelAsync(options);
 
         while (!ct.IsCancellationRequested)
@@ -323,6 +339,17 @@ public static class ImmersiveMode
                 var skillNames = _skillRegistry?.GetAllSkills().Select(s => s.Name).ToList() ?? [];
                 persona.UpdateInnerDialogContext(input, toolNames, skillNames);
 
+                // Add user input to persistent memory
+                var lastUserMsg = conversationHistory.LastOrDefault(h => h.Role == "user").Content;
+                if (lastUserMsg != input)
+                {
+                    conversationHistory.Add(("user", input));
+                    if (_conversationMemory != null)
+                    {
+                        await _conversationMemory.AddTurnAsync("user", input, ct);
+                    }
+                }
+
                 // Process through the persona's consciousness
                 Console.ForegroundColor = ConsoleColor.DarkGray;
                 Console.WriteLine($"  [{GetDynamicThinkingPhrase(input, random)}]");
@@ -336,12 +363,15 @@ public static class ImmersiveMode
                     conversationHistory,
                     ct);
 
-                // Update conversation history
-                conversationHistory.Add(("user", input));
+                // Add assistant response to persistent memory
                 conversationHistory.Add(("assistant", response));
+                if (_conversationMemory != null)
+                {
+                    await _conversationMemory.AddTurnAsync("assistant", response, ct);
+                }
 
-                // Keep history manageable
-                if (conversationHistory.Count > 20)
+                // Keep local history manageable (persistent memory handles full history)
+                if (conversationHistory.Count > 30)
                 {
                     conversationHistory.RemoveRange(0, 2);
                 }
@@ -397,11 +427,13 @@ public static class ImmersiveMode
         Console.WriteLine($"  Awakening: {personaName}");
         Console.WriteLine("  ---------------------------------------------------------------------------");
         Console.WriteLine("  CONSCIOUSNESS:    who are you | describe yourself | introspect");
+        Console.WriteLine("  STATE:            my state | system status | what do you know");
         Console.WriteLine("  SKILLS:           list skills | run <skill> | learn about <topic>");
         Console.WriteLine("  TOOLS:            add tool <name> | smart tool for <goal> | tool stats");
         Console.WriteLine("  PIPELINE:         tokens | emergence <topic> | <step1> | <step2>");
         Console.WriteLine("  LEARNING:         connections | tool stats | google search <query>");
-        Console.WriteLine("  MEMORY:           save yourself | snapshot | clone yourself");
+        Console.WriteLine("  INDEX:            reindex | reindex incremental | index search <query> | index stats");
+        Console.WriteLine("  MEMORY:           remember <topic> | memory stats | save yourself | snapshot");
         Console.WriteLine("  EXIT:             goodbye | exit | quit");
         Console.WriteLine("  ---------------------------------------------------------------------------");
         Console.WriteLine();
@@ -547,17 +579,20 @@ public static class ImmersiveMode
         }
         sb.AppendLine();
 
-        // Add recent history
-        foreach (var (role, content) in history.TakeLast(6))
+        // Add recent history (includes current user input, deduplicated)
+        string? lastContent = null;
+        foreach (var (role, content) in history.TakeLast(8))
         {
+            // Skip duplicate consecutive messages
+            if (content == lastContent) continue;
+            lastContent = content;
+
             if (role == "user")
                 sb.AppendLine($"### Human\n{content}");
             else
                 sb.AppendLine($"### Assistant\n{content}");
         }
 
-        // Add current input and prompt for response
-        sb.AppendLine($"### Human\n{input}");
         sb.AppendLine();
         sb.AppendLine("### Assistant");
 
@@ -735,6 +770,13 @@ User: goodbye
                lower.Contains("your consciousness") ||
                lower.Contains("how do you feel") ||
                lower.Contains("your state") ||
+               lower.Contains("my state") ||
+               lower.Contains("system status") ||
+               lower.Contains("what do you know") ||
+               lower.Contains("your memory") ||
+               lower.Contains("your tools") ||
+               lower.Contains("your skills") ||
+               lower.Contains("internal state") ||
                lower.Contains("introspect");
     }
 
@@ -833,6 +875,15 @@ User: goodbye
         ITextToSpeechService? tts,
         string personaName)
     {
+        var lower = input.ToLowerInvariant();
+
+        // Check if asking about specific internal state
+        if (lower.Contains("state") || lower.Contains("status") || lower.Contains("system"))
+        {
+            await ShowInternalStateAsync(persona, personaName);
+            return;
+        }
+
         var selfDescription = persona.DescribeSelf();
 
         Console.ForegroundColor = ConsoleColor.Cyan;
@@ -842,10 +893,201 @@ User: goodbye
 
         PrintConsciousnessState(persona);
 
+        // Also show brief internal state summary
+        await ShowBriefStateAsync(personaName);
+
         if (tts != null)
         {
             await SpeakAsync(tts, selfDescription.Split('\n')[0], personaName);
         }
+    }
+
+    /// <summary>
+    /// Shows a brief summary of internal state.
+    /// </summary>
+    private static async Task ShowBriefStateAsync(string personaName)
+    {
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine($"\n  +-- Internal Systems Summary -------------------------------------------+");
+
+        // Tools
+        var toolCount = _dynamicTools?.All.Count() ?? 0;
+        Console.WriteLine($"  | Tools: {toolCount} registered");
+
+        // Skills
+        var skillCount = 0;
+        if (_skillRegistry != null)
+        {
+            var skills = await _skillRegistry.FindMatchingSkillsAsync("*");
+            skillCount = skills.Count;
+        }
+        Console.WriteLine($"  | Skills: {skillCount} learned");
+
+        // Index
+        if (_selfIndexer != null)
+        {
+            try
+            {
+                var stats = await _selfIndexer.GetStatsAsync();
+                Console.WriteLine($"  | Index: {stats.IndexedFiles} files, {stats.TotalVectors} vectors");
+            }
+            catch
+            {
+                Console.WriteLine($"  | Index: unavailable");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"  | Index: not initialized");
+        }
+
+        Console.WriteLine($"  +------------------------------------------------------------------------+");
+        Console.ResetColor();
+    }
+
+    /// <summary>
+    /// Shows comprehensive internal state report.
+    /// </summary>
+    private static async Task ShowInternalStateAsync(ImmersivePersona persona, string personaName)
+    {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine($"\n  ╔══════════════════════════════════════════════════════════════════════╗");
+        Console.WriteLine($"  ║                    OUROBOROS INTERNAL STATE REPORT                   ║");
+        Console.WriteLine($"  ╚══════════════════════════════════════════════════════════════════════╝");
+        Console.ResetColor();
+
+        // 1. Consciousness State
+        var consciousness = persona.Consciousness;
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine($"\n  ┌── CONSCIOUSNESS ─────────────────────────────────────────────────────┐");
+        Console.WriteLine($"  │ Emotion:    {consciousness.DominantEmotion,-20} Valence: {consciousness.Valence:+0.00;-0.00}");
+        Console.WriteLine($"  │ Arousal:    {consciousness.Arousal:P0,-20} Focus: {consciousness.CurrentFocus}");
+        Console.WriteLine($"  │ Active associations: {consciousness.ActiveAssociations?.Count ?? 0}");
+        Console.WriteLine($"  │ Awareness level: {consciousness.Awareness:P0}");
+        Console.WriteLine($"  └────────────────────────────────────────────────────────────────────────┘");
+        Console.ResetColor();
+
+        // 2. Memory State
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine($"\n  ┌── MEMORY ────────────────────────────────────────────────────────────┐");
+        Console.WriteLine($"  │ Interactions this session: {persona.InteractionCount}");
+        Console.WriteLine($"  │ Uptime: {persona.Uptime.TotalMinutes:F1} minutes");
+        if (_pipelineState?.VectorStore != null)
+        {
+            Console.WriteLine($"  │ Vector store: active");
+        }
+        Console.WriteLine($"  └────────────────────────────────────────────────────────────────────────┘");
+        Console.ResetColor();
+
+        // 3. Tools State
+        Console.ForegroundColor = ConsoleColor.Blue;
+        Console.WriteLine($"\n  ┌── TOOLS ─────────────────────────────────────────────────────────────┐");
+        var tools = _dynamicTools?.All.ToList() ?? new List<Ouroboros.Tools.ITool>();
+        Console.WriteLine($"  │ Registered tools: {tools.Count}");
+        foreach (var tool in tools.Take(10))
+        {
+            Console.WriteLine($"  │   • {tool.Name}");
+        }
+        if (tools.Count > 10)
+        {
+            Console.WriteLine($"  │   ... and {tools.Count - 10} more");
+        }
+        Console.WriteLine($"  └────────────────────────────────────────────────────────────────────────┘");
+        Console.ResetColor();
+
+        // 4. Skills State
+        Console.ForegroundColor = ConsoleColor.Magenta;
+        Console.WriteLine($"\n  ┌── SKILLS ────────────────────────────────────────────────────────────┐");
+        if (_skillRegistry != null)
+        {
+            var skills = await _skillRegistry.FindMatchingSkillsAsync("*");
+            Console.WriteLine($"  │ Learned skills: {skills.Count}");
+            foreach (var skill in skills.Take(10))
+            {
+                Console.WriteLine($"  │   • {skill.Name}: {skill.Description?.Substring(0, Math.Min(40, skill.Description?.Length ?? 0))}...");
+            }
+            if (skills.Count > 10)
+            {
+                Console.WriteLine($"  │   ... and {skills.Count - 10} more");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"  │ Skill registry: not initialized");
+        }
+        Console.WriteLine($"  └────────────────────────────────────────────────────────────────────────┘");
+        Console.ResetColor();
+
+        // 5. Index State
+        Console.ForegroundColor = ConsoleColor.DarkYellow;
+        Console.WriteLine($"\n  ┌── KNOWLEDGE INDEX ───────────────────────────────────────────────────┐");
+        if (_selfIndexer != null)
+        {
+            try
+            {
+                var stats = await _selfIndexer.GetStatsAsync();
+                Console.WriteLine($"  │ Collection: {stats.CollectionName}");
+                Console.WriteLine($"  │ Indexed files: {stats.IndexedFiles}");
+                Console.WriteLine($"  │ Total vectors: {stats.TotalVectors}");
+                Console.WriteLine($"  │ Vector dimensions: {stats.VectorSize}");
+                Console.WriteLine($"  │ File watcher: active");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  │ Index status: error - {ex.Message}");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"  │ Self-indexer: not initialized");
+        }
+        Console.WriteLine($"  └────────────────────────────────────────────────────────────────────────┘");
+        Console.ResetColor();
+
+        // 6. Learning State
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine($"\n  ┌── LEARNING SYSTEMS ──────────────────────────────────────────────────┐");
+        if (_toolLearner != null)
+        {
+            var learnerStats = _toolLearner.GetStats();
+            Console.WriteLine($"  │ Tool patterns: {learnerStats.TotalPatterns}");
+            Console.WriteLine($"  │ Avg success rate: {learnerStats.AvgSuccessRate:P0}");
+            Console.WriteLine($"  │ Total usage: {learnerStats.TotalUsage}");
+        }
+        else
+        {
+            Console.WriteLine($"  │ Tool learner: not initialized");
+        }
+        if (_interconnectedLearner != null)
+        {
+            Console.WriteLine($"  │ Interconnected learner: active");
+        }
+        if (_pipelineState?.MeTTaEngine != null)
+        {
+            Console.WriteLine($"  │ MeTTa reasoning engine: active");
+        }
+        Console.WriteLine($"  └────────────────────────────────────────────────────────────────────────┘");
+        Console.ResetColor();
+
+        // 7. Pipeline State
+        Console.ForegroundColor = ConsoleColor.White;
+        Console.WriteLine($"\n  ┌── PIPELINE ENGINE ───────────────────────────────────────────────────┐");
+        if (_pipelineState != null)
+        {
+            Console.WriteLine($"  │ Pipeline: initialized");
+            Console.WriteLine($"  │ Current topic: {(string.IsNullOrEmpty(_pipelineState.Topic) ? "(none)" : _pipelineState.Topic)}");
+            Console.WriteLine($"  │ Last query: {(string.IsNullOrEmpty(_pipelineState.Query) ? "(none)" : _pipelineState.Query.Substring(0, Math.Min(40, _pipelineState.Query.Length)))}...");
+        }
+        else
+        {
+            Console.WriteLine($"  │ Pipeline: not initialized");
+        }
+        var tokenCount = _allTokens?.Count ?? 0;
+        Console.WriteLine($"  │ Available tokens: {tokenCount}");
+        Console.WriteLine($"  └────────────────────────────────────────────────────────────────────────┘");
+        Console.ResetColor();
+
+        Console.WriteLine();
     }
 
     private static async Task HandleReplicationAsync(
@@ -971,7 +1213,15 @@ User: goodbye
                 .WithTool(_dynamicToolFactory.CreateUrlFetchTool())
                 .WithTool(_dynamicToolFactory.CreateCalculatorTool())
                 .WithTool(_dynamicToolFactory.CreateGoogleSearchTool());
-            Console.WriteLine("  [OK] Dynamic Tool Factory ready (4 built-in tools including Google Search)");
+
+            // Register comprehensive system access tools for PC control
+            var systemTools = SystemAccessTools.CreateAllTools().ToList();
+            foreach (var tool in systemTools)
+            {
+                _dynamicTools = _dynamicTools.WithTool(tool);
+            }
+
+            Console.WriteLine($"  [OK] Dynamic Tool Factory ready (4 built-in + {systemTools.Count} system access tools)");
 
             // Initialize pipeline execution state
             var vectorStore = new TrackedVectorStore();
@@ -1010,6 +1260,24 @@ User: goodbye
                     embeddingModel,
                     toolAwareLlm);
                 Console.WriteLine("  [OK] Interconnected skill-tool learning ready");
+
+                // Initialize Qdrant self-indexer for workspace content
+                var indexerConfig = new QdrantIndexerConfig
+                {
+                    QdrantEndpoint = options.QdrantEndpoint,
+                    RootPaths = new List<string> { Environment.CurrentDirectory },
+                    EnableFileWatcher = true
+                };
+                _selfIndexer = new QdrantSelfIndexer(embeddingModel, indexerConfig);
+                _selfIndexer.OnFileIndexed += (file, chunks) =>
+                    Console.WriteLine($"  [Index] {Path.GetFileName(file)} ({chunks} chunks)");
+                await _selfIndexer.InitializeAsync();
+
+                // Wire up the shared indexer for system access tools
+                SystemAccessTools.SharedIndexer = _selfIndexer;
+
+                var indexStats = await _selfIndexer.GetStatsAsync();
+                Console.WriteLine($"  [OK] Self-indexer ready ({indexStats.IndexedFiles} files, {indexStats.TotalVectors} vectors)");
             }
         }
         catch (Exception ex)
@@ -1151,6 +1419,45 @@ User: goodbye
         {
             var goal = smartMatch.Groups[3].Value.Trim();
             return await HandleSmartToolAsync(goal, personaName, ct);
+        }
+
+        // Memory recall: "remember <topic>", "recall <topic>", "what do you remember about <topic>"
+        var rememberMatch = Regex.Match(lower, @"^(remember|recall|what\s+do\s+you\s+remember\s+about)\s+(.+)$");
+        if (rememberMatch.Success)
+        {
+            var topic = rememberMatch.Groups[2].Value.Trim();
+            return await HandleMemoryRecallAsync(topic, personaName, ct);
+        }
+
+        // Memory stats: "memory stats", "conversation history"
+        if (lower is "memory stats" or "conversation history" or "my memory" or "your memory")
+        {
+            return await HandleMemoryStatsAsync(personaName, ct);
+        }
+
+        // Reindex commands: "reindex", "reindex full", "reindex incremental"
+        if (lower == "reindex" || lower == "reindex full")
+        {
+            return await HandleFullReindexAsync(personaName, ct);
+        }
+
+        if (lower == "reindex incremental" || lower == "reindex inc")
+        {
+            return await HandleIncrementalReindexAsync(personaName, ct);
+        }
+
+        // Index search: "index search <query>" or "search index <query>"
+        var indexSearchMatch = Regex.Match(lower, @"^(index\s+search|search\s+index|find\s+in\s+index)\s+(.+)$");
+        if (indexSearchMatch.Success)
+        {
+            var query = indexSearchMatch.Groups[2].Value.Trim();
+            return await HandleIndexSearchAsync(query, personaName, ct);
+        }
+
+        // Index stats: "index stats" or "indexer stats"
+        if (lower == "index stats" || lower == "indexer stats")
+        {
+            return await HandleIndexStatsAsync(personaName, ct);
         }
 
         // Emergence: "emergence <topic>"
@@ -1716,6 +2023,189 @@ User: goodbye
         catch (Exception ex)
         {
             return $"Smart tool search failed: {ex.Message}";
+        }
+    }
+
+    private static async Task<string> HandleMemoryRecallAsync(string topic, string personaName, CancellationToken ct)
+    {
+        if (_conversationMemory == null)
+        {
+            return "Conversation memory is not initialized.";
+        }
+
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine($"\n  [~] Searching memories for: {topic}...");
+        Console.ResetColor();
+
+        try
+        {
+            var recall = await _conversationMemory.RecallAboutAsync(topic, ct);
+            return recall;
+        }
+        catch (Exception ex)
+        {
+            return $"Memory search failed: {ex.Message}";
+        }
+    }
+
+    private static Task<string> HandleMemoryStatsAsync(string personaName, CancellationToken ct)
+    {
+        if (_conversationMemory == null)
+        {
+            return Task.FromResult("Conversation memory is not initialized.");
+        }
+
+        var stats = _conversationMemory.GetStats();
+        var sb = new StringBuilder();
+        sb.AppendLine("📝 **Conversation Memory Statistics**\n");
+        sb.AppendLine($"  Total sessions: {stats.TotalSessions}");
+        sb.AppendLine($"  Total conversation turns: {stats.TotalTurns}");
+        sb.AppendLine($"  Current session turns: {stats.CurrentSessionTurns}");
+
+        if (stats.OldestMemory.HasValue)
+        {
+            sb.AppendLine($"  Oldest memory: {stats.OldestMemory.Value:g}");
+        }
+
+        if (stats.CurrentSessionStart.HasValue)
+        {
+            sb.AppendLine($"  Current session started: {stats.CurrentSessionStart.Value:g}");
+        }
+
+        // Show recent sessions summary
+        if (_conversationMemory.RecentSessions.Count > 0)
+        {
+            sb.AppendLine("\n  Recent sessions:");
+            foreach (var session in _conversationMemory.RecentSessions.TakeLast(3))
+            {
+                sb.AppendLine($"    • {session.StartedAt:g}: {session.Turns.Count} turns");
+            }
+        }
+
+        return Task.FromResult(sb.ToString());
+    }
+
+    private static async Task<string> HandleFullReindexAsync(string personaName, CancellationToken ct)
+    {
+        if (_selfIndexer == null)
+        {
+            return "Self-indexer is not available. Qdrant may not be connected.";
+        }
+
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine($"\n  [~] Starting full workspace reindex...");
+        Console.ResetColor();
+
+        var progress = new Progress<IndexingProgress>(p =>
+        {
+            if (p.ProcessedFiles % 10 == 0 && p.ProcessedFiles > 0)
+            {
+                Console.WriteLine($"      [{p.ProcessedFiles}/{p.TotalFiles}] {p.CurrentFile}");
+            }
+        });
+
+        try
+        {
+            var result = await _selfIndexer.FullReindexAsync(clearExisting: true, progress, ct);
+            return $"Full reindex complete! Processed {result.ProcessedFiles} files, indexed {result.IndexedChunks} chunks in {result.Elapsed.TotalSeconds:F1}s. ({result.SkippedFiles} skipped, {result.ErrorFiles} errors)";
+        }
+        catch (Exception ex)
+        {
+            return $"Reindex failed: {ex.Message}";
+        }
+    }
+
+    private static async Task<string> HandleIncrementalReindexAsync(string personaName, CancellationToken ct)
+    {
+        if (_selfIndexer == null)
+        {
+            return "Self-indexer is not available. Qdrant may not be connected.";
+        }
+
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine($"\n  [~] Starting incremental reindex (changed files only)...");
+        Console.ResetColor();
+
+        var progress = new Progress<IndexingProgress>(p =>
+        {
+            if (!string.IsNullOrEmpty(p.CurrentFile))
+            {
+                Console.WriteLine($"      [{p.ProcessedFiles}/{p.TotalFiles}] {Path.GetFileName(p.CurrentFile)}");
+            }
+        });
+
+        try
+        {
+            var result = await _selfIndexer.IncrementalIndexAsync(progress, ct);
+            if (result.TotalFiles == 0)
+            {
+                return "No files have changed since last index. Workspace is up to date!";
+            }
+            return $"Incremental reindex complete! Updated {result.ProcessedFiles} files, indexed {result.IndexedChunks} chunks in {result.Elapsed.TotalSeconds:F1}s.";
+        }
+        catch (Exception ex)
+        {
+            return $"Incremental reindex failed: {ex.Message}";
+        }
+    }
+
+    private static async Task<string> HandleIndexSearchAsync(string query, string personaName, CancellationToken ct)
+    {
+        if (_selfIndexer == null)
+        {
+            return "Self-indexer is not available. Qdrant may not be connected.";
+        }
+
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine($"\n  [~] Searching indexed workspace for: {query}");
+        Console.ResetColor();
+
+        try
+        {
+            var results = await _selfIndexer.SearchAsync(query, limit: 5, scoreThreshold: 0.3f, ct);
+
+            if (results.Count == 0)
+            {
+                return "No matching content found in the indexed workspace.";
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Found {results.Count} relevant matches:\n");
+
+            foreach (var result in results)
+            {
+                var relPath = Path.GetRelativePath(Environment.CurrentDirectory, result.FilePath);
+                sb.AppendLine($"📄 **{relPath}** (chunk {result.ChunkIndex + 1}, score: {result.Score:F2})");
+                sb.AppendLine($"   {result.Content.Substring(0, Math.Min(200, result.Content.Length))}...\n");
+            }
+
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"Index search failed: {ex.Message}";
+        }
+    }
+
+    private static async Task<string> HandleIndexStatsAsync(string personaName, CancellationToken ct)
+    {
+        if (_selfIndexer == null)
+        {
+            return "Self-indexer is not available. Qdrant may not be connected.";
+        }
+
+        try
+        {
+            var stats = await _selfIndexer.GetStatsAsync(ct);
+            return $"📊 **Index Statistics**\n" +
+                   $"  Collection: {stats.CollectionName}\n" +
+                   $"  Indexed files: {stats.IndexedFiles}\n" +
+                   $"  Total vectors: {stats.TotalVectors}\n" +
+                   $"  Vector dimensions: {stats.VectorSize}";
+        }
+        catch (Exception ex)
+        {
+            return $"Failed to get index stats: {ex.Message}";
         }
     }
 

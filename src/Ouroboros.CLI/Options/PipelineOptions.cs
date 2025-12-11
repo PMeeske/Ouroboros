@@ -98,13 +98,7 @@ public sealed class PipelineOptions : IVoiceOptions
     [Option("endpoint-type", Required = false, HelpText = "Endpoint type: auto|openai|ollama-cloud|litellm|github-models (overrides CHAT_ENDPOINT_TYPE env var)")]
     public string? EndpointType { get; set; }
 
-    // Voice mode options
-    [Option('v', "voice", Required = false, HelpText = "Enable voice mode (speak & listen)", Default = false)]
-    public bool Voice { get; set; }
-
-    [Option("persona", Required = false, HelpText = "Persona for voice mode: Ouroboros, Aria, Echo, Sage, Atlas", Default = "Ouroboros")]
-    public string Persona { get; set; } = "Ouroboros";
-
+    // Additional voice mode options
     [Option("voice-only", Required = false, HelpText = "Voice-only mode (no text output)", Default = false)]
     public bool VoiceOnly { get; set; }
 

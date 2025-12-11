@@ -14,6 +14,9 @@ public interface IVoiceOptions
     string Endpoint { get; set; }
     string EmbedModel { get; set; }
     string QdrantEndpoint { get; set; }
+    bool VoiceOnly { get; set; }
+    bool LocalTts { get; set; }
+    bool VoiceLoop { get; set; }
 }
 
 /// <summary>
@@ -39,4 +42,13 @@ public abstract class VoiceOptionsBase : IVoiceOptions
 
     [Option("qdrant", Required = false, Default = "http://localhost:6334", HelpText = "Qdrant endpoint for skill storage.")]
     public virtual string QdrantEndpoint { get; set; } = "http://localhost:6334";
+
+    [Option("voice-only", Required = false, Default = false, HelpText = "Voice-only mode (no text output).")]
+    public bool VoiceOnly { get; set; }
+
+    [Option("local-tts", Required = false, Default = true, HelpText = "Prefer local TTS (Windows SAPI) over cloud.")]
+    public bool LocalTts { get; set; } = true;
+
+    [Option("voice-loop", Required = false, Default = false, HelpText = "Continue voice conversation after command.")]
+    public bool VoiceLoop { get; set; }
 }
