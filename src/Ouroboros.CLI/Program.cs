@@ -52,7 +52,7 @@ return;
 static async Task ParseAndRunAsync(string[] args)
 {
     // CommandLineParser verbs
-    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions, AssistOptions, SkillsOptions, NetworkOptions, DagOptions, EnvironmentOptions>(args)
+    await Parser.Default.ParseArguments<AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions, AssistOptions, SkillsOptions, NetworkOptions, DagOptions, EnvironmentOptions, AffectOptions>(args)
         .MapResult(
             (AskOptions o) => RunAskAsync(o),
             (PipelineOptions o) => RunPipelineAsync(o),
@@ -66,6 +66,7 @@ static async Task ParseAndRunAsync(string[] args)
             (NetworkOptions o) => RunNetworkAsync(o),
             (DagOptions o) => RunDagAsync(o),
             (EnvironmentOptions o) => RunEnvironmentAsync(o),
+            (AffectOptions o) => RunAffectAsync(o),
             _ => Task.CompletedTask
         );
 }
@@ -120,6 +121,8 @@ static Task RunNetworkAsync(NetworkOptions o) => NetworkCommands.RunAsync(o);
 static Task RunDagAsync(DagOptions o) => DagCommands.RunDagAsync(o);
 
 static Task RunEnvironmentAsync(EnvironmentOptions o) => EnvironmentCommands.RunEnvironmentCommandAsync(o);
+
+static Task RunAffectAsync(AffectOptions o) => AffectCommands.RunAffectAsync(o);
 
 
 
