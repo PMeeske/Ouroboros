@@ -299,6 +299,7 @@ public class DagMeTTaIntegrationTests
 
     /// <summary>
     /// Test MeTTa engine that records facts and allows setting query responses.
+    /// This is a test-only implementation for unit testing without requiring an actual MeTTa installation.
     /// </summary>
     private sealed class TestMeTTaEngine : IMeTTaEngine
     {

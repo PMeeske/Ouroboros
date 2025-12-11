@@ -261,36 +261,61 @@ public static class MeTTaInteractiveMode
                 break;
             }
 
-            // Parse action
+            // Parse action parts
             string[] actionParts = actionInput.Trim().Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
-            if (actionParts.Length < 2)
+            if (actionParts.Length < 1)
             {
                 Console.WriteLine("Invalid action format. Try: <type> <operation> [<target>]");
                 continue;
             }
 
-            PlanAction? action = actionParts[0].ToLowerInvariant() switch
+            // Parse action with validation
+            PlanAction? action = null;
+            
+            switch (actionParts[0].ToLowerInvariant())
             {
-                "filesystem" or "fs" => new FileSystemAction(
-                    actionParts[1],
-                    actionParts.Length > 2 ? actionParts[2] : null),
-                "network" or "net" => new NetworkAction(
-                    actionParts[1],
-                    actionParts.Length > 2 ? actionParts[2] : null),
-                "tool" => new ToolAction(
-                    actionParts[1],
-                    actionParts.Length > 2 ? actionParts[2] : null),
-                _ => null
-            };
+                case "filesystem" or "fs":
+                    if (actionParts.Length < 2)
+                    {
+                        Console.WriteLine("FileSystem action requires operation (e.g., 'filesystem read')");
+                        continue;
+                    }
+                    action = new FileSystemAction(
+                        actionParts[1],
+                        actionParts.Length > 2 ? actionParts[2] : null);
+                    break;
+                    
+                case "network" or "net":
+                    if (actionParts.Length < 2)
+                    {
+                        Console.WriteLine("Network action requires operation (e.g., 'network get')");
+                        continue;
+                    }
+                    action = new NetworkAction(
+                        actionParts[1],
+                        actionParts.Length > 2 ? actionParts[2] : null);
+                    break;
+                    
+                case "tool":
+                    if (actionParts.Length < 2)
+                    {
+                        Console.WriteLine("Tool action requires name (e.g., 'tool search_tool')");
+                        continue;
+                    }
+                    action = new ToolAction(
+                        actionParts[1],
+                        actionParts.Length > 2 ? actionParts[2] : null);
+                    break;
+                    
+                default:
+                    Console.WriteLine("Unknown action type. Use: filesystem, network, or tool");
+                    continue;
+            }
 
             if (action != null)
             {
                 actions.Add(action);
                 Console.WriteLine($"✓ Added: {action.ToMeTTaAtom()}");
-            }
-            else
-            {
-                Console.WriteLine("Unknown action type. Use: filesystem, network, or tool");
             }
         }
 
