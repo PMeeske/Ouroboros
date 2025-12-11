@@ -351,7 +351,15 @@ public sealed class PriorityModulator : IPriorityModulator
                 Agent Confidence: {state.Confidence:P0}
                 """;
 
-            return await _llm.GenerateTextAsync(prompt, ct);
+            string? response = await _llm.GenerateTextAsync(prompt, ct);
+
+            // Handle null or empty LLM response with fallback
+            if (string.IsNullOrWhiteSpace(response))
+            {
+                return $"Threat: {threatLevel:P0}, Opportunity: {opportunityScore:P0}";
+            }
+
+            return response;
         }
         catch
         {

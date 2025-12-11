@@ -316,6 +316,12 @@ public sealed class ValenceMonitor : IValenceMonitor
 
     private static void ApplyHanningWindow(double[] data, int length)
     {
+        // Guard against division by zero when length <= 1
+        if (length <= 1)
+        {
+            return;
+        }
+
         for (int i = 0; i < length; i++)
         {
             double window = 0.5 * (1 - Math.Cos(2 * Math.PI * i / (length - 1)));
@@ -336,8 +342,9 @@ public sealed class ValenceMonitor : IValenceMonitor
             data[i] = new Complex(input[i], 0);
         }
 
-        // Bit-reverse permutation
-        int bits = (int)Math.Log2(n);
+        // Bit-reverse permutation - n is guaranteed to be power of 2 from NextPowerOfTwo
+        // Using ILogB for precise integer log2 calculation
+        int bits = n > 1 ? (int)Math.Ceiling(Math.Log2(n)) : 0;
         for (int i = 0; i < n; i++)
         {
             int j = ReverseBits(i, bits);

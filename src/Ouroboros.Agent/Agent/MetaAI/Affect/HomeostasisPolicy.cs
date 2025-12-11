@@ -98,9 +98,16 @@ public sealed class HomeostasisPolicy : IHomeostasisPolicy
             
             PolicyViolation? violation = null;
 
+            // Calculate range for proper severity computation
+            // Works correctly for signals like valence (-1 to 1) and others (0 to 1)
+            double range = Math.Abs(rule.UpperBound - rule.LowerBound);
+            double safeRange = Math.Max(0.01, range);
+
             if (observedValue < rule.LowerBound)
             {
-                double severity = (rule.LowerBound - observedValue) / Math.Max(0.01, rule.LowerBound);
+                // Severity is the absolute deviation divided by the valid range
+                double deviation = Math.Abs(rule.LowerBound - observedValue);
+                double severity = deviation / safeRange;
                 violation = new PolicyViolation(
                     rule.Id,
                     rule.Name,
@@ -115,7 +122,9 @@ public sealed class HomeostasisPolicy : IHomeostasisPolicy
             }
             else if (observedValue > rule.UpperBound)
             {
-                double severity = (observedValue - rule.UpperBound) / Math.Max(0.01, 1.0 - rule.UpperBound);
+                // Severity is the absolute deviation divided by the valid range
+                double deviation = Math.Abs(observedValue - rule.UpperBound);
+                double severity = deviation / safeRange;
                 violation = new PolicyViolation(
                     rule.Id,
                     rule.Name,
