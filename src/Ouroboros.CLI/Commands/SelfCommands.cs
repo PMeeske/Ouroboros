@@ -2,7 +2,11 @@ using System.Text;
 using System.Text.Json;
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Agent.MetaAI.SelfModel;
+using LangChainPipeline.Pipeline.Branches;
+using LangChainPipeline.Pipeline.Planning;
+using LangChainPipeline.Pipeline.Verification;
 using Ouroboros.CLI.Options;
+using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.CLI.Commands;
 
@@ -15,6 +19,7 @@ public static class SelfCommands
     private static IIdentityGraph? _identityGraph;
     private static IPredictiveMonitor? _predictiveMonitor;
     private static IGlobalWorkspace? _globalWorkspace;
+    private static IMeTTaEngine? _mettaEngine;
 
     /// <summary>
     /// Initializes self-model components.
@@ -43,13 +48,23 @@ public static class SelfCommands
             }
 
             string command = options.Command.ToLowerInvariant();
+            
+            // Check if interactive mode is requested
+            if (options.Interactive && (command == "query" || command == "plan"))
+            {
+                await MeTTaInteractiveMode.RunInteractiveAsync(_mettaEngine);
+                return;
+            }
+            
             await (command switch
             {
                 "state" => ExecuteStateAsync(options),
                 "forecast" => ExecuteForecastAsync(options),
                 "commitments" => ExecuteCommitmentsAsync(options),
                 "explain" => ExecuteExplainAsync(options),
-                _ => PrintErrorAsync($"Unknown self command: {options.Command}. Valid commands: state, forecast, commitments, explain")
+                "query" => ExecuteMeTTaQueryAsync(options),
+                "plan" => ExecutePlanCheckAsync(options),
+                _ => PrintErrorAsync($"Unknown self command: {options.Command}. Valid commands: state, forecast, commitments, explain, query, plan")
             });
         }
         catch (Exception ex)
@@ -292,6 +307,149 @@ public static class SelfCommands
             Console.WriteLine($"   Status: {commitment.Status} | Progress: {commitment.ProgressPercent:F0}% | Deadline: {commitment.Deadline:yyyy-MM-dd HH:mm} {urgency}");
             Console.WriteLine();
         }
+    }
+
+    private static async Task ExecuteMeTTaQueryAsync(SelfOptions options)
+    {
+        Console.WriteLine("=== MeTTa Symbolic Query ===\n");
+
+        // Initialize MeTTa engine if not already done
+        if (_mettaEngine == null)
+        {
+            _mettaEngine = new SubprocessMeTTaEngine();
+        }
+
+        // Get query from EventId field (repurposed for query string)
+        if (string.IsNullOrWhiteSpace(options.EventId))
+        {
+            PrintError("Query required. Use --event 'your-metta-query' to specify the query.");
+            return;
+        }
+
+        string query = options.EventId;
+        Console.WriteLine($"Executing query: {query}\n");
+
+        Result<string, string> result = await _mettaEngine.ExecuteQueryAsync(query, CancellationToken.None);
+
+        result.Match(
+            success =>
+            {
+                Console.WriteLine("Query Result:");
+                if (options.OutputFormat.Equals("json", StringComparison.OrdinalIgnoreCase))
+                {
+                    var output = new { Query = query, Result = success };
+                    string json = JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true });
+                    Console.WriteLine(json);
+
+                    if (!string.IsNullOrWhiteSpace(options.OutputPath))
+                    {
+                        File.WriteAllText(options.OutputPath, json);
+                        Console.WriteLine($"\n✓ Saved to: {options.OutputPath}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine(success);
+                }
+                return Unit.Value;
+            },
+            error =>
+            {
+                PrintError($"Query failed: {error}");
+                return Unit.Value;
+            });
+    }
+
+    private static async Task ExecutePlanCheckAsync(SelfOptions options)
+    {
+        Console.WriteLine("=== Plan Constraint Check ===\n");
+
+        // Initialize MeTTa engine if not already done
+        if (_mettaEngine == null)
+        {
+            _mettaEngine = new SubprocessMeTTaEngine();
+        }
+
+        // Create a plan selector
+        var selector = new SymbolicPlanSelector(_mettaEngine);
+        await selector.InitializeAsync();
+
+        // Create sample plans for demonstration
+        // In practice, these would come from user input or a planner
+        var plan1 = new LangChainPipeline.Pipeline.Verification.Plan("Read configuration files")
+            .WithAction(new FileSystemAction("read", "/etc/config.yaml"));
+
+        var plan2 = new LangChainPipeline.Pipeline.Verification.Plan("Update system files")
+            .WithAction(new FileSystemAction("write", "/etc/config.yaml"));
+
+        var plan3 = new LangChainPipeline.Pipeline.Verification.Plan("Query API endpoint")
+            .WithAction(new NetworkAction("get", "https://api.example.com"));
+
+        var candidates = new[] { plan1, plan2, plan3 };
+
+        Console.WriteLine("Checking plans against ReadOnly context:\n");
+
+        foreach (var plan in candidates)
+        {
+            Console.WriteLine($"Plan: {plan.Description}");
+            
+            Result<string, string> explanationResult = await selector.ExplainPlanAsync(
+                plan,
+                SafeContext.ReadOnly,
+                CancellationToken.None);
+
+            explanationResult.Match(
+                explanation =>
+                {
+                    Console.WriteLine($"  ✓ {explanation}");
+                    return Unit.Value;
+                },
+                error =>
+                {
+                    Console.WriteLine($"  ✗ Error: {error}");
+                    return Unit.Value;
+                });
+
+            Console.WriteLine();
+        }
+
+        // Select best plan
+        Console.WriteLine("Selecting best plan...");
+        Result<PlanCandidate, string> selectionResult = await selector.SelectBestPlanAsync(
+            candidates,
+            SafeContext.ReadOnly,
+            CancellationToken.None);
+
+        selectionResult.Match(
+            selected =>
+            {
+                Console.WriteLine($"\n✓ Selected: {selected.Plan.Description}");
+                Console.WriteLine($"  Score: {selected.Score:F2}");
+                Console.WriteLine($"  Explanation: {selected.Explanation}");
+
+                if (options.OutputFormat.Equals("json", StringComparison.OrdinalIgnoreCase))
+                {
+                    var output = new
+                    {
+                        SelectedPlan = selected.Plan.Description,
+                        Score = selected.Score,
+                        Explanation = selected.Explanation
+                    };
+                    string json = JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true });
+                    
+                    if (!string.IsNullOrWhiteSpace(options.OutputPath))
+                    {
+                        File.WriteAllText(options.OutputPath, json);
+                        Console.WriteLine($"\n✓ Saved to: {options.OutputPath}");
+                    }
+                }
+                return Unit.Value;
+            },
+            error =>
+            {
+                PrintError($"Plan selection failed: {error}");
+                return Unit.Value;
+            });
     }
 
     private static void InitializeDefaults()

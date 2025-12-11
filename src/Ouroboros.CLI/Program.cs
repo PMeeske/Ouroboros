@@ -122,6 +122,8 @@ static Task RunNetworkAsync(NetworkOptions o) => NetworkCommands.RunAsync(o);
 
 static Task RunDagAsync(DagOptions o) => DagCommands.RunDagAsync(o);
 
+static Task RunSelfAsync(SelfOptions o) => SelfCommands.RunSelfAsync(o);
+
 static Task RunEnvironmentAsync(EnvironmentOptions o) => EnvironmentCommands.RunEnvironmentCommandAsync(o);
 
 static Task RunAffectAsync(AffectOptions o) => AffectCommands.RunAffectAsync(o);
