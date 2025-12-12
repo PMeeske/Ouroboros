@@ -718,10 +718,8 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
     }
 }
 
-/// <summary>
-/// Global helper to check if voice mode is requested and run it for any command.
-/// Returns true if voice mode was activated (caller should return), false otherwise.
-/// </summary>
+// Global helper to check if voice mode is requested and run it for any command.
+// Returns true if voice mode was activated (caller should return), false otherwise.
 static async Task<bool> TryRunVoiceModeAsync(IVoiceOptions voiceOptions)
 {
     if (!voiceOptions.Voice)
