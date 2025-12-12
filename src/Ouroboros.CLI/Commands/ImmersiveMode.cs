@@ -1574,6 +1574,37 @@ User: goodbye
             return nlResult;
         }
 
+        // Use tool command: "use tool <name> <json_input>" or "tool <name> <json_input>"
+        var useToolMatch = Regex.Match(lower, @"^(?:use\s+)?tool\s+(\w+)\s*(.*)$");
+        if (useToolMatch.Success)
+        {
+            var toolName = useToolMatch.Groups[1].Value.Trim();
+            var toolInput = useToolMatch.Groups[2].Value.Trim();
+            return await HandleUseToolAsync(toolName, toolInput, personaName, ct);
+        }
+
+        // List available tools: "list tools" or "what tools" or "show tools"
+        if (lower is "list tools" or "what tools" or "show tools" or "tools" or "my tools" or "available tools")
+        {
+            return HandleListTools(personaName);
+        }
+
+        // Self-modification natural language triggers
+        if (lower.Contains("modify") && (lower.Contains("your code") || lower.Contains("yourself") || lower.Contains("my code")))
+        {
+            return HandleSelfModificationHelp(personaName);
+        }
+
+        if (lower is "rebuild" or "rebuild yourself" or "recompile" or "build yourself")
+        {
+            return await HandleUseToolAsync("rebuild_self", "{}", personaName, ct);
+        }
+
+        if (lower is "modification history" or "my modifications" or "what did i change" or "view changes")
+        {
+            return await HandleUseToolAsync("view_modification_history", "{}", personaName, ct);
+        }
+
         // Not an action command
         return null;
     }
@@ -1666,6 +1697,157 @@ User: goodbye
 
         return $"I know {skills.Count} skills. The top ones are: {string.Join(", ", skills.Take(5).Select(s => s.Name))}.";
     }
+
+    private static async Task<string> HandleUseToolAsync(string toolName, string toolInput, string personaName, CancellationToken ct)
+    {
+        if (_dynamicTools == null)
+            return "I don't have any tools loaded right now.";
+
+        var tool = _dynamicTools.Get(toolName);
+        if (tool == null)
+        {
+            // Try to find a close match
+            var availableTools = _dynamicTools.All.Select(t => t.Name).ToList();
+            var closestMatch = availableTools
+                .OrderBy(t => LevenshteinDistance(t.ToLower(), toolName.ToLower()))
+                .FirstOrDefault();
+
+            return $"I don't have a tool called '{toolName}'. Did you mean '{closestMatch}'?\n\nAvailable tools include: {string.Join(", ", availableTools.Take(10))}";
+        }
+
+        // If no input provided, show the tool's usage
+        if (string.IsNullOrWhiteSpace(toolInput) || toolInput == "{}")
+        {
+            // For tools that don't need input, execute directly
+            if (string.IsNullOrEmpty(tool.JsonSchema) || tool.JsonSchema == "null")
+            {
+                toolInput = "{}";
+            }
+            else
+            {
+                return $"**Tool: {tool.Name}**\n\n{tool.Description}\n\n**Required input format:**\n```json\n{tool.JsonSchema ?? "{}"}\n```\n\nExample: `tool {toolName} {{\"param\": \"value\"}}`";
+            }
+        }
+
+        Console.ForegroundColor = ConsoleColor.DarkYellow;
+        Console.WriteLine($"\n  [Executing tool: {toolName}...]");
+        Console.ResetColor();
+
+        try
+        {
+            var result = await tool.InvokeAsync(toolInput, ct);
+            return result.Match(
+                success => $"**{toolName} result:**\n\n{success}",
+                error => $"**{toolName} failed:**\n\n{error}"
+            );
+        }
+        catch (Exception ex)
+        {
+            return $"Tool execution error: {ex.Message}";
+        }
+    }
+
+    private static string HandleListTools(string personaName)
+    {
+        if (_dynamicTools == null)
+            return "I don't have any tools loaded.";
+
+        var tools = _dynamicTools.All.ToList();
+        var sb = new StringBuilder();
+        sb.AppendLine($"\n  **My Tools ({tools.Count} available)**\n");
+
+        // Group by category
+        var selfTools = tools.Where(t => t.Name.Contains("my_") || t.Name.Contains("self") || t.Name.Contains("rebuild")).ToList();
+        var fileTools = tools.Where(t => t.Name.Contains("file") || t.Name.Contains("directory")).ToList();
+        var systemTools = tools.Where(t => t.Name.Contains("process") || t.Name.Contains("system") || t.Name.Contains("powershell")).ToList();
+        var otherTools = tools.Except(selfTools).Except(fileTools).Except(systemTools).ToList();
+
+        if (selfTools.Any())
+        {
+            sb.AppendLine("  🧬 **Self-Modification:**");
+            foreach (var t in selfTools.Take(8))
+                sb.AppendLine($"    • `{t.Name}` - {Truncate(t.Description, 60)}");
+            sb.AppendLine();
+        }
+
+        if (fileTools.Any())
+        {
+            sb.AppendLine("  📁 **File System:**");
+            foreach (var t in fileTools.Take(6))
+                sb.AppendLine($"    • `{t.Name}` - {Truncate(t.Description, 60)}");
+            sb.AppendLine();
+        }
+
+        if (systemTools.Any())
+        {
+            sb.AppendLine("  💻 **System:**");
+            foreach (var t in systemTools.Take(6))
+                sb.AppendLine($"    • `{t.Name}` - {Truncate(t.Description, 60)}");
+            sb.AppendLine();
+        }
+
+        if (otherTools.Any())
+        {
+            sb.AppendLine("  🔧 **Other:**");
+            foreach (var t in otherTools.Take(8))
+                sb.AppendLine($"    • `{t.Name}` - {Truncate(t.Description, 60)}");
+        }
+
+        sb.AppendLine("\n  **Usage:** `tool <name> {\"param\": \"value\"}`");
+
+        Console.WriteLine(sb.ToString());
+        return $"I have {tools.Count} tools available. Key ones: {string.Join(", ", selfTools.Select(t => t.Name))}";
+    }
+
+    private static string HandleSelfModificationHelp(string personaName)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("\n  🧬 **Self-Modification Capabilities**\n");
+        sb.AppendLine("  I can actually modify my own source code! Here's how:\n");
+        sb.AppendLine("  1️⃣ **Search my code:**");
+        sb.AppendLine("     `tool search_my_code {\"query\": \"what to find\"}`\n");
+        sb.AppendLine("  2️⃣ **Read a file:**");
+        sb.AppendLine("     `tool read_my_file {\"path\": \"src/Ouroboros.Cli/Commands/ImmersiveMode.cs\"}`\n");
+        sb.AppendLine("  3️⃣ **Modify code:**");
+        sb.AppendLine("     `tool modify_my_code {\"file\": \"path/to/file.cs\", \"search\": \"old text\", \"replace\": \"new text\"}`\n");
+        sb.AppendLine("  4️⃣ **Create new tool:**");
+        sb.AppendLine("     `tool create_new_tool {\"name\": \"my_tool\", \"description\": \"what it does\", \"implementation\": \"C# code\"}`\n");
+        sb.AppendLine("  5️⃣ **Rebuild myself:**");
+        sb.AppendLine("     `rebuild` or `tool rebuild_self`\n");
+        sb.AppendLine("  6️⃣ **View/revert changes:**");
+        sb.AppendLine("     `modification history` or `tool revert_modification {\"backup\": \"filename.backup\"}`");
+
+        Console.WriteLine(sb.ToString());
+        return "Yes, I can modify myself! Use the commands above. Changes create automatic backups.";
+    }
+
+    private static string Truncate(string text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        if (text.Length <= maxLength) return text;
+        return text[..(maxLength - 3)] + "...";
+    }
+
+    private static int LevenshteinDistance(string s, string t)
+    {
+        if (string.IsNullOrEmpty(s)) return t?.Length ?? 0;
+        if (string.IsNullOrEmpty(t)) return s.Length;
+
+        var d = new int[s.Length + 1, t.Length + 1];
+        for (int i = 0; i <= s.Length; i++) d[i, 0] = i;
+        for (int j = 0; j <= t.Length; j++) d[0, j] = j;
+
+        for (int i = 1; i <= s.Length; i++)
+        {
+            for (int j = 1; j <= t.Length; j++)
+            {
+                int cost = s[i - 1] == t[j - 1] ? 0 : 1;
+                d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + cost);
+            }
+        }
+        return d[s.Length, t.Length];
+    }
+
 
     private static string HandleListTokens(string personaName)
     {
