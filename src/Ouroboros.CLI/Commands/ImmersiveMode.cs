@@ -164,6 +164,7 @@ public static class ImmersiveMode
     private static InterconnectedLearner? _interconnectedLearner;
     private static QdrantSelfIndexer? _selfIndexer;
     private static PersistentConversationMemory? _conversationMemory;
+    private static AutonomousMind? _autonomousMind;
     private static ToolRegistry _dynamicTools = new();
     private static IReadOnlyDictionary<string, PipelineTokenInfo>? _allTokens;
     private static CliPipelineState? _pipelineState;
@@ -262,6 +263,57 @@ public static class ImmersiveMode
             Console.WriteLine($"  [Memory] Loaded {memStats.TotalSessions} previous conversations ({memStats.TotalTurns} turns)");
             Console.ResetColor();
         }
+
+        // Initialize autonomous mind for background thinking and curiosity
+        _autonomousMind = new AutonomousMind();
+        _autonomousMind.ThinkFunction = async (prompt, token) =>
+        {
+            var thinkModel = await CreateChatModelAsync(options);
+            return await thinkModel.GenerateTextAsync(prompt, token);
+        };
+        _autonomousMind.SearchFunction = async (query, token) =>
+        {
+            var searchTool = _dynamicToolFactory?.CreateWebSearchTool("duckduckgo");
+            if (searchTool != null)
+            {
+                var result = await searchTool.InvokeAsync(query, token);
+                return result.Match(s => s, e => "");
+            }
+            return "";
+        };
+        _autonomousMind.ExecuteToolFunction = async (toolName, input, token) =>
+        {
+            var tool = _dynamicTools.Get(toolName);
+            if (tool != null)
+            {
+                var result = await tool.InvokeAsync(input, token);
+                return result.Match(s => s, e => $"Error: {e}");
+            }
+            return "Tool not found";
+        };
+
+        // Wire up autonomous mind events
+        _autonomousMind.OnProactiveMessage += (msg) =>
+        {
+            Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine($"[Autonomous] {msg}");
+            Console.ResetColor();
+            Console.Write($"\n{personaName}> ");
+        };
+        _autonomousMind.OnThought += (thought) =>
+        {
+            // Log thoughts to debug
+            System.Diagnostics.Debug.WriteLine($"[Thought] {thought.Type}: {thought.Content}");
+        };
+        _autonomousMind.OnDiscovery += (query, fact) =>
+        {
+            System.Diagnostics.Debug.WriteLine($"[Discovery] {query}: {fact}");
+        };
+
+        // Start autonomous thinking
+        _autonomousMind.Start();
+        Console.WriteLine("  [OK] Autonomous mind active (thinking, exploring, learning in background)");
 
         // Main interaction loop - use persistent memory
         var conversationHistory = _conversationMemory.GetActiveHistory();
@@ -434,6 +486,7 @@ public static class ImmersiveMode
         Console.WriteLine("  LEARNING:         connections | tool stats | google search <query>");
         Console.WriteLine("  INDEX:            reindex | reindex incremental | index search <query> | index stats");
         Console.WriteLine("  MEMORY:           remember <topic> | memory stats | save yourself | snapshot");
+        Console.WriteLine("  MIND:             mind state | think about <topic> | start mind | stop mind | interests");
         Console.WriteLine("  EXIT:             goodbye | exit | quit");
         Console.WriteLine("  ---------------------------------------------------------------------------");
         Console.WriteLine();
@@ -1452,6 +1505,49 @@ User: goodbye
             return await HandleMemoryStatsAsync(personaName, ct);
         }
 
+        // Autonomous mind commands
+        if (lower is "mind state" or "mind status" or "autonomous state" or "your mind")
+        {
+            return HandleMindState();
+        }
+
+        if (lower is "start mind" or "start thinking" or "wake up mind" or "enable autonomous")
+        {
+            _autonomousMind?.Start();
+            return "🧠 Autonomous mind activated. I'll think, explore the internet, and learn in the background.";
+        }
+
+        if (lower is "stop mind" or "stop thinking" or "pause mind" or "disable autonomous")
+        {
+            if (_autonomousMind != null)
+            {
+                await _autonomousMind.StopAsync();
+            }
+            return "💤 Autonomous mind paused. I'll only respond when you talk to me.";
+        }
+
+        if (lower is "interests" or "my interests" or "what are you curious about")
+        {
+            return HandleShowInterests();
+        }
+
+        var thinkAboutMatch = Regex.Match(lower, @"^(think about|explore|be curious about|research)\s+(.+)$");
+        if (thinkAboutMatch.Success)
+        {
+            var topic = thinkAboutMatch.Groups[2].Value.Trim();
+            _autonomousMind?.InjectTopic(topic);
+            _autonomousMind?.AddInterest(topic);
+            return $"🤔 I'll explore '{topic}' in the background and let you know if I find something interesting!";
+        }
+
+        var addInterestMatch = Regex.Match(lower, @"^(add interest|interest in|i'm interested in)\s+(.+)$");
+        if (addInterestMatch.Success)
+        {
+            var interest = addInterestMatch.Groups[2].Value.Trim();
+            _autonomousMind?.AddInterest(interest);
+            return $"📌 Added '{interest}' to my interests. I'll keep an eye out for related information!";
+        }
+
         // Reindex commands: "reindex", "reindex full", "reindex incremental"
         if (lower == "reindex" || lower == "reindex full")
         {
@@ -2100,6 +2196,44 @@ User: goodbye
         }
 
         return Task.FromResult(sb.ToString());
+    }
+
+    private static string HandleMindState()
+    {
+        if (_autonomousMind == null)
+        {
+            return "Autonomous mind is not initialized.";
+        }
+
+        return _autonomousMind.GetMindState();
+    }
+
+    private static string HandleShowInterests()
+    {
+        if (_autonomousMind == null)
+        {
+            return "Autonomous mind is not initialized.";
+        }
+
+        var facts = _autonomousMind.LearnedFacts;
+        var sb = new StringBuilder();
+        sb.AppendLine("🎯 **My Current Interests & Discoveries**\n");
+
+        if (facts.Count == 0)
+        {
+            sb.AppendLine("I haven't discovered anything yet. Let me explore the internet!");
+            sb.AppendLine("\n💡 Try: `think about AI` or `add interest quantum computing`");
+        }
+        else
+        {
+            sb.AppendLine("**Recent Discoveries:**");
+            foreach (var fact in facts.TakeLast(10))
+            {
+                sb.AppendLine($"  💡 {fact}");
+            }
+        }
+
+        return sb.ToString();
     }
 
     private static async Task<string> HandleFullReindexAsync(string personaName, CancellationToken ct)
