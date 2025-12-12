@@ -171,7 +171,7 @@ public sealed class LocalWhisperService : ISpeechToTextService
     private static string FindWhisperExecutable()
     {
         // First check for Python whisper via our wrapper script
-        string scriptPath = FindWhisperPythonScript();
+        string? scriptPath = FindWhisperPythonScript();
         if (!string.IsNullOrEmpty(scriptPath) && IsPythonWhisperAvailable())
         {
             return "python"; // Use python to run script

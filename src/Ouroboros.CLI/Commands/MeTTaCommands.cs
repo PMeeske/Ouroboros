@@ -272,7 +272,7 @@ public static class MeTTaCommands
             await voiceService.SayAsync($"Planning for: {goal}");
 
             var planResult = await orchestrator.PlanAsync(goal);
-            var plan = planResult.Match(
+            var plan = planResult.Match<MeTTaPlan?>(
                 success => success,
                 error =>
                 {

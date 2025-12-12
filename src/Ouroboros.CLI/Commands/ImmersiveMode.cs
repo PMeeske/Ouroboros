@@ -347,7 +347,7 @@ public static class ImmersiveMode
                 // Check for exit commands
                 if (IsExitCommand(input))
                 {
-                    var goodbye = await GenerateGoodbyeAsync(persona, chatModel, conversationHistory);
+                    var goodbye = await GenerateGoodbyeAsync(persona, chatModel);
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine($"\n  {personaName}: {goodbye}");
                     Console.ResetColor();
@@ -743,8 +743,7 @@ public static class ImmersiveMode
 
     private static async Task<string> GenerateGoodbyeAsync(
         ImmersivePersona persona,
-        IChatCompletionModel chatModel,
-        List<(string Role, string Content)> history)
+        IChatCompletionModel chatModel)
     {
         var prompt = $@"{persona.GenerateSystemPrompt()}
 
@@ -757,41 +756,6 @@ User: goodbye
 
         var result = await chatModel.GenerateTextAsync(prompt, CancellationToken.None);
         return result.Trim();
-    }
-
-    private static string BuildPromptFromMessages(List<(string Role, string Content)> messages)
-    {
-        var sb = new StringBuilder();
-        string personaName = "Ouroboros";
-
-        foreach (var (role, content) in messages)
-        {
-            if (role == "system")
-            {
-                sb.AppendLine(content);
-                sb.AppendLine();
-                // Extract persona name from system prompt if present
-                if (content.Contains("named "))
-                {
-                    var nameMatch = System.Text.RegularExpressions.Regex.Match(content, @"named (\w+)");
-                    if (nameMatch.Success) personaName = nameMatch.Groups[1].Value;
-                }
-            }
-            else if (role == "user")
-            {
-                sb.AppendLine($"User: {content}");
-            }
-            else if (role == "assistant")
-            {
-                sb.AppendLine($"{personaName}: {content}");
-            }
-        }
-
-        // Add the response prompt to make it clear the model should respond
-        sb.AppendLine();
-        sb.AppendLine($"{personaName}:");
-
-        return sb.ToString();
     }
 
     private static bool IsExitCommand(string input)
@@ -1280,6 +1244,15 @@ User: goodbye
             {
                 _dynamicTools = _dynamicTools.WithTool(tool);
             }
+
+            // Initialize vision service for AI-powered visual understanding
+            var visionService = new VisionService(new VisionConfig
+            {
+                OllamaEndpoint = options.Endpoint,
+                OllamaVisionModel = "llava:latest", // Default vision model
+            });
+            PerceptionTools.VisionService = visionService;
+            Console.WriteLine("  [OK] Vision service initialized (AI-powered visual understanding)");
 
             // Subscribe to perception events for proactive responses
             PerceptionTools.OnScreenChanged += async (msg) =>

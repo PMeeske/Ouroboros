@@ -357,6 +357,10 @@ public sealed class OuroborosAgent : IAsyncDisposable
                 persona.CoreIdentity);
 
             Console.WriteLine($"  ✓ Personality: {persona.Name} ({_personality.Traits.Count} traits)");
+
+            // Initialize valence monitor for affective state tracking
+            _valenceMonitor = new ValenceMonitor();
+            Console.WriteLine("  ✓ Valence monitor initialized");
         }
         catch (Exception ex)
         {
