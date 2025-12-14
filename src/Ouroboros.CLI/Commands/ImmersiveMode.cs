@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
+using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Domain;
 using LangChainPipeline.Network;
@@ -177,6 +178,11 @@ public static class ImmersiveMode
     private static string? _lastPipelineContext; // Track recent pipeline interactions
     private static (string Topic, string Description)? _pendingToolRequest; // Track pending tool creation context
 
+    // Multi-model orchestration and divide-and-conquer
+    private static OrchestratedChatModel? _orchestratedModel;
+    private static DivideAndConquerOrchestrator? _divideAndConquer;
+    private static IChatCompletionModel? _baseModel;
+
     /// <summary>
     /// Runs the fully immersive persona experience.
     /// </summary>
@@ -314,15 +320,15 @@ public static class ImmersiveMode
         _autonomousMind = new AutonomousMind();
         _autonomousMind.ThinkFunction = async (prompt, token) =>
         {
-            var thinkModel = await CreateChatModelAsync(options);
-            return await thinkModel.GenerateTextAsync(prompt, token);
+            // Use orchestration for autonomous thinking - routes to appropriate model
+            return await GenerateWithOrchestrationAsync(prompt, useDivideAndConquer: false, token);
         };
 
         // Wire up pipeline-based reasoning function for monadic thinking
         _autonomousMind.PipelineThinkFunction = async (prompt, existingBranch, token) =>
         {
-            var thinkModel = await CreateChatModelAsync(options);
-            var response = await thinkModel.GenerateTextAsync(prompt, token);
+            // Use orchestration for pipeline-based thinking
+            var response = await GenerateWithOrchestrationAsync(prompt, useDivideAndConquer: false, token);
 
             // If we have a branch, add the thought as a reasoning event
             if (existingBranch != null)
@@ -817,6 +823,8 @@ public static class ImmersiveMode
         string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
         string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
 
+        IChatCompletionModel baseModel;
+
         if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey))
         {
             if (!_llmMessagePrinted)
@@ -824,16 +832,177 @@ public static class ImmersiveMode
                 Console.WriteLine($"  [~] Using remote LLM: {options.Model} via {endpoint}");
                 _llmMessagePrinted = true;
             }
-            return new HttpOpenAiCompatibleChatModel(endpoint, apiKey, options.Model, settings);
+            baseModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey, options.Model, settings);
+        }
+        else
+        {
+            // Use Ollama cloud model with the configured endpoint
+            if (!_llmMessagePrinted)
+            {
+                Console.WriteLine($"  [~] Using Ollama LLM: {options.Model} via {options.Endpoint}");
+                _llmMessagePrinted = true;
+            }
+            baseModel = new OllamaCloudChatModel(options.Endpoint, "ollama", options.Model, settings);
         }
 
-        // Use Ollama cloud model with the configured endpoint
-        if (!_llmMessagePrinted)
+        // Store base model for orchestration
+        _baseModel = baseModel;
+
+        // Initialize multi-model orchestration if specialized models are configured via environment
+        await InitializeImmersiveOrchestrationAsync(options, settings, endpoint, apiKey);
+
+        // Return orchestrated model if available, otherwise base model
+        return _orchestratedModel ?? baseModel;
+    }
+
+    /// <summary>
+    /// Initializes multi-model orchestration for immersive mode.
+    /// Uses environment variables for specialized model configuration.
+    /// </summary>
+    private static async Task InitializeImmersiveOrchestrationAsync(
+        IVoiceOptions options,
+        ChatRuntimeSettings settings,
+        string? endpoint,
+        string? apiKey)
+    {
+        try
         {
-            Console.WriteLine($"  [~] Using Ollama LLM: {options.Model} via {options.Endpoint}");
-            _llmMessagePrinted = true;
+            // Check for specialized models via environment variables
+            var coderModel = Environment.GetEnvironmentVariable("IMMERSIVE_CODER_MODEL");
+            var reasonModel = Environment.GetEnvironmentVariable("IMMERSIVE_REASON_MODEL");
+            var summarizeModel = Environment.GetEnvironmentVariable("IMMERSIVE_SUMMARIZE_MODEL");
+
+            bool hasSpecializedModels = !string.IsNullOrEmpty(coderModel)
+                                     || !string.IsNullOrEmpty(reasonModel)
+                                     || !string.IsNullOrEmpty(summarizeModel);
+
+            if (!hasSpecializedModels || _baseModel == null)
+            {
+                return; // No orchestration needed
+            }
+
+            bool isLocal = string.IsNullOrEmpty(endpoint) || endpoint.Contains("localhost");
+
+            // Helper to create a model
+            IChatCompletionModel CreateModel(string modelName)
+            {
+                if (isLocal)
+                    return new OllamaCloudChatModel(options.Endpoint, "ollama", modelName, settings);
+                return new HttpOpenAiCompatibleChatModel(endpoint!, apiKey ?? "", modelName, settings);
+            }
+
+            // Build orchestrated chat model
+            var builder = new OrchestratorBuilder(_dynamicTools, "general")
+                .WithModel(
+                    "general",
+                    _baseModel,
+                    ModelType.General,
+                    new[] { "conversation", "general-purpose", "versatile", "chat", "emotion", "consciousness" },
+                    maxTokens: 1024,
+                    avgLatencyMs: 1000);
+
+            if (!string.IsNullOrEmpty(coderModel))
+            {
+                builder.WithModel(
+                    "coder",
+                    CreateModel(coderModel),
+                    ModelType.Code,
+                    new[] { "code", "programming", "debugging", "tool", "script" },
+                    maxTokens: 2048,
+                    avgLatencyMs: 1500);
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"  [~] Multi-model: Coder = {coderModel}");
+                Console.ResetColor();
+            }
+
+            if (!string.IsNullOrEmpty(reasonModel))
+            {
+                builder.WithModel(
+                    "reasoner",
+                    CreateModel(reasonModel),
+                    ModelType.Reasoning,
+                    new[] { "reasoning", "analysis", "introspection", "planning", "philosophy" },
+                    maxTokens: 2048,
+                    avgLatencyMs: 1200);
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"  [~] Multi-model: Reasoner = {reasonModel}");
+                Console.ResetColor();
+            }
+
+            if (!string.IsNullOrEmpty(summarizeModel))
+            {
+                builder.WithModel(
+                    "summarizer",
+                    CreateModel(summarizeModel),
+                    ModelType.General,
+                    new[] { "summarize", "condense", "memory", "recall" },
+                    maxTokens: 1024,
+                    avgLatencyMs: 800);
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"  [~] Multi-model: Summarizer = {summarizeModel}");
+                Console.ResetColor();
+            }
+
+            builder.WithMetricTracking(true);
+            _orchestratedModel = builder.Build();
+
+            // Initialize divide-and-conquer for large input processing
+            var dcConfig = new DivideAndConquerConfig(
+                MaxParallelism: Math.Max(2, Environment.ProcessorCount / 2),
+                ChunkSize: 800,
+                MergeResults: true,
+                MergeSeparator: "\n\n");
+            _divideAndConquer = new DivideAndConquerOrchestrator(_orchestratedModel, dcConfig);
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("  [OK] Multi-model orchestration enabled for immersive mode");
+            Console.ResetColor();
+
+            await Task.CompletedTask;
         }
-        return new OllamaCloudChatModel(options.Endpoint, "ollama", options.Model, settings);
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"  [!] Multi-model orchestration unavailable: {ex.Message}");
+            Console.ResetColor();
+        }
+    }
+
+    /// <summary>
+    /// Generates text using orchestration if available, with optional divide-and-conquer for large inputs.
+    /// </summary>
+    private static async Task<string> GenerateWithOrchestrationAsync(
+        string prompt,
+        bool useDivideAndConquer = false,
+        CancellationToken ct = default)
+    {
+        // For large inputs, use divide-and-conquer
+        if (useDivideAndConquer && _divideAndConquer != null && prompt.Length > 2000)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine($"  [D&C] Processing large input ({prompt.Length} chars)...");
+            Console.ResetColor();
+
+            var chunks = _divideAndConquer.DivideIntoChunks(prompt);
+            var result = await _divideAndConquer.ExecuteAsync("Process:", chunks, ct);
+
+            return result.Match(
+                success => success,
+                error =>
+                {
+                    // Fall back to direct generation
+                    return (_orchestratedModel ?? _baseModel)?.GenerateTextAsync(prompt, ct).Result ?? "";
+                });
+        }
+
+        // Use orchestrated model if available
+        if (_orchestratedModel != null)
+        {
+            return await _orchestratedModel.GenerateTextAsync(prompt, ct);
+        }
+
+        // Fall back to base model
+        return await (_baseModel?.GenerateTextAsync(prompt, ct) ?? Task.FromResult(""));
     }
 
     private static async Task<string> GenerateImmersiveResponseAsync(

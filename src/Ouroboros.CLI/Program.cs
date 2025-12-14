@@ -9,6 +9,7 @@ using CommandLine;
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
+using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Diagnostics; // added
 using LangChainPipeline.Options;
@@ -555,12 +556,32 @@ static async Task RunSkillsAsync(SkillsOptions o)
     // Interactive REPL mode
     if (o.Interactive)
     {
+        // Use unified OuroborosAgent for interactive mode when voice or full features are needed
         if (o.Voice)
         {
-            await ImmersiveMode.RunImmersiveAsync(o);
+            // Convert SkillsOptions to OuroborosConfig for unified experience
+            var ouroborosConfig = new OuroborosConfig(
+                Persona: o.Persona ?? "Ouroboros",
+                Model: o.Model ?? "deepseek-v3.1:671b-cloud",
+                Endpoint: o.Endpoint ?? "http://localhost:11434",
+                EmbedModel: o.EmbedModel ?? "nomic-embed-text",
+                EmbedEndpoint: o.Endpoint ?? "http://localhost:11434",
+                QdrantEndpoint: o.QdrantEndpoint ?? "http://localhost:6334",
+                Voice: true,
+                EnableSkills: true,
+                EnableMeTTa: true,
+                EnableTools: true,
+                EnablePersonality: true,
+                EnableMind: true,
+                EnableConsciousness: true);
+
+            await using var ouroborosAgent = new OuroborosAgent(ouroborosConfig);
+            await ouroborosAgent.InitializeAsync();
+            await ouroborosAgent.RunAsync();
         }
         else
         {
+            // Fallback to lightweight skills-only mode for non-voice
             await RunInteractiveSkillsMode(registry, MakeStep);
         }
     }
@@ -586,11 +607,88 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
     Console.WriteLine("|    fetch <query>      - Learn skill from arXiv research                |");
     Console.WriteLine("|    suggest <goal>     - Find matching skills                           |");
     Console.WriteLine("|    run <skill>        - Execute a skill (simulated)                    |");
+    Console.WriteLine("|    orchestrate <task> - Execute task with multi-model orchestration    |");
+    Console.WriteLine("|    process <text>     - Process large text with divide-and-conquer     |");
     Console.WriteLine("|    help / ?           - Show this help                                 |");
     Console.WriteLine("|    exit / quit        - Exit interactive mode                          |");
     Console.WriteLine("+------------------------------------------------------------------------+\n");
 
     using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+
+    // Initialize orchestration if models are available
+    OrchestratedChatModel? orchestratedModel = null;
+    DivideAndConquerOrchestrator? divideAndConquer = null;
+    IChatCompletionModel? baseModel = null;
+
+    try
+    {
+        // Check for orchestration configuration via environment variables
+        var endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT") ?? "http://localhost:11434";
+        var apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
+        var model = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "llama3";
+        var coderModel = Environment.GetEnvironmentVariable("SKILLS_CODER_MODEL");
+        var reasonModel = Environment.GetEnvironmentVariable("SKILLS_REASON_MODEL");
+
+        var settings = new ChatRuntimeSettings(0.7, 1024, 60, false);
+        bool isLocal = endpoint.Contains("localhost") || endpoint.Contains("127.0.0.1");
+
+        // Create base model
+        baseModel = isLocal
+            ? (IChatCompletionModel)new OllamaCloudChatModel(endpoint, "ollama", model, settings)
+            : new HttpOpenAiCompatibleChatModel(endpoint, apiKey ?? "", model, settings);
+
+        // Set up orchestration if specialized models are configured
+        if (!string.IsNullOrEmpty(coderModel) || !string.IsNullOrEmpty(reasonModel))
+        {
+            var tools = ToolRegistry.CreateDefault();
+            var builder = new OrchestratorBuilder(tools, "general")
+                .WithModel("general", baseModel, ModelType.General,
+                    new[] { "general", "conversation", "skills" }, 1024, 1000);
+
+            if (!string.IsNullOrEmpty(coderModel))
+            {
+                IChatCompletionModel coder = isLocal
+                    ? new OllamaCloudChatModel(endpoint, "ollama", coderModel, settings)
+                    : new HttpOpenAiCompatibleChatModel(endpoint, apiKey ?? "", coderModel, settings);
+                builder.WithModel("coder", coder, ModelType.Code,
+                    new[] { "code", "programming", "script", "tool" }, 2048, 1500);
+            }
+
+            if (!string.IsNullOrEmpty(reasonModel))
+            {
+                IChatCompletionModel reasoner = isLocal
+                    ? new OllamaCloudChatModel(endpoint, "ollama", reasonModel, settings)
+                    : new HttpOpenAiCompatibleChatModel(endpoint, apiKey ?? "", reasonModel, settings);
+                builder.WithModel("reasoner", reasoner, ModelType.Reasoning,
+                    new[] { "reasoning", "analysis", "planning", "strategy" }, 2048, 1200);
+            }
+
+            builder.WithMetricTracking(true);
+            orchestratedModel = builder.Build();
+
+            // Initialize divide-and-conquer
+            var dcConfig = new DivideAndConquerConfig(
+                MaxParallelism: Math.Max(2, Environment.ProcessorCount / 2),
+                ChunkSize: 800,
+                MergeResults: true);
+            divideAndConquer = new DivideAndConquerOrchestrator(orchestratedModel, dcConfig);
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("  [+] Multi-model orchestration enabled");
+            Console.ResetColor();
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            if (!string.IsNullOrEmpty(coderModel)) Console.WriteLine($"      Coder: {coderModel}");
+            if (!string.IsNullOrEmpty(reasonModel)) Console.WriteLine($"      Reasoner: {reasonModel}");
+            Console.ResetColor();
+            Console.WriteLine();
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine($"  [!] Orchestration unavailable: {ex.Message}\n");
+        Console.ResetColor();
+    }
 
     while (true)
     {
@@ -736,6 +834,84 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
                 }
                 break;
 
+            case "orchestrate":
+            case "orch":
+                if (string.IsNullOrWhiteSpace(arg))
+                {
+                    Console.WriteLine("  [!] Usage: orchestrate <task>\n");
+                    break;
+                }
+                if (orchestratedModel != null)
+                {
+                    Console.WriteLine($"\n  [>] Processing with multi-model orchestration...");
+                    try
+                    {
+                        var result = await orchestratedModel.GenerateTextAsync(arg);
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"\n  [Result]:\n{result}\n");
+                        Console.ResetColor();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"  [!] Orchestration error: {ex.Message}\n");
+                    }
+                }
+                else if (baseModel != null)
+                {
+                    Console.WriteLine("  [~] Orchestration not configured, using single model...");
+                    var result = await baseModel.GenerateTextAsync(arg);
+                    Console.WriteLine($"\n  [Result]:\n{result}\n");
+                }
+                else
+                {
+                    Console.WriteLine("  [!] No LLM available. Set CHAT_ENDPOINT and CHAT_MODEL.\n");
+                }
+                break;
+
+            case "process":
+            case "dc":
+                if (string.IsNullOrWhiteSpace(arg))
+                {
+                    Console.WriteLine("  [!] Usage: process <large_text_or_file_path>\n");
+                    break;
+                }
+                if (divideAndConquer != null)
+                {
+                    Console.WriteLine($"\n  [>] Processing with divide-and-conquer...");
+                    try
+                    {
+                        // Check if arg is a file path
+                        string textToProcess = arg;
+                        if (File.Exists(arg))
+                        {
+                            textToProcess = await File.ReadAllTextAsync(arg);
+                            Console.WriteLine($"  [~] Loaded {textToProcess.Length} chars from file");
+                        }
+
+                        var chunks = divideAndConquer.DivideIntoChunks(textToProcess);
+                        Console.WriteLine($"  [~] Split into {chunks.Count} chunks, processing in parallel...");
+
+                        var result = await divideAndConquer.ExecuteAsync("Summarize and extract key points:", chunks);
+                        result.Match(
+                            success =>
+                            {
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                Console.WriteLine($"\n  [Result]:\n{success}\n");
+                                Console.ResetColor();
+                            },
+                            error => Console.WriteLine($"  [!] Error: {error}\n"));
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"  [!] Processing error: {ex.Message}\n");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("  [!] Divide-and-conquer not available. Set SKILLS_CODER_MODEL or SKILLS_REASON_MODEL.\n");
+                }
+                break;
+
             default:
                 Console.WriteLine($"  [!] Unknown command: {cmd}. Type 'help' for commands.\n");
                 break;
@@ -750,7 +926,26 @@ static async Task<bool> TryRunVoiceModeAsync(IVoiceOptions voiceOptions)
     if (!voiceOptions.Voice)
         return false;
 
-    // Use the new fully immersive persona mode
-    await ImmersiveMode.RunImmersiveAsync(voiceOptions);
+    // Use unified OuroborosAgent for voice mode (it includes ImmersivePersona consciousness)
+    var config = new OuroborosConfig(
+        Persona: voiceOptions.Persona ?? "Ouroboros",
+        Model: voiceOptions.Model ?? "deepseek-v3.1:671b-cloud",
+        Endpoint: voiceOptions.Endpoint ?? "http://localhost:11434",
+        EmbedModel: voiceOptions.EmbedModel ?? "nomic-embed-text",
+        EmbedEndpoint: "http://localhost:11434",
+        QdrantEndpoint: voiceOptions.QdrantEndpoint ?? "http://localhost:6334",
+        Voice: true,
+        VoiceOnly: voiceOptions.VoiceOnly,
+        LocalTts: voiceOptions.LocalTts,
+        EnableSkills: true,
+        EnableMeTTa: true,
+        EnableTools: true,
+        EnablePersonality: true,
+        EnableMind: true,
+        EnableConsciousness: true);
+
+    await using var agent = new OuroborosAgent(config);
+    await agent.InitializeAsync();
+    await agent.RunAsync();
     return true;
 }

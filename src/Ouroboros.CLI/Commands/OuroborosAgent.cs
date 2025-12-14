@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
+using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Network;
 using LangChainPipeline.Agent.MetaAI.Affect;
@@ -53,6 +54,7 @@ public sealed record OuroborosConfig(
     bool EnablePersonality = true,
     bool EnableMind = true,
     bool EnableBrowser = true,
+    bool EnableConsciousness = true,
     // Additional config
     int ThinkingIntervalSeconds = 30,
     int AgentMaxSteps = 10,
@@ -96,6 +98,16 @@ public sealed class OuroborosAgent : IAsyncDisposable
     private MetaAIPlannerOrchestrator? _orchestrator;
     private AutonomousMind? _autonomousMind;
     private PlaywrightMcpTool? _playwrightTool;
+
+    // Consciousness simulation via ImmersivePersona
+    private ImmersivePersona? _immersivePersona;
+
+    // Multi-model orchestration - routes tasks to specialized models
+    private OrchestratedChatModel? _orchestratedModel;
+    private DivideAndConquerOrchestrator? _divideAndConquer;
+    private IChatCompletionModel? _coderModel;
+    private IChatCompletionModel? _reasonModel;
+    private IChatCompletionModel? _summarizeModel;
 
     // Network State Tracking - reifies Step execution into MerkleDag
     private NetworkStateTracker? _networkTracker;
@@ -234,6 +246,16 @@ public sealed class OuroborosAgent : IAsyncDisposable
             Console.WriteLine("  ○ AutonomousMind: Disabled (use --no-mind=false to enable)");
         }
 
+        // Initialize ImmersivePersona consciousness simulation (conditionally)
+        if (_config.EnableConsciousness)
+        {
+            await InitializeConsciousnessAsync();
+        }
+        else
+        {
+            Console.WriteLine("  ○ Consciousness: Disabled (use --no-consciousness=false to enable)");
+        }
+
         // Initialize persistent thought memory (always enabled for continuity)
         await InitializePersistentThoughtsAsync();
 
@@ -269,6 +291,8 @@ public sealed class OuroborosAgent : IAsyncDisposable
         Console.WriteLine($"    {(_config.EnablePersonality ? "✓" : "○")} Personality  - Affective states & traits");
         Console.ForegroundColor = _config.EnableMind ? ConsoleColor.Green : ConsoleColor.DarkGray;
         Console.WriteLine($"    {(_config.EnableMind ? "✓" : "○")} Mind         - Autonomous inner thoughts");
+        Console.ForegroundColor = _config.EnableConsciousness ? ConsoleColor.Green : ConsoleColor.DarkGray;
+        Console.WriteLine($"    {(_config.EnableConsciousness ? "✓" : "○")} Consciousness- ImmersivePersona self-awareness");
         Console.ResetColor();
         Console.WriteLine();
     }
@@ -332,10 +356,125 @@ public sealed class OuroborosAgent : IAsyncDisposable
             {
                 Console.WriteLine($"  ⚠ LLM: {_config.Model} (limited mode)");
             }
+
+            // Initialize multi-model orchestration if specialized models are configured
+            await InitializeMultiModelOrchestrationAsync(settings, endpoint, apiKey, isLocalOllama);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"  ⚠ LLM unavailable: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Initializes multi-model orchestration for routing tasks to specialized models.
+    /// </summary>
+    private async Task InitializeMultiModelOrchestrationAsync(
+        ChatRuntimeSettings settings,
+        string endpoint,
+        string? apiKey,
+        bool isLocalOllama)
+    {
+        try
+        {
+            // Check if any specialized models are configured
+            bool hasSpecializedModels = !string.IsNullOrEmpty(_config.CoderModel)
+                                     || !string.IsNullOrEmpty(_config.ReasonModel)
+                                     || !string.IsNullOrEmpty(_config.SummarizeModel);
+
+            if (!hasSpecializedModels || _chatModel == null)
+            {
+                Console.WriteLine("  ○ Multi-model: Using single model (specify --coder-model, --reason-model, or --summarize-model to enable)");
+                return;
+            }
+
+            // Helper to create a model
+            IChatCompletionModel CreateModel(string modelName)
+            {
+                if (isLocalOllama)
+                    return new OllamaCloudChatModel(endpoint, "ollama", modelName, settings);
+                return new HttpOpenAiCompatibleChatModel(endpoint, apiKey ?? "", modelName, settings);
+            }
+
+            // Create specialized models
+            if (!string.IsNullOrEmpty(_config.CoderModel))
+                _coderModel = CreateModel(_config.CoderModel);
+
+            if (!string.IsNullOrEmpty(_config.ReasonModel))
+                _reasonModel = CreateModel(_config.ReasonModel);
+
+            if (!string.IsNullOrEmpty(_config.SummarizeModel))
+                _summarizeModel = CreateModel(_config.SummarizeModel);
+
+            // Build orchestrated chat model using OrchestratorBuilder
+            var builder = new OrchestratorBuilder(_tools, "general")
+                .WithModel(
+                    "general",
+                    _chatModel,
+                    ModelType.General,
+                    new[] { "conversation", "general-purpose", "versatile", "chat" },
+                    maxTokens: _config.MaxTokens,
+                    avgLatencyMs: 1000);
+
+            if (_coderModel != null)
+            {
+                builder.WithModel(
+                    "coder",
+                    _coderModel,
+                    ModelType.Code,
+                    new[] { "code", "programming", "debugging", "syntax", "refactor", "implement" },
+                    maxTokens: _config.MaxTokens,
+                    avgLatencyMs: 1500);
+            }
+
+            if (_reasonModel != null)
+            {
+                builder.WithModel(
+                    "reasoner",
+                    _reasonModel,
+                    ModelType.Reasoning,
+                    new[] { "reasoning", "analysis", "logic", "explanation", "planning", "strategy" },
+                    maxTokens: _config.MaxTokens,
+                    avgLatencyMs: 1200);
+            }
+
+            if (_summarizeModel != null)
+            {
+                builder.WithModel(
+                    "summarizer",
+                    _summarizeModel,
+                    ModelType.General,
+                    new[] { "summarize", "condense", "extract", "tldr", "brief" },
+                    maxTokens: _config.MaxTokens,
+                    avgLatencyMs: 800);
+            }
+
+            builder.WithMetricTracking(true);
+            _orchestratedModel = builder.Build();
+
+            var modelCount = 1 + (_coderModel != null ? 1 : 0) + (_reasonModel != null ? 1 : 0) + (_summarizeModel != null ? 1 : 0);
+            Console.WriteLine($"  ✓ Multi-model: Orchestration enabled ({modelCount} models)");
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine($"    General: {_config.Model}");
+            if (_coderModel != null) Console.WriteLine($"    Coder: {_config.CoderModel}");
+            if (_reasonModel != null) Console.WriteLine($"    Reasoner: {_config.ReasonModel}");
+            if (_summarizeModel != null) Console.WriteLine($"    Summarizer: {_config.SummarizeModel}");
+            Console.ResetColor();
+
+            // Initialize divide-and-conquer orchestrator for large input processing
+            var dcConfig = new DivideAndConquerConfig(
+                MaxParallelism: Math.Max(2, Environment.ProcessorCount / 2),
+                ChunkSize: 1000,
+                MergeResults: true,
+                MergeSeparator: "\n\n");
+            _divideAndConquer = new DivideAndConquerOrchestrator(_orchestratedModel, dcConfig);
+            Console.WriteLine($"  ✓ Divide-and-Conquer: Parallel processing enabled (parallelism={dcConfig.MaxParallelism})");
+
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  ⚠ Multi-model orchestration failed: {ex.Message}");
         }
     }
 
@@ -550,6 +689,83 @@ public sealed class OuroborosAgent : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Initializes ImmersivePersona consciousness simulation for self-awareness,
+    /// inner dialog, and emotional processing.
+    /// </summary>
+    private async Task InitializeConsciousnessAsync()
+    {
+        try
+        {
+            // Create ImmersivePersona with consciousness systems
+            _immersivePersona = new ImmersivePersona(
+                _config.Persona,
+                _mettaEngine ?? new InMemoryMeTTaEngine(),
+                _embedding,
+                _config.QdrantEndpoint);
+
+            // Subscribe to autonomous thought events
+            _immersivePersona.AutonomousThought += (_, e) =>
+            {
+                // Display autonomous thoughts inline (non-blocking)
+                string savedInput;
+                lock (_inputLock)
+                {
+                    savedInput = _currentInputBuffer.ToString();
+                }
+
+                if (!string.IsNullOrEmpty(savedInput))
+                {
+                    // Clear line and print thought, then restore input
+                    Console.Write("\r" + new string(' ', Console.WindowWidth - 1) + "\r");
+                }
+
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.WriteLine($"\n  [inner thought] {e.Thought.Content}");
+                Console.ResetColor();
+
+                // Restore the input prompt and buffer
+                Console.Write($"  {_config.Persona}> {savedInput}");
+            };
+
+            // Subscribe to consciousness shift events
+            _immersivePersona.ConsciousnessShift += (_, e) =>
+            {
+                Console.ForegroundColor = ConsoleColor.DarkMagenta;
+                Console.WriteLine($"\n  [consciousness] Emotional shift: {e.NewEmotion} (Δ arousal: {e.ArousalChange:+0.00;-0.00})");
+                Console.ResetColor();
+            };
+
+            // Awaken the persona
+            await _immersivePersona.AwakenAsync();
+            Console.WriteLine($"  ✓ Consciousness: ImmersivePersona '{_config.Persona}' awakened");
+
+            // Display initial consciousness state
+            PrintConsciousnessState();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  ⚠ Consciousness unavailable: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Displays the current consciousness state of the ImmersivePersona.
+    /// </summary>
+    private void PrintConsciousnessState()
+    {
+        if (_immersivePersona == null) return;
+
+        var consciousness = _immersivePersona.Consciousness;
+        var selfAwareness = _immersivePersona.SelfAwareness;
+
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine($"    Emotional state: {consciousness.DominantEmotion} (arousal={consciousness.Arousal:F2}, valence={consciousness.Valence:F2})");
+        Console.WriteLine($"    Self-awareness: {selfAwareness.Name} - {selfAwareness.CurrentMood}");
+        Console.WriteLine($"    Identity: {_immersivePersona.Identity.Name} (uptime: {_immersivePersona.Uptime:hh\\:mm\\:ss})");
+        Console.ResetColor();
+    }
+
     private async Task InitializePersistentThoughtsAsync()
     {
         try
@@ -651,11 +867,10 @@ public sealed class OuroborosAgent : IAsyncDisposable
         {
             _autonomousMind = new AutonomousMind();
 
-            // Configure thinking capability
+            // Configure thinking capability - use orchestrated model if available
             _autonomousMind.ThinkFunction = async (prompt, token) =>
             {
-                if (_chatModel == null) return "";
-                return await _chatModel.GenerateTextAsync(prompt, token);
+                return await GenerateWithOrchestrationAsync(prompt, token);
             };
 
             // Configure search capability
@@ -827,6 +1042,11 @@ public sealed class OuroborosAgent : IAsyncDisposable
             ActionType.Policy => await PolicyCommandAsync(action.Argument),
             ActionType.Explain => ExplainDsl(action.Argument),
             ActionType.Test => await RunTestAsync(action.Argument),
+            // Merged from ImmersiveMode and Skills mode
+            ActionType.Consciousness => GetConsciousnessState(),
+            ActionType.Tokens => GetDslTokens(),
+            ActionType.Fetch => await FetchResearchAsync(action.Argument),
+            ActionType.Process => await ProcessLargeInputAsync(action.Argument),
             ActionType.Chat => await ChatAsync(input),
             _ => await ChatAsync(input)
         };
@@ -969,6 +1189,25 @@ public sealed class OuroborosAgent : IAsyncDisposable
         if (lower.StartsWith("test ") || lower == "test")
             return (ActionType.Test, input.Length > 5 ? input[5..].Trim() : "", null);
 
+        // Consciousness state
+        if (lower is "consciousness" or "conscious" or "inner" or "self")
+            return (ActionType.Consciousness, "", null);
+
+        // DSL Tokens (from Skills mode)
+        if (lower is "tokens" or "t")
+            return (ActionType.Tokens, "", null);
+
+        // Fetch/learn from arXiv (from Skills mode)
+        if (lower.StartsWith("fetch "))
+            return (ActionType.Fetch, input[6..].Trim(), null);
+
+        // Process large text with divide-and-conquer (from Skills mode)
+        if (lower.StartsWith("process ") || lower.StartsWith("dc "))
+        {
+            var arg = lower.StartsWith("process ") ? input[8..].Trim() : input[3..].Trim();
+            return (ActionType.Process, arg, null);
+        }
+
         // Default to chat
         return (ActionType.Chat, input, null);
     }
@@ -999,6 +1238,8 @@ public sealed class OuroborosAgent : IAsyncDisposable
 ║   list skills       - Show learned skills                    ║
 ║   run X             - Execute a learned skill                ║
 ║   suggest X         - Get skill suggestions for a goal       ║
+║   fetch X           - Learn skill from arXiv research        ║
+║   tokens            - Show available DSL tokens              ║
 ║                                                              ║
 ║ TOOLS & CAPABILITIES                                         ║
 ║   create tool X     - Create a new tool at runtime           ║
@@ -1009,7 +1250,8 @@ public sealed class OuroborosAgent : IAsyncDisposable
 ║ PLANNING & EXECUTION                                         ║
 ║   plan X            - Create a step-by-step plan             ║
 ║   do X / accomplish - Plan and execute a goal                ║
-║   orchestrate X     - Full multi-step orchestration          ║
+║   orchestrate X     - Multi-model task orchestration         ║
+║   process X         - Large text via divide-and-conquer      ║
 ║                                                              ║
 ║ REASONING & MEMORY                                           ║
 ║   metta: expr       - Execute MeTTa symbolic expression      ║
@@ -1021,6 +1263,10 @@ public sealed class OuroborosAgent : IAsyncDisposable
 ║   ask X             - Quick single question                  ║
 ║   pipeline DSL      - Run a pipeline DSL expression          ║
 ║   explain DSL       - Explain a pipeline expression          ║
+║                                                              ║
+║ CONSCIOUSNESS & AWARENESS                                    ║
+║   consciousness     - View ImmersivePersona state            ║
+║   inner / self      - Check self-awareness                   ║
 ║                                                              ║
 ║ SYSTEM                                                       ║
 ║   status            - Show current system state              ║
@@ -1243,6 +1489,206 @@ public sealed class OuroborosAgent : IAsyncDisposable
 
         var options = responses.GetValueOrDefault(mood.ToLowerInvariant(), new[] { "I'm doing well, thanks for asking!" });
         return options[new Random().Next(options.Length)];
+    }
+
+    /// <summary>
+    /// Gets the current consciousness state from ImmersivePersona.
+    /// </summary>
+    private string GetConsciousnessState()
+    {
+        if (_immersivePersona == null)
+        {
+            return "Consciousness simulation is not enabled. Use --consciousness to enable it.";
+        }
+
+        var consciousness = _immersivePersona.Consciousness;
+        var selfAwareness = _immersivePersona.SelfAwareness;
+        var identity = _immersivePersona.Identity;
+
+        var sb = new StringBuilder();
+        sb.AppendLine("╔══════════════════════════════════════════════════════════╗");
+        sb.AppendLine("║                 CONSCIOUSNESS STATE                      ║");
+        sb.AppendLine("╠══════════════════════════════════════════════════════════╣");
+        sb.AppendLine($"║  Identity: {identity.Name,-45} ║");
+        sb.AppendLine($"║  Uptime: {_immersivePersona.Uptime:hh\\:mm\\:ss,-47} ║");
+        sb.AppendLine($"║  Interactions: {_immersivePersona.InteractionCount,-41:N0} ║");
+        sb.AppendLine("╠══════════════════════════════════════════════════════════╣");
+        sb.AppendLine("║  EMOTIONAL STATE                                         ║");
+        sb.AppendLine($"║    Dominant: {consciousness.DominantEmotion,-43} ║");
+        sb.AppendLine($"║    Arousal: {consciousness.Arousal,-44:F3} ║");
+        sb.AppendLine($"║    Valence: {consciousness.Valence,-44:F3} ║");
+        sb.AppendLine("╠══════════════════════════════════════════════════════════╣");
+        sb.AppendLine("║  SELF-AWARENESS                                          ║");
+        sb.AppendLine($"║    Name: {selfAwareness.Name,-47} ║");
+        sb.AppendLine($"║    Mood: {selfAwareness.CurrentMood,-47} ║");
+        var truncatedPurpose = selfAwareness.Purpose.Length > 40 ? selfAwareness.Purpose[..40] + "..." : selfAwareness.Purpose;
+        sb.AppendLine($"║    Purpose: {truncatedPurpose,-44} ║");
+        sb.AppendLine("╚══════════════════════════════════════════════════════════╝");
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Lists available DSL tokens for pipeline construction.
+    /// </summary>
+    private string GetDslTokens()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("╔══════════════════════════════════════════════════════════╗");
+        sb.AppendLine("║                    DSL TOKENS                            ║");
+        sb.AppendLine("╠══════════════════════════════════════════════════════════╣");
+        sb.AppendLine("║  Built-in Pipeline Steps:                                ║");
+        sb.AppendLine("║    • SetPrompt    - Set the initial prompt               ║");
+        sb.AppendLine("║    • UseDraft     - Generate initial draft               ║");
+        sb.AppendLine("║    • UseCritique  - Self-critique the draft              ║");
+        sb.AppendLine("║    • UseRevise    - Revise based on critique             ║");
+        sb.AppendLine("║    • UseOutput    - Produce final output                 ║");
+        sb.AppendLine("║    • UseReflect   - Reflect on process                   ║");
+        sb.AppendLine("╠══════════════════════════════════════════════════════════╣");
+
+        if (_skills != null)
+        {
+            var skills = _skills.GetAllSkills().ToList();
+            if (skills.Count > 0)
+            {
+                sb.AppendLine("║  Skill-Based Tokens:                                     ║");
+                foreach (var skill in skills.Take(10))
+                {
+                    sb.AppendLine($"║    • UseSkill_{skill.Name,-37} ║");
+                }
+                if (skills.Count > 10)
+                {
+                    sb.AppendLine($"║    ... and {skills.Count - 10} more                                     ║");
+                }
+            }
+        }
+
+        sb.AppendLine("╚══════════════════════════════════════════════════════════╝");
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Fetches research from arXiv and creates a new skill.
+    /// </summary>
+    private async Task<string> FetchResearchAsync(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return "Usage: fetch <research query>";
+        }
+
+        try
+        {
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+            string url = $"http://export.arxiv.org/api/query?search_query=all:{Uri.EscapeDataString(query)}&start=0&max_results=5";
+            string xml = await httpClient.GetStringAsync(url);
+            var doc = System.Xml.Linq.XDocument.Parse(xml);
+            System.Xml.Linq.XNamespace atom = "http://www.w3.org/2005/Atom";
+            var entries = doc.Descendants(atom + "entry").Take(5).ToList();
+
+            if (entries.Count == 0)
+            {
+                return $"No research found for '{query}'. Try a different search term.";
+            }
+
+            // Create skill name from query
+            string skillName = string.Join("", query.Split(' ')
+                .Select(w => w.Length > 0 ? char.ToUpperInvariant(w[0]) + (w.Length > 1 ? w[1..].ToLowerInvariant() : "") : "")) + "Analysis";
+
+            // Register new skill if we have a skill registry
+            if (_skills != null)
+            {
+                var newSkill = new Skill(
+                    skillName,
+                    $"Analysis methodology from '{query}' research",
+                    new List<string> { "research-context" },
+                    new List<PlanStep>
+                    {
+                        new("Gather sources", new Dictionary<string, object> { ["query"] = query }, "Relevant papers", 0.9),
+                        new("Extract patterns", new Dictionary<string, object> { ["method"] = "identify" }, "Key techniques", 0.85),
+                        new("Synthesize", new Dictionary<string, object> { ["action"] = "combine" }, "Actionable knowledge", 0.8)
+                    },
+                    0.75, 0, DateTime.UtcNow, DateTime.UtcNow);
+                _skills.RegisterSkill(newSkill);
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Found {entries.Count} papers on '{query}':");
+            sb.AppendLine();
+
+            foreach (var entry in entries)
+            {
+                var title = entry.Element(atom + "title")?.Value?.Trim().Replace("\n", " ");
+                var summary = entry.Element(atom + "summary")?.Value?.Trim();
+                var truncatedSummary = summary?.Length > 150 ? summary[..150] + "..." : summary;
+
+                sb.AppendLine($"  • {title}");
+                sb.AppendLine($"    {truncatedSummary}");
+                sb.AppendLine();
+            }
+
+            if (_skills != null)
+            {
+                sb.AppendLine($"✓ New skill created: UseSkill_{skillName}");
+            }
+
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"Error fetching research: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Processes large input using divide-and-conquer orchestration.
+    /// </summary>
+    private async Task<string> ProcessLargeInputAsync(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return "Usage: process <large text or file path>";
+        }
+
+        // Check if input is a file path
+        string textToProcess = input;
+        if (File.Exists(input))
+        {
+            try
+            {
+                textToProcess = await File.ReadAllTextAsync(input);
+            }
+            catch (Exception ex)
+            {
+                return $"Error reading file: {ex.Message}";
+            }
+        }
+
+        if (_divideAndConquer == null)
+        {
+            // Fall back to regular processing
+            if (_chatModel == null)
+            {
+                return "No LLM available for processing.";
+            }
+            return await _chatModel.GenerateTextAsync($"Summarize and extract key points:\n\n{textToProcess}");
+        }
+
+        try
+        {
+            var chunks = _divideAndConquer.DivideIntoChunks(textToProcess);
+            var result = await _divideAndConquer.ExecuteAsync(
+                "Summarize and extract key points:",
+                chunks);
+
+            return result.Match(
+                success => $"Processed {chunks.Count} chunks:\n\n{success}",
+                error => $"Processing error: {error}");
+        }
+        catch (Exception ex)
+        {
+            return $"Divide-and-conquer processing failed: {ex.Message}";
+        }
     }
 
     private async Task<string> RememberAsync(string info)
@@ -1799,6 +2245,10 @@ If you don't have a real value, ask the user or skip the tool call.";
         {
             await _playwrightTool.DisposeAsync();
         }
+        if (_immersivePersona != null)
+        {
+            await _immersivePersona.DisposeAsync();
+        }
 
         _voice.Dispose();
         _mettaEngine?.Dispose();
@@ -1836,7 +2286,11 @@ If you don't have a real value, ask the user or skip the tool call.";
         Maintenance,
         Policy,
         Explain,
-        Test
+        Test,
+        Consciousness,
+        Tokens,
+        Fetch,
+        Process
     }
 
     /// <summary>
@@ -1924,4 +2378,98 @@ If you don't have a real value, ask the user or skip the tool call.";
             Console.ResetColor();
         }
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MULTI-MODEL ORCHESTRATION & DIVIDE-AND-CONQUER HELPERS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Generates text using multi-model orchestration if available, falling back to single model.
+    /// The orchestrator automatically routes to specialized models (coder, reasoner, summarizer)
+    /// based on prompt content analysis.
+    /// </summary>
+    private async Task<string> GenerateWithOrchestrationAsync(string prompt, CancellationToken ct = default)
+    {
+        if (_orchestratedModel != null)
+        {
+            return await _orchestratedModel.GenerateTextAsync(prompt, ct);
+        }
+
+        if (_chatModel != null)
+        {
+            return await _chatModel.GenerateTextAsync(prompt, ct);
+        }
+
+        return "[error] No LLM available";
+    }
+
+    /// <summary>
+    /// Processes large text input using divide-and-conquer parallel processing.
+    /// Automatically chunks the input, processes in parallel, and merges results.
+    /// </summary>
+    /// <param name="task">The task instruction (e.g., "Summarize:", "Analyze:", "Extract key points:")</param>
+    /// <param name="largeInput">The large text input to process</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>Merged result from all chunk processing</returns>
+    public async Task<string> ProcessLargeInputAsync(string task, string largeInput, CancellationToken ct = default)
+    {
+        // Use divide-and-conquer if available and input is large enough
+        if (_divideAndConquer != null && largeInput.Length > 2000)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine($"  [D&C] Processing large input ({largeInput.Length} chars) in parallel...");
+            Console.ResetColor();
+
+            var chunks = _divideAndConquer.DivideIntoChunks(largeInput);
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine($"  [D&C] Split into {chunks.Count} chunks");
+            Console.ResetColor();
+
+            var result = await _divideAndConquer.ExecuteAsync(task, chunks, ct);
+
+            return result.Match(
+                success =>
+                {
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.WriteLine("  [D&C] Parallel processing completed");
+                    Console.ResetColor();
+                    return success;
+                },
+                error =>
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"  [D&C] Error: {error}");
+                    Console.ResetColor();
+                    // Fall back to direct processing
+                    return GenerateWithOrchestrationAsync($"{task}\n\n{largeInput}", ct).Result;
+                });
+        }
+
+        // For smaller inputs, use direct orchestration
+        return await GenerateWithOrchestrationAsync($"{task}\n\n{largeInput}", ct);
+    }
+
+    /// <summary>
+    /// Gets the current orchestration metrics showing model usage statistics.
+    /// </summary>
+    public IReadOnlyDictionary<string, PerformanceMetrics>? GetOrchestrationMetrics()
+    {
+        if (_orchestratedModel != null)
+        {
+            // Access through the builder's underlying orchestrator
+            return null; // Would need to expose metrics from OrchestratedChatModel
+        }
+
+        return _divideAndConquer?.GetMetrics();
+    }
+
+    /// <summary>
+    /// Checks if multi-model orchestration is enabled and available.
+    /// </summary>
+    public bool IsMultiModelEnabled => _orchestratedModel != null;
+
+    /// <summary>
+    /// Checks if divide-and-conquer processing is available.
+    /// </summary>
+    public bool IsDivideAndConquerEnabled => _divideAndConquer != null;
 }
