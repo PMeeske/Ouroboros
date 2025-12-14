@@ -1,4 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+using LangChainPipeline.Network;
+
 namespace Ouroboros.Application;
 
 public sealed class CliPipelineState
@@ -30,9 +32,48 @@ public sealed class CliPipelineState
     public StreamingContext? Streaming { get; set; }
     public IObservable<object>? ActiveStream { get; set; }
 
+    // Network State Tracking (optional, for reifying Steps into MerkleDag)
+    public NetworkStateTracker? NetworkTracker { get; set; }
+
     public CliPipelineState WithBranch(PipelineBranch branch)
     {
         this.Branch = branch;
+
+        // Auto-update network tracker if enabled
+        this.NetworkTracker?.UpdateBranch(branch);
+
         return this;
+    }
+
+    /// <summary>
+    /// Enables network state tracking for this pipeline state.
+    /// All branch updates will automatically be reified into the MerkleDag.
+    /// </summary>
+    public CliPipelineState WithNetworkTracking()
+    {
+        this.NetworkTracker ??= new NetworkStateTracker();
+        this.NetworkTracker.TrackBranch(this.Branch);
+        return this;
+    }
+
+    /// <summary>
+    /// Gets a summary of the network state if tracking is enabled.
+    /// </summary>
+    public string? GetNetworkStateSummary()
+    {
+        return this.NetworkTracker?.GetStateSummary();
+    }
+
+    /// <summary>
+    /// Projects the current branch to a GlobalNetworkState snapshot.
+    /// </summary>
+    public GlobalNetworkState? ProjectNetworkState()
+    {
+        if (this.NetworkTracker == null)
+        {
+            return null;
+        }
+
+        return this.NetworkTracker.CreateSnapshot();
     }
 }

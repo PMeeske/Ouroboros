@@ -12,3 +12,4 @@ global using System.Threading.Tasks;
 global using LangChainPipeline.Core.Monads;
 global using LangChainPipeline.Domain.States;
 global using LangChainPipeline.Domain.Events;
+global using LangChainPipeline.Pipeline.Branches;

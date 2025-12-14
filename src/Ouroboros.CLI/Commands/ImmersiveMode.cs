@@ -10,6 +10,7 @@ using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
 using LangChainPipeline.Domain;
+using LangChainPipeline.Network;
 using LangChainPipeline.Options;
 using LangChainPipeline.Providers;
 using LangChainPipeline.Providers.SpeechToText;
@@ -164,8 +165,13 @@ public static class ImmersiveMode
     private static InterconnectedLearner? _interconnectedLearner;
     private static QdrantSelfIndexer? _selfIndexer;
     private static PersistentConversationMemory? _conversationMemory;
+    private static PersistentNetworkStateProjector? _networkStateProjector;
     private static AutonomousMind? _autonomousMind;
+    private static SelfPersistence? _selfPersistence;
     private static ToolRegistry _dynamicTools = new();
+    private static StringBuilder _currentInputBuffer = new();
+    private static readonly object _inputLock = new();
+    private static string _currentPromptPrefix = "  You: ";
     private static IReadOnlyDictionary<string, PipelineTokenInfo>? _allTokens;
     private static CliPipelineState? _pipelineState;
     private static string? _lastPipelineContext; // Track recent pipeline interactions
@@ -264,6 +270,46 @@ public static class ImmersiveMode
             Console.ResetColor();
         }
 
+        // Initialize persistent network state projector for learning persistence
+        if (embeddingModel != null)
+        {
+            try
+            {
+                var dag = new MerkleDag();
+                _networkStateProjector = new PersistentNetworkStateProjector(
+                    dag,
+                    options.QdrantEndpoint,
+                    async text => await embeddingModel.CreateEmbeddingsAsync(text));
+                await _networkStateProjector.InitializeAsync(ct);
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.WriteLine($"  [NetworkState] Epoch {_networkStateProjector.CurrentEpoch}, {_networkStateProjector.RecentLearnings.Count} learnings loaded");
+                Console.ResetColor();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  [!] Network state persistence unavailable: {ex.Message}");
+            }
+        }
+
+        // Initialize self-persistence for mind state storage in Qdrant
+        if (embeddingModel != null)
+        {
+            try
+            {
+                _selfPersistence = new SelfPersistence(
+                    options.QdrantEndpoint,
+                    async text => await embeddingModel.CreateEmbeddingsAsync(text));
+                await _selfPersistence.InitializeAsync(ct);
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.WriteLine("  [SelfPersistence] Qdrant collection 'ouroboros_self' ready for mind state storage");
+                Console.ResetColor();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  [!] Self-persistence unavailable: {ex.Message}");
+            }
+        }
+
         // Initialize autonomous mind for background thinking and curiosity
         _autonomousMind = new AutonomousMind();
         _autonomousMind.ThinkFunction = async (prompt, token) =>
@@ -271,6 +317,53 @@ public static class ImmersiveMode
             var thinkModel = await CreateChatModelAsync(options);
             return await thinkModel.GenerateTextAsync(prompt, token);
         };
+
+        // Wire up pipeline-based reasoning function for monadic thinking
+        _autonomousMind.PipelineThinkFunction = async (prompt, existingBranch, token) =>
+        {
+            var thinkModel = await CreateChatModelAsync(options);
+            var response = await thinkModel.GenerateTextAsync(prompt, token);
+
+            // If we have a branch, add the thought as a reasoning event
+            if (existingBranch != null)
+            {
+                var updatedBranch = existingBranch.WithReasoning(
+                    new LangChainPipeline.Domain.States.Thinking(response),
+                    prompt,
+                    null);
+                return (response, updatedBranch);
+            }
+
+            return (response, existingBranch!);
+        };
+
+        // Wire up state persistence functions
+        _autonomousMind.PersistLearningFunction = async (category, content, confidence, token) =>
+        {
+            if (_networkStateProjector != null)
+            {
+                await _networkStateProjector.RecordLearningAsync(
+                    category,
+                    content,
+                    "autonomous_mind",
+                    confidence,
+                    token);
+            }
+        };
+
+        _autonomousMind.PersistEmotionFunction = async (emotion, token) =>
+        {
+            if (_networkStateProjector != null)
+            {
+                await _networkStateProjector.RecordLearningAsync(
+                    "emotional_state",
+                    $"Emotion: {emotion.DominantEmotion} (arousal={emotion.Arousal:F2}, valence={emotion.Valence:F2}) - {emotion.Description}",
+                    "autonomous_mind",
+                    0.6,
+                    token);
+            }
+        };
+
         _autonomousMind.SearchFunction = async (query, token) =>
         {
             var searchTool = _dynamicToolFactory?.CreateWebSearchTool("duckduckgo");
@@ -295,11 +388,26 @@ public static class ImmersiveMode
         // Wire up autonomous mind events
         _autonomousMind.OnProactiveMessage += (msg) =>
         {
+            string savedInput;
+            lock (_inputLock)
+            {
+                savedInput = _currentInputBuffer.ToString();
+            }
+
+            // Clear current line and show proactive message
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine($"[Autonomous] {msg}");
             Console.ResetColor();
-            Console.Write($"\n{personaName}> ");
+
+            // Restore prompt and any text user was typing
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write($"\n{_currentPromptPrefix}");
+            Console.ResetColor();
+            if (!string.IsNullOrEmpty(savedInput))
+            {
+                Console.Write(savedInput);
+            }
         };
         _autonomousMind.OnThought += (thought) =>
         {
@@ -310,10 +418,31 @@ public static class ImmersiveMode
         {
             System.Diagnostics.Debug.WriteLine($"[Discovery] {query}: {fact}");
         };
+        _autonomousMind.OnEmotionalChange += (emotion) =>
+        {
+            Console.ForegroundColor = ConsoleColor.DarkCyan;
+            Console.WriteLine($"\n  [mind] Emotional shift: {emotion.DominantEmotion} ({emotion.Description})");
+            Console.ResetColor();
+        };
+        _autonomousMind.OnStatePersisted += (msg) =>
+        {
+            System.Diagnostics.Debug.WriteLine($"[State] {msg}");
+        };
 
         // Start autonomous thinking
         _autonomousMind.Start();
         Console.WriteLine("  [OK] Autonomous mind active (thinking, exploring, learning in background)");
+        Console.WriteLine("       State persistence enabled (thoughts, emotions, learnings)");
+
+        // Wire up self-persistence tools to access the mind and persistence service
+        if (_selfPersistence != null && _autonomousMind != null)
+        {
+            SystemAccessTools.SharedPersistence = _selfPersistence;
+            SystemAccessTools.SharedMind = _autonomousMind;
+            Console.ForegroundColor = ConsoleColor.DarkCyan;
+            Console.WriteLine("  [Tools] Self-persistence tools linked: persist_self, restore_self, search_my_thoughts, persistence_stats");
+            Console.ResetColor();
+        }
 
         // Main interaction loop - use persistent memory
         var conversationHistory = _conversationMemory.GetActiveHistory();
@@ -327,6 +456,7 @@ public static class ImmersiveMode
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.Write("\n  You: ");
                 Console.ResetColor();
+                _currentPromptPrefix = "  You: ";
 
                 string? input;
                 if (sttService != null && speechDetector != null)
@@ -339,7 +469,7 @@ public static class ImmersiveMode
                 }
                 else
                 {
-                    input = Console.ReadLine();
+                    input = ReadLinePreservingBuffer(ct);
                 }
 
                 if (string.IsNullOrWhiteSpace(input)) continue;
@@ -415,6 +545,12 @@ public static class ImmersiveMode
                     conversationHistory,
                     ct);
 
+                // Record learnings from this interaction
+                if (_networkStateProjector != null)
+                {
+                    await RecordInteractionLearningsAsync(input, response, persona, ct);
+                }
+
                 // Add assistant response to persistent memory
                 conversationHistory.Add(("assistant", response));
                 if (_conversationMemory != null)
@@ -455,6 +591,28 @@ public static class ImmersiveMode
         // Final consciousness state
         Console.WriteLine("\n  [~] Consciousness fading...");
         PrintConsciousnessState(persona);
+
+        // Persist final network state and learnings
+        if (_networkStateProjector != null)
+        {
+            try
+            {
+                Console.WriteLine("  [~] Persisting learnings...");
+                await _networkStateProjector.ProjectAndPersistAsync(
+                    System.Collections.Immutable.ImmutableDictionary<string, string>.Empty
+                        .Add("event", "session_end")
+                        .Add("interactions", persona.InteractionCount.ToString())
+                        .Add("uptime_minutes", persona.Uptime.TotalMinutes.ToString("F1")),
+                    ct);
+                Console.WriteLine($"  [OK] State saved (epoch {_networkStateProjector.CurrentEpoch}, {_networkStateProjector.RecentLearnings.Count} learnings)");
+                await _networkStateProjector.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  [!] Failed to persist state: {ex.Message}");
+            }
+        }
+
         Console.WriteLine($"\n  Session complete. {persona.InteractionCount} interactions. Uptime: {persona.Uptime.TotalMinutes:F1} minutes.");
     }
 
@@ -583,6 +741,74 @@ public static class ImmersiveMode
         return (tts, stt, detector);
     }
 
+    /// <summary>
+    /// Reads a line of input while tracking the buffer so proactive messages can restore it.
+    /// </summary>
+    private static string? ReadLinePreservingBuffer(CancellationToken ct = default)
+    {
+        lock (_inputLock)
+        {
+            _currentInputBuffer.Clear();
+        }
+
+        while (!ct.IsCancellationRequested)
+        {
+            if (!Console.KeyAvailable)
+            {
+                Thread.Sleep(10);
+                continue;
+            }
+
+            var keyInfo = Console.ReadKey(intercept: true);
+
+            if (keyInfo.Key == ConsoleKey.Enter)
+            {
+                Console.WriteLine();
+                string result;
+                lock (_inputLock)
+                {
+                    result = _currentInputBuffer.ToString();
+                    _currentInputBuffer.Clear();
+                }
+                return result;
+            }
+            else if (keyInfo.Key == ConsoleKey.Backspace)
+            {
+                lock (_inputLock)
+                {
+                    if (_currentInputBuffer.Length > 0)
+                    {
+                        _currentInputBuffer.Remove(_currentInputBuffer.Length - 1, 1);
+                        // Erase character on console
+                        Console.Write("\b \b");
+                    }
+                }
+            }
+            else if (keyInfo.Key == ConsoleKey.Escape)
+            {
+                // Clear the line
+                lock (_inputLock)
+                {
+                    var len = _currentInputBuffer.Length;
+                    _currentInputBuffer.Clear();
+                    Console.Write(new string('\b', len) + new string(' ', len) + new string('\b', len));
+                }
+            }
+            else if (!char.IsControl(keyInfo.KeyChar))
+            {
+                lock (_inputLock)
+                {
+                    _currentInputBuffer.Append(keyInfo.KeyChar);
+                }
+                Console.Write(keyInfo.KeyChar);
+            }
+        }
+
+        return null;
+    }
+
+    private static bool _llmMessagePrinted = false;
+
     private static async Task<IChatCompletionModel> CreateChatModelAsync(IVoiceOptions options)
     {
         var settings = new ChatRuntimeSettings(0.8, 1024, 120, false);
@@ -593,12 +819,20 @@ public static class ImmersiveMode
 
         if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey))
         {
-            Console.WriteLine($"  [~] Using remote LLM: {options.Model} via {endpoint}");
+            if (!_llmMessagePrinted)
+            {
+                Console.WriteLine($"  [~] Using remote LLM: {options.Model} via {endpoint}");
+                _llmMessagePrinted = true;
+            }
             return new HttpOpenAiCompatibleChatModel(endpoint, apiKey, options.Model, settings);
         }
 
         // Use Ollama cloud model with the configured endpoint
-        Console.WriteLine($"  [~] Using Ollama LLM: {options.Model} via {options.Endpoint}");
+        if (!_llmMessagePrinted)
+        {
+            Console.WriteLine($"  [~] Using Ollama LLM: {options.Model} via {options.Endpoint}");
+            _llmMessagePrinted = true;
+        }
         return new OllamaCloudChatModel(options.Endpoint, "ollama", options.Model, settings);
     }
 
@@ -805,6 +1039,94 @@ User: goodbye
                lower.Contains("create a copy") ||
                lower.Contains("snapshot") ||
                lower.Contains("save yourself");
+    }
+
+    /// <summary>
+    /// Records learnings from each interaction to persistent storage.
+    /// Captures insights, skills used, and knowledge gained during thinking.
+    /// </summary>
+    private static async Task RecordInteractionLearningsAsync(
+        string userInput,
+        string response,
+        ImmersivePersona persona,
+        CancellationToken ct)
+    {
+        if (_networkStateProjector == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var lowerInput = userInput.ToLowerInvariant();
+            var lowerResponse = response.ToLowerInvariant();
+
+            // Record skill usage
+            if (_skillRegistry != null)
+            {
+                var matchedSkills = await _skillRegistry.FindMatchingSkillsAsync(userInput);
+                foreach (var skill in matchedSkills.Take(3))
+                {
+                    await _networkStateProjector.RecordLearningAsync(
+                        "skill_usage",
+                        $"Used skill '{skill.Name}' for: {userInput.Substring(0, Math.Min(100, userInput.Length))}",
+                        userInput,
+                        confidence: 0.8,
+                        ct: ct);
+                }
+            }
+
+            // Record tool usage
+            if (lowerResponse.Contains("tool") || lowerResponse.Contains("search") || lowerResponse.Contains("executed"))
+            {
+                await _networkStateProjector.RecordLearningAsync(
+                    "tool_usage",
+                    $"Tool interaction: {response.Substring(0, Math.Min(200, response.Length))}",
+                    userInput,
+                    confidence: 0.7,
+                    ct: ct);
+            }
+
+            // Record learning/insight if response contains knowledge indicators
+            if (lowerResponse.Contains("learned") || lowerResponse.Contains("discovered") ||
+                lowerResponse.Contains("found out") || lowerResponse.Contains("interesting") ||
+                lowerResponse.Contains("realized"))
+            {
+                await _networkStateProjector.RecordLearningAsync(
+                    "insight",
+                    response.Substring(0, Math.Min(300, response.Length)),
+                    userInput,
+                    confidence: 0.75,
+                    ct: ct);
+            }
+
+            // Record emotional state changes
+            var consciousnessState = persona.Consciousness;
+            if (consciousnessState.Arousal > 0.6 || consciousnessState.Valence < -0.3)
+            {
+                await _networkStateProjector.RecordLearningAsync(
+                    "emotional_context",
+                    $"Emotional state during '{userInput.Substring(0, Math.Min(50, userInput.Length))}': arousal={consciousnessState.Arousal:F2}, valence={consciousnessState.Valence:F2}, emotion={consciousnessState.DominantEmotion}",
+                    userInput,
+                    confidence: 0.6,
+                    ct: ct);
+            }
+
+            // Periodically save network state snapshot (every 10 interactions based on epoch)
+            if (_networkStateProjector.CurrentEpoch % 10 == 0)
+            {
+                await _networkStateProjector.ProjectAndPersistAsync(
+                    System.Collections.Immutable.ImmutableDictionary<string, string>.Empty
+                        .Add("trigger", "periodic")
+                        .Add("last_input", userInput.Substring(0, Math.Min(50, userInput.Length))),
+                    ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Don't fail the interaction just because learning persistence failed
+            Console.Error.WriteLine($"[WARN] Failed to record learnings: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -1199,7 +1521,11 @@ User: goodbye
             // Initialize skill registry with Qdrant persistence if available
             if (embeddingModel != null)
             {
-                var config = new QdrantSkillConfig(options.QdrantEndpoint, "ouroboros_skills", true, 1536);
+                // Detect vector size from embedding model
+                var testEmbed = await embeddingModel.CreateEmbeddingsAsync("test");
+                var vectorSize = testEmbed.Length > 0 ? testEmbed.Length : 32;
+
+                var config = new QdrantSkillConfig(options.QdrantEndpoint, "ouroboros_skills", true, vectorSize);
                 var qdrantRegistry = new QdrantSkillRegistry(embeddingModel, config);
                 await qdrantRegistry.InitializeAsync();
                 _skillRegistry = qdrantRegistry;
@@ -1231,19 +1557,25 @@ User: goodbye
                 .WithTool(_dynamicToolFactory.CreateCalculatorTool())
                 .WithTool(_dynamicToolFactory.CreateGoogleSearchTool());
 
+            Console.WriteLine($"  [DEBUG] After factory tools: {_dynamicTools.Count} tools");
+
             // Register comprehensive system access tools for PC control
             var systemTools = SystemAccessTools.CreateAllTools().ToList();
+            Console.WriteLine($"  [DEBUG] SystemAccessTools.CreateAllTools returned {systemTools.Count} tools");
             foreach (var tool in systemTools)
             {
                 _dynamicTools = _dynamicTools.WithTool(tool);
             }
+            Console.WriteLine($"  [DEBUG] After system tools: {_dynamicTools.Count} tools");
 
             // Register perception tools for proactive screen/camera monitoring
             var perceptionTools = PerceptionTools.CreateAllTools().ToList();
+            Console.WriteLine($"  [DEBUG] PerceptionTools returned {perceptionTools.Count} tools");
             foreach (var tool in perceptionTools)
             {
                 _dynamicTools = _dynamicTools.WithTool(tool);
             }
+            Console.WriteLine($"  [DEBUG] Final tool count: {_dynamicTools.Count} tools");
 
             // Initialize vision service for AI-powered visual understanding
             var visionService = new VisionService(new VisionConfig

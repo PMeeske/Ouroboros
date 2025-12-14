@@ -5,13 +5,18 @@ namespace LangChainPipeline.Options;
 
 /// <summary>
 /// Options for the DSL assistant command (GitHub Copilot-like behavior).
+/// NOTE: For the full Ouroboros experience, use the default 'ouroboros' command instead.
+/// This command is maintained for backward compatibility with DSL-mode workflows.
 /// </summary>
-[Verb("assist", HelpText = "AI-powered DSL assistant. Use --voice for voice mode.")]
+[Verb("assist", HelpText = "[DEPRECATED: Use 'ouroboros' instead] Legacy DSL assistant mode. Use --dsl-mode for DSL-specific features.")]
 public class AssistOptions : BaseModelOptions, IVoiceOptions
 {
     // Voice mode options
-    [Option('v', "voice", Required = false, Default = false, HelpText = "Enable voice persona mode (speak & listen).")]
+    [Option('v', "voice", Required = false, Default = false, HelpText = "Enable voice input/output (speak & listen).")]
     public bool Voice { get; set; }
+
+    [Option("dsl-mode", Required = false, Default = false, HelpText = "Run DSL assistant instead of Ouroboros persona.")]
+    public bool DslMode { get; set; }
 
     [Option("persona", Required = false, Default = "Ouroboros", HelpText = "Persona name for voice mode.")]
     public string Persona { get; set; } = "Ouroboros";
@@ -62,8 +67,8 @@ public class AssistOptions : BaseModelOptions, IVoiceOptions
 /// </summary>
 public abstract class BaseModelOptions
 {
-    [Option("model", Required = false, Default = "deepseek-v3.1:671b-cloud", HelpText = "Model to use")]
-    public string Model { get; set; } = "deepseek-v3.1:671b-cloud";
+    [Option("model", Required = false, Default = "ministral-3:latest", HelpText = "Model to use")]
+    public string Model { get; set; } = "ministral-3:latest";
 
     [Option("embed", Required = false, Default = "nomic-embed-text", HelpText = "Embedding model")]
     public string Embed { get; set; } = "nomic-embed-text";

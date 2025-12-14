@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using CommandLine;
 
 namespace LangChainPipeline.Options;
@@ -8,14 +7,49 @@ namespace LangChainPipeline.Options;
 /// </summary>
 public interface IVoiceOptions
 {
+    /// <summary>
+    /// Gets or sets a value indicating whether voice mode is enabled.
+    /// </summary>
     bool Voice { get; set; }
+
+    /// <summary>
+    /// Gets or sets the persona name for voice mode.
+    /// </summary>
     string Persona { get; set; }
+
+    /// <summary>
+    /// Gets or sets the LLM model for voice mode.
+    /// </summary>
     string Model { get; set; }
+
+    /// <summary>
+    /// Gets or sets the LLM endpoint URL.
+    /// </summary>
     string Endpoint { get; set; }
+
+    /// <summary>
+    /// Gets or sets the embedding model for semantic search.
+    /// </summary>
     string EmbedModel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Qdrant endpoint for skill storage.
+    /// </summary>
     string QdrantEndpoint { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether voice-only mode is enabled.
+    /// </summary>
     bool VoiceOnly { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to prefer local TTS.
+    /// </summary>
     bool LocalTts { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to continue voice conversation after command.
+    /// </summary>
     bool VoiceLoop { get; set; }
 }
 
@@ -31,8 +65,8 @@ public abstract class VoiceOptionsBase : IVoiceOptions
     [Option("persona", Required = false, Default = "Ouroboros", HelpText = "Persona name for voice mode (Ouroboros, Aria, Nova, Echo, Sage, Atlas).")]
     public string Persona { get; set; } = "Ouroboros";
 
-    [Option("model", Required = false, Default = "deepseek-v3.1:671b-cloud", HelpText = "LLM model for voice mode.")]
-    public virtual string Model { get; set; } = "deepseek-v3.1:671b-cloud";
+    [Option("model", Required = false, Default = "ministral-3:latest", HelpText = "LLM model for voice mode.")]
+    public virtual string Model { get; set; } = "ministral-3:latest";
 
     [Option("endpoint", Required = false, Default = "http://localhost:11434", HelpText = "LLM endpoint URL.")]
     public virtual string Endpoint { get; set; } = "http://localhost:11434";

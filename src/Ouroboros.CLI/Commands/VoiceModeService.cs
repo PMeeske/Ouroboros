@@ -342,21 +342,26 @@ public sealed class VoiceModeService : IDisposable
                 {
                     while (Console.KeyAvailable)
                     {
-                        var key = Console.ReadKey(intercept: false);
+                        var key = Console.ReadKey(intercept: true); // Intercept to prevent double echo
                         if (key.Key == ConsoleKey.Enter)
                         {
+                            Console.WriteLine(); // Move to next line
                             var result = inputBuffer.ToString();
                             inputBuffer.Clear();
                             return result;
                         }
-                        else if (key.Key == ConsoleKey.Backspace && inputBuffer.Length > 0)
+                        else if (key.Key == ConsoleKey.Backspace)
                         {
-                            inputBuffer.Length--;
-                            Console.Write(" \b");
+                            if (inputBuffer.Length > 0)
+                            {
+                                inputBuffer.Length--;
+                                Console.Write("\b \b"); // Erase character visually
+                            }
                         }
                         else if (!char.IsControl(key.KeyChar))
                         {
                             inputBuffer.Append(key.KeyChar);
+                            Console.Write(key.KeyChar); // Echo character manually
                         }
                     }
                 }

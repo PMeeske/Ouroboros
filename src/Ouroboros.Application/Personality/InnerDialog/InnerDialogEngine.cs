@@ -833,6 +833,8 @@ public sealed class InnerDialogEngine
     private Task? _autonomousThinkingTask;
     private static readonly Random _staticRandom = new();
     private bool _useContextualThoughts = true;
+    private ThoughtPersistenceService? _persistenceService;
+    private string? _currentTopic;
 
     /// <summary>
     /// Gets the thought-driven operation engine for registering executors and retrieving results.
@@ -846,6 +848,69 @@ public sealed class InnerDialogEngine
     {
         get => _useContextualThoughts;
         set => _useContextualThoughts = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the persistence service for saving thoughts.
+    /// </summary>
+    public ThoughtPersistenceService? PersistenceService
+    {
+        get => _persistenceService;
+        set => _persistenceService = value;
+    }
+
+    /// <summary>
+    /// Enables thought persistence with file storage.
+    /// </summary>
+    /// <param name="sessionId">Unique identifier for this session.</param>
+    /// <param name="directory">Optional directory for thought files.</param>
+    public void EnablePersistence(string sessionId, string? directory = null)
+    {
+        _persistenceService = ThoughtPersistenceService.CreateWithFilePersistence(sessionId, directory);
+    }
+
+    /// <summary>
+    /// Enables thought persistence with in-memory storage (for testing).
+    /// </summary>
+    /// <param name="sessionId">Unique identifier for this session.</param>
+    public void EnableInMemoryPersistence(string sessionId)
+    {
+        _persistenceService = ThoughtPersistenceService.CreateInMemory(sessionId);
+    }
+
+    /// <summary>
+    /// Gets a summary of persisted thoughts for this session.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Summary string or null if persistence not enabled.</returns>
+    public async Task<string?> GetThoughtSummaryAsync(CancellationToken ct = default)
+    {
+        if (_persistenceService == null) return null;
+        return await _persistenceService.GetThoughtSummaryAsync(ct);
+    }
+
+    /// <summary>
+    /// Recalls recent thoughts from persistent storage.
+    /// </summary>
+    /// <param name="count">Number of thoughts to recall.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>List of recent thoughts or empty if persistence not enabled.</returns>
+    public async Task<IReadOnlyList<InnerThought>> RecallRecentThoughtsAsync(int count = 10, CancellationToken ct = default)
+    {
+        if (_persistenceService == null) return Array.Empty<InnerThought>();
+        return await _persistenceService.GetRecentAsync(count, ct);
+    }
+
+    /// <summary>
+    /// Searches persistent thoughts for relevant content.
+    /// </summary>
+    /// <param name="query">Search query.</param>
+    /// <param name="limit">Maximum results.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public async Task<IReadOnlyList<InnerThought>> SearchThoughtsAsync(string query, int limit = 20, CancellationToken ct = default)
+    {
+        if (_persistenceService == null) return Array.Empty<InnerThought>();
+        return await _persistenceService.SearchAsync(query, limit, ct);
     }
 
     /// <summary>
@@ -1381,9 +1446,31 @@ public sealed class InnerDialogEngine
         // Store session history
         StoreSession(session, profile?.PersonaName ?? "default");
 
+        // Persist thoughts if enabled
+        _currentTopic = topic;
+        await PersistThoughtsAsync(session.Thoughts, topic, ct);
+
         // Build result
         var result = BuildResult(session, profile, userMood);
         return result;
+    }
+
+    /// <summary>
+    /// Persists thoughts to the storage backend if enabled.
+    /// </summary>
+    private async Task PersistThoughtsAsync(List<InnerThought> thoughts, string? topic, CancellationToken ct)
+    {
+        if (_persistenceService == null || thoughts.Count == 0) return;
+
+        try
+        {
+            await _persistenceService.SaveManyAsync(thoughts, topic, ct);
+        }
+        catch (Exception ex)
+        {
+            // Log but don't fail - persistence is non-critical
+            Console.WriteLine($"[ThoughtPersistence] Failed to save thoughts: {ex.Message}");
+        }
     }
 
     /// <summary>

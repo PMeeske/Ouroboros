@@ -324,6 +324,19 @@ public static class ReasoningArrows
                     string name = match.Groups[1].Value;
                     string args = match.Groups[2].Value.Trim();
 
+                    // Validate tool name is not empty
+                    if (string.IsNullOrWhiteSpace(name))
+                    {
+                        string errorResult = "error: empty tool name";
+                        ToolExecution errorExecution = new ToolExecution("?", args, errorResult, DateTime.UtcNow);
+                        allToolCalls.Add(errorExecution);
+                        string errorTag = $"[TOOL-RESULT:?] {errorResult}";
+                        fullText.Append(errorTag);
+                        PipelineBranch withError = branch.WithReasoning(new Thinking(fullText.ToString()), prompt, allToolCalls);
+                        yield return (errorTag, withError);
+                        continue;
+                    }
+
                     ITool? tool = tools.Get(name);
                     string output;
                     if (tool is null)

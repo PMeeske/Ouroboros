@@ -39,6 +39,14 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
             string name = match.Groups[1].Value;
             string args = match.Groups[2].Value.Trim();
 
+            // Validate tool name is not empty or just whitespace
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                string errorResult = "[TOOL-RESULT:?] error: empty tool name";
+                modifiedResult = modifiedResult.Replace(fullMatch, errorResult);
+                continue;
+            }
+
             ITool? tool = registry.Get(name);
             if (tool is null)
             {
@@ -61,7 +69,7 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
             }
 
             toolCalls.Add(new ToolExecution(name, args, output, DateTime.UtcNow));
-            
+
             // Replace the tool invocation with the result in the text
             string replacement = $"[TOOL-RESULT:{name}] {output}";
             modifiedResult = modifiedResult.Replace(fullMatch, replacement);

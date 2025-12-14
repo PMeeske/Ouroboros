@@ -48,7 +48,7 @@ public static class ReasoningCliSteps
         => async s =>
         {
             (string topic, string query) = CliSteps.Normalize(s);
-            
+
             // Parse iteration count from args, default to 1
             int iterations = 1;
             if (!string.IsNullOrWhiteSpace(args))
@@ -62,16 +62,16 @@ public static class ReasoningCliSteps
 
             // Create self-critique agent
             LangChainPipeline.Agent.SelfCritiqueAgent agent = new(s.Llm, s.Tools, s.Embed);
-            
+
             // Generate with critique
-            Result<LangChainPipeline.Agent.SelfCritiqueResult, string> result = 
+            Result<LangChainPipeline.Agent.SelfCritiqueResult, string> result =
                 await agent.GenerateWithCritiqueAsync(s.Branch, topic, query, iterations, s.RetrievalK);
 
             if (result.IsSuccess)
             {
                 LangChainPipeline.Agent.SelfCritiqueResult critiqueResult = result.Value;
                 s.Branch = critiqueResult.Branch;
-                
+
                 // Format output to show Draft → Critique → Improved sections
                 StringBuilder output = new();
                 output.AppendLine("\n=== Self-Critique Result ===");
@@ -84,11 +84,11 @@ public static class ReasoningCliSteps
                 output.AppendLine("\n--- Improved Response ---");
                 output.AppendLine(critiqueResult.ImprovedResponse);
                 output.AppendLine("\n=========================");
-                
+
                 s.Output = output.ToString();
                 s.Context = critiqueResult.ImprovedResponse;
-                
-                if (s.Trace) 
+
+                if (s.Trace)
                 {
                     Console.WriteLine($"[trace] Self-critique completed with {critiqueResult.IterationsPerformed} iteration(s), confidence: {critiqueResult.Confidence}");
                 }
@@ -117,7 +117,7 @@ public static class ReasoningCliSteps
                 // Check if using LiteLLM endpoint
                 string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
                 string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "deepseek-v3.1:671b-cloud";
 
                 if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
                     (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
@@ -133,7 +133,7 @@ public static class ReasoningCliSteps
             }
 
             (string topic, string query) = CliSteps.Normalize(s);
-            
+
             // Parse iteration count from args, default to 1
             int iterations = 1;
             if (!string.IsNullOrWhiteSpace(args))
@@ -156,7 +156,7 @@ public static class ReasoningCliSteps
             for (int i = 0; i < iterations; i++)
             {
                 Console.WriteLine($"--- Iteration {i + 1} ---");
-                
+
                 // Stream Draft (only on first iteration)
                 if (i == 0)
                 {
@@ -203,7 +203,7 @@ public static class ReasoningCliSteps
             // Compute confidence
             string lastCritique = critiqueText.ToString();
             ConfidenceRating confidence = ConfidenceRating.Medium;
-            if (lastCritique.Contains("excellent", StringComparison.OrdinalIgnoreCase) || 
+            if (lastCritique.Contains("excellent", StringComparison.OrdinalIgnoreCase) ||
                 lastCritique.Contains("high quality", StringComparison.OrdinalIgnoreCase))
             {
                 confidence = ConfidenceRating.High;
@@ -243,7 +243,7 @@ public static class ReasoningCliSteps
                 // Check if using LiteLLM endpoint via environment variable or create streaming model
                 string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
                 string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "deepseek-v3.1:671b-cloud";
 
                 if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
                     (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
@@ -288,7 +288,7 @@ public static class ReasoningCliSteps
             {
                 string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
                 string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "deepseek-v3.1:671b-cloud";
 
                 if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
                     (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
@@ -333,7 +333,7 @@ public static class ReasoningCliSteps
             {
                 string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
                 string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "deepseek-v3.1:671b-cloud";
 
                 if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
                     (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
@@ -379,7 +379,7 @@ public static class ReasoningCliSteps
             {
                 string? endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT");
                 string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "gpt-oss-120b-sovereign";
+                string? modelName = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "deepseek-v3.1:671b-cloud";
 
                 if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
                     (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))

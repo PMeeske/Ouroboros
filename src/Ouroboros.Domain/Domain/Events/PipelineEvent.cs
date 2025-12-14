@@ -11,4 +11,5 @@ namespace LangChainPipeline.Domain.Events;
 [JsonDerivedType(typeof(ReasoningStep), typeDiscriminator: "Reasoning")]
 [JsonDerivedType(typeof(EnvironmentStepEvent), typeDiscriminator: "EnvironmentStep")]
 [JsonDerivedType(typeof(EpisodeEvent), typeDiscriminator: "Episode")]
+[JsonDerivedType(typeof(StepExecutionEvent), typeDiscriminator: "StepExecution")]
 public abstract record PipelineEvent(Guid Id, string Kind, DateTime Timestamp);

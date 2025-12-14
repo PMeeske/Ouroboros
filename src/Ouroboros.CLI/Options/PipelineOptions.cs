@@ -25,8 +25,8 @@ public sealed class PipelineOptions : IVoiceOptions
     [Option('d', "dsl", Required = true, HelpText = "Pipeline DSL string.")]
     public string Dsl { get; set; } = string.Empty;
 
-    [Option("model", Required = false, HelpText = "LLM model name", Default = "deepseek-v3.1:671b-cloud")]
-    public string Model { get; set; } = "deepseek-v3.1:671b-cloud";
+    [Option("model", Required = false, HelpText = "LLM model name", Default = "ministral-3:latest")]
+    public string Model { get; set; } = "ministral-3:latest";
 
     [Option("embed", Required = false, HelpText = "Ollama embedding model name", Default = "nomic-embed-text")]
     public string Embed { get; set; } = "nomic-embed-text";

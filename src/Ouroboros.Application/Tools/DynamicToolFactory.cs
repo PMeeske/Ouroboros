@@ -13,6 +13,8 @@ using LangChainPipeline.Providers;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
+using Ouroboros.Application.Mcp;
+using Ouroboros.Application.Tools.CaptchaResolver;
 using Ouroboros.Tools;
 
 /// <summary>
@@ -22,6 +24,8 @@ using Ouroboros.Tools;
 public class DynamicToolFactory
 {
     private readonly ToolAwareChatModel _llm;
+    private readonly PlaywrightMcpTool? _playwrightMcpTool;
+    private readonly CaptchaResolverChain _captchaResolver;
     private readonly AssemblyLoadContext _loadContext;
     private readonly List<MetadataReference> _references;
     private readonly string _storagePath;
@@ -32,9 +36,11 @@ public class DynamicToolFactory
     /// </summary>
     /// <param name="llm">The LLM for generating tool code.</param>
     /// <param name="storagePath">Optional path to store generated tools.</param>
-    public DynamicToolFactory(ToolAwareChatModel llm, string? storagePath = null)
+    /// <param name="playwrightMcpTool">Optional Playwright tool for browser automation.</param>
+    public DynamicToolFactory(ToolAwareChatModel llm, string? storagePath = null, PlaywrightMcpTool? playwrightMcpTool = null)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        _playwrightMcpTool = playwrightMcpTool;
         _loadContext = new AssemblyLoadContext("DynamicTools", isCollectible: true);
         _storagePath = storagePath ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -45,6 +51,68 @@ public class DynamicToolFactory
 
         // Build reference assemblies for compilation
         _references = BuildReferences();
+
+        // Initialize CAPTCHA resolver chain with available strategies
+        // Use semantic decorator to enhance detection and provide intelligent guidance
+        var visionResolver = new VisionCaptchaResolver(_playwrightMcpTool);
+        var alternativeResolver = new AlternativeSearchResolver();
+
+        _captchaResolver = new CaptchaResolverChain()
+            .AddStrategy(new SemanticCaptchaResolverDecorator(visionResolver, _llm))
+            .AddStrategy(new SemanticCaptchaResolverDecorator(alternativeResolver, _llm, useSemanticDetection: false))
+            .AddStrategy(visionResolver)  // Fallback without semantic analysis
+            .AddStrategy(alternativeResolver);
+    }
+
+    /// <summary>
+    /// Fixes malformed URLs that LLMs sometimes generate (e.g., "https: example.com path" → "https://example.com/path").
+    /// </summary>
+    private static string FixMalformedUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return url;
+
+        url = url.Trim();
+
+        // Fix "https: " → "https://" and "http: " → "http://"
+        url = Regex.Replace(url, @"^(https?): +", "$1://");
+
+        // If URL still doesn't have proper scheme, check for common patterns
+        if (!url.StartsWith("http://") && !url.StartsWith("https://"))
+        {
+            // Check if it looks like a domain (e.g., "www.example.com" or "example.com")
+            if (Regex.IsMatch(url, @"^[\w\-]+(\.[\w\-]+)+"))
+            {
+                url = "https://" + url;
+            }
+        }
+
+        // Try to parse and fix path components with spaces
+        if (Uri.TryCreate(url, UriKind.Absolute, out Uri? parsed))
+        {
+            // URL is valid, return as-is
+            return url;
+        }
+
+        // If parsing failed, try to fix spaces in path
+        // Pattern: "https://domain path1 path2" → "https://domain/path1/path2"
+        var match = Regex.Match(url, @"^(https?://[\w\.\-]+)([\s/].*)$");
+        if (match.Success)
+        {
+            string domain = match.Groups[1].Value;
+            string path = match.Groups[2].Value.Trim();
+
+            // Replace spaces with / in path, normalize multiple slashes
+            path = Regex.Replace(path, @"\s+", "/");
+            path = Regex.Replace(path, @"/+", "/");
+
+            if (!path.StartsWith("/"))
+                path = "/" + path;
+
+            url = domain + path;
+        }
+
+        return url;
     }
 
     /// <summary>
@@ -150,6 +218,55 @@ CODE:
         return tool;
     }
 
+    // Random instance for human-like timing simulation
+    private static readonly Random _humanRng = new();
+
+    /// <summary>
+    /// Simulates human-like delay to avoid bot detection.
+    /// </summary>
+    private static async Task SimulateHumanDelayAsync(int minMs = 500, int maxMs = 2000)
+    {
+        int delay = _humanRng.Next(minMs, maxMs);
+        await Task.Delay(delay);
+    }
+
+    /// <summary>
+    /// Gets a randomized User-Agent string to simulate different browsers.
+    /// </summary>
+    private static string GetRandomUserAgent()
+    {
+        var userAgents = new[]
+        {
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"
+        };
+        return userAgents[_humanRng.Next(userAgents.Length)];
+    }
+
+    /// <summary>
+    /// Configures HttpClient with realistic browser-like headers.
+    /// </summary>
+    private static void ConfigureHumanLikeHeaders(HttpClient http)
+    {
+        http.DefaultRequestHeaders.Clear();
+        http.DefaultRequestHeaders.Add("User-Agent", GetRandomUserAgent());
+        http.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
+        http.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9,de;q=0.8");
+        http.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br");
+        http.DefaultRequestHeaders.Add("DNT", "1");
+        http.DefaultRequestHeaders.Add("Connection", "keep-alive");
+        http.DefaultRequestHeaders.Add("Upgrade-Insecure-Requests", "1");
+        http.DefaultRequestHeaders.Add("Sec-Fetch-Dest", "document");
+        http.DefaultRequestHeaders.Add("Sec-Fetch-Mode", "navigate");
+        http.DefaultRequestHeaders.Add("Sec-Fetch-Site", "none");
+        http.DefaultRequestHeaders.Add("Sec-Fetch-User", "?1");
+        http.DefaultRequestHeaders.Add("Cache-Control", "max-age=0");
+    }
+
     /// <summary>
     /// Creates a web search tool that searches the internet.
     /// </summary>
@@ -163,29 +280,146 @@ CODE:
             async (query) =>
             {
                 using var http = new HttpClient();
-                http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
 
-                string searchUrl = searchProvider.ToLowerInvariant() switch
+                // Configure realistic browser-like headers
+                ConfigureHumanLikeHeaders(http);
+                http.Timeout = TimeSpan.FromSeconds(20);
+
+                // Initial human-like delay before first request (simulates typing/thinking)
+                await SimulateHumanDelayAsync(300, 800);
+
+                // Try multiple search endpoints for DuckDuckGo
+                var searchUrls = searchProvider.ToLowerInvariant() switch
                 {
-                    "google" => $"https://www.google.com/search?q={Uri.EscapeDataString(query)}",
-                    "bing" => $"https://www.bing.com/search?q={Uri.EscapeDataString(query)}",
-                    _ => $"https://html.duckduckgo.com/html/?q={Uri.EscapeDataString(query)}"
+                    "google" => new[] { $"https://www.google.com/search?q={Uri.EscapeDataString(query)}" },
+                    "bing" => new[] { $"https://www.bing.com/search?q={Uri.EscapeDataString(query)}" },
+                    _ => new[]
+                    {
+                        $"https://lite.duckduckgo.com/lite/?q={Uri.EscapeDataString(query)}",  // Lite version (less strict)
+                        $"https://html.duckduckgo.com/html/?q={Uri.EscapeDataString(query)}", // HTML version
+                        $"https://duckduckgo.com/?q={Uri.EscapeDataString(query)}&t=h_&ia=web" // Main site
+                    }
                 };
 
-                try
+                foreach (var searchUrl in searchUrls)
                 {
-                    string html = await http.GetStringAsync(searchUrl);
+                    try
+                    {
+                        // Add referer for subsequent requests (simulates clicking through)
+                        if (searchUrl != searchUrls[0])
+                        {
+                            http.DefaultRequestHeaders.Remove("Referer");
+                            http.DefaultRequestHeaders.Add("Referer", searchUrls[0]);
 
-                    // Extract text snippets from results
-                    var results = ExtractSearchResults(html, searchProvider);
-                    return results.Count > 0
-                        ? string.Join("\n\n", results.Take(5))
-                        : "No results found";
+                            // Human-like delay between retry attempts
+                            await SimulateHumanDelayAsync(1000, 3000);
+                        }
+
+                        var response = await http.GetAsync(searchUrl);
+
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            // Try next URL if this one fails
+                            continue;
+                        }
+
+                        string html = await response.Content.ReadAsStringAsync();
+
+                        // Check for CAPTCHA before extracting results
+                        var captchaCheck = _captchaResolver.DetectCaptcha(html, searchUrl);
+                        if (captchaCheck.IsCaptcha)
+                        {
+                            // CAPTCHA detected - try to resolve it
+                            var resolution = await _captchaResolver.ResolveAsync(searchUrl, html);
+                            if (resolution.Success && !string.IsNullOrWhiteSpace(resolution.ResolvedContent))
+                            {
+                                return resolution.ResolvedContent;
+                            }
+
+                            // Resolution failed - continue to next URL
+                            continue;
+                        }
+
+                        // Extract text snippets from results
+                        var results = ExtractSearchResults(html, searchProvider);
+                        if (results.Count > 0)
+                        {
+                            return string.Join("\n\n", results.Take(5));
+                        }
+                    }
+                    catch (HttpRequestException)
+                    {
+                        // Try next URL
+                        continue;
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // Timeout, try next
+                        continue;
+                    }
                 }
-                catch (Exception ex)
+
+                // All primary URLs failed - use CAPTCHA resolver's alternative search strategy
+                var fallbackUrl = $"https://duckduckgo.com/?q={Uri.EscapeDataString(query)}";
+                var alternativeResult = await _captchaResolver.ResolveAsync(fallbackUrl, "Primary search failed");
+                if (alternativeResult.Success && !string.IsNullOrWhiteSpace(alternativeResult.ResolvedContent))
                 {
-                    return $"Search failed: {ex.Message}";
+                    return alternativeResult.ResolvedContent;
                 }
+
+                // If CAPTCHA resolver also failed, try browser automation as last resort
+                if (_playwrightMcpTool != null)
+                {
+                    try
+                    {
+                        // First, navigate to the page. This ensures the page is loaded before we screenshot.
+                        var searchUrl = $"https://duckduckgo.com/?q={Uri.EscapeDataString(query)}&t=h_&ia=web";
+                        var navArgs = new Dictionary<string, object>
+                        {
+                            { "action", "navigate" },
+                            { "url", searchUrl }
+                        };
+                        var navJson = JsonSerializer.Serialize(navArgs);
+                        await _playwrightMcpTool.InvokeAsync(navJson, CancellationToken.None); // We don't need the result, just the action
+
+                        // Now, take a screenshot. We'll get the analysis in the next step.
+                        var screenshotArgs = new Dictionary<string, object>
+                        {
+                            { "action", "screenshot" }
+                        };
+                        var screenshotJson = JsonSerializer.Serialize(screenshotArgs);
+                        await _playwrightMcpTool.InvokeAsync(screenshotJson, CancellationToken.None);
+
+                        // Get the clean vision analysis using the new internal method.
+                        var visionResult = await _playwrightMcpTool.GetVisionAnalysisForLastScreenshotAsync(CancellationToken.None);
+
+                        if (visionResult.IsSuccess)
+                        {
+                            var analysis = visionResult.Match(
+                                success => success,
+                                failure => string.Empty);
+
+                            if (!string.IsNullOrWhiteSpace(analysis))
+                            {
+                                return $"Visually extracted results:\n{analysis}";
+                            }
+                        }
+                        else
+                        {
+                            var error = visionResult.Match(
+                                success => string.Empty,
+                                failure => failure);
+                            return $"Search failed. Vision analysis returned an error: {error}";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Playwright tool also failed, fall through to the generic error.
+                        return $"Search failed after multiple retries. Vision-based search failed with: {ex.Message}";
+                    }
+                }
+
+                return "Search failed: All search providers returned errors or blocked the request. Try using the Playwright browser tool to search manually.";
             });
 
         return tool;
@@ -202,8 +436,11 @@ CODE:
             "Search the web using Google and return results with titles, URLs, and snippets",
             async (query) =>
             {
+                // Simulate human typing/thinking delay
+                await SimulateHumanDelayAsync(200, 600);
+
                 using var http = new HttpClient();
-                http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                ConfigureHumanLikeHeaders(http);
                 http.Timeout = TimeSpan.FromSeconds(30);
 
                 string? serpApiKey = Environment.GetEnvironmentVariable("SERPAPI_KEY");
@@ -257,15 +494,73 @@ CODE:
         return CreateSimpleTool(
             "fetch_url",
             "Fetch content from a URL and return the text",
-            async (url) =>
+            async (input) =>
             {
-                using var http = new HttpClient();
-                http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
+                string url = input?.Trim() ?? string.Empty;
+
+                // Handle JSON input from orchestrator (e.g., {"url":"...","__sandboxed__":true})
+                if (url.StartsWith("{") || url.StartsWith("'"))
+                {
+                    try
+                    {
+                        // Try to parse as JSON and extract 'url' field
+                        string normalized = url.Replace("'", "\""); // Handle single quotes
+                        using var doc = System.Text.Json.JsonDocument.Parse(normalized);
+                        if (doc.RootElement.TryGetProperty("url", out var urlProp))
+                        {
+                            url = urlProp.GetString() ?? string.Empty;
+                        }
+                    }
+                    catch
+                    {
+                        // Not valid JSON, continue with original input
+                    }
+                }
+
+                // Validate URL is not empty
+                if (string.IsNullOrWhiteSpace(url))
+                {
+                    return "Fetch failed: URL is required";
+                }
+
+                // Fix malformed URLs from LLM (e.g., "https: example.com path" → "https://example.com/path")
+                url = FixMalformedUrl(url);
+
+                // Detect placeholder descriptions that LLMs sometimes generate instead of actual URLs
+                string lower = url.ToLowerInvariant().Trim();
+                if (lower.StartsWith("url of") ||
+                    lower.StartsWith("the ") ||
+                    lower.Contains(" of the ") ||
+                    lower.Contains("from step") ||
+                    lower.Contains("e.g.,") ||
+                    lower.Contains("placeholder") ||
+                    lower.Contains("result from"))
+                {
+                    return $"Fetch failed: The URL appears to be a placeholder description, not an actual URL. Got: '{url}'. Please provide a real URL like 'https://example.com'.";
+                }
+
+                // Validate URL is absolute
+                if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? parsedUri))
+                {
+                    return $"Fetch failed: Invalid URL format. URL must be absolute (e.g., https://example.com). Got: {url}";
+                }
+
+                // Only allow http/https schemes
+                if (parsedUri.Scheme != "http" && parsedUri.Scheme != "https")
+                {
+                    return $"Fetch failed: Only http and https URLs are supported. Got: {parsedUri.Scheme}";
+                }
+
+                // Simulate human-like delay before fetch
+                await SimulateHumanDelayAsync(200, 500);
+
+                using HttpClient http = new HttpClient();
+                ConfigureHumanLikeHeaders(http);
                 http.Timeout = TimeSpan.FromSeconds(30);
 
                 try
                 {
-                    string content = await http.GetStringAsync(url);
+                    string content = await http.GetStringAsync(parsedUri);
 
                     // Basic HTML to text conversion
                     content = System.Text.RegularExpressions.Regex.Replace(content, @"<script[^>]*>[\s\S]*?</script>", "");
@@ -588,22 +883,95 @@ Generate ONLY the complete C# code, no explanations.";
     {
         var results = new List<string>();
 
-        // Simple regex-based extraction (works for basic cases)
-        var snippetPattern = provider.ToLowerInvariant() switch
+        // Try multiple patterns for each provider (they change HTML frequently)
+        var patterns = provider.ToLowerInvariant() switch
         {
-            "google" => @"<span[^>]*>([^<]{50,})</span>",
-            "bing" => @"<p[^>]*>([^<]{50,})</p>",
-            _ => @"<a[^>]*class=""result__snippet""[^>]*>([^<]+)</a>|<td[^>]*class=""result__snippet""[^>]*>([^<]+)</td>"
+            "google" => new[]
+            {
+                @"<span[^>]*>([^<]{50,})</span>",
+                @"<div[^>]*class=""[^""]*BNeawe[^""]*""[^>]*>([^<]{30,})</div>",
+                @"<div[^>]*data-sncf=""[^""]*""[^>]*>([^<]{30,})</div>"
+            },
+            "bing" => new[]
+            {
+                @"<p[^>]*>([^<]{50,})</p>",
+                @"<li[^>]*class=""b_algo""[^>]*>.*?<p>([^<]{30,})</p>",
+                @"<span[^>]*class=""algoSlug_icon""[^>]*>([^<]{30,})</span>"
+            },
+            "brave" => new[]
+            {
+                @"<p[^>]*class=""[^""]*snippet[^""]*""[^>]*>([^<]{30,})</p>",
+                @"<div[^>]*class=""[^""]*snippet[^""]*""[^>]*>([^<]{30,})</div>",
+                @"<span[^>]*class=""[^""]*description[^""]*""[^>]*>([^<]{30,})</span>",
+                @"data-testid=""result-item""[^>]*>.*?<p[^>]*>([^<]{30,})</p>"
+            },
+            _ => new[] // DuckDuckGo (including lite version) - try multiple selectors
+            {
+                @"<a[^>]*class=""result__snippet""[^>]*>([^<]+)</a>",
+                @"<td[^>]*class=""result__snippet""[^>]*>([^<]+)</td>",
+                @"class=""result__snippet""[^>]*>([^<]{20,})<",
+                @"<a[^>]*class=""[^""]*result[^""]*""[^>]*>([^<]{30,})</a>",
+                @"<div[^>]*class=""[^""]*snippet[^""]*""[^>]*>([^<]{30,})</div>",
+                @"<span[^>]*class=""[^""]*snippet[^""]*""[^>]*>([^<]{30,})</span>",
+                // Lite version patterns
+                @"<td>([^<]{40,})</td>",
+                @"<tr[^>]*>.*?<td[^>]*>([^<]{30,})</td>"
+            }
         };
 
-        var matches = System.Text.RegularExpressions.Regex.Matches(html, snippetPattern);
-        foreach (System.Text.RegularExpressions.Match m in matches)
+        foreach (var pattern in patterns)
         {
-            string text = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value;
-            text = System.Net.WebUtility.HtmlDecode(text).Trim();
-            if (text.Length > 30 && !results.Contains(text))
+            var matches = System.Text.RegularExpressions.Regex.Matches(html, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            foreach (System.Text.RegularExpressions.Match m in matches)
             {
-                results.Add(text);
+                // Try all capture groups
+                for (int i = 1; i <= m.Groups.Count - 1; i++)
+                {
+                    if (m.Groups[i].Success)
+                    {
+                        string text = System.Net.WebUtility.HtmlDecode(m.Groups[i].Value).Trim();
+                        // Filter out noise
+                        if (text.Length > 25 &&
+                            !results.Contains(text) &&
+                            !text.StartsWith("http") &&
+                            !text.Contains("javascript:") &&
+                            !text.All(c => char.IsDigit(c) || char.IsWhiteSpace(c)))
+                        {
+                            results.Add(text);
+                        }
+                    }
+                }
+            }
+
+            // If we found results with this pattern, don't need to try more
+            if (results.Count >= 3) break;
+        }
+
+        // Fallback: extract any reasonably sized text blocks if no results found
+        if (results.Count == 0)
+        {
+            var fallbackPattern = @">([^<]{40,200})<";
+            var fallbackMatches = System.Text.RegularExpressions.Regex.Matches(html, fallbackPattern);
+            foreach (System.Text.RegularExpressions.Match m in fallbackMatches)
+            {
+                string text = System.Net.WebUtility.HtmlDecode(m.Groups[1].Value).Trim();
+                if (text.Length > 40 &&
+                    !results.Contains(text) &&
+                    !text.StartsWith("http") &&
+                    !text.Contains("{") &&  // Skip JSON/CSS
+                    !text.Contains("function") &&  // Skip JS
+                    !text.Contains("var ") && // Skip JS vars
+                    !text.Contains("window.") && // Skip JS window objects
+                    !text.Contains(";") && // Skip code-like lines
+                    results.Count < 10)
+                {
+                    // Check for high density of symbols (likely code or garbage)
+                    int symbols = text.Count(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c) && c != '.' && c != ',');
+                    if (symbols < text.Length * 0.2) // Less than 20% symbols
+                    {
+                        results.Add(text);
+                    }
+                }
             }
         }
 

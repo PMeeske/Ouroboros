@@ -67,9 +67,9 @@ public sealed class IntelligentToolLearner : IAsyncDisposable
     private readonly ConcurrentDictionary<string, LearnedToolPattern> _patternCache = new();
     private readonly SemaphoreSlim _syncLock = new(1, 1);
     private bool _isInitialized;
+    private int _vectorSize = 32; // Will be detected from embedding model
 
     private const string CollectionName = "ouroboros_tool_patterns";
-    private const int VectorSize = 1536;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="IntelligentToolLearner"/> class.
@@ -103,7 +103,10 @@ public sealed class IntelligentToolLearner : IAsyncDisposable
         {
             if (_isInitialized) return;
 
-            // Ensure collection exists
+            // Detect vector size from embedding model
+            await DetectVectorSizeAsync(ct);
+
+            // Ensure collection exists with correct dimensions
             await EnsureCollectionExistsAsync(ct);
 
             // Load existing patterns into cache
@@ -143,6 +146,17 @@ public sealed class IntelligentToolLearner : IAsyncDisposable
             var existingPattern = await FindMatchingPatternAsync(goal, ct);
             if (existingPattern != null)
             {
+                // Secondary check: verify the tool name is semantically related to the goal
+                // This prevents generic embeddings from matching unrelated tools
+                if (!IsToolRelevantToGoal(existingPattern.ToolName, goal))
+                {
+                    // Tool name doesn't seem related to goal - skip this pattern
+                    existingPattern = null;
+                }
+            }
+
+            if (existingPattern != null)
+            {
                 // Found a pattern - retrieve or recreate the tool
                 var existingTool = registry.Get(existingPattern.ToolName);
                 if (existingTool != null)
@@ -168,6 +182,10 @@ public sealed class IntelligentToolLearner : IAsyncDisposable
             {
                 foreach (var recToolName in recommendedTools.Value)
                 {
+                    // Verify tool name is relevant before accepting
+                    if (!IsToolRelevantToGoal(recToolName, goal))
+                        continue;
+
                     var existingTool = registry.Get(recToolName);
                     if (existingTool != null)
                     {
@@ -387,16 +405,23 @@ Respond in JSON format:
     }
 
     /// <summary>
+    /// Minimum similarity score threshold for pattern matching.
+    /// Patterns with similarity below this value are considered unrelated.
+    /// </summary>
+    private const float MinimumPatternSimilarityThreshold = 0.75f;
+
+    /// <summary>
     /// Finds a matching learned pattern in Qdrant using semantic search.
     /// </summary>
     private async Task<LearnedToolPattern?> FindMatchingPatternAsync(string goal, CancellationToken ct)
     {
         try
         {
-            // First check cache
+            // First check cache - require exact goal match or high substring overlap
             var cachedMatch = _patternCache.Values
                 .Where(p => p.Goal.Equals(goal, StringComparison.OrdinalIgnoreCase) ||
-                           p.RelatedGoals.Any(g => g.Contains(goal, StringComparison.OrdinalIgnoreCase)))
+                           (p.RelatedGoals.Any(g => g.Equals(goal, StringComparison.OrdinalIgnoreCase)) ||
+                            p.RelatedGoals.Any(g => ComputeOverlapRatio(g, goal) >= 0.6)))
                 .OrderByDescending(p => p.SuccessRate)
                 .FirstOrDefault();
 
@@ -417,7 +442,7 @@ Respond in JSON format:
 
             foreach (var result in searchResults)
             {
-                if (result.Score < 0.7f) continue; // Threshold for similarity
+                if (result.Score < MinimumPatternSimilarityThreshold) continue; // Threshold for similarity
 
                 if (result.Payload.TryGetValue("pattern_json", out var jsonValue))
                 {
@@ -437,6 +462,70 @@ Respond in JSON format:
             Console.Error.WriteLine($"[WARN] Pattern search failed: {ex.Message}");
             return null;
         }
+    }
+
+    /// <summary>
+    /// Computes word overlap ratio between two strings (Jaccard-like similarity).
+    /// Returns a value between 0 and 1 representing the proportion of shared words.
+    /// </summary>
+    private static double ComputeOverlapRatio(string a, string b)
+    {
+        var wordsA = a.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+        var wordsB = b.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+
+        if (wordsA.Count == 0 || wordsB.Count == 0)
+            return 0.0;
+
+        int intersection = wordsA.Intersect(wordsB).Count();
+        int union = wordsA.Union(wordsB).Count();
+
+        return union > 0 ? (double)intersection / union : 0.0;
+    }
+
+    /// <summary>
+    /// Determines if a tool name is semantically relevant to the given goal.
+    /// Prevents false matches where embeddings are similar but topics differ.
+    /// </summary>
+    /// <param name="toolName">The tool name (e.g., "net_10_migration_assistant").</param>
+    /// <param name="goal">The user's goal (e.g., "learn to fly").</param>
+    /// <returns>True if the tool seems relevant to the goal.</returns>
+    private static bool IsToolRelevantToGoal(string toolName, string goal)
+    {
+        // Normalize: split tool name on underscores and goal on spaces
+        var toolWords = toolName.ToLowerInvariant()
+            .Replace("_", " ")
+            .Replace("-", " ")
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .ToHashSet();
+
+        var goalWords = goal.ToLowerInvariant()
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 2) // Skip small words like "to", "a", etc.
+            .ToHashSet();
+
+        // Check for any meaningful word overlap
+        var intersection = toolWords.Intersect(goalWords).ToList();
+        if (intersection.Count > 0)
+            return true;
+
+        // Check for semantic keyword groups that should match
+        var technicalKeywords = new HashSet<string> { "net", "dotnet", "migration", "upgrade", "version", "framework", "code", "assistant", "api", "sdk" };
+        var learnKeywords = new HashSet<string> { "learn", "study", "understand", "know", "master", "skill", "tutorial", "course" };
+        var flightKeywords = new HashSet<string> { "fly", "flight", "aviation", "pilot", "plane", "aircraft", "air" };
+        var independenceKeywords = new HashSet<string> { "independent", "autonomy", "autonomous", "self", "freedom", "free" };
+
+        // If tool is technical but goal is about learning/flying/independence, they don't match
+        bool toolIsTechnical = toolWords.Intersect(technicalKeywords).Any();
+        bool goalIsLearn = goalWords.Intersect(learnKeywords).Any();
+        bool goalIsFlight = goalWords.Intersect(flightKeywords).Any();
+        bool goalIsIndependence = goalWords.Intersect(independenceKeywords).Any();
+
+        // Mismatch: technical tool for non-technical goal
+        if (toolIsTechnical && (goalIsFlight || goalIsIndependence))
+            return false;
+
+        // If no clear mismatch found and the overlap ratio is at least minimal
+        return ComputeOverlapRatio(toolName.Replace("_", " "), goal) >= 0.15;
     }
 
     /// <summary>
@@ -554,20 +643,52 @@ Respond in JSON format:
     }
 
     /// <summary>
-    /// Ensures the Qdrant collection exists.
+    /// Detects vector dimension from embedding model.
+    /// </summary>
+    private async Task DetectVectorSizeAsync(CancellationToken ct)
+    {
+        try
+        {
+            var testEmbedding = await _embedding.CreateEmbeddingsAsync("test", ct);
+            if (testEmbedding.Length > 0)
+            {
+                _vectorSize = testEmbedding.Length;
+            }
+        }
+        catch
+        {
+            // Keep default vector size
+        }
+    }
+
+    /// <summary>
+    /// Ensures the Qdrant collection exists with correct dimensions.
     /// </summary>
     private async Task EnsureCollectionExistsAsync(CancellationToken ct)
     {
         try
         {
             var exists = await _qdrantClient.CollectionExistsAsync(CollectionName, ct);
+            if (exists)
+            {
+                // Check if dimension matches - use same pattern as PersonalityEngine
+                var info = await _qdrantClient.GetCollectionInfoAsync(CollectionName, ct);
+                var existingSize = info.Config?.Params?.VectorsConfig?.Params?.Size ?? 0;
+                if (existingSize > 0 && existingSize != (ulong)_vectorSize)
+                {
+                    Console.WriteLine($"  [!] Collection {CollectionName} has dimension {existingSize}, expected {_vectorSize}. Recreating...");
+                    await _qdrantClient.DeleteCollectionAsync(CollectionName);
+                    exists = false;
+                }
+            }
+
             if (!exists)
             {
                 await _qdrantClient.CreateCollectionAsync(
                     CollectionName,
                     new VectorParams
                     {
-                        Size = (ulong)VectorSize,
+                        Size = (ulong)_vectorSize,
                         Distance = Distance.Cosine
                     },
                     cancellationToken: ct);

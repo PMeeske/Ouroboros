@@ -270,6 +270,15 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 
         try
         {
+            // Validate step action is not empty
+            if (string.IsNullOrWhiteSpace(step.Action))
+            {
+                return new StepResult(
+                    step, false, string.Empty,
+                    "Step action/tool name cannot be empty",
+                    sw.Elapsed, observedState);
+            }
+
             // Find and execute the tool
             Option<ITool> toolOption = _tools.GetTool(step.Action);
             if (!toolOption.HasValue)
@@ -332,7 +341,16 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     ""expected_outcome"": ""what should happen"",
     ""confidence"": 0.9
   }
-]";
+]
+
+CRITICAL PARAMETER RULES:
+- Use ACTUAL CONCRETE VALUES in parameters - never placeholder descriptions
+- URLs must be real URLs (https://example.com), not descriptions like 'URL from search'
+- Search queries must be actual text, not 'query about topic'
+- If you don't have a real value, SKIP that step or ask for it
+
+WRONG parameters: {""url"": ""URL of the search result"", ""query"": ""search for topic""}
+CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ouroboros mythology serpent""}";
 
         return prompt;
     }

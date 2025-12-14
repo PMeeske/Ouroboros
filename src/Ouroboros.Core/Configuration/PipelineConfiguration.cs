@@ -58,7 +58,7 @@ public class LlmProviderConfiguration
     /// <summary>
     /// Gets or sets default model name for chat operations.
     /// </summary>
-    public string DefaultChatModel { get; set; } = "llama3";
+    public string DefaultChatModel { get; set; } = "deepseek-v3.1:671b-cloud";
 
     /// <summary>
     /// Gets or sets default model name for embeddings.

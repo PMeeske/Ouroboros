@@ -13,7 +13,16 @@ public static class OuroborosCommands
     /// </summary>
     public static async Task RunOuroborosAsync(OuroborosOptions opts)
     {
-        Console.Clear();
+        // Clear console safely (may fail when output is redirected)
+        try
+        {
+            Console.Clear();
+        }
+        catch (IOException)
+        {
+            // Ignore - output may be redirected
+        }
+
         PrintBanner();
 
         if (opts.Debug)
@@ -23,7 +32,7 @@ public static class OuroborosCommands
 
         try
         {
-            // Create unified config from CLI options
+            // Create unified config from CLI options - ALL features enabled by default
             var config = new OuroborosConfig(
                 Persona: opts.Persona,
                 Model: opts.Model,
@@ -37,7 +46,24 @@ public static class OuroborosCommands
                 LocalTts: opts.LocalTts,
                 Debug: opts.Debug,
                 Temperature: opts.Temperature,
-                MaxTokens: opts.MaxTokens
+                MaxTokens: opts.MaxTokens,
+                // Feature toggles - invert the "No" flags
+                EnableSkills: !opts.NoSkills,
+                EnableMeTTa: !opts.NoMeTTa,
+                EnableTools: !opts.NoTools,
+                EnablePersonality: !opts.NoPersonality,
+                EnableMind: !opts.NoMind,
+                EnableBrowser: !opts.NoBrowser,
+                // Additional config
+                ThinkingIntervalSeconds: opts.ThinkingInterval,
+                AgentMaxSteps: opts.AgentMaxSteps,
+                InitialGoal: opts.Goal,
+                InitialQuestion: opts.Question,
+                InitialDsl: opts.Dsl,
+                // Multi-model
+                CoderModel: opts.CoderModel,
+                ReasonModel: opts.ReasonModel,
+                SummarizeModel: opts.SummarizeModel
             );
 
             // Create the unified Ouroboros agent
@@ -53,6 +79,10 @@ public static class OuroborosCommands
             else if (!string.IsNullOrEmpty(opts.Question))
             {
                 await agent.ProcessQuestionAsync(opts.Question);
+            }
+            else if (!string.IsNullOrEmpty(opts.Dsl))
+            {
+                await agent.ProcessDslAsync(opts.Dsl);
             }
 
             // Main interaction loop
@@ -85,10 +115,23 @@ public static class OuroborosCommands
    ║                                                                       ║
    ║          ∞ The Self-Improving AI Agent ∞                             ║
    ║                                                                       ║
-   ║   Unified Voice + Skills + Tools + Reasoning + Personality           ║
-   ║                                                                       ║
    ╚═══════════════════════════════════════════════════════════════════════╝
 ");
+        Console.ResetColor();
+
+        Console.ForegroundColor = ConsoleColor.DarkYellow;
+        Console.WriteLine("   Full-featured mode: Voice • Skills • Tools • MeTTa • Personality • Browser");
+        Console.ResetColor();
+        Console.WriteLine();
+
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine("   Quick examples:");
+        Console.WriteLine("     ouroboros                        # Interactive with voice (default)");
+        Console.WriteLine("     ouroboros --text-only            # Text-only mode");
+        Console.WriteLine("     ouroboros -q \"What is AI?\"       # Answer a question");
+        Console.WriteLine("     ouroboros -g \"Build a website\"   # Goal-driven planning");
+        Console.WriteLine("     ouroboros -d \"SetPrompt | LLM\"   # Execute pipeline DSL");
+        Console.WriteLine("     ouroboros --no-browser --no-mind # Disable specific features");
         Console.ResetColor();
         Console.WriteLine();
     }

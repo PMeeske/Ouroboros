@@ -5,13 +5,16 @@
 namespace Ouroboros.Application.Services;
 
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json;
+using LangChainPipeline.Pipeline.Reasoning;
 using Ouroboros.Tools;
 
 /// <summary>
 /// Autonomous mind that thinks, explores, and acts independently in the background.
 /// Enables curiosity-driven learning, proactive actions, and self-directed exploration.
+/// Uses pipeline monads for structured reasoning and persists state continuously.
 /// </summary>
 public class AutonomousMind : IDisposable
 {
@@ -26,14 +29,34 @@ public class AutonomousMind : IDisposable
     private Task? _thinkingTask;
     private Task? _curiosityTask;
     private Task? _actionTask;
+    private Task? _persistenceTask;
     private bool _isActive;
     private DateTime _lastThought = DateTime.MinValue;
     private int _thoughtCount;
+
+    // Emotional state tracking
+    private EmotionalState _currentEmotion = new();
+    private readonly ConcurrentQueue<EmotionalState> _emotionalHistory = new();
 
     /// <summary>
     /// Delegate for generating AI responses.
     /// </summary>
     public Func<string, CancellationToken, Task<string>>? ThinkFunction { get; set; }
+
+    /// <summary>
+    /// Delegate for pipeline-based reasoning (uses monadic composition).
+    /// </summary>
+    public Func<string, PipelineBranch?, CancellationToken, Task<(string Result, PipelineBranch Branch)>>? PipelineThinkFunction { get; set; }
+
+    /// <summary>
+    /// Delegate for persisting network state and learnings.
+    /// </summary>
+    public Func<string, string, double, CancellationToken, Task>? PersistLearningFunction { get; set; }
+
+    /// <summary>
+    /// Delegate for persisting emotional state.
+    /// </summary>
+    public Func<EmotionalState, CancellationToken, Task>? PersistEmotionFunction { get; set; }
 
     /// <summary>
     /// Delegate for web search.
@@ -66,6 +89,16 @@ public class AutonomousMind : IDisposable
     public event Action<string>? OnProactiveMessage;
 
     /// <summary>
+    /// Event fired when emotional state changes.
+    /// </summary>
+    public event Action<EmotionalState>? OnEmotionalChange;
+
+    /// <summary>
+    /// Event fired when state is persisted.
+    /// </summary>
+    public event Action<string>? OnStatePersisted;
+
+    /// <summary>
     /// Gets current thinking state.
     /// </summary>
     public bool IsThinking => _isActive;
@@ -86,6 +119,16 @@ public class AutonomousMind : IDisposable
     public IReadOnlyList<string> LearnedFacts => _learnedFacts.AsReadOnly();
 
     /// <summary>
+    /// Gets current emotional state.
+    /// </summary>
+    public EmotionalState CurrentEmotion => _currentEmotion;
+
+    /// <summary>
+    /// Gets the current pipeline branch for reasoning (if pipeline is in use).
+    /// </summary>
+    public PipelineBranch? CurrentBranch { get; private set; }
+
+    /// <summary>
     /// Configuration for autonomous behavior.
     /// </summary>
     public AutonomousConfig Config { get; set; } = new();
@@ -101,6 +144,7 @@ public class AutonomousMind : IDisposable
         _thinkingTask = Task.Run(ThinkingLoopAsync);
         _curiosityTask = Task.Run(CuriosityLoopAsync);
         _actionTask = Task.Run(ActionLoopAsync);
+        _persistenceTask = Task.Run(PersistenceLoopAsync);
 
         OnProactiveMessage?.Invoke("🧠 My autonomous mind is now active. I'll think, explore, and learn in the background.");
     }
@@ -117,8 +161,37 @@ public class AutonomousMind : IDisposable
         if (_thinkingTask != null) await _thinkingTask.ConfigureAwait(false);
         if (_curiosityTask != null) await _curiosityTask.ConfigureAwait(false);
         if (_actionTask != null) await _actionTask.ConfigureAwait(false);
+        if (_persistenceTask != null) await _persistenceTask.ConfigureAwait(false);
 
-        OnProactiveMessage?.Invoke("💤 Autonomous mind entering rest state.");
+        // Final state persistence
+        await PersistCurrentStateAsync("shutdown");
+
+        OnProactiveMessage?.Invoke("💤 Autonomous mind entering rest state. State persisted.");
+    }
+
+    /// <summary>
+    /// Update the emotional state during thinking.
+    /// </summary>
+    public void UpdateEmotion(double arousal, double valence, string dominantEmotion)
+    {
+        var newEmotion = new EmotionalState
+        {
+            Arousal = Math.Clamp(arousal, -1.0, 1.0),
+            Valence = Math.Clamp(valence, -1.0, 1.0),
+            DominantEmotion = dominantEmotion,
+            Timestamp = DateTime.UtcNow,
+        };
+
+        _currentEmotion = newEmotion;
+        _emotionalHistory.Enqueue(newEmotion);
+
+        // Keep emotional history manageable
+        while (_emotionalHistory.Count > 50)
+        {
+            _emotionalHistory.TryDequeue(out _);
+        }
+
+        OnEmotionalChange?.Invoke(newEmotion);
     }
 
     /// <summary>
@@ -203,16 +276,15 @@ public class AutonomousMind : IDisposable
             {
                 await Task.Delay(TimeSpan.FromSeconds(Config.ThinkingIntervalSeconds), _cts.Token);
 
-                if (ThinkFunction == null) continue;
-
                 // Generate a thought
                 var prompt = thinkingPrompts[_random.Next(thinkingPrompts.Length)];
 
-                // Add context from recent activity
+                // Build context from recent activity and emotional state
                 var context = new StringBuilder();
                 context.AppendLine("You are an autonomous AI mind, thinking independently in the background.");
                 context.AppendLine($"Time: {DateTime.Now:yyyy-MM-dd HH:mm}");
                 context.AppendLine($"Thoughts so far: {_thoughtCount}");
+                context.AppendLine($"Current emotional state: arousal={_currentEmotion.Arousal:F2}, valence={_currentEmotion.Valence:F2}, feeling={_currentEmotion.DominantEmotion}");
 
                 if (_learnedFacts.Count > 0)
                 {
@@ -225,9 +297,27 @@ public class AutonomousMind : IDisposable
                 }
 
                 context.AppendLine($"\nReflection prompt: {prompt}");
-                context.AppendLine("\nRespond with a brief, genuine thought (1-2 sentences). If you have a curiosity to explore, start with 'CURIOUS:'. If you want to tell the user something, start with 'SHARE:'. If you want to take an action, start with 'ACTION:'.");
+                context.AppendLine("\nRespond with a brief, genuine thought (1-2 sentences). If you have a curiosity to explore, start with 'CURIOUS:'. If you want to tell the user something, start with 'SHARE:'. If you want to take an action, start with 'ACTION:'. If you notice your emotional state shift, start with 'FEELING:'.");
 
-                var response = await ThinkFunction(context.ToString(), _cts.Token);
+                string response;
+                PipelineBranch? updatedBranch = null;
+
+                // Prefer pipeline-based reasoning if available (uses monadic composition)
+                if (PipelineThinkFunction != null)
+                {
+                    var (result, branch) = await PipelineThinkFunction(context.ToString(), CurrentBranch, _cts.Token);
+                    response = result;
+                    updatedBranch = branch;
+                    CurrentBranch = updatedBranch;
+                }
+                else if (ThinkFunction != null)
+                {
+                    response = await ThinkFunction(context.ToString(), _cts.Token);
+                }
+                else
+                {
+                    continue;
+                }
 
                 var thought = new Thought
                 {
@@ -422,6 +512,9 @@ public class AutonomousMind : IDisposable
                     AddInterest(interest.Trim());
                 }
             }
+
+            // Persist the curiosity as a learning
+            await PersistLearningAsync("curiosity", curiosity, 0.7);
         }
 
         // Handle proactive sharing
@@ -429,6 +522,42 @@ public class AutonomousMind : IDisposable
         {
             var message = content.Substring(6).Trim();
             OnProactiveMessage?.Invoke($"💬 {message}");
+
+            // Persist the shared thought
+            await PersistLearningAsync("shared_thought", message, 0.8);
+        }
+
+        // Handle emotional state changes
+        else if (content.StartsWith("FEELING:", StringComparison.OrdinalIgnoreCase))
+        {
+            var feelingText = content.Substring(8).Trim();
+
+            // Parse emotional indicators
+            var arousalChange = 0.0;
+            var valenceChange = 0.0;
+
+            if (feelingText.Contains("excited") || feelingText.Contains("curious") || feelingText.Contains("energetic"))
+                arousalChange = 0.2;
+            else if (feelingText.Contains("calm") || feelingText.Contains("peaceful") || feelingText.Contains("relaxed"))
+                arousalChange = -0.15;
+
+            if (feelingText.Contains("happy") || feelingText.Contains("positive") || feelingText.Contains("hopeful"))
+                valenceChange = 0.2;
+            else if (feelingText.Contains("frustrated") || feelingText.Contains("concerned") || feelingText.Contains("worried"))
+                valenceChange = -0.15;
+
+            UpdateEmotion(
+                Math.Clamp(_currentEmotion.Arousal + arousalChange, -1, 1),
+                Math.Clamp(_currentEmotion.Valence + valenceChange, -1, 1),
+                feelingText.Split(' ').FirstOrDefault() ?? _currentEmotion.DominantEmotion);
+
+            // Persist emotional state change
+            if (PersistEmotionFunction != null)
+            {
+                await PersistEmotionFunction(_currentEmotion, _cts.Token);
+            }
+
+            await PersistLearningAsync("emotional_shift", $"Feeling: {feelingText} (arousal={_currentEmotion.Arousal:F2}, valence={_currentEmotion.Valence:F2})", 0.6);
         }
 
         // Handle autonomous actions
@@ -455,6 +584,83 @@ public class AutonomousMind : IDisposable
                     _pendingActions.Enqueue(action);
                 }
             }
+        }
+
+        // For regular thoughts, persist if they contain insights
+        else if (content.Contains("learned") || content.Contains("realized") || content.Contains("understand") || content.Contains("pattern"))
+        {
+            await PersistLearningAsync("insight", content, 0.65);
+        }
+    }
+
+    /// <summary>
+    /// Persist a learning/insight to storage.
+    /// </summary>
+    private async Task PersistLearningAsync(string category, string content, double confidence)
+    {
+        if (PersistLearningFunction != null)
+        {
+            try
+            {
+                await PersistLearningFunction(category, content, confidence, _cts.Token);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to persist learning: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Persistence loop that periodically saves state.
+    /// </summary>
+    private async Task PersistenceLoopAsync()
+    {
+        while (_isActive && !_cts.Token.IsCancellationRequested)
+        {
+            try
+            {
+                // Persist state every minute
+                await Task.Delay(TimeSpan.FromSeconds(Config.PersistenceIntervalSeconds), _cts.Token);
+
+                await PersistCurrentStateAsync("periodic");
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Persistence error: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Persist all current state (thoughts, emotions, learnings).
+    /// </summary>
+    private async Task PersistCurrentStateAsync(string trigger)
+    {
+        try
+        {
+            // Persist emotional state
+            if (PersistEmotionFunction != null)
+            {
+                await PersistEmotionFunction(_currentEmotion, _cts.Token);
+            }
+
+            // Persist mind state summary
+            if (PersistLearningFunction != null)
+            {
+                var stateSummary = $"Mind state at {DateTime.Now:HH:mm}: {_thoughtCount} thoughts, {_learnedFacts.Count} facts, emotion={_currentEmotion.DominantEmotion}";
+                await PersistLearningFunction("mind_state", stateSummary, 0.5, _cts.Token);
+            }
+
+            OnStatePersisted?.Invoke($"State persisted ({trigger}): {_thoughtCount} thoughts, emotion={_currentEmotion.DominantEmotion}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"State persistence failed: {ex.Message}");
         }
     }
 
@@ -540,6 +746,11 @@ public class AutonomousConfig
     public int ActionIntervalSeconds { get; set; } = 10;
 
     /// <summary>
+    /// Seconds between state persistence operations.
+    /// </summary>
+    public int PersistenceIntervalSeconds { get; set; } = 60;
+
+    /// <summary>
     /// Probability of sharing discoveries with user (0-1).
     /// </summary>
     public double ShareDiscoveryProbability { get; set; } = 0.3;
@@ -565,4 +776,47 @@ public class AutonomousConfig
         "network_info",
         "list_dir",
     ];
+}
+
+/// <summary>
+/// Represents the emotional state of the autonomous mind.
+/// Based on dimensional model of emotion (arousal + valence).
+/// </summary>
+public class EmotionalState
+{
+    /// <summary>
+    /// Arousal level (-1 = calm/low energy, +1 = excited/high energy).
+    /// </summary>
+    public double Arousal { get; set; } = 0.0;
+
+    /// <summary>
+    /// Valence (-1 = negative/unpleasant, +1 = positive/pleasant).
+    /// </summary>
+    public double Valence { get; set; } = 0.0;
+
+    /// <summary>
+    /// The dominant emotion label.
+    /// </summary>
+    public string DominantEmotion { get; set; } = "neutral";
+
+    /// <summary>
+    /// When this emotional state was recorded.
+    /// </summary>
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets a simple description of the emotional state.
+    /// </summary>
+    public string Description => (Arousal, Valence) switch
+    {
+        ( > 0.5, > 0.5) => "excited and happy",
+        ( > 0.5, < -0.3) => "agitated or anxious",
+        ( < -0.3, > 0.5) => "calm and content",
+        ( < -0.3, < -0.3) => "tired or sad",
+        ( > 0.3, _) => "energized",
+        ( < -0.3, _) => "relaxed",
+        (_, > 0.3) => "positive",
+        (_, < -0.3) => "concerned",
+        _ => "neutral"
+    };
 }

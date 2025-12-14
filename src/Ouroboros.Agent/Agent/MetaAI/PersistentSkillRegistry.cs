@@ -125,6 +125,15 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
     }
 
     /// <summary>
+    /// Minimum similarity threshold for semantic skill matching.
+    /// Skills with similarity below this value are considered unrelated.
+    /// </summary>
+    /// <summary>
+    /// Minimum similarity score threshold - 0.75+ ensures strong match.
+    /// </summary>
+    private const double MinimumSimilarityThreshold = 0.75;
+
+    /// <summary>
     /// Finds skills matching a goal using semantic similarity if available.
     /// </summary>
     public async Task<List<Skill>> FindMatchingSkillsAsync(
@@ -147,7 +156,9 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
                 var matchedSkills = new List<Skill>();
                 foreach (var doc in similarDocs)
                 {
-                    if (doc.Metadata?.TryGetValue("skill_name", out var nameObj) == true && 
+                    // Check similarity score if available (stored during indexing)
+                    // This is a fallback check since GetSimilarDocumentsAsync doesn't filter by score
+                    if (doc.Metadata?.TryGetValue("skill_name", out var nameObj) == true &&
                         nameObj is string name &&
                         _skills.TryGetValue(name, out var skill))
                     {
@@ -155,8 +166,28 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
                     }
                 }
 
+                // Re-score and filter by threshold to ensure quality matches
                 if (matchedSkills.Count > 0)
-                    return matchedSkills;
+                {
+                    var scoredSkills = new List<(Skill skill, double score)>();
+                    foreach (var skill in matchedSkills)
+                    {
+                        float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description);
+                        double similarity = CosineSimilarity(goalEmbedding, skillEmbedding);
+                        if (similarity >= MinimumSimilarityThreshold)
+                        {
+                            scoredSkills.Add((skill, similarity));
+                        }
+                    }
+
+                    if (scoredSkills.Count > 0)
+                    {
+                        return scoredSkills
+                            .OrderByDescending(x => x.score)
+                            .Select(x => x.skill)
+                            .ToList();
+                    }
+                }
             }
             catch
             {
@@ -177,7 +208,9 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
                 skillScores.Add((skill, similarity));
             }
 
+            // Only return skills meeting the minimum similarity threshold
             return skillScores
+                .Where(x => x.score >= MinimumSimilarityThreshold)
                 .OrderByDescending(x => x.score)
                 .Select(x => x.skill)
                 .ToList();
@@ -300,7 +333,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
         {
             var serializableSkills = _skills.Values.Select(ToSerializable).ToList();
             string json = JsonSerializer.Serialize(serializableSkills, JsonOptions);
-            
+
             string fullPath = Path.GetFullPath(_config.StoragePath);
             string? directory = Path.GetDirectoryName(fullPath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))

@@ -145,8 +145,33 @@ static Task RunMaintenanceAsync(MaintenanceOptions o) => MaintenanceCommands.Run
 
 static async Task RunAssistAsync(AssistOptions o)
 {
-    if (await TryRunVoiceModeAsync(o)) return;
+    // Run Ouroboros agent mode by default (unless --dsl-mode is specified)
+    if (!o.DslMode)
+    {
+        // Convert AssistOptions to OuroborosConfig for the unified agent
+        var config = new OuroborosConfig(
+            Persona: o.Persona,
+            Model: o.Model,
+            Endpoint: o.Endpoint ?? "http://localhost:11434",
+            EmbedModel: o.EmbedModel,
+            EmbedEndpoint: "http://localhost:11434",
+            QdrantEndpoint: o.QdrantEndpoint,
+            ApiKey: Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY"),
+            Voice: o.Voice,
+            VoiceOnly: o.VoiceOnly,
+            LocalTts: o.LocalTts,
+            Debug: o.Debug,
+            Temperature: o.Temperature,
+            MaxTokens: o.MaxTokens
+        );
 
+        await using var agent = new OuroborosAgent(config);
+        await agent.InitializeAsync();
+        await agent.RunAsync();
+        return;
+    }
+
+    // DSL Assistant mode (legacy)
     Console.WriteLine("+--------------------------------------------------------------+");
     Console.WriteLine("|   DSL Assistant - GitHub Copilot-like Code Intelligence     |");
     Console.WriteLine("+--------------------------------------------------------------+\n");

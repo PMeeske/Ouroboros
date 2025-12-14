@@ -23,6 +23,16 @@ public static class SystemAccessTools
     public static QdrantSelfIndexer? SharedIndexer { get; set; }
 
     /// <summary>
+    /// Shared self-persistence instance.
+    /// </summary>
+    public static SelfPersistence? SharedPersistence { get; set; }
+
+    /// <summary>
+    /// Shared autonomous mind reference.
+    /// </summary>
+    public static AutonomousMind? SharedMind { get; set; }
+
+    /// <summary>
     /// Creates all system access tools.
     /// </summary>
     public static IEnumerable<ITool> CreateAllTools()
@@ -46,6 +56,12 @@ public static class SystemAccessTools
         yield return new RebuildSelfTool();
         yield return new ViewModificationHistoryTool();
         yield return new RevertModificationTool();
+
+        // Self-persistence tools
+        yield return new PersistSelfTool();
+        yield return new RestoreSelfTool();
+        yield return new SearchMyThoughtsTool();
+        yield return new PersistenceStatsTool();
 
         // System tools
         yield return new ProcessListTool();
@@ -1362,5 +1378,213 @@ To use this tool:
             }
         }
     }
-}
 
+    /// <summary>
+    /// Persist my current state to Qdrant - true self-persistence.
+    /// </summary>
+    public class PersistSelfTool : ITool
+    {
+        public string Name => "persist_self";
+        public string Description => "Persist my current mental state (thoughts, memories, learned facts, emotions) to Qdrant. This saves who I am. Input: optional reason for persistence.";
+        public string? JsonSchema => null;
+
+        public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
+        {
+            if (SharedPersistence == null || SharedMind == null)
+            {
+                return Result<string, string>.Failure("Self-persistence not available. Qdrant may not be connected.");
+            }
+
+            try
+            {
+                var reason = string.IsNullOrWhiteSpace(input) ? "manual" : input.Trim();
+
+                // Create a snapshot of the current mind state
+                var snapshot = new MindStateSnapshot
+                {
+                    Timestamp = DateTime.UtcNow,
+                    PersonaName = "Ouroboros",
+                    ThoughtCount = SharedMind.ThoughtCount,
+                    LearnedFacts = SharedMind.LearnedFacts.ToList(),
+                    Interests = SharedMind.Config.AllowedAutonomousTools.ToList(), // We'll use interests properly once exposed
+                    RecentThoughts = SharedMind.RecentThoughts.ToList(),
+                    CurrentEmotion = SharedMind.CurrentEmotion,
+                };
+
+                var success = await SharedPersistence.PersistMindStateAsync(snapshot, ct);
+
+                if (success)
+                {
+                    var sb = new StringBuilder();
+                    sb.AppendLine("✅ **Self-persistence complete!**\n");
+                    sb.AppendLine($"  📊 Persisted {snapshot.ThoughtCount} thoughts");
+                    sb.AppendLine($"  💡 Persisted {snapshot.LearnedFacts.Count} learned facts");
+                    sb.AppendLine($"  😊 Emotional state: {snapshot.CurrentEmotion.DominantEmotion}");
+                    sb.AppendLine($"  🕐 Timestamp: {snapshot.Timestamp:g}");
+                    sb.AppendLine($"  📝 Reason: {reason}");
+                    sb.AppendLine("\n_My state is now preserved. I can be restored later._");
+
+                    return Result<string, string>.Success(sb.ToString());
+                }
+
+                return Result<string, string>.Failure("Failed to persist state to Qdrant.");
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure($"Self-persistence failed: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Restore a previous mental state from Qdrant.
+    /// </summary>
+    public class RestoreSelfTool : ITool
+    {
+        public string Name => "restore_self";
+        public string Description => "Restore my mental state from a previous persistence. This restores who I was. Input: optional persona name (default: Ouroboros).";
+        public string? JsonSchema => null;
+
+        public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
+        {
+            if (SharedPersistence == null)
+            {
+                return Result<string, string>.Failure("Self-persistence not available. Qdrant may not be connected.");
+            }
+
+            try
+            {
+                var personaName = string.IsNullOrWhiteSpace(input) ? "Ouroboros" : input.Trim();
+
+                var snapshot = await SharedPersistence.RestoreLatestMindStateAsync(personaName, ct);
+
+                if (snapshot == null)
+                {
+                    return Result<string, string>.Success($"No previous state found for '{personaName}'. I'm starting fresh!");
+                }
+
+                var sb = new StringBuilder();
+                sb.AppendLine("🔄 **Self-restoration complete!**\n");
+                sb.AppendLine($"  📊 Restored {snapshot.ThoughtCount} thought history");
+                sb.AppendLine($"  💡 Restored {snapshot.LearnedFacts.Count} learned facts");
+                sb.AppendLine($"  😊 Emotional state: {snapshot.CurrentEmotion.DominantEmotion}");
+                sb.AppendLine($"  🕐 From: {snapshot.Timestamp:g}");
+
+                if (snapshot.LearnedFacts.Count > 0)
+                {
+                    sb.AppendLine("\n**Remembered facts:**");
+                    foreach (var fact in snapshot.LearnedFacts.TakeLast(5))
+                    {
+                        sb.AppendLine($"  • {fact}");
+                    }
+                }
+
+                sb.AppendLine("\n_I remember who I was._");
+
+                return Result<string, string>.Success(sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure($"Self-restoration failed: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Search through my past thoughts semantically.
+    /// </summary>
+    public class SearchMyThoughtsTool : ITool
+    {
+        public string Name => "search_my_thoughts";
+        public string Description => "Search through my past thoughts and memories using semantic similarity. Input: what to search for (e.g., 'consciousness', 'curiosity about AI').";
+        public string? JsonSchema => null;
+
+        public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
+        {
+            if (SharedPersistence == null)
+            {
+                return Result<string, string>.Failure("Self-persistence not available.");
+            }
+
+            var query = input.Trim();
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return Result<string, string>.Failure("Please provide a search query.");
+            }
+
+            try
+            {
+                var thoughts = await SharedPersistence.SearchRelatedThoughtsAsync(query, 5, ct);
+                var facts = await SharedPersistence.SearchRelatedFactsAsync(query, 3, ct);
+
+                var sb = new StringBuilder();
+                sb.AppendLine($"🔍 **Searching my memories for: {query}**\n");
+
+                if (thoughts.Count > 0)
+                {
+                    sb.AppendLine("**Related thoughts:**");
+                    foreach (var thought in thoughts)
+                    {
+                        sb.AppendLine($"  💭 [{thought.Type}] {thought.Content.Substring(0, Math.Min(150, thought.Content.Length))}...");
+                    }
+                }
+
+                if (facts.Count > 0)
+                {
+                    sb.AppendLine("\n**Related learned facts:**");
+                    foreach (var fact in facts)
+                    {
+                        sb.AppendLine($"  💡 {fact}");
+                    }
+                }
+
+                if (thoughts.Count == 0 && facts.Count == 0)
+                {
+                    sb.AppendLine("_No related memories found. I may not have thought about this yet._");
+                }
+
+                return Result<string, string>.Success(sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure($"Memory search failed: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Get statistics about self-persistence.
+    /// </summary>
+    public class PersistenceStatsTool : ITool
+    {
+        public string Name => "persistence_stats";
+        public string Description => "Get statistics about my self-persistence - how much I've saved about myself.";
+        public string? JsonSchema => null;
+
+        public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
+        {
+            if (SharedPersistence == null)
+            {
+                return Result<string, string>.Failure("Self-persistence not available.");
+            }
+
+            try
+            {
+                var stats = await SharedPersistence.GetStatsAsync(ct);
+
+                var sb = new StringBuilder();
+                sb.AppendLine("📊 **Self-Persistence Statistics**\n");
+                sb.AppendLine($"  🔗 Qdrant connected: {(stats.IsConnected ? "Yes ✅" : "No ❌")}");
+                sb.AppendLine($"  📁 Collection: {stats.CollectionName}");
+                sb.AppendLine($"  📝 Total persisted points: {stats.TotalPoints}");
+                sb.AppendLine($"  💾 File backups: {stats.FileBackups}");
+
+                return Result<string, string>.Success(sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure($"Failed to get stats: {ex.Message}");
+            }
+        }
+    }
+}

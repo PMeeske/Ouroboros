@@ -538,7 +538,7 @@ public static class StreamingCliSteps
                     TimeSpan elapsed = DateTime.UtcNow - startTime;
                     double rate = elapsed.TotalSeconds > 0 ? count / elapsed.TotalSeconds : 0;
 
-                    Console.Clear();
+                    try { Console.Clear(); } catch { /* ignore when output is redirected */ }
                     Console.WriteLine("╔════════════════════════════════════════════════╗");
                     Console.WriteLine("║         STREAM DASHBOARD                       ║");
                     Console.WriteLine("╠════════════════════════════════════════════════╣");

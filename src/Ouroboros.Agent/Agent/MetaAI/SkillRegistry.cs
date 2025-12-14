@@ -40,6 +40,15 @@ public sealed class SkillRegistry : ISkillRegistry
     }
 
     /// <summary>
+    /// Minimum similarity threshold for semantic skill matching.
+    /// Skills with similarity below this value are considered unrelated.
+    /// </summary>
+    /// <summary>
+    /// Minimum similarity score threshold - 0.75+ ensures strong match.
+    /// </summary>
+    private const double MinimumSimilarityThreshold = 0.75;
+
+    /// <summary>
     /// Finds skills matching a goal.
     /// </summary>
     public async Task<List<Skill>> FindMatchingSkillsAsync(
@@ -64,7 +73,9 @@ public sealed class SkillRegistry : ISkillRegistry
                 skillScores.Add((skill, similarity));
             }
 
+            // Only return skills that meet the minimum similarity threshold
             return skillScores
+                .Where(x => x.score >= MinimumSimilarityThreshold)
                 .OrderByDescending(x => x.score)
                 .Select(x => x.skill)
                 .ToList();

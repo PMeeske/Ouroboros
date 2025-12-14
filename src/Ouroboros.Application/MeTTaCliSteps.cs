@@ -19,11 +19,11 @@ public static class MeTTaCliSteps
             var result = await initStep.ExecuteAsync(Unit.Value);
 
             result.Match(
-                success => 
+                success =>
                 {
                     if (s.Trace) Console.WriteLine("[metta] Motto initialized");
                 },
-                failure => 
+                failure =>
                 {
                     Console.WriteLine($"[metta] Failed to initialize Motto: {failure}");
                     s.Branch = s.Branch.WithIngestEvent($"metta:error:init:{failure}", Array.Empty<string>());
@@ -56,14 +56,14 @@ public static class MeTTaCliSteps
             var result = await chatStep.ExecuteAsync(message);
 
             result.Match(
-                success => 
+                success =>
                 {
                     s.Output = success;
                     if (s.Trace) Console.WriteLine($"[metta] Chat response: {success}");
                     // Record as reasoning?
                     s.Branch = s.Branch.WithReasoning(new FinalSpec(success), message, new List<ToolExecution>());
                 },
-                failure => 
+                failure =>
                 {
                     Console.WriteLine($"[metta] Chat failed: {failure}");
                     s.Branch = s.Branch.WithIngestEvent($"metta:error:chat:{failure}", Array.Empty<string>());
@@ -83,10 +83,10 @@ public static class MeTTaCliSteps
                 await new MottoSteps.MottoInitializeStep(s.MeTTaEngine).ExecuteAsync(Unit.Value);
             }
 
-            string model = "llama3";
+            string model = "deepseek-v3.1:671b-cloud";
             string message = ParseString(args);
             string? script = null;
-            
+
             // Parse args: "model=phi3|msg=Hello|script=ollama_agent.msa"
             // Also handle single: "msg=Hello" or "Hello"
             if (message.Contains("|"))
@@ -107,9 +107,9 @@ public static class MeTTaCliSteps
                 model = message.Substring(6);
                 message = string.Empty;
             }
-            
+
             if (string.IsNullOrWhiteSpace(message)) message = s.Query;
-            
+
             // If we have context from previous pipeline steps (like UseDir), include it
             if (!string.IsNullOrWhiteSpace(s.Context))
             {
@@ -133,17 +133,17 @@ public static class MeTTaCliSteps
                 query = $"!((ollama-agent \"{model}\") (user \"{message.Replace("\"", "\\\"")}\"))";
                 if (s.Trace) Console.WriteLine($"[metta] Calling Ollama ({model}): {message}");
             }
-            
+
             var result = await s.MeTTaEngine.ExecuteQueryAsync(query);
-            
+
             result.Match(
-                success => 
+                success =>
                 {
                     s.Output = success;
                     if (s.Trace) Console.WriteLine($"[metta] Ollama response: {success}");
                     s.Branch = s.Branch.WithReasoning(new FinalSpec(success), message, new List<ToolExecution>());
                 },
-                failure => 
+                failure =>
                 {
                     Console.WriteLine($"[metta] Ollama call failed: {failure}");
                     s.Branch = s.Branch.WithIngestEvent($"metta:error:ollama:{failure}", Array.Empty<string>());
@@ -188,10 +188,10 @@ public static class MeTTaCliSteps
 
                 string content = File.ReadAllText(fullPath);
                 string fileName = Path.GetFileName(fullPath);
-                
+
                 // Set as context with file info header
                 s.Context = $"=== File: {fileName} ===\n{content}";
-                
+
                 if (s.Trace) Console.WriteLine($"[file] Loaded {fileName} ({content.Length} chars)");
             }
             catch (Exception ex)
@@ -224,7 +224,7 @@ public static class MeTTaCliSteps
 
             // Use the current output or context as the initial draft
             string initialContent = !string.IsNullOrWhiteSpace(s.Output) ? s.Output : s.Context;
-            
+
             if (string.IsNullOrWhiteSpace(initialContent))
             {
                 Console.WriteLine("[metta-critique] No content to critique. Run MottoChat or MottoOllama first.");
@@ -236,19 +236,19 @@ public static class MeTTaCliSteps
 
             // Now apply self-critique using the standard agent
             LangChainPipeline.Agent.SelfCritiqueAgent agent = new(s.Llm, s.Tools, s.Embed);
-            
+
             // We need to extract topic and query
             string topic = !string.IsNullOrWhiteSpace(s.Topic) ? s.Topic : "MeTTa reasoning output";
             string query = !string.IsNullOrWhiteSpace(s.Query) ? s.Query : topic;
 
-            Result<LangChainPipeline.Agent.SelfCritiqueResult, string> result = 
+            Result<LangChainPipeline.Agent.SelfCritiqueResult, string> result =
                 await agent.GenerateWithCritiqueAsync(s.Branch, topic, query, iterations, s.RetrievalK);
 
             if (result.IsSuccess)
             {
                 LangChainPipeline.Agent.SelfCritiqueResult critiqueResult = result.Value;
                 s.Branch = critiqueResult.Branch;
-                
+
                 // Format output to show the critique process
                 StringBuilder output = new();
                 output.AppendLine("\n=== MeTTa Self-Critique Result ===");
@@ -261,11 +261,11 @@ public static class MeTTaCliSteps
                 output.AppendLine("\n--- Improved Response ---");
                 output.AppendLine(critiqueResult.ImprovedResponse);
                 output.AppendLine("\n=========================");
-                
+
                 s.Output = output.ToString();
                 s.Context = critiqueResult.ImprovedResponse;
-                
-                if (s.Trace) 
+
+                if (s.Trace)
                 {
                     Console.WriteLine($"[metta-critique] Self-critique completed with {critiqueResult.IterationsPerformed} iteration(s), confidence: {critiqueResult.Confidence}");
                 }

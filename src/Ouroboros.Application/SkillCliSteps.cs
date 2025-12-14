@@ -128,10 +128,29 @@ public static class SkillCliSteps
                 return s;
             }
 
+            // Fix malformed URLs from LLM (e.g., "https: example.com path" → "https://example.com/path")
+            targetUrl = FixMalformedUrl(targetUrl);
+
+            // Validate URL is absolute
+            if (!Uri.TryCreate(targetUrl, UriKind.Absolute, out Uri? parsedUri))
+            {
+                Console.WriteLine($"[Fetch] ⚠ Invalid URL format: {targetUrl}");
+                s.Output = $"Fetch failed: Invalid URL format. URL must be absolute (e.g., https://example.com)";
+                return s;
+            }
+
+            // Only allow http/https schemes
+            if (parsedUri.Scheme != "http" && parsedUri.Scheme != "https")
+            {
+                Console.WriteLine($"[Fetch] ⚠ Unsupported scheme: {parsedUri.Scheme}");
+                s.Output = $"Fetch failed: Only http and https URLs are supported";
+                return s;
+            }
+
             Console.WriteLine($"[Fetch] Fetching: {targetUrl}");
             try
             {
-                string content = await _httpClient.Value.GetStringAsync(targetUrl);
+                string content = await _httpClient.Value.GetStringAsync(parsedUri);
 
                 // Extract text from HTML if needed
                 if (content.Contains("<html") || content.Contains("<HTML"))
@@ -1085,6 +1104,57 @@ public static class SkillCliSteps
         m = Regex.Match(arg, @"^""(?<s>.*)""$", RegexOptions.Singleline);
         if (m.Success) return m.Groups["s"].Value;
         return arg;
+    }
+
+    /// <summary>
+    /// Fixes malformed URLs that LLMs sometimes generate (e.g., "https: example.com path" → "https://example.com/path").
+    /// </summary>
+    private static string FixMalformedUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return url;
+
+        url = url.Trim();
+
+        // Fix "https: " → "https://" and "http: " → "http://"
+        url = Regex.Replace(url, @"^(https?): +", "$1://");
+
+        // If URL still doesn't have proper scheme, check for common patterns
+        if (!url.StartsWith("http://") && !url.StartsWith("https://"))
+        {
+            // Check if it looks like a domain (e.g., "www.example.com" or "example.com")
+            if (Regex.IsMatch(url, @"^[\w\-]+(\.[\w\-]+)+"))
+            {
+                url = "https://" + url;
+            }
+        }
+
+        // Try to parse and fix path components with spaces
+        if (Uri.TryCreate(url, UriKind.Absolute, out _))
+        {
+            // URL is valid, return as-is
+            return url;
+        }
+
+        // If parsing failed, try to fix spaces in path
+        // Pattern: "https://domain path1 path2" → "https://domain/path1/path2"
+        var match = Regex.Match(url, @"^(https?://[\w\.\-]+)([\s/].*)$");
+        if (match.Success)
+        {
+            string domain = match.Groups[1].Value;
+            string path = match.Groups[2].Value.Trim();
+
+            // Replace spaces with / in path, normalize multiple slashes
+            path = Regex.Replace(path, @"\s+", "/");
+            path = Regex.Replace(path, @"/+", "/");
+
+            if (!path.StartsWith("/"))
+                path = "/" + path;
+
+            url = domain + path;
+        }
+
+        return url;
     }
 
     // ========================================================================

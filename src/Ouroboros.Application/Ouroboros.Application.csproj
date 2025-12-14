@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Ouroboros.Core\Ouroboros.Core.csproj" />
     <ProjectReference Include="..\Ouroboros.Domain\Ouroboros.Domain.csproj" />
+    <ProjectReference Include="..\Ouroboros.Network\Ouroboros.Network.csproj" />
     <ProjectReference Include="..\Ouroboros.Pipeline\Ouroboros.Pipeline.csproj" />
     <ProjectReference Include="..\Ouroboros.Tools\Ouroboros.Tools.csproj" />
     <ProjectReference Include="..\Ouroboros.Providers\Ouroboros.Providers.csproj" />

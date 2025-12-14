@@ -25,8 +25,8 @@ public sealed class OrchestratorOptions : IVoiceOptions
     [Option('g', "goal", Required = true, HelpText = "Goal or task for the orchestrator to accomplish.")]
     public string Goal { get; set; } = string.Empty;
 
-    [Option("model", Required = false, HelpText = "Primary LLM model name", Default = "deepseek-v3.1:671b-cloud")]
-    public string Model { get; set; } = "deepseek-v3.1:671b-cloud";
+    [Option("model", Required = false, HelpText = "Primary LLM model name", Default = "ministral-3:latest")]
+    public string Model { get; set; } = "ministral-3:latest";
 
     [Option("coder-model", Required = false, HelpText = "Model for code/refactor tasks.", Default = "codellama")]
     public string? CoderModel { get; set; }

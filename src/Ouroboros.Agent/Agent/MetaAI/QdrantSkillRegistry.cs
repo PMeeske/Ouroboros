@@ -113,6 +113,14 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
     }
 
     /// <summary>
+    /// Minimum similarity score threshold for semantic skill matching.
+    /// Skills with similarity below this value are considered unrelated.
+    /// Qdrant scores typically range from 0 to 1 for cosine similarity.
+    /// A threshold of 0.75+ ensures strong semantic match, not just topical relatedness.
+    /// </summary>
+    private const float MinimumSimilarityThreshold = 0.75f;
+
+    /// <summary>
     /// Finds skills matching a goal using semantic similarity.
     /// </summary>
     public async Task<List<Skill>> FindMatchingSkillsAsync(
@@ -135,7 +143,8 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
                     var searchResults = await _client.SearchAsync(
                         _config.CollectionName,
                         goalEmbedding,
-                        limit: 10);
+                        limit: 10,
+                        scoreThreshold: MinimumSimilarityThreshold);
 
                     var matchedSkills = new List<Skill>();
                     foreach (var result in searchResults)

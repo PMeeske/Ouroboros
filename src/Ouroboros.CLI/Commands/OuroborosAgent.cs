@@ -3,18 +3,26 @@
 // </copyright>
 
 using System.Reactive.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using LangChain.Databases;
+using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent.MetaAI;
+using LangChainPipeline.Network;
 using LangChainPipeline.Agent.MetaAI.Affect;
 using LangChainPipeline.Diagnostics;
+using LangChainPipeline.Pipeline.Branches;
+using LangChainPipeline.Pipeline.Reasoning;
 using LangChainPipeline.Providers;
 using LangChainPipeline.Providers.SpeechToText;
 using LangChainPipeline.Providers.TextToSpeech;
 using LangChainPipeline.Speech;
 using LangChainPipeline.Tools.MeTTa;
+using Ouroboros.Application;
+using Ouroboros.Application.Mcp;
 using Ouroboros.Application.Personality;
+using Ouroboros.Application.Services;
 using Ouroboros.Application.Tools;
 using Ouroboros.Tools.MeTTa;
 using IEmbeddingModel = LangChainPipeline.Domain.IEmbeddingModel;
@@ -27,7 +35,7 @@ namespace Ouroboros.CLI.Commands;
 public sealed record OuroborosConfig(
     string Persona = "Ouroboros",
     string Model = "deepseek-v3.1:671b-cloud",
-    string Endpoint = "https://api.ollama.com",
+    string Endpoint = "http://localhost:11434",
     string EmbedModel = "nomic-embed-text",
     string EmbedEndpoint = "http://localhost:11434",
     string QdrantEndpoint = "http://localhost:6334",
@@ -37,7 +45,24 @@ public sealed record OuroborosConfig(
     bool LocalTts = true,
     bool Debug = false,
     double Temperature = 0.7,
-    int MaxTokens = 512);
+    int MaxTokens = 2048,
+    // Feature toggles - all enabled by default
+    bool EnableSkills = true,
+    bool EnableMeTTa = true,
+    bool EnableTools = true,
+    bool EnablePersonality = true,
+    bool EnableMind = true,
+    bool EnableBrowser = true,
+    // Additional config
+    int ThinkingIntervalSeconds = 30,
+    int AgentMaxSteps = 10,
+    string? InitialGoal = null,
+    string? InitialQuestion = null,
+    string? InitialDsl = null,
+    // Multi-model
+    string? CoderModel = null,
+    string? ReasonModel = null,
+    string? SummarizeModel = null);
 
 /// <summary>
 /// Unified Ouroboros agent that integrates all capabilities:
@@ -47,6 +72,7 @@ public sealed record OuroborosConfig(
 /// - Dynamic tool creation
 /// - Personality engine with affective states
 /// - Self-improvement and curiosity
+/// - Persistent thought memory across sessions
 /// </summary>
 public sealed class OuroborosAgent : IAsyncDisposable
 {
@@ -68,6 +94,20 @@ public sealed class OuroborosAgent : IAsyncDisposable
     private PersonalityProfile? _personality;
     private IValenceMonitor? _valenceMonitor;
     private MetaAIPlannerOrchestrator? _orchestrator;
+    private AutonomousMind? _autonomousMind;
+    private PlaywrightMcpTool? _playwrightTool;
+
+    // Network State Tracking - reifies Step execution into MerkleDag
+    private NetworkStateTracker? _networkTracker;
+
+    // Persistent thought memory - enables continuity across sessions
+    private ThoughtPersistenceService? _thoughtPersistence;
+    private List<InnerThought> _persistentThoughts = new();
+
+    // Input buffer for preserving typed text during proactive messages
+    private readonly StringBuilder _currentInputBuffer = new();
+    private readonly object _inputLock = new();
+    private bool _isInConversationLoop;
 
     // State
     private readonly List<string> _conversationHistory = new();
@@ -122,36 +162,123 @@ public sealed class OuroborosAgent : IAsyncDisposable
         Console.WriteLine("║          🐍 OUROBOROS - Unified AI Agent System           ║");
         Console.WriteLine("╚════════════════════════════════════════════════════════════╝\n");
 
+        // Print feature configuration
+        PrintFeatureStatus();
+
         // Initialize voice
         if (_config.Voice)
         {
             await _voice.InitializeAsync();
         }
 
-        // Initialize LLM
+        // Initialize LLM (always required)
         await InitializeLlmAsync();
 
-        // Initialize embedding
+        // Initialize embedding (always required for most features)
         await InitializeEmbeddingAsync();
 
-        // Initialize tools
-        await InitializeToolsAsync();
+        // Initialize tools (conditionally)
+        if (_config.EnableTools)
+        {
+            await InitializeToolsAsync();
+        }
+        else
+        {
+            _tools = ToolRegistry.CreateDefault();
+            Console.WriteLine("  ○ Tools: Disabled (use --no-tools=false to enable)");
+        }
 
-        // Initialize MeTTa symbolic reasoning
-        await InitializeMeTTaAsync();
+        // Initialize MeTTa symbolic reasoning (conditionally)
+        if (_config.EnableMeTTa)
+        {
+            await InitializeMeTTaAsync();
+        }
+        else
+        {
+            Console.WriteLine("  ○ MeTTa: Disabled (use --no-metta=false to enable)");
+        }
 
-        // Initialize skill registry
-        await InitializeSkillsAsync();
+        // Initialize skill registry (conditionally)
+        if (_config.EnableSkills)
+        {
+            await InitializeSkillsAsync();
+        }
+        else
+        {
+            Console.WriteLine("  ○ Skills: Disabled (use --no-skills=false to enable)");
+        }
 
-        // Initialize personality engine
-        await InitializePersonalityAsync();
+        // Initialize personality engine (conditionally)
+        if (_config.EnablePersonality)
+        {
+            await InitializePersonalityAsync();
+        }
+        else
+        {
+            Console.WriteLine("  ○ Personality: Disabled (use --no-personality=false to enable)");
+        }
 
-        // Initialize orchestrator
-        await InitializeOrchestratorAsync();
+        // Initialize orchestrator (conditionally - needs skills)
+        if (_config.EnableSkills)
+        {
+            await InitializeOrchestratorAsync();
+        }
+
+        // Initialize autonomous mind for inner thoughts and proactivity (conditionally)
+        if (_config.EnableMind)
+        {
+            await InitializeAutonomousMindAsync();
+        }
+        else
+        {
+            Console.WriteLine("  ○ AutonomousMind: Disabled (use --no-mind=false to enable)");
+        }
+
+        // Initialize persistent thought memory (always enabled for continuity)
+        await InitializePersistentThoughtsAsync();
+
+        // Initialize network state tracking (always enabled - reifies Steps into MerkleDag)
+        _networkTracker = new NetworkStateTracker();
+        Console.WriteLine("  ✓ NetworkState: Merkle-DAG reification active");
 
         _isInitialized = true;
 
         Console.WriteLine("\n  ✓ Ouroboros fully initialized\n");
+        PrintQuickHelp();
+    }
+
+    private void PrintFeatureStatus()
+    {
+        Console.WriteLine("  Configuration:");
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine($"    Model: {_config.Model}");
+        Console.WriteLine($"    Persona: {_config.Persona}");
+        Console.WriteLine($"    Voice: {(_config.Voice ? "✓ enabled" : "○ disabled")}");
+        Console.ResetColor();
+        Console.WriteLine();
+        Console.WriteLine("  Features (all enabled by default, use --no-X to disable):");
+        Console.ForegroundColor = _config.EnableSkills ? ConsoleColor.Green : ConsoleColor.DarkGray;
+        Console.WriteLine($"    {(_config.EnableSkills ? "✓" : "○")} Skills       - Persistent learning with Qdrant");
+        Console.ForegroundColor = _config.EnableMeTTa ? ConsoleColor.Green : ConsoleColor.DarkGray;
+        Console.WriteLine($"    {(_config.EnableMeTTa ? "✓" : "○")} MeTTa        - Symbolic reasoning engine");
+        Console.ForegroundColor = _config.EnableTools ? ConsoleColor.Green : ConsoleColor.DarkGray;
+        Console.WriteLine($"    {(_config.EnableTools ? "✓" : "○")} Tools        - Web search, calculator, URL fetch");
+        Console.ForegroundColor = _config.EnableBrowser ? ConsoleColor.Green : ConsoleColor.DarkGray;
+        Console.WriteLine($"    {(_config.EnableBrowser ? "✓" : "○")} Browser      - Playwright automation");
+        Console.ForegroundColor = _config.EnablePersonality ? ConsoleColor.Green : ConsoleColor.DarkGray;
+        Console.WriteLine($"    {(_config.EnablePersonality ? "✓" : "○")} Personality  - Affective states & traits");
+        Console.ForegroundColor = _config.EnableMind ? ConsoleColor.Green : ConsoleColor.DarkGray;
+        Console.WriteLine($"    {(_config.EnableMind ? "✓" : "○")} Mind         - Autonomous inner thoughts");
+        Console.ResetColor();
+        Console.WriteLine();
+    }
+
+    private void PrintQuickHelp()
+    {
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine("  Quick commands: 'help' | 'status' | 'skills' | 'tools' | 'exit'");
+        Console.WriteLine("  Say or type anything to chat. Use [TOOL:name args] to call tools.\n");
+        Console.ResetColor();
     }
 
     private async Task InitializeLlmAsync()
@@ -241,17 +368,43 @@ public sealed class OuroborosAgent : IAsyncDisposable
 
             if (_chatModel != null)
             {
-                // Create tool-aware LLM
-                _llm = new ToolAwareChatModel(_chatModel, _tools);
+                // Create temporary tool-aware LLM for bootstrapping dynamic tools
+                var tempLlm = new ToolAwareChatModel(_chatModel, _tools);
 
-                // Initialize dynamic tool factory
-                _toolFactory = new DynamicToolFactory(_llm);
+                // Initialize dynamic tool factory with temporary LLM
+                _toolFactory = new DynamicToolFactory(tempLlm);
 
                 // Add built-in dynamic tools
                 _tools = _tools
                     .WithTool(_toolFactory.CreateWebSearchTool("duckduckgo"))
                     .WithTool(_toolFactory.CreateUrlFetchTool())
                     .WithTool(_toolFactory.CreateCalculatorTool());
+
+                // Add Playwright MCP tool for browser automation (if enabled)
+                if (_config.EnableBrowser)
+                {
+                    try
+                    {
+                        _playwrightTool = new PlaywrightMcpTool();
+                        await _playwrightTool.InitializeAsync();
+                        _tools = _tools.WithTool(_playwrightTool);
+                        Console.WriteLine($"  ✓ Playwright: Browser automation ready ({_playwrightTool.AvailableTools.Count} tools)");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"  ⚠ Playwright: Not available ({ex.Message})");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("  ○ Playwright: Disabled (use --no-browser=false to enable)");
+                }
+
+                // NOW create the final ToolAwareChatModel with ALL tools registered
+                _llm = new ToolAwareChatModel(_chatModel, _tools);
+
+                // Re-initialize dynamic tool factory with final LLM
+                _toolFactory = new DynamicToolFactory(_llm);
 
                 // Initialize intelligent tool learner if embedding available
                 if (_embedding != null)
@@ -397,6 +550,198 @@ public sealed class OuroborosAgent : IAsyncDisposable
         }
     }
 
+    private async Task InitializePersistentThoughtsAsync()
+    {
+        try
+        {
+            // Create a unique session ID based on persona name (allows continuity across restarts)
+            var sessionId = $"ouroboros-{_config.Persona.ToLowerInvariant()}";
+            var thoughtsDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".ouroboros",
+                "thoughts");
+
+            _thoughtPersistence = ThoughtPersistenceService.CreateWithFilePersistence(sessionId, thoughtsDir);
+
+            // Load recent thoughts from previous sessions
+            _persistentThoughts = (await _thoughtPersistence.GetRecentAsync(50)).ToList();
+
+            if (_persistentThoughts.Count > 0)
+            {
+                Console.WriteLine($"  ✓ Persistent Memory: {_persistentThoughts.Count} thoughts recalled from previous sessions");
+
+                // Show a brief summary of what we remember
+                var thoughtTypes = _persistentThoughts
+                    .GroupBy(t => t.Type)
+                    .OrderByDescending(g => g.Count())
+                    .Take(3)
+                    .Select(g => $"{g.Key}:{g.Count()}");
+
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"    Thought types: {string.Join(", ", thoughtTypes)}");
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.WriteLine("  ✓ Persistent Memory: Ready (first session)");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  ⚠ Persistent memory unavailable: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Persists a new thought to storage for future sessions.
+    /// </summary>
+    private async Task PersistThoughtAsync(InnerThought thought, string? topic = null)
+    {
+        if (_thoughtPersistence == null) return;
+
+        try
+        {
+            await _thoughtPersistence.SaveAsync(thought, topic);
+            _persistentThoughts.Add(thought);
+
+            // Keep only the most recent 100 thoughts in memory
+            if (_persistentThoughts.Count > 100)
+            {
+                _persistentThoughts.RemoveAt(0);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ThoughtPersistence] Failed to save: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Builds context from persistent thoughts for injection into prompts.
+    /// </summary>
+    private string BuildPersistentThoughtContext()
+    {
+        if (_persistentThoughts.Count == 0) return "";
+
+        var sb = new StringBuilder();
+        sb.AppendLine("\n[PERSISTENT MEMORY - Your thoughts from previous sessions]");
+
+        // Group by type and show the most relevant/recent ones
+        var recentThoughts = _persistentThoughts
+            .OrderByDescending(t => t.Timestamp)
+            .Take(10);
+
+        foreach (var thought in recentThoughts)
+        {
+            var age = DateTime.UtcNow - thought.Timestamp;
+            var ageStr = age.TotalHours < 1 ? $"{age.TotalMinutes:F0}m ago"
+                       : age.TotalDays < 1 ? $"{age.TotalHours:F0}h ago"
+                       : $"{age.TotalDays:F0}d ago";
+
+            sb.AppendLine($"  [{thought.Type}] ({ageStr}): {thought.Content}");
+        }
+
+        sb.AppendLine("[END PERSISTENT MEMORY]\n");
+        return sb.ToString();
+    }
+
+    private async Task InitializeAutonomousMindAsync()
+    {
+        try
+        {
+            _autonomousMind = new AutonomousMind();
+
+            // Configure thinking capability
+            _autonomousMind.ThinkFunction = async (prompt, token) =>
+            {
+                if (_chatModel == null) return "";
+                return await _chatModel.GenerateTextAsync(prompt, token);
+            };
+
+            // Configure search capability
+            _autonomousMind.SearchFunction = async (query, token) =>
+            {
+                var searchTool = _toolFactory?.CreateWebSearchTool("duckduckgo");
+                if (searchTool != null)
+                {
+                    var result = await searchTool.InvokeAsync(query, token);
+                    return result.Match(s => s, _ => "");
+                }
+                return "";
+            };
+
+            // Configure tool execution
+            _autonomousMind.ExecuteToolFunction = async (toolName, input, token) =>
+            {
+                var tool = _tools.Get(toolName);
+                if (tool != null)
+                {
+                    var result = await tool.InvokeAsync(input, token);
+                    return result.Match(s => s, e => $"Error: {e}");
+                }
+                return "Tool not found";
+            };
+
+            // Wire up proactive message events
+            _autonomousMind.OnProactiveMessage += (msg) =>
+            {
+                // Handle proactive messages without corrupting user input
+                string savedInput;
+                lock (_inputLock)
+                {
+                    savedInput = _currentInputBuffer.ToString();
+                }
+
+                // Only do input preservation if user was typing
+                if (!string.IsNullOrEmpty(savedInput))
+                {
+                    Console.WriteLine();
+                }
+
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.WriteLine($"  💭 {msg}");
+                Console.ResetColor();
+
+                // Only restore prompt if we're in the conversation loop
+                if (_isInConversationLoop)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.Write("\n  You: ");
+                    Console.ResetColor();
+                    if (!string.IsNullOrEmpty(savedInput))
+                    {
+                        Console.Write(savedInput);
+                    }
+                }
+            };
+
+            _autonomousMind.OnThought += (thought) =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[Thought] {thought.Type}: {thought.Content}");
+            };
+
+            _autonomousMind.OnDiscovery += (query, fact) =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[Discovery] {query}: {fact}");
+            };
+
+            // Configure faster thinking for interactive use
+            _autonomousMind.Config.ThinkingIntervalSeconds = 15;
+            _autonomousMind.Config.CuriosityIntervalSeconds = 30;
+            _autonomousMind.Config.ActionIntervalSeconds = 45;
+
+            // Start autonomous thinking
+            _autonomousMind.Start();
+            Console.WriteLine("  ✓ Autonomous mind active (inner thoughts every ~15s)");
+
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  ⚠ Autonomous mind unavailable: {ex.Message}");
+        }
+    }
+
     /// <summary>
     /// Runs the main interaction loop.
     /// </summary>
@@ -412,6 +757,7 @@ public sealed class OuroborosAgent : IAsyncDisposable
         // Greeting
         await _voice.SayAsync(GetGreeting());
 
+        _isInConversationLoop = true;
         bool running = true;
         while (running)
         {
@@ -1328,20 +1674,78 @@ public sealed class OuroborosAgent : IAsyncDisposable
             return "I need an LLM connection to chat. Check if Ollama is running.";
 
         // Build context-aware prompt
-        var context = string.Join("\n", _conversationHistory.TakeLast(6));
-        var personalityPrompt = _voice.BuildPersonalityPrompt(
+        string context = string.Join("\n", _conversationHistory.TakeLast(6));
+        string personalityPrompt = _voice.BuildPersonalityPrompt(
             $"Available skills: {_skills?.GetAllSkills().Count() ?? 0}\nAvailable tools: {_tools.Count}");
 
-        var prompt = $"{personalityPrompt}\n\nRecent conversation:\n{context}\n\nUser: {input}\n\n{_voice.ActivePersona.Name}:";
+        // Include persistent thoughts from previous sessions
+        string persistentThoughtContext = BuildPersistentThoughtContext();
+
+        // Build tool instruction if tools are available
+        string toolInstruction = string.Empty;
+        if (_tools.Count > 0)
+        {
+            List<string> simpleTools = _tools.All
+                .Where(t => t.Name != "playwright")
+                .Select(t => $"{t.Name} ({t.Description})")
+                .ToList();
+
+            toolInstruction = $@"
+
+TOOL USAGE INSTRUCTIONS:
+You have access to tools. To use a tool, write [TOOL:toolname input] in your response.
+THESE TOOLS ARE FULLY FUNCTIONAL - USE THEM DIRECTLY. Do not explain how to use them or provide code examples.
+
+CRITICAL RULES:
+1. Use ACTUAL VALUES only - never use placeholder descriptions like 'URL of the result' or 'ref of the search box'
+2. For searches, provide the actual search query
+3. For fetch_url, provide a complete URL starting with https://
+4. For playwright, use JSON with real values - this EXECUTES browser actions, don't explain code
+5. NEVER say 'I can help you with the code' - just USE the tool directly
+
+AVAILABLE TOOLS:
+- duckduckgo_search: Search the web. Example: [TOOL:duckduckgo_search ouroboros mythology symbol]
+- fetch_url: Fetch webpage content. Example: [TOOL:fetch_url https://en.wikipedia.org/wiki/Ouroboros]
+- calculator: Math expressions. Example: [TOOL:calculator 2+2*3]
+- playwright: Browser automation that EXECUTES actions (not code examples). Use workflow:
+  1. Navigate: [TOOL:playwright {{""action"":""navigate"",""url"":""https://example.com""}}]
+  2. Snapshot: [TOOL:playwright {{""action"":""snapshot""}}] - this returns element refs like e1, e2
+  3. Click/Type: [TOOL:playwright {{""action"":""click"",""ref"":""e5""}}]
+
+Other tools: {string.Join(", ", simpleTools.Take(5))}
+
+WRONG (placeholder - DO NOT DO THIS):
+[TOOL:fetch_url URL of the search result]
+[TOOL:playwright {{""action"":""click"",""ref"":""ref of the button""}}]
+
+CORRECT (actual values):
+[TOOL:fetch_url https://example.com/page]
+[TOOL:playwright {{""action"":""click"",""ref"":""e5""}}]
+
+If you don't have a real value, ask the user or skip the tool call.";
+        }
+
+        string prompt = $"{personalityPrompt}{persistentThoughtContext}{toolInstruction}\n\nRecent conversation:\n{context}\n\nUser: {input}\n\n{_voice.ActivePersona.Name}:";
 
         try
         {
-            var (response, tools) = await _llm.GenerateWithToolsAsync(prompt);
+            (string response, List<ToolExecution> tools) = await _llm.GenerateWithToolsAsync(prompt);
+
+            // Persist an observation thought about this interaction
+            if (!string.IsNullOrWhiteSpace(response))
+            {
+                var thought = InnerThought.CreateAutonomous(
+                    InnerThoughtType.Observation,
+                    $"User asked about '{TruncateForThought(input)}'. I responded with thoughts about {ExtractTopicFromResponse(response)}.",
+                    confidence: 0.8,
+                    priority: ThoughtPriority.Normal);
+                _ = PersistThoughtAsync(thought, ExtractTopicFromResponse(input));
+            }
 
             // Handle any tool calls
             if (tools?.Any() == true)
             {
-                var toolResults = string.Join("\n", tools.Select(t => $"[{t.ToolName}]: {t.Output}"));
+                string toolResults = string.Join("\n", tools.Select(t => $"[{t.ToolName}]: {t.Output}"));
                 return $"{response}\n\n{toolResults}";
             }
 
@@ -1351,6 +1755,24 @@ public sealed class OuroborosAgent : IAsyncDisposable
         {
             return $"I had trouble processing that: {ex.Message}";
         }
+    }
+
+    private static string TruncateForThought(string text, int maxLength = 50)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "unknown topic";
+        return text.Length > maxLength ? text[..maxLength] + "..." : text;
+    }
+
+    private static string ExtractTopicFromResponse(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "general discussion";
+
+        // Take first sentence or first 60 chars
+        var firstSentence = text.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        if (firstSentence != null && firstSentence.Length <= 80)
+            return firstSentence.Trim();
+
+        return text.Length > 60 ? text[..60] + "..." : text;
     }
 
     private static string ExtractToolName(string input)
@@ -1371,6 +1793,12 @@ public sealed class OuroborosAgent : IAsyncDisposable
     {
         if (_disposed) return;
         _disposed = true;
+
+        _autonomousMind?.Dispose();
+        if (_playwrightTool != null)
+        {
+            await _playwrightTool.DisposeAsync();
+        }
 
         _voice.Dispose();
         _mettaEngine?.Dispose();
@@ -1431,5 +1859,69 @@ public sealed class OuroborosAgent : IAsyncDisposable
         await _voice.SayAsync(response);
         _conversationHistory.Add($"User: {question}");
         _conversationHistory.Add($"Ouroboros: {response}");
+    }
+
+    /// <summary>
+    /// Processes and executes a pipeline DSL string.
+    /// </summary>
+    public async Task ProcessDslAsync(string dsl)
+    {
+        try
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"\n  📜 Executing DSL: {dsl}\n");
+            Console.ResetColor();
+
+            // Explain the DSL first
+            var explanation = PipelineDsl.Explain(dsl);
+            Console.WriteLine(explanation);
+
+            // Build and execute the pipeline
+            if (_embedding != null && _llm != null)
+            {
+                var store = new TrackedVectorStore();
+                var dataSource = DataSource.FromPath(".");
+                var branch = new PipelineBranch("ouroboros-dsl", store, dataSource);
+
+                var state = new CliPipelineState
+                {
+                    Branch = branch,
+                    Llm = _llm,
+                    Tools = _tools,
+                    Embed = _embedding,
+                    Trace = _config.Debug
+                };
+
+                var step = PipelineDsl.Build(dsl);
+                state = await step(state);
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("\n  ✓ Pipeline completed");
+                Console.ResetColor();
+
+                // Get last reasoning output
+                var lastReasoning = state.Branch.Events.OfType<ReasoningStep>().LastOrDefault();
+                if (lastReasoning != null)
+                {
+                    Console.WriteLine($"\n{lastReasoning.State.Text}");
+                    await _voice.SayAsync(lastReasoning.State.Text);
+                }
+                else if (!string.IsNullOrEmpty(state.Output))
+                {
+                    Console.WriteLine($"\n{state.Output}");
+                    await _voice.SayAsync(state.Output);
+                }
+            }
+            else
+            {
+                Console.WriteLine("  ⚠ Cannot execute DSL: LLM or embeddings not available");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"  ✗ DSL execution failed: {ex.Message}");
+            Console.ResetColor();
+        }
     }
 }

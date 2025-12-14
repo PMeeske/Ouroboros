@@ -285,6 +285,19 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
 
         try
         {
+            // Validate step action is not empty
+            if (string.IsNullOrWhiteSpace(step.Action))
+            {
+                stopwatch.Stop();
+                return new StepResult(
+                    step,
+                    false,
+                    "",
+                    "Step action/tool name cannot be empty",
+                    stopwatch.Elapsed,
+                    new Dictionary<string, object> { ["error"] = "empty_action" });
+            }
+
             // Check if this is a tool invocation
             ITool? tool = _tools.Get(step.Action);
             if (tool != null)
@@ -394,9 +407,18 @@ GOAL: {goal}
 
 Create a plan with specific steps. For each step, specify:
 1. Action (tool name or task description)
-2. Parameters (as JSON object)
+2. Parameters (as JSON object with ACTUAL CONCRETE VALUES)
 3. Expected outcome
 4. Confidence score (0-1)
+
+CRITICAL PARAMETER RULES:
+- Use ACTUAL CONCRETE VALUES in parameters - never placeholder descriptions
+- URLs must be real URLs (https://example.com), not descriptions like 'URL from search'
+- Search queries must be actual text, not 'query about topic'
+- If you don't have a real value yet, SKIP that step or mark confidence as 0
+
+WRONG parameters: {{""url"": ""URL of the search result"", ""query"": ""search for topic""}}
+CORRECT parameters: {{""url"": ""https://example.com/page"", ""query"": ""Ouroboros mythology serpent""}}
 
 Format your response as:
 STEP 1: [action]
