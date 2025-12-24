@@ -95,15 +95,8 @@ public static class TriStateExtensions
     /// </example>
     public static bool ResolveChain(bool defaultValue, params TriState[] chain)
     {
-        foreach (var state in chain)
-        {
-            if (state != TriState.Inherit)
-            {
-                return state == TriState.On;
-            }
-        }
-
-        return defaultValue;
+        var firstNonInherit = chain.FirstOrDefault(state => state != TriState.Inherit);
+        return firstNonInherit != TriState.Inherit ? firstNonInherit == TriState.On : defaultValue;
     }
 
     /// <summary>

@@ -176,12 +176,14 @@ public class FormStateMachineTests
 
         // Act - Sample at different time steps
         var sample1 = machine.SampleAt(ServerRole.Leader, ServerRole.Follower, 0.0);
-        var sample2 = machine.SampleAt(ServerRole.Leader, ServerRole.Follower, 0.5);
 
-        // Assert - Due to sine wave, different time steps should give different results
-        // At timeStep=0, phase=0: sin(0) = 0, so we get state2 (Follower)
-        // At timeStep=0.5, phase=0: sin(π) ≈ 0, boundary case
+        // Assert - Due to sine wave at timeStep=0, phase=0: sin(0) = 0, so we get state2 (Follower)
         sample1.Should().Be(ServerRole.Follower);
+        
+        // Sample at different time step
+        var sample2 = machine.SampleAt(ServerRole.Leader, ServerRole.Follower, 0.5);
+        // At timeStep=0.5, phase=0: sin(π) ≈ 0, boundary case - also Follower
+        sample2.Should().Be(ServerRole.Follower);
     }
 
     [Fact]
