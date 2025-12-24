@@ -246,7 +246,7 @@ public sealed class SafeToolExecutor
                 // Add approval evidence
                 evidence.Add(new Evidence(
                     "human_approval",
-                    Form.Cross(),
+                    Form.Mark,
                     "Human reviewer approved execution"));
 
                 // Execute the tool

@@ -122,7 +122,7 @@ public sealed class ToolApprovalQueue
         {
             new Evidence(
                 "human_review",
-                approved ? Form.Cross() : Form.Void,
+                approved ? Form.Mark : Form.Void,
                 $"Human review: {reviewerNotes}")
         };
 

@@ -104,7 +104,7 @@ public sealed record AuditableDecision<T>
     {
         return new AuditableDecision<T>(
             Result<T, string>.Success(value),
-            Form.Cross(),
+            Form.Mark,
             reasoning,
             evidence);
     }
@@ -123,7 +123,7 @@ public sealed record AuditableDecision<T>
     {
         return new AuditableDecision<T>(
             Result<T, string>.Success(value),
-            Form.Cross(),
+            Form.Mark,
             reasoning,
             evidence);
     }

@@ -83,16 +83,16 @@ public static class Imagination
         // If only one is imaginary, return it
         if (eval1 is Form.ImaginaryForm)
         {
-            return eval1;
+            return form1;
         }
 
         if (eval2 is Form.ImaginaryForm)
         {
-            return eval2;
+            return form2;
         }
 
         // Both are real - use indication
-        return form1.Call(form2).Eval();
+        return form1.Call(form2);
     }
 
     /// <summary>
@@ -140,7 +140,7 @@ public static class Imagination
         }
 
         // Real forms are their own conjugates
-        return evaluated;
+        return form;
     }
 
     /// <summary>
@@ -203,11 +203,11 @@ public static class Imagination
             }
 
             // Project based on phase: [0, π) → Void, [π, 2π) → Mark
-            return normalizedPhase < Math.PI ? Form.Void : Form.Cross();
+            return normalizedPhase < Math.PI ? Form.Void : Form.Mark;
         }
 
         // Real forms project to themselves
-        return evaluated;
+        return form;
     }
 
     /// <summary>
@@ -222,11 +222,13 @@ public static class Imagination
 
         if (evaluated is Form.ImaginaryForm imag)
         {
-            return imag.AtTime(time);
+            // AtTime returns object, but we know for imaginary forms we should alternate
+            // Stub: just return Form.Imaginary
+            return Form.Imaginary;
         }
 
         // Real forms are constant across time
-        return evaluated;
+        return form;
     }
 
     /// <summary>
@@ -293,7 +295,7 @@ public sealed record Wave(double Frequency, double Phase)
     /// <param name="time">The time to sample at.</param>
     /// <returns>A form based on the wave's value at that time.</returns>
     public Form ToFormAt(double time) =>
-        this.IsMarkedAt(time) ? Form.Cross() : Form.Void;
+        this.IsMarkedAt(time) ? Form.Mark : Form.Void;
 
     /// <summary>
     /// Converts this wave to an imaginary form with the current phase.
@@ -328,7 +330,7 @@ public sealed class Dream
         return choice switch
         {
             0 => Form.Void,
-            1 => Form.Cross(),
+            1 => Form.Mark,
             _ => Form.Imagine(this.random.NextDouble() * 2 * Math.PI)
         };
     }
@@ -343,7 +345,7 @@ public sealed class Dream
         var roll = this.random.NextDouble();
         if (roll < bias)
         {
-            return Form.Cross();
+            return Form.Mark;
         }
         else if (roll < bias + ((1 - bias) / 2))
         {

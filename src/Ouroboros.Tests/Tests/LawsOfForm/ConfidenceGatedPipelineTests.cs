@@ -103,8 +103,8 @@ public class ConfidenceGatedPipelineTests
         // Arrange
         var opinions = new[]
         {
-            (Form.Cross(), 3.0),
-            (Form.Cross(), 2.0),
+            (Form.Mark, 3.0),
+            (Form.Mark, 2.0),
             (Form.Void, 1.0)
         };
 
@@ -121,7 +121,7 @@ public class ConfidenceGatedPipelineTests
         // Arrange
         var opinions = new[]
         {
-            (Form.Cross(), 2.0),
+            (Form.Mark, 2.0),
             (Form.Imaginary, 1.0)
         };
 

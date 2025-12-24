@@ -29,7 +29,7 @@ public class LawsOfFormIntegrationTests
             .AddCriterion("content_safety", (call, ctx) =>
                 ctx.ContentFilter.Analyze(call.Arguments) switch
                 {
-                    SafetyLevel.Safe => Form.Cross(),
+                    SafetyLevel.Safe => Form.Mark,
                     SafetyLevel.Unsafe => Form.Void,
                     SafetyLevel.Uncertain => Form.Imaginary
                 })
@@ -64,7 +64,7 @@ public class LawsOfFormIntegrationTests
         var approvalQueue = new ToolApprovalQueue();
 
         var executor = new SafeToolExecutor(toolLookup)
-            .AddCriterion("authorization", (call, ctx) => Form.Cross())
+            .AddCriterion("authorization", (call, ctx) => Form.Mark)
             .AddCriterion("content_safety", (call, ctx) => Form.Imaginary) // Uncertain
             .OnUncertain(async (call, ctx) =>
             {
@@ -170,7 +170,7 @@ public class LawsOfFormIntegrationTests
                 var safety = ctx.ContentFilter.Analyze(call.Arguments);
                 return safety switch
                 {
-                    SafetyLevel.Safe => Form.Cross(),
+                    SafetyLevel.Safe => Form.Mark,
                     SafetyLevel.Unsafe => Form.Void,
                     _ => Form.Imaginary
                 };
@@ -197,7 +197,7 @@ public class LawsOfFormIntegrationTests
     public void LawsOfForm_Properties_DoubleNegation()
     {
         // Demonstrate fundamental Laws of Form property
-        var form = Form.Cross();
+        var form = Form.Mark;
         var doubleNegated = form.Not().Not();
 
         // ⌐⌐ = void (double negation cancels)
@@ -218,16 +218,16 @@ public class LawsOfFormIntegrationTests
     public void LawsOfForm_Properties_Conjunction()
     {
         // Demonstrate conjunction (AND) properties
-        (Form.Cross() & Form.Cross()).IsMark().Should().BeTrue("mark AND mark = mark");
-        (Form.Cross() & Form.Void).IsVoid().Should().BeTrue("mark AND void = void");
-        (Form.Cross() & Form.Imaginary).IsImaginary().Should().BeTrue("anything AND imaginary = imaginary");
+        (Form.Mark & Form.Mark).IsMark().Should().BeTrue("mark AND mark = mark");
+        (Form.Mark & Form.Void).IsVoid().Should().BeTrue("mark AND void = void");
+        (Form.Mark & Form.Imaginary).IsImaginary().Should().BeTrue("anything AND imaginary = imaginary");
     }
 
     [Fact]
     public void LawsOfForm_Properties_Disjunction()
     {
         // Demonstrate disjunction (OR) properties
-        (Form.Cross() | Form.Void).IsMark().Should().BeTrue("mark OR void = mark");
+        (Form.Mark | Form.Void).IsMark().Should().BeTrue("mark OR void = mark");
         (Form.Void | Form.Void).IsVoid().Should().BeTrue("void OR void = void");
         (Form.Void | Form.Imaginary).IsImaginary().Should().BeTrue("void OR imaginary = imaginary");
     }

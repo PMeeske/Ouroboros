@@ -61,7 +61,7 @@ public sealed class ContradictionDetector
         }
 
         // No contradictions found
-        return Form.Cross();
+        return Form.Mark;
     }
 
     /// <summary>
@@ -102,7 +102,7 @@ public sealed class ContradictionDetector
             }
         }
 
-        return Form.Cross();
+        return Form.Mark;
     }
 
     /// <summary>
@@ -143,7 +143,7 @@ public sealed class ContradictionDetector
             }
 
             // Both confident and similar but not opposite - consistent
-            return Form.Cross();
+            return Form.Mark;
         }
 
         // At least one claim is uncertain or weak - not enough confidence to detect contradiction

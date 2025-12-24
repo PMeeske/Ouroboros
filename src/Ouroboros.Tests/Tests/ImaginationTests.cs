@@ -128,7 +128,7 @@ public class ImaginationTests
     {
         // Imaginary dominates over real in indication
         var imag = Form.Imaginary;
-        var real = Form.Cross();
+        var real = Form.Mark;
 
         var combined = imag.Call(real).Eval();
 
@@ -199,7 +199,7 @@ public class ImaginationTests
     public void Imagination_Apply_TransformsMarkToImaginaryWithPhaseShift()
     {
         // Arrange
-        var mark = Form.Cross();
+        var mark = Form.Mark;
 
         // Act
         var result = Imagination.Apply(mark);
@@ -226,7 +226,7 @@ public class ImaginationTests
     public void Imagination_Conjugate_RealFormUnchanged()
     {
         // Arrange
-        var mark = Form.Cross();
+        var mark = Form.Mark;
 
         // Act
         var conjugate = Imagination.Conjugate(mark);
@@ -252,7 +252,7 @@ public class ImaginationTests
     public void Imagination_Magnitude_MarkIsOne()
     {
         // Arrange
-        var mark = Form.Cross();
+        var mark = Form.Mark;
 
         // Act
         var magnitude = Imagination.Magnitude(mark);
@@ -291,7 +291,7 @@ public class ImaginationTests
     public void Imagination_Phase_MarkIsPi()
     {
         // Arrange
-        var mark = Form.Cross();
+        var mark = Form.Mark;
 
         // Act
         var phase = Imagination.Phase(mark);
@@ -334,7 +334,7 @@ public class ImaginationTests
     public void Oscillator_AtEvenTime_ReturnsStateA()
     {
         // Arrange
-        var oscillator = Imagination.Oscillate(Form.Void, Form.Cross());
+        var oscillator = Imagination.Oscillate(Form.Void, Form.Mark);
 
         // Act & Assert
         oscillator.AtTime(0).IsVoid().Should().BeTrue();
@@ -346,7 +346,7 @@ public class ImaginationTests
     public void Oscillator_AtOddTime_ReturnsStateB()
     {
         // Arrange
-        var oscillator = Imagination.Oscillate(Form.Void, Form.Cross());
+        var oscillator = Imagination.Oscillate(Form.Void, Form.Mark);
 
         // Act & Assert
         oscillator.AtTime(1).IsMarked().Should().BeTrue();
@@ -358,7 +358,7 @@ public class ImaginationTests
     public void Oscillator_Period_IsTwo()
     {
         // Arrange
-        var oscillator = Imagination.Oscillate(Form.Void, Form.Cross());
+        var oscillator = Imagination.Oscillate(Form.Void, Form.Mark);
 
         // Assert
         oscillator.Period.Should().Be(2);
@@ -368,7 +368,7 @@ public class ImaginationTests
     public void Oscillator_ToImaginary_ReturnsImaginary()
     {
         // Arrange
-        var oscillator = Imagination.Oscillate(Form.Void, Form.Cross());
+        var oscillator = Imagination.Oscillate(Form.Void, Form.Mark);
 
         // Act
         var imag = oscillator.ToImaginary();
@@ -488,7 +488,7 @@ public class ImaginationTests
     public void ToNullableBoolean_Mark_ReturnsTrue()
     {
         // Arrange
-        var form = Form.Cross();
+        var form = Form.Mark;
 
         // Act
         var result = form.ToNullableBoolean();
@@ -561,7 +561,7 @@ public class ImaginationTests
         var form = Form.Void;
 
         // Act
-        var oscillator = form.OscillateWith(Form.Cross());
+        var oscillator = form.OscillateWith(Form.Mark);
 
         // Assert
         oscillator.AtTime(0).IsVoid().Should().BeTrue();

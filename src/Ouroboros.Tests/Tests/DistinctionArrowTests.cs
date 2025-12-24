@@ -215,7 +215,7 @@ public class DistinctionArrowTests
     public async Task Evaluate_PreservesSimpleForms()
     {
         // Arrange
-        var input = new FormRecord("test", Form.Cross());
+        var input = new FormRecord("test", Form.Mark);
         var arrow = DistinctionArrow.Evaluate<FormRecord>(
             extractor: r => r.Distinction,
             combiner: (r, f) => r with { Distinction = f });
@@ -237,7 +237,7 @@ public class DistinctionArrowTests
         // Arrange - a self-reference that converges
         // f(x) = if x is void then mark else void
         var arrow = DistinctionArrow.ReEntry<string>(
-            selfReference: (_, current) => current.IsVoid() ? Form.Cross() : Form.Void,
+            selfReference: (_, current) => current.IsVoid() ? Form.Mark : Form.Void,
             maxDepth: 10);
 
         // Act
@@ -253,7 +253,7 @@ public class DistinctionArrowTests
     {
         // Arrange - a self-reference that always returns the same form
         var arrow = DistinctionArrow.ReEntry<string>(
-            selfReference: (_, _) => Form.Cross(),
+            selfReference: (_, _) => Form.Mark,
             maxDepth: 10);
 
         // Act
@@ -272,7 +272,7 @@ public class DistinctionArrowTests
             selfReference: (_, current) =>
             {
                 iterations++;
-                return current.IsVoid() ? Form.Cross() : Form.Void;
+                return current.IsVoid() ? Form.Mark : Form.Void;
             },
             maxDepth: 5);
 

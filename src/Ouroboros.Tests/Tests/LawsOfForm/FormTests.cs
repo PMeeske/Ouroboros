@@ -18,7 +18,7 @@ public class FormTests
     public void Cross_CreatesMarkedForm()
     {
         // Act
-        var form = Form.Cross();
+        var form = Form.Mark;
 
         // Assert
         form.IsMark().Should().BeTrue();
@@ -55,7 +55,7 @@ public class FormTests
     {
         // Law of Form: ⌐⌐ = void (double negation cancels)
         // Arrange
-        var form = Form.Cross();
+        var form = Form.Mark;
 
         // Act
         var result = form.Not().Not();
@@ -95,8 +95,8 @@ public class FormTests
     public void And_MarkAndMark_ReturnsMark()
     {
         // Arrange
-        var left = Form.Cross();
-        var right = Form.Cross();
+        var left = Form.Mark;
+        var right = Form.Mark;
 
         // Act
         var result = left.And(right);
@@ -109,7 +109,7 @@ public class FormTests
     public void And_MarkAndVoid_ReturnsVoid()
     {
         // Arrange
-        var left = Form.Cross();
+        var left = Form.Mark;
         var right = Form.Void;
 
         // Act
@@ -123,7 +123,7 @@ public class FormTests
     public void And_WithImaginary_ReturnsImaginary()
     {
         // Arrange
-        var left = Form.Cross();
+        var left = Form.Mark;
         var right = Form.Imaginary;
 
         // Act
@@ -137,7 +137,7 @@ public class FormTests
     public void Or_MarkOrAnything_ReturnsMark()
     {
         // Arrange
-        var left = Form.Cross();
+        var left = Form.Mark;
         var right = Form.Void;
 
         // Act
@@ -179,7 +179,7 @@ public class FormTests
     public void NotOperator_NegatesForm()
     {
         // Arrange
-        var form = Form.Cross();
+        var form = Form.Mark;
 
         // Act
         var result = !form;
@@ -192,8 +192,8 @@ public class FormTests
     public void AndOperator_PerformsConjunction()
     {
         // Arrange
-        var left = Form.Cross();
-        var right = Form.Cross();
+        var left = Form.Mark;
+        var right = Form.Mark;
 
         // Act
         var result = left & right;
@@ -207,7 +207,7 @@ public class FormTests
     {
         // Arrange
         var left = Form.Void;
-        var right = Form.Cross();
+        var right = Form.Mark;
 
         // Act
         var result = left | right;
@@ -220,7 +220,7 @@ public class FormTests
     public void Match_OnMark_ExecutesMarkFunction()
     {
         // Arrange
-        var form = Form.Cross();
+        var form = Form.Mark;
         var executed = string.Empty;
 
         // Act
@@ -271,7 +271,7 @@ public class FormTests
     public void MatchWithReturn_OnMark_ReturnsMarkResult()
     {
         // Arrange
-        var form = Form.Cross();
+        var form = Form.Mark;
 
         // Act
         var result = form.Match(
@@ -287,8 +287,8 @@ public class FormTests
     public void Equals_SameForms_ReturnsTrue()
     {
         // Arrange
-        var form1 = Form.Cross();
-        var form2 = Form.Cross();
+        var form1 = Form.Mark;
+        var form2 = Form.Mark;
 
         // Act & Assert
         form1.Equals(form2).Should().BeTrue();
@@ -299,7 +299,7 @@ public class FormTests
     public void Equals_DifferentForms_ReturnsFalse()
     {
         // Arrange
-        var form1 = Form.Cross();
+        var form1 = Form.Mark;
         var form2 = Form.Void;
 
         // Act & Assert
@@ -311,7 +311,7 @@ public class FormTests
     public void ToString_Mark_ReturnsSymbol()
     {
         // Arrange
-        var form = Form.Cross();
+        var form = Form.Mark;
 
         // Act
         var result = form.ToString();

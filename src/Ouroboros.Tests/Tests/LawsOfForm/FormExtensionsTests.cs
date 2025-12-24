@@ -120,7 +120,7 @@ public class FormExtensionsTests
     public void All_AllMarked_ReturnsMark()
     {
         // Arrange
-        var forms = new[] { Form.Cross(), Form.Cross(), Form.Cross() };
+        var forms = new[] { Form.Mark, Form.Mark, Form.Mark };
 
         // Act
         var result = FormExtensions.All(forms);
@@ -133,7 +133,7 @@ public class FormExtensionsTests
     public void All_OneVoid_ReturnsVoid()
     {
         // Arrange
-        var forms = new[] { Form.Cross(), Form.Void, Form.Cross() };
+        var forms = new[] { Form.Mark, Form.Void, Form.Mark };
 
         // Act
         var result = FormExtensions.All(forms);
@@ -146,7 +146,7 @@ public class FormExtensionsTests
     public void All_OneImaginary_ReturnsImaginary()
     {
         // Arrange
-        var forms = new[] { Form.Cross(), Form.Imaginary, Form.Cross() };
+        var forms = new[] { Form.Mark, Form.Imaginary, Form.Mark };
 
         // Act
         var result = FormExtensions.All(forms);
@@ -169,7 +169,7 @@ public class FormExtensionsTests
     public void Any_OneMark_ReturnsMark()
     {
         // Arrange
-        var forms = new[] { Form.Void, Form.Cross(), Form.Void };
+        var forms = new[] { Form.Void, Form.Mark, Form.Void };
 
         // Act
         var result = FormExtensions.Any(forms);
@@ -220,8 +220,8 @@ public class FormExtensionsTests
         // Arrange
         var opinions = new[]
         {
-            (Form.Cross(), 3.0),
-            (Form.Cross(), 2.0),
+            (Form.Mark, 3.0),
+            (Form.Mark, 2.0),
             (Form.Void, 1.0)
         };
 
@@ -240,7 +240,7 @@ public class FormExtensionsTests
         {
             (Form.Void, 3.0),
             (Form.Void, 2.0),
-            (Form.Cross(), 1.0)
+            (Form.Mark, 1.0)
         };
 
         // Act
@@ -256,7 +256,7 @@ public class FormExtensionsTests
         // Arrange
         var opinions = new[]
         {
-            (Form.Cross(), 1.0),
+            (Form.Mark, 1.0),
             (Form.Void, 1.0)
         };
 
@@ -273,7 +273,7 @@ public class FormExtensionsTests
         // Arrange
         var opinions = new[]
         {
-            (Form.Cross(), 3.0),
+            (Form.Mark, 3.0),
             (Form.Imaginary, 1.0)
         };
 
@@ -288,7 +288,7 @@ public class FormExtensionsTests
     public void ToResult_Mark_ReturnsSuccess()
     {
         // Arrange
-        var form = Form.Cross();
+        var form = Form.Mark;
 
         // Act
         var result = form.ToResult(42, "error");
@@ -330,7 +330,7 @@ public class FormExtensionsTests
     public void ToOption_Mark_ReturnsSome()
     {
         // Arrange
-        var form = Form.Cross();
+        var form = Form.Mark;
 
         // Act
         var option = form.ToOption(42);
