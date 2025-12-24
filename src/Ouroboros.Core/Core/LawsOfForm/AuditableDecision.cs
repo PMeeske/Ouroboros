@@ -4,230 +4,242 @@
 
 namespace LangChainPipeline.Core.LawsOfForm;
 
-using LangChainPipeline.Core.Monads;
-
 /// <summary>
-/// Represents a decision that can be audited for compliance purposes.
-/// Uses Laws of Form three-valued logic to explicitly track certainty.
-/// Suitable for regulated domains where uncertain decisions must be escalated.
+/// Represents a decision with full audit trail and evidence.
+/// Combines the decision result with certainty information and reasoning.
 /// </summary>
-/// <typeparam name="T">The type of the approved value.</typeparam>
-public sealed class AuditableDecision<T>
+/// <typeparam name="T">The type of the decision result.</typeparam>
+public sealed record AuditableDecision<T>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="AuditableDecision{T}"/> class.
+    /// Gets the result of the decision.
     /// </summary>
-    /// <param name="state">The form state (Mark = approved, Void = rejected, Imaginary = inconclusive).</param>
-    /// <param name="value">The approved value (only present when state is Mark).</param>
-    /// <param name="reasoning">The explanation for the decision.</param>
-    /// <param name="evidence">List of evidence items supporting the decision.</param>
-    /// <param name="confidencePhase">For Imaginary states, represents the oscillation phase (0.0 to 1.0).</param>
-    /// <param name="timestamp">When the decision was made.</param>
-    internal AuditableDecision(
-        Form state,
-        Option<T> value,
-        string reasoning,
-        IReadOnlyList<string> evidence,
-        double? confidencePhase,
-        DateTimeOffset timestamp)
-    {
-        this.State = state;
-        this.Value = value;
-        this.Reasoning = reasoning;
-        this.Evidence = evidence;
-        this.ConfidencePhase = confidencePhase;
-        this.Timestamp = timestamp;
-    }
+    public Result<T, string> Result { get; init; }
 
     /// <summary>
-    /// Gets the form state of the decision.
+    /// Gets the certainty level of the decision as a Form.
     /// </summary>
-    public Form State { get; }
-
-    /// <summary>
-    /// Gets the approved value (only present when State is Mark).
-    /// </summary>
-    public Option<T> Value { get; }
+    public Form Certainty { get; init; }
 
     /// <summary>
     /// Gets the reasoning behind the decision.
     /// </summary>
-    public string Reasoning { get; }
+    public string Reasoning { get; init; }
 
     /// <summary>
-    /// Gets the evidence chain supporting the decision.
+    /// Gets the evidence that led to this decision.
+    /// Each piece of evidence includes a criterion name and its evaluation.
     /// </summary>
-    public IReadOnlyList<string> Evidence { get; }
-
-    /// <summary>
-    /// Gets the confidence phase for Imaginary (inconclusive) decisions.
-    /// Value between 0.0 and 1.0 representing the oscillation phase.
-    /// </summary>
-    public double? ConfidencePhase { get; }
+    public IReadOnlyList<Evidence> EvidenceTrail { get; init; }
 
     /// <summary>
     /// Gets the timestamp when the decision was made.
     /// </summary>
-    public DateTimeOffset Timestamp { get; }
+    public DateTime Timestamp { get; init; }
 
     /// <summary>
-    /// Gets a value indicating whether this decision requires human review.
-    /// True for Imaginary (inconclusive) states.
+    /// Gets optional metadata about the decision context.
     /// </summary>
-    public bool RequiresHumanReview => this.State == Form.Imaginary;
+    public IReadOnlyDictionary<string, string> Metadata { get; init; }
 
     /// <summary>
-    /// Gets a human-readable compliance status string.
+    /// Initializes a new instance of the <see cref="AuditableDecision{T}"/> class.
     /// </summary>
-    public string ComplianceStatus => this.State switch
-    {
-        Form.Mark => "APPROVED",
-        Form.Void => "REJECTED",
-        Form.Imaginary => $"INCONCLUSIVE (confidence phase: {this.ConfidencePhase:F2})",
-        _ => "UNKNOWN",
-    };
-
-    /// <summary>
-    /// Creates an approved decision (Mark state).
-    /// </summary>
-    /// <param name="value">The approved value.</param>
-    /// <param name="reasoning">The reasoning for approval.</param>
-    /// <param name="evidence">Evidence supporting the approval.</param>
-    /// <returns>An approved auditable decision.</returns>
-    /// <example>
-    /// var decision = AuditableDecision&lt;AccountApplication&gt;.Approve(
-    ///     application,
-    ///     "All KYC checks passed",
-    ///     new[] { "ID verified", "Address confirmed", "Credit check passed" });
-    /// </example>
-    public static AuditableDecision<T> Approve(T value, string reasoning, IEnumerable<string>? evidence = null)
-    {
-        return new AuditableDecision<T>(
-            Form.Mark,
-            Option<T>.Some(value),
-            reasoning,
-            evidence?.ToList() ?? new List<string>(),
-            null,
-            DateTimeOffset.UtcNow);
-    }
-
-    /// <summary>
-    /// Creates a rejected decision (Void state).
-    /// </summary>
-    /// <param name="reasoning">The reasoning for rejection.</param>
-    /// <param name="evidence">Evidence supporting the rejection.</param>
-    /// <returns>A rejected auditable decision.</returns>
-    /// <example>
-    /// var decision = AuditableDecision&lt;AccountApplication&gt;.Reject(
-    ///     "Failed identity verification",
-    ///     new[] { "Document mismatch", "Suspicious activity detected" });
-    /// </example>
-    public static AuditableDecision<T> Reject(string reasoning, IEnumerable<string>? evidence = null)
-    {
-        return new AuditableDecision<T>(
-            Form.Void,
-            Option<T>.None(),
-            reasoning,
-            evidence?.ToList() ?? new List<string>(),
-            null,
-            DateTimeOffset.UtcNow);
-    }
-
-    /// <summary>
-    /// Creates an inconclusive decision (Imaginary state) that requires human review.
-    /// </summary>
-    /// <param name="confidencePhase">A value between 0.0 and 1.0 representing confidence oscillation.</param>
-    /// <param name="reasoning">The reasoning for inconclusiveness.</param>
-    /// <param name="evidence">Evidence collected so far.</param>
-    /// <returns>An inconclusive auditable decision requiring human review.</returns>
-    /// <example>
-    /// var decision = AuditableDecision&lt;AccountApplication&gt;.Inconclusive(
-    ///     0.65,
-    ///     "Conflicting signals detected - manual review required",
-    ///     new[] { "Credit score borderline", "Recent address change", "Limited credit history" });
-    /// </example>
-    public static AuditableDecision<T> Inconclusive(
-        double confidencePhase,
+    /// <param name="result">The decision result.</param>
+    /// <param name="certainty">The certainty level.</param>
+    /// <param name="reasoning">The reasoning.</param>
+    /// <param name="evidenceTrail">The evidence trail.</param>
+    /// <param name="timestamp">The timestamp.</param>
+    /// <param name="metadata">Optional metadata.</param>
+    public AuditableDecision(
+        Result<T, string> result,
+        Form certainty,
         string reasoning,
-        IEnumerable<string>? evidence = null)
+        IReadOnlyList<Evidence> evidenceTrail,
+        DateTime? timestamp = null,
+        IReadOnlyDictionary<string, string>? metadata = null)
     {
-        if (confidencePhase is < 0.0 or > 1.0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(confidencePhase), "Confidence phase must be between 0.0 and 1.0");
-        }
-
-        return new AuditableDecision<T>(
-            Form.Imaginary,
-            Option<T>.None(),
-            reasoning,
-            evidence?.ToList() ?? new List<string>(),
-            confidencePhase,
-            DateTimeOffset.UtcNow);
+        this.Result = result;
+        this.Certainty = certainty;
+        this.Reasoning = reasoning;
+        this.EvidenceTrail = evidenceTrail;
+        this.Timestamp = timestamp ?? DateTime.UtcNow;
+        this.Metadata = metadata ?? new Dictionary<string, string>();
     }
 
     /// <summary>
-    /// Converts the decision to an audit log entry.
+    /// Creates a decision with Mark certainty (certain affirmative).
     /// </summary>
-    /// <returns>A formatted audit entry string.</returns>
+    /// <param name="value">The success value.</param>
+    /// <param name="reasoning">The reasoning.</param>
+    /// <param name="evidence">The evidence trail.</param>
+    /// <returns>An auditable decision with Mark certainty.</returns>
+    public static AuditableDecision<T> Approve(
+        T value,
+        string reasoning,
+        params Evidence[] evidence)
+    {
+        return new AuditableDecision<T>(
+            Result<T, string>.Success(value),
+            Form.Cross(),
+            reasoning,
+            evidence);
+    }
+
+    /// <summary>
+    /// Creates a decision with Void certainty (certain negative).
+    /// </summary>
+    /// <param name="error">The error message.</param>
+    /// <param name="reasoning">The reasoning.</param>
+    /// <param name="evidence">The evidence trail.</param>
+    /// <returns>An auditable decision with Void certainty.</returns>
+    public static AuditableDecision<T> Reject(
+        string error,
+        string reasoning,
+        params Evidence[] evidence)
+    {
+        return new AuditableDecision<T>(
+            Result<T, string>.Failure(error),
+            Form.Void,
+            reasoning,
+            evidence);
+    }
+
+    /// <summary>
+    /// Creates a decision with Imaginary certainty (uncertain/requires escalation).
+    /// </summary>
+    /// <param name="error">The error message describing the uncertainty.</param>
+    /// <param name="reasoning">The reasoning.</param>
+    /// <param name="evidence">The evidence trail.</param>
+    /// <returns>An auditable decision with Imaginary certainty.</returns>
+    public static AuditableDecision<T> Uncertain(
+        string error,
+        string reasoning,
+        params Evidence[] evidence)
+    {
+        return new AuditableDecision<T>(
+            Result<T, string>.Failure(error),
+            Form.Imaginary,
+            reasoning,
+            evidence);
+    }
+
+    /// <summary>
+    /// Adds additional evidence to the decision.
+    /// </summary>
+    /// <param name="evidence">The evidence to add.</param>
+    /// <returns>A new decision with the added evidence.</returns>
+    public AuditableDecision<T> WithEvidence(Evidence evidence)
+    {
+        var newEvidence = new List<Evidence>(this.EvidenceTrail) { evidence };
+        return this with { EvidenceTrail = newEvidence };
+    }
+
+    /// <summary>
+    /// Adds metadata to the decision.
+    /// </summary>
+    /// <param name="key">The metadata key.</param>
+    /// <param name="value">The metadata value.</param>
+    /// <returns>A new decision with the added metadata.</returns>
+    public AuditableDecision<T> WithMetadata(string key, string value)
+    {
+        var newMetadata = new Dictionary<string, string>(this.Metadata)
+        {
+            [key] = value
+        };
+        return this with { Metadata = newMetadata };
+    }
+
+    /// <summary>
+    /// Converts the decision to an audit log entry format.
+    /// </summary>
+    /// <returns>A formatted audit log entry.</returns>
     public string ToAuditEntry()
     {
-        var evidenceStr = this.Evidence.Count > 0
-            ? string.Join("; ", this.Evidence)
-            : "No evidence recorded";
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"[{this.Timestamp:O}] Decision: {this.Certainty}");
+        sb.AppendLine($"Result: {(this.Result.IsSuccess ? "Success" : "Failure")}");
+        sb.AppendLine($"Reasoning: {this.Reasoning}");
+        sb.AppendLine("Evidence Trail:");
 
-        return $"[{this.Timestamp:yyyy-MM-dd HH:mm:ss}] {this.ComplianceStatus}\n" +
-               $"Reasoning: {this.Reasoning}\n" +
-               $"Evidence: {evidenceStr}";
-    }
-
-    /// <summary>
-    /// Maps the approved value to a new type while preserving decision metadata.
-    /// Only applicable for Mark (approved) states.
-    /// </summary>
-    /// <typeparam name="TResult">The new value type.</typeparam>
-    /// <param name="mapper">Function to transform the approved value.</param>
-    /// <returns>A new decision with the transformed value.</returns>
-    public AuditableDecision<TResult> Map<TResult>(Func<T, TResult> mapper)
-    {
-        var newValue = this.Value.Map(mapper);
-        return new AuditableDecision<TResult>(
-            this.State,
-            newValue,
-            this.Reasoning,
-            this.Evidence,
-            this.ConfidencePhase,
-            this.Timestamp);
-    }
-
-    /// <summary>
-    /// Combines this decision with another using AND logic.
-    /// Both must be approved for the result to be approved.
-    /// </summary>
-    /// <param name="other">The other decision to combine with.</param>
-    /// <returns>A combined decision.</returns>
-    public AuditableDecision<(T, T)> And(AuditableDecision<T> other)
-    {
-        var combinedState = this.State.And(other.State);
-        var combinedEvidence = this.Evidence.Concat(other.Evidence).ToList();
-        var reasoning = $"Combined: ({this.Reasoning}) AND ({other.Reasoning})";
-
-        if (combinedState == Form.Mark && this.Value.HasValue && other.Value.HasValue)
+        foreach (var evidence in this.EvidenceTrail)
         {
-            return new AuditableDecision<(T, T)>(
-                combinedState,
-                Option<(T, T)>.Some((this.Value.Value!, other.Value.Value!)),
-                reasoning,
-                combinedEvidence,
-                null,
-                DateTimeOffset.UtcNow);
+            sb.AppendLine($"  - {evidence.CriterionName}: {evidence.Evaluation} ({evidence.Description})");
         }
 
-        return new AuditableDecision<(T, T)>(
-            combinedState,
-            Option<(T, T)>.None(),
-            reasoning,
-            combinedEvidence,
-            combinedState == Form.Imaginary ? Math.Max(this.ConfidencePhase ?? 0, other.ConfidencePhase ?? 0) : null,
-            DateTimeOffset.UtcNow);
+        if (this.Metadata.Count > 0)
+        {
+            sb.AppendLine("Metadata:");
+            foreach (var (key, value) in this.Metadata)
+            {
+                sb.AppendLine($"  - {key}: {value}");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Pattern matching on the certainty state.
+    /// </summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <param name="onCertain">Function to execute if certain (Mark).</param>
+    /// <param name="onRejected">Function to execute if rejected (Void).</param>
+    /// <param name="onUncertain">Function to execute if uncertain (Imaginary).</param>
+    /// <returns>The result of the matched function.</returns>
+    public TResult Match<TResult>(
+        Func<T, TResult> onCertain,
+        Func<string, TResult> onRejected,
+        Func<string, TResult> onUncertain)
+    {
+        return this.Certainty.Match(
+            onMark: () => this.Result.IsSuccess ? onCertain(this.Result.Value) : onRejected(this.Result.Error),
+            onVoid: () => onRejected(this.Result.Error),
+            onImaginary: () => onUncertain(this.Result.Error));
+    }
+}
+
+/// <summary>
+/// Represents a piece of evidence in a decision trail.
+/// </summary>
+public sealed record Evidence
+{
+    /// <summary>
+    /// Gets the name of the criterion being evaluated.
+    /// </summary>
+    public string CriterionName { get; init; }
+
+    /// <summary>
+    /// Gets the evaluation result as a Form.
+    /// </summary>
+    public Form Evaluation { get; init; }
+
+    /// <summary>
+    /// Gets a human-readable description of the evidence.
+    /// </summary>
+    public string Description { get; init; }
+
+    /// <summary>
+    /// Gets the timestamp when the evidence was collected.
+    /// </summary>
+    public DateTime Timestamp { get; init; }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Evidence"/> class.
+    /// </summary>
+    /// <param name="criterionName">The criterion name.</param>
+    /// <param name="evaluation">The evaluation result.</param>
+    /// <param name="description">The description.</param>
+    /// <param name="timestamp">Optional timestamp.</param>
+    public Evidence(
+        string criterionName,
+        Form evaluation,
+        string description,
+        DateTime? timestamp = null)
+    {
+        this.CriterionName = criterionName;
+        this.Evaluation = evaluation;
+        this.Description = description;
+        this.Timestamp = timestamp ?? DateTime.UtcNow;
     }
 }

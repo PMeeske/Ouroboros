@@ -5,150 +5,228 @@
 namespace LangChainPipeline.Core.LawsOfForm;
 
 /// <summary>
-/// Represents the three fundamental states in Laws of Form logic.
-/// Based on G. Spencer-Brown's calculus of indications.
+/// Represents a three-valued form from Spencer-Brown's Laws of Form.
+/// - Mark (Cross): A distinction is drawn, certain affirmative state
+/// - Void: No distinction, certain negative state
+/// - Imaginary: Re-entrant form, uncertain/paradoxical state
 /// </summary>
-public enum Form
+public readonly struct Form : IEquatable<Form>
 {
     /// <summary>
-    /// Void - the unmarked state (absence, false, nothing).
-    /// Represents the empty or undistinguished state.
+    /// Gets the certainty state of this form.
     /// </summary>
-    Void = 0,
+    public TriState State { get; }
 
-    /// <summary>
-    /// Mark - the marked state (presence, true, distinction).
-    /// Represents a clear distinction or boundary.
-    /// </summary>
-    Mark = 1,
-
-    /// <summary>
-    /// Imaginary - the indeterminate or oscillating state.
-    /// Represents uncertainty, superposition, or unresolved state.
-    /// In Spencer-Brown's calculus, this emerges from self-referential paradoxes.
-    /// </summary>
-    Imaginary = 2,
-}
-
-/// <summary>
-/// Extension methods implementing Laws of Form algebraic operations.
-/// Provides the fundamental laws: Calling, Crossing, and their consequences.
-/// </summary>
-public static class FormExtensions
-{
-    /// <summary>
-    /// Law of Calling: The idempotent property of Forms.
-    /// In Spencer-Brown's notation, juxtaposition represents calling the marked state.
-    /// Here we implement the simpler idempotence: f(f(x)) = f(x).
-    /// Mark remains Mark, Void remains Void, Imaginary remains Imaginary.
-    /// </summary>
-    /// <param name="form">The form to apply calling to.</param>
-    /// <returns>The result of the calling operation.</returns>
-    public static Form Calling(this Form form) => form switch
+    private Form(TriState state)
     {
-        Form.Mark => Form.Mark,
-        Form.Void => Form.Void,
-        Form.Imaginary => Form.Imaginary,
-        _ => throw new ArgumentOutOfRangeException(nameof(form)),
-    };
+        this.State = state;
+    }
 
     /// <summary>
-    /// Law of Crossing: Crossing twice returns to the original state.
-    /// Not(Not(x)) = x.
+    /// Creates a marked form (Cross) - represents certainty, affirmative, or true.
+    /// In notation: ⌐ or | |
     /// </summary>
-    /// <param name="form">The form to cross.</param>
-    /// <returns>The complement of the form.</returns>
-    public static Form Cross(this Form form) => form switch
+    /// <returns>A marked form.</returns>
+    public static Form Cross() => new(TriState.Mark);
+
+    /// <summary>
+    /// Creates a void form - represents emptiness, negation, or false.
+    /// In notation: (empty space)
+    /// </summary>
+    public static Form Void => new(TriState.Void);
+
+    /// <summary>
+    /// Creates an imaginary form - represents re-entry, uncertainty, or paradox.
+    /// Occurs when f = ⌐f (self-negation/re-entry).
+    /// </summary>
+    public static Form Imaginary => new(TriState.Imaginary);
+
+    /// <summary>
+    /// Gets a value indicating whether this form is marked (certain affirmative).
+    /// </summary>
+    /// <returns>True if the form is in the Mark state.</returns>
+    public bool IsMark() => this.State == TriState.Mark;
+
+    /// <summary>
+    /// Gets a value indicating whether this form is void (certain negative).
+    /// </summary>
+    /// <returns>True if the form is in the Void state.</returns>
+    public bool IsVoid() => this.State == TriState.Void;
+
+    /// <summary>
+    /// Gets a value indicating whether this form is imaginary (uncertain/paradoxical).
+    /// </summary>
+    /// <returns>True if the form is in the Imaginary state.</returns>
+    public bool IsImaginary() => this.State == TriState.Imaginary;
+
+    /// <summary>
+    /// Negation operator - Cross the form.
+    /// ⌐⌐ = void (double negation cancels)
+    /// ⌐void = ⌐ (negating void gives mark)
+    /// ⌐imaginary = imaginary (re-entry is self-negating)
+    /// </summary>
+    /// <returns>The negated form.</returns>
+    public Form Not()
     {
-        Form.Mark => Form.Void,
-        Form.Void => Form.Mark,
-        Form.Imaginary => Form.Imaginary, // Imaginary is self-dual
-        _ => throw new ArgumentOutOfRangeException(nameof(form)),
-    };
+        return this.State switch
+        {
+            TriState.Mark => Void,
+            TriState.Void => Cross(),
+            TriState.Imaginary => Imaginary,
+            _ => throw new InvalidOperationException("Unknown form state")
+        };
+    }
 
     /// <summary>
-    /// Three-valued AND operation following Laws of Form semantics.
-    /// Imaginary propagates (represents uncertainty).
+    /// Conjunction (AND) - Juxtaposition in Laws of Form.
+    /// Mark AND Mark = Mark
+    /// Mark AND Void = Void
+    /// Anything AND Imaginary = Imaginary
     /// </summary>
-    /// <param name="left">The left operand.</param>
-    /// <param name="right">The right operand.</param>
+    /// <param name="other">The other form.</param>
     /// <returns>The conjunction of the two forms.</returns>
-    public static Form And(this Form left, Form right)
+    public Form And(Form other)
     {
-        if (left == Form.Imaginary || right == Form.Imaginary)
+        if (this.IsImaginary() || other.IsImaginary())
         {
-            return Form.Imaginary;
+            return Imaginary;
         }
 
-        if (left == Form.Mark && right == Form.Mark)
+        if (this.IsVoid() || other.IsVoid())
         {
-            return Form.Mark;
+            return Void;
         }
 
-        return Form.Void;
+        return Cross();
     }
 
     /// <summary>
-    /// Three-valued OR operation following Laws of Form semantics.
-    /// Imaginary propagates (represents uncertainty).
+    /// Disjunction (OR) - De Morgan dual of conjunction.
+    /// Mark OR anything = Mark
+    /// Void OR Void = Void
+    /// Anything OR Imaginary = Imaginary (unless other is Mark)
     /// </summary>
-    /// <param name="left">The left operand.</param>
-    /// <param name="right">The right operand.</param>
+    /// <param name="other">The other form.</param>
     /// <returns>The disjunction of the two forms.</returns>
-    public static Form Or(this Form left, Form right)
+    public Form Or(Form other)
     {
-        if (left == Form.Imaginary || right == Form.Imaginary)
+        if (this.IsMark() || other.IsMark())
         {
-            return Form.Imaginary;
+            return Cross();
         }
 
-        if (left == Form.Mark || right == Form.Mark)
+        if (this.IsImaginary() || other.IsImaginary())
         {
-            return Form.Mark;
+            return Imaginary;
         }
 
-        return Form.Void;
+        return Void;
     }
 
     /// <summary>
-    /// Determines if the form represents a certain (definite) state.
-    /// Mark and Void are certain; Imaginary is uncertain.
+    /// Pattern matching on the form state.
     /// </summary>
-    /// <param name="form">The form to check.</param>
-    /// <returns>True if the form is certain (Mark or Void), false if Imaginary.</returns>
-    public static bool IsCertain(this Form form) => form != Form.Imaginary;
-
-    /// <summary>
-    /// Converts a boolean to a Form (Void = false, Mark = true).
-    /// </summary>
-    /// <param name="value">The boolean value.</param>
-    /// <returns>Mark if true, Void if false.</returns>
-    public static Form ToForm(this bool value) => value ? Form.Mark : Form.Void;
-
-    /// <summary>
-    /// Attempts to convert a Form to a boolean.
-    /// Returns None for Imaginary (uncertain) values.
-    /// </summary>
-    /// <param name="form">The form to convert.</param>
-    /// <returns>Some(true) for Mark, Some(false) for Void, None for Imaginary.</returns>
-    public static Monads.Option<bool> ToBool(this Form form) => form switch
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <param name="onMark">Function to execute if marked.</param>
+    /// <param name="onVoid">Function to execute if void.</param>
+    /// <param name="onImaginary">Function to execute if imaginary.</param>
+    /// <returns>The result of the matched function.</returns>
+    public TResult Match<TResult>(
+        Func<TResult> onMark,
+        Func<TResult> onVoid,
+        Func<TResult> onImaginary)
     {
-        Form.Mark => Monads.Option<bool>.Some(true),
-        Form.Void => Monads.Option<bool>.Some(false),
-        Form.Imaginary => Monads.Option<bool>.None(),
-        _ => throw new ArgumentOutOfRangeException(nameof(form)),
-    };
+        return this.State switch
+        {
+            TriState.Mark => onMark(),
+            TriState.Void => onVoid(),
+            TriState.Imaginary => onImaginary(),
+            _ => throw new InvalidOperationException("Unknown form state")
+        };
+    }
 
     /// <summary>
-    /// Resolves a nullable boolean to a Form.
-    /// Null maps to Imaginary (uncertain state).
+    /// Pattern matching with actions.
     /// </summary>
-    /// <param name="value">The nullable boolean value.</param>
-    /// <returns>Mark for true, Void for false, Imaginary for null.</returns>
-    public static Form ToForm(this bool? value) => value switch
+    /// <param name="onMark">Action to execute if marked.</param>
+    /// <param name="onVoid">Action to execute if void.</param>
+    /// <param name="onImaginary">Action to execute if imaginary.</param>
+    public void Match(
+        Action onMark,
+        Action onVoid,
+        Action onImaginary)
     {
-        true => Form.Mark,
-        false => Form.Void,
-        null => Form.Imaginary,
-    };
+        switch (this.State)
+        {
+            case TriState.Mark:
+                onMark();
+                break;
+            case TriState.Void:
+                onVoid();
+                break;
+            case TriState.Imaginary:
+                onImaginary();
+                break;
+            default:
+                throw new InvalidOperationException("Unknown form state");
+        }
+    }
+
+    /// <summary>
+    /// Negation operator overload.
+    /// </summary>
+    /// <param name="form">The form to negate.</param>
+    /// <returns>The negated form.</returns>
+    public static Form operator !(Form form) => form.Not();
+
+    /// <summary>
+    /// Conjunction operator overload.
+    /// </summary>
+    /// <param name="left">The left form.</param>
+    /// <param name="right">The right form.</param>
+    /// <returns>The conjunction of the two forms.</returns>
+    public static Form operator &(Form left, Form right) => left.And(right);
+
+    /// <summary>
+    /// Disjunction operator overload.
+    /// </summary>
+    /// <param name="left">The left form.</param>
+    /// <param name="right">The right form.</param>
+    /// <returns>The disjunction of the two forms.</returns>
+    public static Form operator |(Form left, Form right) => left.Or(right);
+
+    /// <summary>
+    /// Equality comparison.
+    /// </summary>
+    /// <param name="other">The other form.</param>
+    /// <returns>True if the forms are equal.</returns>
+    public bool Equals(Form other) => this.State == other.State;
+
+    /// <inheritdoc/>
+    public override bool Equals(object? obj) => obj is Form other && this.Equals(other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => this.State.GetHashCode();
+
+    /// <summary>
+    /// Equality operator.
+    /// </summary>
+    public static bool operator ==(Form left, Form right) => left.Equals(right);
+
+    /// <summary>
+    /// Inequality operator.
+    /// </summary>
+    public static bool operator !=(Form left, Form right) => !left.Equals(right);
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return this.State switch
+        {
+            TriState.Mark => "⌐",
+            TriState.Void => "∅",
+            TriState.Imaginary => "i",
+            _ => "?"
+        };
+    }
 }
