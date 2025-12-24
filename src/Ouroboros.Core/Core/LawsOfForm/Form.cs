@@ -5,312 +5,228 @@
 namespace LangChainPipeline.Core.LawsOfForm;
 
 /// <summary>
-/// Represents a Form in George Spencer-Brown's Laws of Form calculus.
-/// A Form represents the fundamental act of drawing a distinction, creating
-/// a boundary between what is inside (marked) and what is outside (unmarked).
-///
-/// The calculus is built on two fundamental axioms:
-/// 1. Law of Calling (Condensation): Calling a name twice is the same as calling it once.
-///    In notation: ⌐⌐ = ⌐ (or Mark(Mark(x)) = Mark(x))
-/// 2. Law of Crossing (Cancellation): Crossing from unmarked to marked and back yields unmarked.
-///    In notation: ⌐⌐void = void (or Mark(Mark(Void)) = Void)
-///
-/// Extended with Imaginary Forms (Chapter 11 of Laws of Form):
-/// When a form re-enters itself (contains a reference to itself), it creates
-/// an "imaginary" value that oscillates between marked and unmarked states.
-/// This is analogous to the imaginary unit i in mathematics where i² = -1.
-/// In LoF: if f = ⌐f, then f is imaginary (neither purely marked nor void).
-///
-/// This implementation models Forms as an algebraic data type that can be:
-/// - Void: The unmarked state (absence of distinction)
-/// - Mark: A distinction/boundary containing an inner form
-/// - Imaginary: A self-referential form that oscillates (re-entry)
-///
-/// The Form calculus is equivalent to Boolean algebra with:
-/// - Void = True (or False, depending on convention)
-/// - Mark(Void) = False (or True)
-/// - Mark(Mark(x)) simplifies according to the laws
-/// - Imaginary values extend beyond Boolean into oscillating/wave-like states
+/// Represents a three-valued form from Spencer-Brown's Laws of Form.
+/// - Mark (Cross): A distinction is drawn, certain affirmative state
+/// - Void: No distinction, certain negative state
+/// - Imaginary: Re-entrant form, uncertain/paradoxical state
 /// </summary>
-public abstract record Form
+public readonly struct Form : IEquatable<Form>
 {
     /// <summary>
-    /// Prevents external inheritance.
+    /// Gets the certainty state of this form.
     /// </summary>
-    private Form()
+    public TriState State { get; }
+
+    private Form(TriState state)
     {
+        this.State = state;
     }
 
     /// <summary>
-    /// Gets the void form - the unmarked state representing no distinction.
-    /// In Boolean terms, this is typically interpreted as True (the ground state).
+    /// Creates a marked form (Cross) - represents certainty, affirmative, or true.
+    /// In notation: ⌐ or | |
     /// </summary>
-    public static Form Void { get; } = new VoidForm();
+    /// <returns>A marked form.</returns>
+    public static Form Cross() => new(TriState.Mark);
 
     /// <summary>
-    /// Gets the imaginary form - the self-referential state that oscillates.
-    /// In Spencer-Brown's notation, this is the form f where f = ⌐f.
-    /// Analogous to the imaginary unit i in complex numbers.
+    /// Creates a void form - represents emptiness, negation, or false.
+    /// In notation: (empty space)
     /// </summary>
-    public static Form Imaginary { get; } = new ImaginaryForm();
+    public static Form Void => new(TriState.Void);
 
     /// <summary>
-    /// Creates a marked form (distinction) containing the given inner form.
-    /// The mark represents crossing from the unmarked state to the marked state.
+    /// Creates an imaginary form - represents re-entry, uncertainty, or paradox.
+    /// Occurs when f = ⌐f (self-negation/re-entry).
     /// </summary>
-    /// <param name="inner">The form contained within this distinction.</param>
-    /// <returns>A marked form containing the inner form.</returns>
-    public static Form Mark(Form inner) => new MarkForm(inner);
+    public static Form Imaginary => new(TriState.Imaginary);
 
     /// <summary>
-    /// Creates a simple mark (distinction around void).
-    /// This represents the basic marked state: ⌐ or Mark(Void).
+    /// Gets a value indicating whether this form is marked (certain affirmative).
     /// </summary>
-    /// <returns>A marked form containing void.</returns>
-    public static Form Cross() => Mark(Void);
+    /// <returns>True if the form is in the Mark state.</returns>
+    public bool IsMark() => this.State == TriState.Mark;
 
     /// <summary>
-    /// Creates an imaginary form with a specific phase.
-    /// Phase represents the position in the oscillation cycle.
+    /// Gets a value indicating whether this form is void (certain negative).
     /// </summary>
-    /// <param name="phase">The phase angle (0 to 2π) in the oscillation.</param>
-    /// <returns>An imaginary form at the specified phase.</returns>
-    public static Form Imagine(double phase) => new ImaginaryForm(phase);
+    /// <returns>True if the form is in the Void state.</returns>
+    public bool IsVoid() => this.State == TriState.Void;
 
     /// <summary>
-    /// Creates a re-entry form - a form that references itself.
-    /// This is the fundamental source of imaginary values in LoF.
-    /// The equation f = ⌐f has no solution in {Void, Mark} but is
-    /// satisfied by the imaginary value.
+    /// Gets a value indicating whether this form is imaginary (uncertain/paradoxical).
     /// </summary>
-    /// <param name="name">Optional name for the self-reference.</param>
-    /// <returns>A re-entry form representing self-reference.</returns>
-    public static Form ReEntry(string? name = null) => new ReEntryForm(name ?? "f");
+    /// <returns>True if the form is in the Imaginary state.</returns>
+    public bool IsImaginary() => this.State == TriState.Imaginary;
 
     /// <summary>
-    /// Evaluates this form to its simplest equivalent form by applying
-    /// the Laws of Form (calling and crossing) recursively.
+    /// Negation operator - Cross the form.
+    /// ⌐⌐ = void (double negation cancels)
+    /// ⌐void = ⌐ (negating void gives mark)
+    /// ⌐imaginary = imaginary (re-entry is self-negating)
     /// </summary>
-    /// <returns>The reduced form.</returns>
-    public abstract Form Eval();
-
-    /// <summary>
-    /// Determines if this form is equivalent to the marked state.
-    /// After evaluation, a form is marked if it reduces to Mark(Void).
-    /// Imaginary forms are neither marked nor void.
-    /// </summary>
-    /// <returns>True if this form evaluates to the marked state.</returns>
-    public bool IsMarked() => this.Eval() is MarkForm { Inner: VoidForm };
-
-    /// <summary>
-    /// Determines if this form is equivalent to the unmarked/void state.
-    /// After evaluation, a form is void if it reduces to Void.
-    /// Imaginary forms are neither marked nor void.
-    /// </summary>
-    /// <returns>True if this form evaluates to void.</returns>
-    public bool IsVoid() => this.Eval() is VoidForm;
-
-    /// <summary>
-    /// Determines if this form is imaginary (self-referential/oscillating).
-    /// An imaginary form transcends the marked/unmarked distinction.
-    /// </summary>
-    /// <returns>True if this form evaluates to an imaginary state.</returns>
-    public bool IsImaginary() => this.Eval() is ImaginaryForm or ReEntryForm;
-
-    /// <summary>
-    /// Indicates (calls) this form with another form.
-    /// In Spencer-Brown notation, this is juxtaposition of forms.
-    /// Calling represents the combining of distinctions.
-    /// </summary>
-    /// <param name="other">The form to indicate with.</param>
-    /// <returns>A form representing the indication.</returns>
-    public Form Call(Form other) => new IndicationForm(this, other);
-
-    /// <summary>
-    /// The void form - represents no distinction, the ground state.
-    /// </summary>
-    internal sealed record VoidForm : Form
+    /// <returns>The negated form.</returns>
+    public Form Not()
     {
-        /// <inheritdoc/>
-        public override Form Eval() => this;
-
-        /// <inheritdoc/>
-        public override string ToString() => "∅";
-    }
-
-    /// <summary>
-    /// A marked form - represents a distinction containing an inner form.
-    /// The mark crosses the boundary from unmarked to marked.
-    /// </summary>
-    /// <param name="Inner">The form contained within this distinction.</param>
-    internal sealed record MarkForm(Form Inner) : Form
-    {
-        /// <inheritdoc/>
-        public override Form Eval()
+        return this.State switch
         {
-            var evalInner = this.Inner.Eval();
-
-            // Law of Crossing: Mark(Mark(x)) = x
-            // When we have nested marks, they cancel out
-            if (evalInner is MarkForm innerMark)
-            {
-                return innerMark.Inner.Eval();
-            }
-
-            // Mark of Imaginary shifts the phase by π (half cycle)
-            // This models the oscillation: ⌐i at time t equals i at time t+1
-            if (evalInner is ImaginaryForm imaginary)
-            {
-                return new ImaginaryForm(imaginary.Phase + Math.PI);
-            }
-
-            // Mark of ReEntry resolves to Imaginary
-            // Since f = ⌐f implies f is imaginary
-            if (evalInner is ReEntryForm)
-            {
-                return Imaginary;
-            }
-
-            return new MarkForm(evalInner);
-        }
-
-        /// <inheritdoc/>
-        public override string ToString() => $"⌐{this.Inner}";
+            TriState.Mark => Void,
+            TriState.Void => Cross(),
+            TriState.Imaginary => Imaginary,
+            _ => throw new InvalidOperationException("Unknown form state")
+        };
     }
 
     /// <summary>
-    /// An indication form - represents two forms placed together (juxtaposition).
-    /// This models the "calling" or "indication" operation.
+    /// Conjunction (AND) - Juxtaposition in Laws of Form.
+    /// Mark AND Mark = Mark
+    /// Mark AND Void = Void
+    /// Anything AND Imaginary = Imaginary
     /// </summary>
-    /// <param name="Left">The left form.</param>
-    /// <param name="Right">The right form.</param>
-    internal sealed record IndicationForm(Form Left, Form Right) : Form
+    /// <param name="other">The other form.</param>
+    /// <returns>The conjunction of the two forms.</returns>
+    public Form And(Form other)
     {
-        /// <inheritdoc/>
-        public override Form Eval()
+        if (this.IsImaginary() || other.IsImaginary())
         {
-            var left = this.Left.Eval();
-            var right = this.Right.Eval();
-
-            // Law of Calling: If either side is marked, the result is marked
-            // Mark placed next to anything yields Mark
-            // (This models Boolean OR in the standard interpretation)
-            if (left is MarkForm { Inner: VoidForm } || right is MarkForm { Inner: VoidForm })
-            {
-                return Cross();
-            }
-
-            // Void next to anything is just that thing (void is the identity for indication)
-            if (left is VoidForm)
-            {
-                return right;
-            }
-
-            if (right is VoidForm)
-            {
-                return left;
-            }
-
-            // Imaginary interactions: combining imaginaries produces interference
-            if (left is ImaginaryForm leftImag && right is ImaginaryForm rightImag)
-            {
-                // Phase combination (like wave interference)
-                var combinedPhase = (leftImag.Phase + rightImag.Phase) / 2;
-                return new ImaginaryForm(combinedPhase);
-            }
-
-            // Imaginary with real: imaginary dominates (like complex + real)
-            if (left is ImaginaryForm || right is ImaginaryForm)
-            {
-                return left is ImaginaryForm ? left : right;
-            }
-
-            // If both sides evaluate to the same thing, apply condensation
-            if (left.Equals(right))
-            {
-                return left;
-            }
-
-            return new IndicationForm(left, right);
-        }
-
-        /// <inheritdoc/>
-        public override string ToString() => $"({this.Left} {this.Right})";
-    }
-
-    /// <summary>
-    /// An imaginary form - represents an oscillating, self-referential state.
-    /// This is Spencer-Brown's extension to handle re-entry equations like f = ⌐f.
-    /// The imaginary form oscillates between marked and unmarked with each "crossing".
-    ///
-    /// In the time domain interpretation:
-    /// - At even times, the imaginary form appears as void
-    /// - At odd times, the imaginary form appears as marked
-    ///
-    /// The phase represents the position in this oscillation cycle.
-    /// </summary>
-    /// <param name="Phase">The phase angle in radians (0 to 2π).</param>
-    internal sealed record ImaginaryForm(double Phase = 0) : Form
-    {
-        /// <inheritdoc/>
-        public override Form Eval() => this;
-
-        /// <summary>
-        /// Gets the apparent value at a given discrete time step.
-        /// The imaginary form oscillates between Void and Mark.
-        /// </summary>
-        /// <param name="time">The discrete time step.</param>
-        /// <returns>Void at even times, Mark at odd times (adjusted by phase).</returns>
-        public Form AtTime(int time)
-        {
-            var effectivePhase = this.Phase + (time * Math.PI);
-            var normalizedPhase = effectivePhase % (2 * Math.PI);
-
-            // If phase is in [0, π), appears as Void; in [π, 2π), appears as Marked
-            return normalizedPhase < Math.PI ? Void : Cross();
-        }
-
-        /// <summary>
-        /// Determines if this imaginary form appears marked at a given time.
-        /// </summary>
-        /// <param name="time">The discrete time step.</param>
-        /// <returns>True if marked at this time.</returns>
-        public bool IsMarkedAtTime(int time) => this.AtTime(time).IsMarked();
-
-        /// <inheritdoc/>
-        public override string ToString() =>
-            this.Phase == 0 ? "i" : $"i∠{this.Phase:F2}";
-    }
-
-    /// <summary>
-    /// A re-entry form - represents a form that contains a reference to itself.
-    /// This is the source of imaginary values: the equation f = ⌐f.
-    ///
-    /// Re-entry captures the essence of self-reference, recursion, and the
-    /// Ouroboros symbol - the serpent consuming its own tail.
-    ///
-    /// When evaluated in the context of its own definition, a re-entry form
-    /// produces an imaginary (oscillating) value.
-    /// </summary>
-    /// <param name="Name">The name of the self-referential variable.</param>
-    internal sealed record ReEntryForm(string Name) : Form
-    {
-        /// <inheritdoc/>
-        public override Form Eval()
-        {
-            // A re-entry form evaluates to Imaginary
-            // because f = ⌐f has no solution in {Void, Mark}
-            // The imaginary value is the "eigenform" of the crossing operation
             return Imaginary;
         }
 
-        /// <summary>
-        /// Creates the defining equation for this re-entry: f = ⌐f.
-        /// </summary>
-        /// <returns>A tuple of (left side, right side) of the equation.</returns>
-        public (Form Left, Form Right) GetEquation() => (this, Mark(this));
+        if (this.IsVoid() || other.IsVoid())
+        {
+            return Void;
+        }
 
-        /// <inheritdoc/>
-        public override string ToString() => $"↻{this.Name}";
+        return Cross();
+    }
+
+    /// <summary>
+    /// Disjunction (OR) - De Morgan dual of conjunction.
+    /// Mark OR anything = Mark
+    /// Void OR Void = Void
+    /// Anything OR Imaginary = Imaginary (unless other is Mark)
+    /// </summary>
+    /// <param name="other">The other form.</param>
+    /// <returns>The disjunction of the two forms.</returns>
+    public Form Or(Form other)
+    {
+        if (this.IsMark() || other.IsMark())
+        {
+            return Cross();
+        }
+
+        if (this.IsImaginary() || other.IsImaginary())
+        {
+            return Imaginary;
+        }
+
+        return Void;
+    }
+
+    /// <summary>
+    /// Pattern matching on the form state.
+    /// </summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <param name="onMark">Function to execute if marked.</param>
+    /// <param name="onVoid">Function to execute if void.</param>
+    /// <param name="onImaginary">Function to execute if imaginary.</param>
+    /// <returns>The result of the matched function.</returns>
+    public TResult Match<TResult>(
+        Func<TResult> onMark,
+        Func<TResult> onVoid,
+        Func<TResult> onImaginary)
+    {
+        return this.State switch
+        {
+            TriState.Mark => onMark(),
+            TriState.Void => onVoid(),
+            TriState.Imaginary => onImaginary(),
+            _ => throw new InvalidOperationException("Unknown form state")
+        };
+    }
+
+    /// <summary>
+    /// Pattern matching with actions.
+    /// </summary>
+    /// <param name="onMark">Action to execute if marked.</param>
+    /// <param name="onVoid">Action to execute if void.</param>
+    /// <param name="onImaginary">Action to execute if imaginary.</param>
+    public void Match(
+        Action onMark,
+        Action onVoid,
+        Action onImaginary)
+    {
+        switch (this.State)
+        {
+            case TriState.Mark:
+                onMark();
+                break;
+            case TriState.Void:
+                onVoid();
+                break;
+            case TriState.Imaginary:
+                onImaginary();
+                break;
+            default:
+                throw new InvalidOperationException("Unknown form state");
+        }
+    }
+
+    /// <summary>
+    /// Negation operator overload.
+    /// </summary>
+    /// <param name="form">The form to negate.</param>
+    /// <returns>The negated form.</returns>
+    public static Form operator !(Form form) => form.Not();
+
+    /// <summary>
+    /// Conjunction operator overload.
+    /// </summary>
+    /// <param name="left">The left form.</param>
+    /// <param name="right">The right form.</param>
+    /// <returns>The conjunction of the two forms.</returns>
+    public static Form operator &(Form left, Form right) => left.And(right);
+
+    /// <summary>
+    /// Disjunction operator overload.
+    /// </summary>
+    /// <param name="left">The left form.</param>
+    /// <param name="right">The right form.</param>
+    /// <returns>The disjunction of the two forms.</returns>
+    public static Form operator |(Form left, Form right) => left.Or(right);
+
+    /// <summary>
+    /// Equality comparison.
+    /// </summary>
+    /// <param name="other">The other form.</param>
+    /// <returns>True if the forms are equal.</returns>
+    public bool Equals(Form other) => this.State == other.State;
+
+    /// <inheritdoc/>
+    public override bool Equals(object? obj) => obj is Form other && this.Equals(other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => this.State.GetHashCode();
+
+    /// <summary>
+    /// Equality operator.
+    /// </summary>
+    public static bool operator ==(Form left, Form right) => left.Equals(right);
+
+    /// <summary>
+    /// Inequality operator.
+    /// </summary>
+    public static bool operator !=(Form left, Form right) => !left.Equals(right);
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return this.State switch
+        {
+            TriState.Mark => "⌐",
+            TriState.Void => "∅",
+            TriState.Imaginary => "i",
+            _ => "?"
+        };
     }
 }
