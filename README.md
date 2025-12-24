@@ -65,21 +65,22 @@ dotnet test
 using LangChainPipeline.Pipeline.Branches;
 using LangChainPipeline.Pipeline.Reasoning;
 using LangChainPipeline.Tools;
-using LangChainPipeline.Providers;
+using LangChainPipeline.Domain.Vectors;
+using LangChain.DocumentLoaders;
 
 // Create a pipeline branch with vector store
 var store = new TrackedVectorStore();
 var branch = new PipelineBranch("demo", store, DataSource.FromPath("."));
 
-// Initialize LLM and tools
-var llm = new OllamaChatModel("llama3");
+// Initialize LLM, tools, and embeddings
+var llm = new ToolAwareChatModel(/* your LLM provider */);
 var tools = new ToolRegistry();
-var embed = new OllamaEmbeddingModel();
+var embed = /* your embedding model */;
 
 // Create a reasoning pipeline: Draft → Critique → Improve
-var draftArrow = ReasoningArrows.DraftArrow(llm, tools, "What is functional programming?");
+var draftArrow = ReasoningArrows.DraftArrow(llm, tools, embed, "What is functional programming?", "analysis");
 var critiqueArrow = ReasoningArrows.CritiqueArrow(llm, tools, embed, "analysis", "critique");
-var improveArrow = ReasoningArrows.ImproveArrow(llm, tools);
+var improveArrow = ReasoningArrows.ImproveArrow(llm, tools, embed, "analysis", "improvement");
 
 // Execute the pipeline with monadic composition
 var result = await draftArrow(branch);
