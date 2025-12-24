@@ -18,22 +18,22 @@ public class FormTests
     public void Cross_FollowsLawOfCrossing_DoubleInversion()
     {
         // Law of Crossing: Cross(Cross(x)) = x
-        Form.Mark.Cross().Cross().Should().Be(Form.Mark);
-        Form.Void.Cross().Cross().Should().Be(Form.Void);
-        Form.Imaginary.Cross().Cross().Should().Be(Form.Imaginary);
+        Form.Mark.Not().Not().Should().Be(Form.Mark);
+        Form.Void.Not().Not().Should().Be(Form.Void);
+        Form.Imaginary.Not().Not().Should().Be(Form.Imaginary);
     }
 
     [Fact]
     public void Cross_InvertsMarkAndVoid()
     {
-        Form.Mark.Cross().Should().Be(Form.Void);
-        Form.Void.Cross().Should().Be(Form.Mark);
+        Form.Mark.Not().Should().Be(Form.Void);
+        Form.Void.Not().Should().Be(Form.Mark);
     }
 
     [Fact]
     public void Cross_ImaginaryIsSelfDual()
     {
-        Form.Imaginary.Cross().Should().Be(Form.Imaginary);
+        Form.Imaginary.Not().Should().Be(Form.Imaginary);
     }
 
     [Fact]
@@ -198,7 +198,7 @@ public class FormTests
         var x = Form.Mark;
         var y = Form.Void;
 
-        x.And(y).Cross().Should().Be(x.Cross().Or(y.Cross()));
+        x.And(y).Not().Should().Be(x.Not().Or(y.Not()));
     }
 
     [Fact]

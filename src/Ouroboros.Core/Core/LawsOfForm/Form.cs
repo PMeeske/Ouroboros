@@ -27,7 +27,7 @@ public readonly struct Form : IEquatable<Form>
     /// In notation: ⌐ or | |
     /// </summary>
     /// <returns>A marked form.</returns>
-    public static Form CreateCross() => new(TriState.Mark);
+    public static Form Cross() => new(TriState.Mark);
 
     /// <summary>
     /// Gets a marked form (alias for Cross) - represents certainty, affirmative, or true.
@@ -95,12 +95,6 @@ public readonly struct Form : IEquatable<Form>
             _ => throw new InvalidOperationException("Unknown form state")
         };
     }
-
-    /// <summary>
-    /// Cross operator - alias for Not() for Laws of Form notation.
-    /// </summary>
-    /// <returns>The crossed (negated) form.</returns>
-    public Form Cross() => this.Not();
 
     /// <summary>
     /// Calling operator - idempotent operation that returns the form itself.
