@@ -27,6 +27,13 @@ A **sophisticated functional programming-based AI pipeline system** built on Lan
 - **🎓 Self-Improving Agents**: Automatic skill extraction and learning from successful executions
 - **🧠 Enhanced Memory**: Persistent memory with consolidation and intelligent forgetting
 - **📈 Uncertainty Routing**: Confidence-aware task routing with fallback strategies
+- **⭕ Laws of Form (NEW)**: Spencer-Brown's calculus of distinctions for foundational reasoning
+  - **Form Calculus**: Void (unmarked), Mark (distinction), and Imaginary (oscillating) as primitive elements
+  - **Law of Calling**: Condensation - calling a name twice equals calling once
+  - **Law of Crossing**: Double marking cancels out (double negation elimination)
+  - **Imagination**: Self-referential forms that oscillate between states (inverse of distinction)
+  - **Re-Entry**: The equation f = ⌐f yields imaginary values, modeling the Ouroboros symbol
+  - **Distinction Arrows**: Pipeline gates based on marked/unmarked/imaginary states
 - **🤖 Phase 2 Metacognition (NEW)**: Agent self-model, goal hierarchy, and autonomous self-evaluation
   - **Capability Registry**: Agent understands its own capabilities and limitations
   - **Goal Hierarchy**: Hierarchical goal decomposition with value alignment
