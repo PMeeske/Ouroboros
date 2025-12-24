@@ -30,6 +30,12 @@ public readonly struct Form : IEquatable<Form>
     public static Form Cross() => new(TriState.Mark);
 
     /// <summary>
+    /// Gets a marked form (alias for Cross) - represents certainty, affirmative, or true.
+    /// In notation: ⌐ or | |
+    /// </summary>
+    public static Form Mark => new(TriState.Mark);
+
+    /// <summary>
     /// Creates a void form - represents emptiness, negation, or false.
     /// In notation: (empty space)
     /// </summary>
@@ -40,6 +46,19 @@ public readonly struct Form : IEquatable<Form>
     /// Occurs when f = ⌐f (self-negation/re-entry).
     /// </summary>
     public static Form Imaginary => new(TriState.Imaginary);
+
+    /// <summary>
+    /// Gets a value indicating whether this form is marked (certain affirmative).
+    /// Alias for IsMark() for compatibility.
+    /// </summary>
+    /// <returns>True if the form is in the Mark state.</returns>
+    public bool IsMarked() => this.IsMark();
+
+    /// <summary>
+    /// Gets a value indicating whether this form is certain (not imaginary).
+    /// </summary>
+    /// <returns>True if the form is Mark or Void, false if Imaginary.</returns>
+    public bool IsCertain() => !this.IsImaginary();
 
     /// <summary>
     /// Gets a value indicating whether this form is marked (certain affirmative).
@@ -71,9 +90,32 @@ public readonly struct Form : IEquatable<Form>
         return this.State switch
         {
             TriState.Mark => Void,
-            TriState.Void => Cross(),
+            TriState.Void => Mark,
             TriState.Imaginary => Imaginary,
             _ => throw new InvalidOperationException("Unknown form state")
+        };
+    }
+
+    /// <summary>
+    /// Calling operator - idempotent operation that returns the form itself.
+    /// In Laws of Form, calling a form is idempotent: f() = f.
+    /// </summary>
+    /// <returns>The form itself.</returns>
+    public Form Calling() => this;
+
+    /// <summary>
+    /// Converts the form to a nullable boolean.
+    /// Mark -> true, Void -> false, Imaginary -> null.
+    /// </summary>
+    /// <returns>A nullable boolean representing the form state.</returns>
+    public bool? ToBool()
+    {
+        return this.State switch
+        {
+            TriState.Mark => true,
+            TriState.Void => false,
+            TriState.Imaginary => null,
+            _ => null
         };
     }
 
@@ -229,4 +271,88 @@ public readonly struct Form : IEquatable<Form>
             _ => "?"
         };
     }
+
+    /// <summary>
+    /// Creates a re-entry form representing self-reference.
+    /// This is a stub implementation that returns Imaginary.
+    /// </summary>
+    /// <param name="name">Optional name for the self-reference.</param>
+    /// <returns>An imaginary form representing re-entry.</returns>
+    public static Form ReEntry(string? name = null) => Imaginary;
+
+    /// <summary>
+    /// Creates an imaginary form with a specific phase.
+    /// This is a stub implementation that returns Imaginary.
+    /// </summary>
+    /// <param name="phase">The phase angle in radians.</param>
+    /// <returns>An imaginary form.</returns>
+    public static Form Imagine(double phase) => Imaginary;
+
+    /// <summary>
+    /// Evaluates the form, converting it to a pattern-matchable record type.
+    /// </summary>
+    /// <returns>A record type representing the evaluated form.</returns>
+    public object Eval()
+    {
+        return this.State switch
+        {
+            TriState.Void => new VoidForm(),
+            TriState.Mark => new MarkForm(),
+            TriState.Imaginary => new ImaginaryForm(0.0),
+            _ => new VoidForm()
+        };
+    }
+
+    /// <summary>
+    /// Calls (applies) this form to another form.
+    /// This implements the "calling" operation from Laws of Form.
+    /// Stub implementation using AND logic.
+    /// </summary>
+    /// <param name="other">The form to apply to.</param>
+    /// <returns>The result of the call.</returns>
+    public Form Call(Form other) => this.And(other);
+
+    /// <summary>
+    /// Represents a void form for pattern matching.
+    /// </summary>
+    public record VoidForm;
+
+    /// <summary>
+    /// Represents a marked form for pattern matching.
+    /// </summary>
+    public record MarkForm;
+
+    /// <summary>
+    /// Represents an imaginary form with a phase for pattern matching.
+    /// </summary>
+    public record ImaginaryForm
+    {
+        /// <summary>
+        /// Gets the phase angle in radians.
+        /// </summary>
+        public double Phase { get; init; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ImaginaryForm"/> class.
+        /// </summary>
+        /// <param name="phase">The phase angle in radians.</param>
+        public ImaginaryForm(double phase)
+        {
+            this.Phase = phase;
+        }
+
+        /// <summary>
+        /// Projects the imaginary form at a specific time.
+        /// Stub implementation that returns the imaginary form itself.
+        /// </summary>
+        /// <param name="time">The time value.</param>
+        /// <returns>The form at the specified time.</returns>
+        public object AtTime(double time) => this;
+    }
+
+    /// <summary>
+    /// Represents a re-entry form with an optional name for pattern matching.
+    /// </summary>
+    /// <param name="Name">Optional name for the self-reference.</param>
+    public record ReEntryForm(string? Name);
 }

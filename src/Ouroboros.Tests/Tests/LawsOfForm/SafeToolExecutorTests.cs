@@ -20,8 +20,8 @@ public class SafeToolExecutorTests
         // Arrange
         var toolLookup = new MockToolLookup(success: true, output: "tool output");
         var executor = new SafeToolExecutor(toolLookup)
-            .AddCriterion("auth", (_, _) => Form.Cross())
-            .AddCriterion("rate", (_, _) => Form.Cross());
+            .AddCriterion("auth", (_, _) => Form.Mark)
+            .AddCriterion("rate", (_, _) => Form.Mark);
 
         var toolCall = new ToolCall("test_tool", "test_args");
         var context = CreateMockContext();
@@ -43,7 +43,7 @@ public class SafeToolExecutorTests
         // Arrange
         var toolLookup = new MockToolLookup(success: true, output: "should not execute");
         var executor = new SafeToolExecutor(toolLookup)
-            .AddCriterion("auth", (_, _) => Form.Cross())
+            .AddCriterion("auth", (_, _) => Form.Mark)
             .AddCriterion("rate", (_, _) => Form.Void); // This fails
 
         var toolCall = new ToolCall("test_tool", "test_args");
@@ -65,7 +65,7 @@ public class SafeToolExecutorTests
         // Arrange
         var toolLookup = new MockToolLookup(success: true, output: "output");
         var executor = new SafeToolExecutor(toolLookup)
-            .AddCriterion("auth", (_, _) => Form.Cross())
+            .AddCriterion("auth", (_, _) => Form.Mark)
             .AddCriterion("safety", (_, _) => Form.Imaginary); // Uncertain
 
         var toolCall = new ToolCall("test_tool", "test_args");
@@ -128,7 +128,7 @@ public class SafeToolExecutorTests
         // Arrange
         var toolLookup = new MockToolLookup(toolExists: false);
         var executor = new SafeToolExecutor(toolLookup)
-            .AddCriterion("auth", (_, _) => Form.Cross());
+            .AddCriterion("auth", (_, _) => Form.Mark);
 
         var toolCall = new ToolCall("nonexistent_tool", "args");
         var context = CreateMockContext();
@@ -148,7 +148,7 @@ public class SafeToolExecutorTests
         // Arrange
         var toolLookup = new MockToolLookup(throwsException: true);
         var executor = new SafeToolExecutor(toolLookup)
-            .AddCriterion("auth", (_, _) => Form.Cross());
+            .AddCriterion("auth", (_, _) => Form.Mark);
 
         var toolCall = new ToolCall("failing_tool", "args");
         var context = CreateMockContext();
@@ -167,7 +167,7 @@ public class SafeToolExecutorTests
         // Arrange
         var toolLookup = new MockToolLookup(success: true, output: "output");
         var executor = new SafeToolExecutor(toolLookup)
-            .AddCriterion("auth", (_, _) => Form.Cross())
+            .AddCriterion("auth", (_, _) => Form.Mark)
             .AddCriterion("buggy", (_, _) => throw new InvalidOperationException("Criterion failed"));
 
         var toolCall = new ToolCall("test_tool", "args");

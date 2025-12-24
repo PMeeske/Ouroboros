@@ -120,8 +120,8 @@ public static class DistinctionArrow
         return input =>
         {
             var form = extractor(input);
-            var evaluated = form.Eval();
-            return Task.FromResult(combiner(input, evaluated));
+            // Eval() is a stub that doesn't really transform, so just use the form itself
+            return Task.FromResult(combiner(input, form));
         };
     }
 

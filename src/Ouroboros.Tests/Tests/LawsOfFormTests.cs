@@ -33,7 +33,7 @@ public class LawsOfFormTests
     public void Cross_IsMarked()
     {
         // Arrange & Act
-        var form = Form.Cross();
+        var form = Form.Mark;
 
         // Assert
         form.IsMarked().Should().BeTrue();
@@ -147,7 +147,7 @@ public class LawsOfFormTests
     public void LawOfCalling_CallingSameForm_Condenses()
     {
         // Calling a form with itself should condense to just the form
-        var mark = Form.Cross();
+        var mark = Form.Mark;
         var form = mark.Call(mark);
 
         // Act
@@ -174,7 +174,7 @@ public class LawsOfFormTests
     public void LawOfCalling_MarkWithVoid_IsMark()
     {
         // Mark indicated with void is mark (void is identity)
-        var form = Form.Cross().Call(Form.Void);
+        var form = Form.Mark.Call(Form.Void);
 
         // Act
         var result = form.Eval();
@@ -187,7 +187,7 @@ public class LawsOfFormTests
     public void LawOfCalling_VoidWithMark_IsMark()
     {
         // Void indicated with mark is mark
-        var form = Form.Void.Call(Form.Cross());
+        var form = Form.Void.Call(Form.Mark);
 
         // Act
         var result = form.Eval();
@@ -221,7 +221,7 @@ public class LawsOfFormTests
     public void Not_InvertsMarkedToVoid()
     {
         // Not(Mark) = Void via double crossing
-        var form = Form.Cross().Not();
+        var form = Form.Mark.Not();
 
         // Act
         var result = form.Eval();
@@ -305,7 +305,7 @@ public class LawsOfFormTests
     public void ToResult_MarkedForm_ReturnsSuccess()
     {
         // Arrange
-        var form = Form.Cross();
+        var form = Form.Mark;
 
         // Act
         var result = form.ToResult(42, "error");
@@ -333,7 +333,7 @@ public class LawsOfFormTests
     public void ToOption_MarkedForm_ReturnsSome()
     {
         // Arrange
-        var form = Form.Cross();
+        var form = Form.Mark;
 
         // Act
         var result = form.ToOption("value");
@@ -416,7 +416,7 @@ public class LawsOfFormTests
     public void Match_OnMarked_ExecutesMarkedFunction()
     {
         // Arrange
-        var form = Form.Cross();
+        var form = Form.Mark;
 
         // Act
         var result = form.Match(
@@ -446,7 +446,7 @@ public class LawsOfFormTests
     public void Map_OnMarkedForm_TransformsInner()
     {
         // Arrange
-        var form = Form.Cross();
+        var form = Form.Mark;
 
         // Act
         var result = form.Map(f => Form.Mark(f));
@@ -463,7 +463,7 @@ public class LawsOfFormTests
     public void Form_SatisfiesDoubleNegationElimination()
     {
         // ¬¬A = A
-        var a = Form.Cross();
+        var a = Form.Mark;
         var doubleNegation = a.Not().Not();
 
         // Act
@@ -477,7 +477,7 @@ public class LawsOfFormTests
     public void Form_SatisfiesDeMorgansLaw_OrCase()
     {
         // ¬(A ∨ B) = ¬A ∧ ¬B
-        var a = Form.Cross();
+        var a = Form.Mark;
         var b = Form.Void;
 
         var leftSide = a.Or(b).Not().Eval();
@@ -491,7 +491,7 @@ public class LawsOfFormTests
     public void Form_SatisfiesDeMorgansLaw_AndCase()
     {
         // ¬(A ∧ B) = ¬A ∨ ¬B
-        var a = Form.Cross();
+        var a = Form.Mark;
         var b = Form.Void;
 
         var leftSide = a.And(b).Not().Eval();
@@ -505,7 +505,7 @@ public class LawsOfFormTests
     public void Form_OrIsCommutative()
     {
         // A ∨ B = B ∨ A
-        var a = Form.Cross();
+        var a = Form.Mark;
         var b = Form.Void;
 
         var ab = a.Or(b).Eval();
@@ -519,7 +519,7 @@ public class LawsOfFormTests
     public void Form_AndIsCommutative()
     {
         // A ∧ B = B ∧ A
-        var a = Form.Cross();
+        var a = Form.Mark;
         var b = Form.Void;
 
         var ab = a.And(b).Eval();
@@ -544,7 +544,7 @@ public class LawsOfFormTests
     public void Form_SatisfiesNonContradiction()
     {
         // A ∧ ¬A = False (Void)
-        var a = Form.Cross();
+        var a = Form.Mark;
         var contradiction = a.And(a.Not()).Eval();
 
         // Assert
@@ -570,8 +570,8 @@ public class LawsOfFormTests
     public void Cross_EqualsCross()
     {
         // Arrange
-        var cross1 = Form.Cross();
-        var cross2 = Form.Cross();
+        var cross1 = Form.Mark;
+        var cross2 = Form.Mark;
 
         // These are structurally equal Mark(Void) forms
         cross1.Eval().IsMarked().Should().Be(cross2.Eval().IsMarked());
@@ -582,7 +582,7 @@ public class LawsOfFormTests
     {
         // Arrange
         var voidForm = Form.Void;
-        var markForm = Form.Cross();
+        var markForm = Form.Mark;
 
         // Assert
         voidForm.Should().NotBe(markForm);

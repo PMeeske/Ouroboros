@@ -20,7 +20,7 @@ public class AuditableDecisionTests
         var decision = AuditableDecision<string>.Approve(
             "test result",
             "All criteria passed",
-            new Evidence("test", Form.Cross(), "Test passed"));
+            new Evidence("test", Form.Mark, "Test passed"));
 
         // Assert
         decision.Result.IsSuccess.Should().BeTrue();
@@ -54,7 +54,7 @@ public class AuditableDecisionTests
         var decision = AuditableDecision<string>.Uncertain(
             "Unable to determine",
             "Conflicting criteria",
-            new Evidence("check1", Form.Cross(), "Passed"),
+            new Evidence("check1", Form.Mark, "Passed"),
             new Evidence("check2", Form.Void, "Failed"));
 
         // Assert
@@ -71,11 +71,11 @@ public class AuditableDecisionTests
         var decision = AuditableDecision<string>.Approve(
             "test",
             "initial",
-            new Evidence("first", Form.Cross(), "First check"));
+            new Evidence("first", Form.Mark, "First check"));
 
         // Act
         var updated = decision.WithEvidence(
-            new Evidence("second", Form.Cross(), "Second check"));
+            new Evidence("second", Form.Mark, "Second check"));
 
         // Assert
         updated.EvidenceTrail.Should().HaveCount(2);
@@ -108,8 +108,8 @@ public class AuditableDecisionTests
         var decision = AuditableDecision<string>.Approve(
             "result",
             "test reasoning",
-            new Evidence("criterion1", Form.Cross(), "Passed"),
-            new Evidence("criterion2", Form.Cross(), "Also passed"));
+            new Evidence("criterion1", Form.Mark, "Passed"),
+            new Evidence("criterion2", Form.Mark, "Also passed"));
 
         var updated = decision.WithMetadata("user", "admin");
 
@@ -188,7 +188,7 @@ public class AuditableDecisionTests
         // Act
         var evidence = new Evidence(
             "test_criterion",
-            Form.Cross(),
+            Form.Mark,
             "Test description",
             timestamp);
 
@@ -208,7 +208,7 @@ public class AuditableDecisionTests
         // Act
         var evidence = new Evidence(
             "test",
-            Form.Cross(),
+            Form.Mark,
             "description");
 
         var after = DateTime.UtcNow;

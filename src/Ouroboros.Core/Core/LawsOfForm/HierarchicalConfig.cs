@@ -20,9 +20,9 @@ public sealed class HierarchicalConfig
     /// <param name="userOverride">User-level override (Inherit to use team/org/system default).</param>
     public HierarchicalConfig(
         bool systemDefault,
-        TriState organizationOverride = TriState.Inherit,
-        TriState teamOverride = TriState.Inherit,
-        TriState userOverride = TriState.Inherit)
+        TriState organizationOverride = TriState.Imaginary,
+        TriState teamOverride = TriState.Imaginary,
+        TriState userOverride = TriState.Imaginary)
     {
         this.SystemDefault = systemDefault;
         this.OrganizationOverride = organizationOverride;
@@ -38,19 +38,19 @@ public sealed class HierarchicalConfig
 
     /// <summary>
     /// Gets the organization-level override.
-    /// Inherit means use SystemDefault.
+    /// Imaginary means use SystemDefault.
     /// </summary>
     public TriState OrganizationOverride { get; }
 
     /// <summary>
     /// Gets the team-level override.
-    /// Inherit means use OrganizationOverride or SystemDefault.
+    /// Imaginary means use OrganizationOverride or SystemDefault.
     /// </summary>
     public TriState TeamOverride { get; }
 
     /// <summary>
     /// Gets the user-level override.
-    /// Inherit means use TeamOverride, OrganizationOverride, or SystemDefault.
+    /// Imaginary means use TeamOverride, OrganizationOverride, or SystemDefault.
     /// </summary>
     public TriState UserOverride { get; }
 
@@ -62,9 +62,9 @@ public sealed class HierarchicalConfig
     /// <example>
     /// var config = new HierarchicalConfig(
     ///     systemDefault: false,
-    ///     organizationOverride: TriState.On,
-    ///     teamOverride: TriState.Inherit,
-    ///     userOverride: TriState.Inherit);
+    ///     organizationOverride: TriState.Mark,
+    ///     teamOverride: TriState.Imaginary,
+    ///     userOverride: TriState.Imaginary);
     /// config.ResolveForUser(); // returns true (inherits from Org)
     /// </example>
     public bool ResolveForUser()
@@ -94,8 +94,8 @@ public sealed class HierarchicalConfig
     /// <returns>The resolved boolean value at organization level.</returns>
     public bool ResolveForOrganization()
     {
-        return this.OrganizationOverride != TriState.Inherit
-            ? this.OrganizationOverride == TriState.On
+        return this.OrganizationOverride != TriState.Imaginary
+            ? this.OrganizationOverride == TriState.Mark
             : this.SystemDefault;
     }
 

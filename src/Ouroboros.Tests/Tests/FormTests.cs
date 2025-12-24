@@ -18,22 +18,22 @@ public class FormTests
     public void Cross_FollowsLawOfCrossing_DoubleInversion()
     {
         // Law of Crossing: Cross(Cross(x)) = x
-        Form.Mark.Cross().Cross().Should().Be(Form.Mark);
-        Form.Void.Cross().Cross().Should().Be(Form.Void);
-        Form.Imaginary.Cross().Cross().Should().Be(Form.Imaginary);
+        Form.Mark.Not().Not().Should().Be(Form.Mark);
+        Form.Void.Not().Not().Should().Be(Form.Void);
+        Form.Imaginary.Not().Not().Should().Be(Form.Imaginary);
     }
 
     [Fact]
     public void Cross_InvertsMarkAndVoid()
     {
-        Form.Mark.Cross().Should().Be(Form.Void);
-        Form.Void.Cross().Should().Be(Form.Mark);
+        Form.Mark.Not().Should().Be(Form.Void);
+        Form.Void.Not().Should().Be(Form.Mark);
     }
 
     [Fact]
     public void Cross_ImaginaryIsSelfDual()
     {
-        Form.Imaginary.Cross().Should().Be(Form.Imaginary);
+        Form.Imaginary.Not().Should().Be(Form.Imaginary);
     }
 
     [Fact]
@@ -45,43 +45,63 @@ public class FormTests
         Form.Imaginary.Calling().Should().Be(Form.Imaginary);
     }
 
+    public static IEnumerable<object[]> AndBooleanLogicData()
+    {
+        yield return new object[] { Form.Mark, Form.Mark, Form.Mark };
+        yield return new object[] { Form.Mark, Form.Void, Form.Void };
+        yield return new object[] { Form.Void, Form.Mark, Form.Void };
+        yield return new object[] { Form.Void, Form.Void, Form.Void };
+    }
+
     [Theory]
-    [InlineData(Form.Mark, Form.Mark, Form.Mark)]
-    [InlineData(Form.Mark, Form.Void, Form.Void)]
-    [InlineData(Form.Void, Form.Mark, Form.Void)]
-    [InlineData(Form.Void, Form.Void, Form.Void)]
+    [MemberData(nameof(AndBooleanLogicData))]
     public void And_FollowsBooleanLogicForCertainValues(Form left, Form right, Form expected)
     {
         left.And(right).Should().Be(expected);
     }
 
+    public static IEnumerable<object[]> AndImaginaryData()
+    {
+        yield return new object[] { Form.Mark, Form.Imaginary };
+        yield return new object[] { Form.Imaginary, Form.Mark };
+        yield return new object[] { Form.Void, Form.Imaginary };
+        yield return new object[] { Form.Imaginary, Form.Void };
+        yield return new object[] { Form.Imaginary, Form.Imaginary };
+    }
+
     [Theory]
-    [InlineData(Form.Mark, Form.Imaginary)]
-    [InlineData(Form.Imaginary, Form.Mark)]
-    [InlineData(Form.Void, Form.Imaginary)]
-    [InlineData(Form.Imaginary, Form.Void)]
-    [InlineData(Form.Imaginary, Form.Imaginary)]
+    [MemberData(nameof(AndImaginaryData))]
     public void And_ImaginaryPropagates(Form left, Form right)
     {
         left.And(right).Should().Be(Form.Imaginary);
     }
 
+    public static IEnumerable<object[]> OrBooleanLogicData()
+    {
+        yield return new object[] { Form.Mark, Form.Mark, Form.Mark };
+        yield return new object[] { Form.Mark, Form.Void, Form.Mark };
+        yield return new object[] { Form.Void, Form.Mark, Form.Mark };
+        yield return new object[] { Form.Void, Form.Void, Form.Void };
+    }
+
     [Theory]
-    [InlineData(Form.Mark, Form.Mark, Form.Mark)]
-    [InlineData(Form.Mark, Form.Void, Form.Mark)]
-    [InlineData(Form.Void, Form.Mark, Form.Mark)]
-    [InlineData(Form.Void, Form.Void, Form.Void)]
+    [MemberData(nameof(OrBooleanLogicData))]
     public void Or_FollowsBooleanLogicForCertainValues(Form left, Form right, Form expected)
     {
         left.Or(right).Should().Be(expected);
     }
 
+    public static IEnumerable<object[]> OrImaginaryData()
+    {
+        yield return new object[] { Form.Mark, Form.Imaginary };
+        yield return new object[] { Form.Imaginary, Form.Mark };
+        yield return new object[] { Form.Void, Form.Imaginary };
+        yield return new object[] { Form.Imaginary, Form.Void };
+        yield return new object[] { Form.Imaginary, Form.Imaginary };
+    }
+
     [Theory]
-    [InlineData(Form.Mark, Form.Imaginary)]
-    [InlineData(Form.Imaginary, Form.Mark)]
-    [InlineData(Form.Void, Form.Imaginary)]
-    [InlineData(Form.Imaginary, Form.Void)]
-    [InlineData(Form.Imaginary, Form.Imaginary)]
+    [MemberData(nameof(OrImaginaryData))]
     public void Or_ImaginaryPropagates(Form left, Form right)
     {
         left.Or(right).Should().Be(Form.Imaginary);
@@ -178,7 +198,7 @@ public class FormTests
         var x = Form.Mark;
         var y = Form.Void;
 
-        x.And(y).Cross().Should().Be(x.Cross().Or(y.Cross()));
+        x.And(y).Not().Should().Be(x.Not().Or(y.Not()));
     }
 
     [Fact]

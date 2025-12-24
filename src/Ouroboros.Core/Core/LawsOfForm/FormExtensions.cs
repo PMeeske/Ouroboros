@@ -17,7 +17,23 @@ public static class FormExtensions
     /// <returns>Mark if true, Void if false.</returns>
     public static Form ToForm(this bool value)
     {
-        return value ? Form.Cross() : Form.Void;
+        return value ? Form.Mark : Form.Void;
+    }
+
+    /// <summary>
+    /// Converts a nullable boolean to a Form.
+    /// True -> Mark, False -> Void, Null -> Imaginary.
+    /// </summary>
+    /// <param name="value">The nullable boolean value.</param>
+    /// <returns>Mark if true, Void if false, Imaginary if null.</returns>
+    public static Form ToForm(this bool? value)
+    {
+        return value switch
+        {
+            true => Form.Mark,
+            false => Form.Void,
+            null => Form.Imaginary
+        };
     }
 
     /// <summary>
@@ -34,7 +50,7 @@ public static class FormExtensions
     {
         if (confidence >= highThreshold)
         {
-            return Form.Cross();
+            return Form.Mark;
         }
 
         if (confidence <= lowThreshold)
@@ -55,7 +71,7 @@ public static class FormExtensions
     public static Form ToForm<T>(this T? value)
         where T : struct
     {
-        return value.HasValue ? Form.Cross() : Form.Void;
+        return value.HasValue ? Form.Mark : Form.Void;
     }
 
     /// <summary>
@@ -68,7 +84,7 @@ public static class FormExtensions
     public static Form ToFormRef<T>(this T? value)
         where T : class
     {
-        return value is not null ? Form.Cross() : Form.Void;
+        return value is not null ? Form.Mark : Form.Void;
     }
 
     /// <summary>
@@ -83,7 +99,7 @@ public static class FormExtensions
     {
         if (forms.Length == 0)
         {
-            return Form.Cross();
+            return Form.Mark;
         }
 
         var result = forms[0];
@@ -175,7 +191,7 @@ public static class FormExtensions
         // Clear consensus
         if (markRatio >= 0.7)
         {
-            return Form.Cross();
+            return Form.Mark;
         }
 
         if (voidRatio >= 0.7)
