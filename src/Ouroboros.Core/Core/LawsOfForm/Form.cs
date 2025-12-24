@@ -30,6 +30,12 @@ public readonly struct Form : IEquatable<Form>
     public static Form Cross() => new(TriState.Mark);
 
     /// <summary>
+    /// Gets a marked form (alias for Cross) - represents certainty, affirmative, or true.
+    /// In notation: ⌐ or | |
+    /// </summary>
+    public static Form Mark => new(TriState.Mark);
+
+    /// <summary>
     /// Creates a void form - represents emptiness, negation, or false.
     /// In notation: (empty space)
     /// </summary>

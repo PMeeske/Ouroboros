@@ -22,15 +22,35 @@ public sealed record AuditableDecision<T>
     public Form Certainty { get; init; }
 
     /// <summary>
+    /// Gets the state of the decision (alias for Certainty for backward compatibility).
+    /// </summary>
+    public Form State => this.Certainty;
+
+    /// <summary>
+    /// Gets the optional value if the decision was successful.
+    /// </summary>
+    public T? Value => this.Result.IsSuccess ? this.Result.Value : default;
+
+    /// <summary>
     /// Gets the reasoning behind the decision.
     /// </summary>
     public string Reasoning { get; init; }
 
     /// <summary>
     /// Gets the evidence that led to this decision.
-    /// Each piece of evidence includes a criterion name and its evaluation.
     /// </summary>
     public IReadOnlyList<Evidence> EvidenceTrail { get; init; }
+
+    /// <summary>
+    /// Gets the evidence (alias for EvidenceTrail for backward compatibility).
+    /// </summary>
+    public IReadOnlyList<Evidence> Evidence => this.EvidenceTrail;
+
+    /// <summary>
+    /// Gets the optional confidence phase for uncertain decisions.
+    /// Value between 0 and 1, where higher means more confident despite uncertainty.
+    /// </summary>
+    public double? ConfidencePhase { get; init; }
 
     /// <summary>
     /// Gets the timestamp when the decision was made.
@@ -51,13 +71,15 @@ public sealed record AuditableDecision<T>
     /// <param name="evidenceTrail">The evidence trail.</param>
     /// <param name="timestamp">The timestamp.</param>
     /// <param name="metadata">Optional metadata.</param>
+    /// <param name="confidencePhase">Optional confidence phase for uncertain decisions.</param>
     public AuditableDecision(
         Result<T, string> result,
         Form certainty,
         string reasoning,
         IReadOnlyList<Evidence> evidenceTrail,
         DateTime? timestamp = null,
-        IReadOnlyDictionary<string, string>? metadata = null)
+        IReadOnlyDictionary<string, string>? metadata = null,
+        double? confidencePhase = null)
     {
         this.Result = result;
         this.Certainty = certainty;
@@ -65,6 +87,7 @@ public sealed record AuditableDecision<T>
         this.EvidenceTrail = evidenceTrail;
         this.Timestamp = timestamp ?? DateTime.UtcNow;
         this.Metadata = metadata ?? new Dictionary<string, string>();
+        this.ConfidencePhase = confidencePhase;
     }
 
     /// <summary>
@@ -78,6 +101,25 @@ public sealed record AuditableDecision<T>
         T value,
         string reasoning,
         params Evidence[] evidence)
+    {
+        return new AuditableDecision<T>(
+            Result<T, string>.Success(value),
+            Form.Cross(),
+            reasoning,
+            evidence);
+    }
+
+    /// <summary>
+    /// Creates a decision with Mark certainty (certain affirmative) from a list of evidence.
+    /// </summary>
+    /// <param name="value">The success value.</param>
+    /// <param name="reasoning">The reasoning.</param>
+    /// <param name="evidence">The evidence trail as a list.</param>
+    /// <returns>An auditable decision with Mark certainty.</returns>
+    public static AuditableDecision<T> Approve(
+        T value,
+        string reasoning,
+        IReadOnlyList<Evidence> evidence)
     {
         return new AuditableDecision<T>(
             Result<T, string>.Success(value),
@@ -106,6 +148,42 @@ public sealed record AuditableDecision<T>
     }
 
     /// <summary>
+    /// Creates a decision with Void certainty (certain negative) from a list of evidence.
+    /// </summary>
+    /// <param name="error">The error message.</param>
+    /// <param name="reasoning">The reasoning.</param>
+    /// <param name="evidence">The evidence trail as a list.</param>
+    /// <returns>An auditable decision with Void certainty.</returns>
+    public static AuditableDecision<T> Reject(
+        string error,
+        string reasoning,
+        IReadOnlyList<Evidence> evidence)
+    {
+        return new AuditableDecision<T>(
+            Result<T, string>.Failure(error),
+            Form.Void,
+            reasoning,
+            evidence);
+    }
+
+    /// <summary>
+    /// Creates a decision with Void certainty (certain negative) with just reasoning.
+    /// </summary>
+    /// <param name="reasoning">The reasoning.</param>
+    /// <param name="evidence">The evidence trail as a list.</param>
+    /// <returns>An auditable decision with Void certainty.</returns>
+    public static AuditableDecision<T> Reject(
+        string reasoning,
+        IReadOnlyList<Evidence> evidence)
+    {
+        return new AuditableDecision<T>(
+            Result<T, string>.Failure(reasoning),
+            Form.Void,
+            reasoning,
+            evidence);
+    }
+
+    /// <summary>
     /// Creates a decision with Imaginary certainty (uncertain/requires escalation).
     /// </summary>
     /// <param name="error">The error message describing the uncertainty.</param>
@@ -122,6 +200,48 @@ public sealed record AuditableDecision<T>
             Form.Imaginary,
             reasoning,
             evidence);
+    }
+
+    /// <summary>
+    /// Creates a decision with Imaginary certainty (inconclusive/uncertain).
+    /// Includes a confidence phase indicating degree of uncertainty.
+    /// </summary>
+    /// <param name="confidencePhase">The confidence level (0-1) despite being inconclusive.</param>
+    /// <param name="reasoning">The reasoning.</param>
+    /// <param name="evidence">The evidence trail.</param>
+    /// <returns>An auditable decision with Imaginary certainty and confidence phase.</returns>
+    public static AuditableDecision<T> Inconclusive(
+        double confidencePhase,
+        string reasoning,
+        params Evidence[] evidence)
+    {
+        return new AuditableDecision<T>(
+            Result<T, string>.Failure("Inconclusive decision"),
+            Form.Imaginary,
+            reasoning,
+            evidence,
+            confidencePhase: confidencePhase);
+    }
+
+    /// <summary>
+    /// Creates a decision with Imaginary certainty (inconclusive/uncertain) from a list of evidence.
+    /// Includes a confidence phase indicating degree of uncertainty.
+    /// </summary>
+    /// <param name="confidencePhase">The confidence level (0-1) despite being inconclusive.</param>
+    /// <param name="reasoning">The reasoning.</param>
+    /// <param name="evidence">The evidence trail as a list.</param>
+    /// <returns>An auditable decision with Imaginary certainty and confidence phase.</returns>
+    public static AuditableDecision<T> Inconclusive(
+        double confidencePhase,
+        string reasoning,
+        IReadOnlyList<Evidence> evidence)
+    {
+        return new AuditableDecision<T>(
+            Result<T, string>.Failure("Inconclusive decision"),
+            Form.Imaginary,
+            reasoning,
+            evidence,
+            confidencePhase: confidencePhase);
     }
 
     /// <summary>

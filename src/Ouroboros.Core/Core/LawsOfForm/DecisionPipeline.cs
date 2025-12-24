@@ -183,26 +183,27 @@ public static class DecisionPipeline
         foreach (var step in steps)
         {
             // Stop if current decision is not approved
-            if (current.State != Form.Mark || !current.Value.HasValue)
+            if (current.State != Form.Mark || current.Value is null)
             {
                 return current;
             }
 
-            var next = step(current.Value.Value!);
+            var next = step(current.Value!);
             var combinedEvidence = current.Evidence.Concat(next.Evidence).ToList();
 
             // Combine states
             var combinedState = current.State.And(next.State);
 
-            if (combinedState == Form.Mark && next.Value.HasValue)
+            if (combinedState == Form.Mark && next.Value is not null)
             {
                 current = new AuditableDecision<T>(
+                    Result<T, string>.Success(next.Value),
                     combinedState,
-                    next.Value,
                     $"{current.Reasoning} → {next.Reasoning}",
-                    combinedEvidence,
+                    combinedEvidence.ToList(),
+                    DateTime.UtcNow,
                     null,
-                    DateTimeOffset.UtcNow);
+                    null);
             }
             else if (combinedState == Form.Imaginary)
             {
