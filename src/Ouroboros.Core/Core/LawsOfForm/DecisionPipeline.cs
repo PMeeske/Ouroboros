@@ -37,7 +37,12 @@ public static class DecisionPipeline
         IEnumerable<Func<TInput, AuditableDecision<TInput>>> criteria,
         Func<TInput, TOutput> onAllPass)
     {
-        var criteriaList = criteria.ToList();
+        if (criteria == null)
+        {
+            throw new ArgumentNullException(nameof(criteria));
+        }
+
+        var criteriaList = criteria as List<Func<TInput, AuditableDecision<TInput>>> ?? criteria.ToList();
         if (criteriaList.Count == 0)
         {
             throw new ArgumentException("At least one criterion must be provided", nameof(criteria));
@@ -103,7 +108,12 @@ public static class DecisionPipeline
         TInput input,
         IEnumerable<Func<TInput, AuditableDecision<TInput>>> criteria)
     {
-        var criteriaList = criteria.ToList();
+        if (criteria == null)
+        {
+            throw new ArgumentNullException(nameof(criteria));
+        }
+
+        var criteriaList = criteria as List<Func<TInput, AuditableDecision<TInput>>> ?? criteria.ToList();
         if (criteriaList.Count == 0)
         {
             throw new ArgumentException("At least one criterion must be provided", nameof(criteria));

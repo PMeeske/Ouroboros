@@ -37,8 +37,10 @@ public enum Form
 public static class FormExtensions
 {
     /// <summary>
-    /// Law of Calling: Calling twice is the same as calling once.
-    /// Mark · Mark = Mark (in the calculus, calling the marked state again yields the marked state).
+    /// Law of Calling: The idempotent property of Forms.
+    /// In Spencer-Brown's notation, juxtaposition represents calling the marked state.
+    /// Here we implement the simpler idempotence: f(f(x)) = f(x).
+    /// Mark remains Mark, Void remains Void, Imaginary remains Imaginary.
     /// </summary>
     /// <param name="form">The form to apply calling to.</param>
     /// <returns>The result of the calling operation.</returns>
