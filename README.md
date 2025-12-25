@@ -13,7 +13,7 @@
   <a href="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml"><img src="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml/badge.svg" alt="Mutation Testing"></a>
 </p>
 
-A **sophisticated functional programming-based AI pipeline system** built on LangChain, implementing category theory principles, monadic composition, and functional programming patterns to create robust, self-improving AI agents.
+A **sophisticated functional programming-based AI pipeline system** built on LangChain, implementing category theory principles, monadic composition, and functional programming patterns to create type-safe, composable AI workflows.
 
 ## 🚀 Key Features
 
@@ -70,7 +70,7 @@ Ouroboros follows a **Functional Pipeline Architecture** with monadic compositio
 │   Core Layer    │    │  Domain Layer   │    │ Pipeline Layer  │
 │                 │    │                 │    │                 │
 │ • Monads        │───▶│ • Events        │───▶│ • Branches      │
-│ • Kleisli       │    │ • States        │    │ • Vectors       │
+│ • Kleisli       │    │ • States        │    │ • Reasoning     │
 │ • Steps         │    │ • Vectors       │    │ • Ingestion     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
@@ -85,7 +85,7 @@ Ouroboros follows a **Functional Pipeline Architecture** with monadic compositio
                     └─────────────────┘
 ```
 
-📘 **[View Detailed Architectural Layer Diagram](docs/ARCHITECTURAL_LAYERS.md)** - Comprehensive system architecture documentation including component responsibilities, data flow patterns, deployment topology, and cross-cutting concerns.
+📘 **[View Detailed Architectural Layer Diagram](docs/ARCHITECTURAL_LAYERS.md)** - Comprehensive system architecture documentation including component responsibilities, data flow patterns, deployment topology, and extensibility points.
 
 ### Iterative Refinement Architecture
 
@@ -220,7 +220,7 @@ dotnet run -- dag --command retention --max-age-days 30 --dry-run
 
 #### Orchestrating Complex Tasks with Small Models
 
-Ouroboros supports **intelligent model orchestration** that allows you to efficiently handle complex tasks by combining multiple small, specialized models. This approach is more cost-effective and often faster than using a single massive model.
+Ouroboros supports **intelligent model orchestration** that allows you to efficiently handle complex tasks by combining multiple small, specialized models. This approach is more cost-effective and often faster than using a single large model.
 
 **Key Features:**
 - **Automatic Model Selection**: The `--router auto` flag intelligently routes sub-tasks to specialized models
@@ -346,7 +346,9 @@ dotnet build -c Release -f net10.0-android -t:Install
 3. Configure Ollama endpoint: `config http://YOUR_SERVER_IP:11434`
 4. Pull a small model on your server: `ollama pull tinyllama`
 5. Ask questions: `ask What is functional programming?`
-6. See [Android App Documentation](src/Ouroboros.Android/README.md) for complete instructions.
+
+See [Android App Documentation](src/Ouroboros.Android/README.md) for complete instructions.
+
 
 #### Smart Model Orchestrator
 
@@ -496,362 +498,840 @@ dotnet run -- ask -q "Explain functional programming" \
 ```
 
 📚 **Provider Documentation:**
-
-- **[Ollama Cloud Integration Guide](docs/OLLAMA_CLOUD_INTEGRATION.md)** - Detailed guide for connecting to cloud-hosted Ollama instances
-- **[GitHub Models Guide](docs/GITHUB_MODELS_INTEGRATION.md)** - Using GitHub Models (GPT-4o, Llama 3) with Ouroboros
+- [Ollama Cloud Integration Guide](docs/OLLAMA_CLOUD_INTEGRATION.md)
+- [GitHub Models Integration Guide](docs/GITHUB_MODELS_INTEGRATION.md) - **NEW!** Access GPT-4o, Claude 3.5 Sonnet, Llama 3.1, and more
 
 #### Programmatic Usage - Convenience Layer
 
-The `Ouroboros` convenience class provides simplified access to the system's capabilities:
-
 ```csharp
-// 1. Initialize with specific models
-var ai = Ouroboros.Create(
-    chatModelName: "llama3", 
-    embeddingModelName: "nomic-embed-text"
-);
+using LangChain.Providers.Ollama;
+using LangChainPipeline.Agent.MetaAI;
 
-// 2. Or initialize with an existing specialized orchestrator
-var ai = Ouroboros.Create(orchestrator);
+// Create a chat assistant in one line
+var provider = new OllamaProvider();
+var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+var orchestrator = MetaAIConvenience.CreateChatAssistant(chatModel).Value;
 
-// 3. Ask a simple question
-var answer = await ai.AskAsync("What is a monad?");
+// Ask a question and get an answer
+var result = await orchestrator.AskQuestion("What is functional programming?");
 
-// 4. Ask with RAG (automatically ingests/retrieves from vector store)
-var ragAnswer = await ai.AskWithRagAsync("How does the current project handle errors?");
-
-// 5. Execute a complex goal using the smart planner
-var result = await ai.ExecuteGoalAsync("Analyze the project structure and suggest improvements");
-
-// 6. Execute a specific pipeline DSL
-var dslResult = await ai.ExecutePipelineAsync("SetTopic('FP') | UseDraft | UseCritique");
+result.Match(
+    answer => Console.WriteLine($"Answer: {answer}"),
+    error => Console.WriteLine($"Error: {error}"));
 ```
 
 #### Programmatic Usage - Core Pipeline Composition
 
-For advanced scenarios, you can compose pipelines directly:
-
 ```csharp
-// Initialize core components
-var llm = new ToolAwareChatModel(new OllamaChatConfig { ModelId = "llama3" });
-var tools = new ToolRegistry();
-var embed = new OllamaEmbeddingModel();
+// Create a simple monadic pipeline
+var pipeline = Step.Pure<string>()
+    .Bind(ValidateInput)
+    .Map(ProcessData)
+    .Bind(ExecuteReasoning)
+    .Map(FormatOutput);
 
-// Create reasoning arrows (Kleisli arrows)
-var draft = ReasoningArrows.DraftArrow(llm, tools, embed, "Explain monads", "draft");
-var critique = ReasoningArrows.CritiqueArrow(llm, tools, embed, "draft", "critique");
-var improve = ReasoningArrows.ImproveArrow(llm, tools, embed, "critique", "final");
-
-// Compose the pipeline
-// Draft -> Critique -> Improve
-var pipeline = draft.ComposeWith(critique).ComposeWith(improve);
-
-// Execute
-var result = await pipeline(ReasoningState.Initial);
+// Execute with error handling
+var result = await pipeline("Hello, Ouroboros!");
+result.Match(
+    success => Console.WriteLine($"Result: {success}"),
+    error => Console.WriteLine($"Error: {error}")
+);
 ```
 
 ## 🧠 Core Concepts
 
 ### Monads
 
-The project uses `Result<T>` and `Option<T>` to handle side effects and failures gracefully, ensuring that pipeline steps can be composed without exception handling boilerplate.
+Ouroboros uses monads for safe, composable operations:
+- **`Result<T>`**: Represents operations that can succeed or fail
+- **`Option<T>`**: Represents potentially null values safely
 
 ### Kleisli Arrows
 
-Pipeline steps are modeled as Kleisli arrows `A -> M<B>`, where `M` is the `Result` monad. This allows for mathematical composition of steps: `(A -> M<B>) >=> (B -> M<C>)` yields `A -> M<C>`.
+Mathematical composition of monadic computations:
+
+```csharp
+public static Step<TInput, TOutput> CreateStep<TInput, TOutput>(
+    Func<TInput, Task<Result<TOutput>>> operation) =>
+    async input => await operation(input);
+```
 
 ### Pipeline Composition
 
-Pipelines are constructed by composing these arrows. If any step fails, the failure propagates through the monad, short-circuiting subsequent steps safely.
+Chain operations using monadic bind:
+
+```csharp
+var enhancedPipeline = Step.Pure<string>()
+    .Bind(LoadContext)
+    .Bind(GenerateDraft)
+    .Bind(CritiqueDraft)
+    .Map(FinalizeResponse);
+```
 
 ## 📁 Project Structure
 
-- **src/Ouroboros.Core**: Core abstractions, monads, and interfaces
-- **src/Ouroboros.Domain**: Domain entities, events, and value objects
-- **src/Ouroboros.Pipeline**: Pipeline implementation, steps, and arrows
-- **src/Ouroboros.Providers**: LLM and service provider implementations (Ollama, OpenAI)
-- **src/Ouroboros.Agent**: AI Agent implementations and orchestrators
-- **src/Ouroboros.CLI**: Command-line interface and entry point
-- **src/Ouroboros.WebApi**: Web API for remote access
-- **src/Ouroboros.Android**: Android mobile application
-- **src/Ouroboros.Tests**: Unit and integration tests
+```
+src/
+├── Ouroboros.Core/        # Monadic abstractions and core functionality
+│   ├── Conversation/            # Conversational pipeline builders
+│   ├── Kleisli/                 # Category theory implementation
+│   ├── Memory/                  # Memory management for conversations
+│   ├── Monads/                  # Option and Result monad implementations
+│   └── Steps/                   # Pipeline step abstractions
+├── Ouroboros.Domain/      # Domain models and business logic
+│   ├── Events/                  # Event sourcing patterns
+│   ├── States/                  # State management
+│   └── Vectors/                 # Vector database abstractions
+├── Ouroboros.Pipeline/    # Pipeline implementation layers
+│   ├── Branches/                # Branch management and persistence
+│   ├── Ingestion/               # Data ingestion pipelines
+│   ├── Reasoning/               # AI reasoning workflows
+│   └── Replay/                  # Execution replay functionality
+├── Ouroboros.Tools/       # Extensible tool system
+│   └── MeTTa/                   # MeTTa symbolic reasoning integration
+├── Ouroboros.Providers/   # External service providers
+├── Ouroboros.Agent/       # AI orchestration and meta-AI
+├── Ouroboros.CLI/         # Command-line interface
+├── Ouroboros.WebApi/      # REST API for containerized deployments
+├── Ouroboros.Android/     # Android app with terminal CLI interface
+├── Ouroboros.Examples/    # Comprehensive examples
+└── Ouroboros.Tests/       # Test suite
+```
 
 ## 🎯 Examples
 
-The `src/Ouroboros.Examples` directory contains runnable examples demonstrating various capabilities.
+The `src/Ouroboros.Examples/Examples/` directory contains comprehensive demonstrations:
+
+- **`MonadicExamples.cs`**: Core monadic operations
+- **`Phase2SelfModelExample.cs`**: Identity graph, global workspace, and predictive monitoring (Phase 2)
+- **`Phase2MetacognitionExample.cs`**: Capability registry, goal hierarchy, and self-evaluation (Phase 2)
+- **`Phase3EmergentIntelligenceExample.cs`**: Curiosity engine, hypothesis testing, and research skills (Phase 3)
+- **`ConversationalKleisliExamples.cs`**: Memory-integrated conversations
+- **`HybridStepExamples.cs`**: Sync/async step combinations
+- **`FunctionalReasoningExamples.cs`**: AI reasoning workflows
+- **`LangChainPipeOperatorsExample.cs`**: LangChain-style pipe operators
+- **`OrchestratorExample.cs`**: AI orchestrator with intelligent model selection
+- **`MeTTaIntegrationExample.cs`**: MeTTa symbolic reasoning
+- **`MetaAIv2Example.cs`**: Meta-AI v2 with planning and learning
+- **`ConvenienceLayerExamples.cs`**: Simplified convenience layer usage
+- **`Epic120Example.cs`**: Epic workflow orchestration with automated agent assignment ⭐ **NEW**
+
+Run all examples:
+```bash
+cd src/Ouroboros.Examples
+dotnet run
+```
 
 ### Epic Branch Orchestration ⭐ NEW
 
-Demonstrates the **Phase 0** capability of automated epic management:
+The **Epic Branch Orchestration** system enables automated management of GitHub epics with dedicated agent assignment and branch creation for each sub-issue. Perfect for coordinating large initiatives like Epic #120 (Production-ready Release v1.0).
 
-```bash
-# Run the Epic Branch Orchestration example
-dotnet run -- project src/Ouroboros.Examples/Ouroboros.Examples.csproj -- example epic-orchestration
+**Key Features:**
+- 🤖 **Automatic Agent Assignment**: Each sub-issue gets its own dedicated agent
+- 🌿 **Dedicated Branches**: Isolated `PipelineBranch` instances for work tracking
+- 📊 **Status Tracking**: Monitor progress through well-defined states
+- ⚡ **Parallel Execution**: Work on multiple sub-issues concurrently
+- 🛡️ **Robust Error Handling**: Result monads throughout for type-safe errors
+
+**Quick Start:**
+```csharp
+var orchestrator = new EpicBranchOrchestrator(distributor, config);
+await orchestrator.RegisterEpicAsync(120, title, description, subIssues);
+await orchestrator.ExecuteSubIssueAsync(120, 121, workFunc);
 ```
 
-This example shows:
-1. **Epic Analysis**: Decomposing a high-level requirement into sub-tasks
-2. **Agent Assignment**: Creating dedicated agents for each sub-task
-3. **Branch Management**: Creating isolated git branches for each task
-4. **Parallel Execution**: Running tasks concurrently
-5. **Result Aggregation**: Combining results back into the main epic
+**Documentation:**
+- 📘 [API Reference](docs/EpicBranchOrchestration.md) - Complete API documentation
+- 📗 [Integration Guide](docs/Epic120Integration.md) - Practical usage patterns
+- 📙 [Implementation Summary](docs/ImplementationSummary.md) - Architecture overview
+- 💻 [Example Code](src/Ouroboros.Examples/Examples/Epic120Example.cs) - Working example
 
 ### Phase 2: Integrated Self-Model ⭐ NEW
 
-Demonstrates the **Phase 2** capability of an agent maintaining a persistent self-model:
+The **Integrated Self-Model** provides agents with persistent identity, global workspace, and predictive monitoring capabilities for enhanced self-awareness and adaptation.
 
+**Key Components:**
+- 🆔 **Identity Graph**: Tracks capabilities, resources, commitments, and performance
+- 🧠 **Global Workspace**: Shared working memory with attention-based priority management
+- 📈 **Predictive Monitor**: Forecast tracking with calibration and anomaly detection
+- 📝 **Self-Explanation**: Generate narratives from execution DAG
+
+**API Endpoints:**
 ```bash
-# Run the Self-Model example
-dotnet run -- project src/Ouroboros.Examples/Ouroboros.Examples.csproj -- example self-model
+GET  /api/self/state         # Get current agent identity state
+GET  /api/self/forecast      # Get forecasts and predictions  
+GET  /api/self/commitments   # Get active commitments
+POST /api/self/explain       # Generate self-explanation from DAG
 ```
 
-This example shows:
-1. **Identity Initialization**: Agent loads its capability profile and constraints
-2. **Global Workspace**: Information moves in and out of the agent's attention
-3. **Predictive Monitoring**: Agent forecasts expected outcomes of its actions
-4. **Anomaly Detection**: Agent notices when results deviate from predictions
-5. **Self-Explanation**: Agent generates a narrative explaining *why* it made specific decisions
+**CLI Commands:**
+```bash
+ouroboros self state              # Display current self-model state
+ouroboros self forecast           # Show forecasts and predictions
+ouroboros self commitments        # List active commitments
+ouroboros self explain            # Generate explanations from DAG
+```
+
+**Quick Start:**
+```csharp
+// Initialize self-model components
+var identityGraph = new IdentityGraph(agentId, "MyAgent", capabilityRegistry);
+var globalWorkspace = new GlobalWorkspace();
+var predictiveMonitor = new PredictiveMonitor();
+
+// Track commitments
+var commitment = identityGraph.CreateCommitment(
+    "Process user requests",
+    deadline: DateTime.UtcNow.AddHours(8),
+    priority: 0.8);
+
+// Manage attention in global workspace
+globalWorkspace.AddItem(
+    "High priority user query",
+    WorkspacePriority.High,
+    "UserInterface");
+
+// Create forecasts
+var forecast = predictiveMonitor.CreateForecast(
+    "Response time forecast",
+    "response_time_ms",
+    predictedValue: 250.0,
+    confidence: 0.85,
+    targetTime: DateTime.UtcNow.AddHours(1));
+
+// Detect anomalies
+var anomaly = await predictiveMonitor.DetectAnomalyAsync("cpu_usage", 95.0);
+```
+
+**Documentation:**
+- 💻 [Example Code](src/Ouroboros.Examples/Examples/Phase2SelfModelExample.cs) - Complete working example
+- 🧪 [Tests](src/Ouroboros.Tests/Tests/SelfModel/) - 27 comprehensive unit tests
 
 ## 🔗 Key Features Details
 
 ### LangChain Pipe Operators
 
-We've implemented custom operators to support LangChain's pipe syntax in C#:
+Ouroboros supports **LangChain's familiar pipe operator syntax** while maintaining functional programming guarantees:
+
+```bash
+# Navigate to CLI directory
+cd src/Ouroboros.CLI
+
+# CLI DSL usage - RAG pipeline
+dotnet run -- pipeline --dsl "SetQuery('What is AI?') | Retrieve | Template | LLM"
+```
+
+Code-based composition:
 
 ```csharp
-var chain = 
-    Set("topic", "AI") 
-    | Retrieve(vectorStore) 
-    | Template(promptTemplate) 
-    | LLM(chatModel);
+using static LangChainPipeline.Core.Interop.Pipe;
 
-var result = await chain.RunAsync();
+var pipeline = Set("Who was drinking unicorn blood?", "query")
+    .Bind(RetrieveSimilarDocuments(5))
+    .Bind(CombineDocuments())
+    .Bind(Template("Use context: {context}\nQuestion: {question}\nAnswer:"))
+    .Bind(LLM());
 ```
 
 ### Meta-AI Layer - Self-Reflective Pipelines
 
-The system exposes its own pipeline steps as tools to the LLM, allowing the AI to:
-1. **Plan** a sequence of operations
-2. **Execute** pipeline steps (e.g., "Draft", "Critique")
-3. **Observe** the results
-4. **Iterate** based on the output
+Pipeline steps are automatically registered as tools that the LLM can invoke:
+
+```bash
+# Navigate to CLI directory
+cd src/Ouroboros.CLI
+
+# The LLM can use pipeline tools to improve its own output
+dotnet run -- pipeline --dsl "SetPrompt('Explain functional programming') | UseDraft | UseCritique | UseImprove"
+```
+
+Available pipeline tools:
+- `run_usedraft` - Generate initial draft response
+- `run_usecritique` - Critique current draft
+- `run_useimprove` - Improve draft based on critique
+- `run_retrieve` - Semantic search over documents
+- Many more...
 
 ### AI Reasoning Pipeline with Refinement Loop
 
-The default reasoning pipeline implements a `Draft -> Critique -> Improve` loop:
-1. **Draft**: Generates an initial response or solution
-2. **Critique**: Analyzes the draft for errors, gaps, or improvements
-3. **Improve**: Generates a refined version based on the critique
+The refinement loop implements an **iterative refinement architecture** where each iteration builds upon the previous improvement, creating a true progressive enhancement cycle.
+
+```bash
+# Navigate to CLI directory
+cd src/Ouroboros.CLI
+
+# Run complete refinement workflow: Draft -> Critique -> Improve
+dotnet run -- pipeline -d "SetTopic('microservices architecture') | UseRefinementLoop('2')"
+
+# The refinement loop architecture works as follows:
+# 1. Creates an initial draft (if none exists)
+# 2. First iteration: Critiques the draft → produces first improvement
+# 3. Second iteration: Critiques the first improvement → produces second improvement
+# 4. Each iteration uses the most recent reasoning state (Draft or FinalSpec) as the baseline
+#    This creates true iterative refinement where each cycle builds on previous improvements
+
+# You can also run individual steps:
+dotnet run -- pipeline -d "SetTopic('AI Safety') | UseDraft | UseCritique | UseImprove"
+```
+
+**Architecture Highlights:**
+- **Iterative State Chaining**: Each critique-improve cycle uses the most recent state as input
+- **Progressive Refinement**: Improvements compound across iterations rather than restarting from the original draft
+- **Monadic Error Handling**: Safe arrows (SafeCritiqueArrow, SafeImproveArrow) provide comprehensive error handling
+- **Event Sourcing**: Complete audit trail of all reasoning steps for replay and analysis
 
 ### MeTTa Symbolic Reasoning
 
-Integration with MeTTa allows for:
-- **Symbolic Planning**: Using logic programming to derive plans
-- **Constraint Satisfaction**: Verifying plans against logical constraints
-- **Neuro-symbolic execution**: Combining LLM generation with symbolic validation
+Combine neural LLM reasoning with symbolic logic:
+
+```csharp
+// Create MeTTa engine (subprocess-based by default)
+using var engine = new SubprocessMeTTaEngine();
+
+// Add symbolic facts
+await engine.AddFactAsync("(human Socrates)");
+await engine.AddFactAsync("(mortal $x) :- (human $x)");
+
+// Execute symbolic query
+var result = await engine.ExecuteQueryAsync("!(match &self (mortal Socrates) $result)");
+```
+
+Register MeTTa tools with the orchestrator:
+
+```csharp
+var tools = ToolRegistry.CreateDefault()
+    .WithMeTTaTools();  // Subprocess-based engine
+
+// MeTTa tools are now available to the LLM
+var llm = new ToolAwareChatModel(chatModel, tools);
+```
 
 ### AI Orchestrator
 
-The smart orchestrator:
-1. **Analyzes** the incoming prompt
-2. **Classifies** the intent (Code, Reasoning, Creative, General)
-3. **Selects** the best model and parameters for the task
-4. **Routes** the request to the appropriate sub-system
+Intelligent model selection based on use case classification:
+
+```csharp
+// Build orchestrator with multiple specialized models
+var orchestrator = new OrchestratorBuilder(tools, "general")
+    .WithModel("general", generalModel, ModelType.General,
+        new[] { "conversation", "general-purpose" })
+    .WithModel("coder", codeModel, ModelType.Code,
+        new[] { "code", "programming", "debugging" })
+    .WithModel("reasoner", reasoningModel, ModelType.Reasoning,
+        new[] { "reasoning", "analysis", "logic" })
+    .WithMetricTracking(true)
+    .Build();
+
+// Automatically routes to best model
+var response = await orchestrator.GenerateTextAsync(
+    "Write a function to calculate factorial");
+// → Automatically selects 'coder' model
+```
 
 ## 🛠️ Development
 
 ### Tool System
 
-The system features a robust tool registry that supports:
-- **Automatic Schema Generation**: Generates JSON schemas from C# interfaces
-- **Dependency Injection**: Tools can request services via DI
-- **Middleware**: Intercept tool execution for logging or validation
+Create custom tools by implementing `ITool`:
+
+```csharp
+public class CustomTool : ITool
+{
+    public string Name => "custom_tool";
+    public string Description => "Performs custom analysis";
+
+    public async Task<ToolExecution> ExecuteAsync(ToolArgs args)
+    {
+        // Implementation
+        return new ToolExecution(Name, args, result);
+    }
+}
+```
 
 #### Built-in Tools
-- `FileSystemTool`: Safe file operations
-- `SearchTool`: Web search capabilities
-- `VectorStoreTool`: RAG operations
-- `PipelineStepTool`: Exposes pipeline steps as tools
+
+Ouroboros includes several built-in tools:
+
+- **MathTool**: Arithmetic expression evaluation
+- **RetrievalTool**: Semantic search over ingested documents
+- **GitHubScopeLockTool**: Formal scope locking mechanism to prevent scope creep
+  - Adds `scope-locked` label to GitHub issues
+  - Posts confirmation comments
+  - Updates milestones
+  - Integrates with Epic Branch Orchestrator for release planning
+
+See [SCOPE_LOCK_GUIDE.md](docs/SCOPE_LOCK_GUIDE.md) for detailed documentation on scope locking.
 
 ### Testing
 
-The project maintains high test coverage using xUnit and Moq.
+Ouroboros has a comprehensive test suite with 300+ passing tests covering core functionality, domain models, security, and performance.
 
 #### Run Tests
+
 ```bash
+# Run all unit tests (mocked, without Ollama)
 dotnet test
+
+# Run specific test class
+dotnet test --filter "FullyQualifiedName~InputValidatorTests"
+
+# Run with detailed output
+dotnet test --verbosity detailed
+
+# Run CLI integration tests
+cd src/Ouroboros.CLI
+dotnet run -- test --all
 ```
 
 #### Integration Tests
-Integration tests require a running Ollama instance:
+
+End-to-end integration tests with Ollama are automated via GitHub Actions (`.github/workflows/ollama-integration-test.yml`):
+
+- ✅ **Basic Ollama connectivity** - Validates LLM model communication
+- ✅ **Pipeline DSL execution** - Tests composable pipeline steps
+- ✅ **Reverse engineering workflow** - Memory-efficient configuration testing
+- ✅ **RAG with embeddings** - Vector search and retrieval testing
+
+**Run locally** (requires Ollama installed):
 ```bash
-dotnet test --filter "Category=Integration"
+# Ensure Ollama is running and models are pulled
+ollama pull llama3:8b
+ollama pull nomic-embed-text
+
+# Run integration tests manually
+cd src/Ouroboros.CLI
+dotnet run -- ask -q "Test question" --model "llama3:8b"
+dotnet run -- pipeline --dsl "SetPrompt('test') | UseDraft" --model "llama3:8b"
 ```
 
 #### Code Coverage
-Generate code coverage reports:
+
+[![Line Coverage](https://img.shields.io/badge/coverage-8.4%25-yellow)](TEST_COVERAGE_REPORT.md)
+[![Branch Coverage](https://img.shields.io/badge/branch--coverage-6.2%25-red)](TEST_COVERAGE_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-300%2B%20passing-brightgreen)](src/Ouroboros.Tests)
+
+**Current Coverage Summary:**
+- **Line Coverage:** 8.4% (1,134 of 13,465 lines)
+- **Branch Coverage:** 6.2% (219 of 3,490 branches)
+- **Test Execution:** ~480ms, all passing
+
+**Well-Tested Components (>80% coverage):**
+- ✅ Domain Model: 80.1% (Event Store, Vector Store, Reasoning States)
+- ✅ Security: 100% (Input Validation, Sanitization)
+- ✅ Performance: 96-100% (Object Pooling, Performance Utilities)
+- ✅ Diagnostics: 99%+ (Metrics, Distributed Tracing)
+
 ```bash
-# Install report generator
-dotnet tool install -g dotnet-reportgenerator-globaltool
+# Generate coverage report
+./scripts/run-coverage.sh
 
-# Run tests with coverage
+# Or manually
 dotnet test --collect:"XPlat Code Coverage"
-
-# Generate report
-reportgenerator -reports:**/coverage.cobertura.xml -targetdir:coveragereport
+reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:"TestCoverageReport" -reporttypes:"Html"
 ```
+
+**Coverage Documentation:**
+- 📊 [Full Coverage Report](TEST_COVERAGE_REPORT.md) - Detailed analysis and recommendations
+- 📋 [Quick Reference](TEST_COVERAGE_QUICKREF.md) - Commands and current metrics
+- 🔄 CI/CD: Automated coverage reporting via GitHub Actions
 
 #### Mutation Testing
-We use Stryker for mutation testing to ensure test quality:
-```bash
-dotnet tool install -g dotnet-stryker
-cd src/Ouroboros.Tests
-dotnet stryker
+
+Mutation testing is powered by [Stryker.NET](https://stryker-mutator.io). A local dotnet tool manifest (`.config/dotnet-tools.json`) pins the `dotnet-stryker` version and a repository-wide configuration (`stryker-config.json`) defines reporters, thresholds, and mutation filters.
+
+**Automated CI/CD:** The mutation testing workflow runs automatically:
+- 🌙 **Nightly Schedule**: Executes at 2 AM UTC daily
+- 🎯 **Manual Trigger**: Can be run on-demand from the Actions tab with configurable mutation level (Standard/Complete/Basic)
+- 📊 **Reports**: Generates HTML and JSON reports available as workflow artifacts
+- ✅ **Thresholds**: High ≥80%, Low ≥60%, Break <50%
+
+**Local Execution:**
+
+```powershell
+# PowerShell
+./scripts/run-mutation-tests.ps1 -OpenReport
+
+# Bash / WSL / macOS
+./scripts/run-mutation-tests.sh
 ```
+
+Both helpers restore local tools and execute `dotnet stryker --config-file stryker-config.json`. The PowerShell variant can optionally open the latest HTML report (`StrykerOutput/<timestamp>/reports/mutation-report.html`).
+
+Additional details and CI guidance are available in [TEST_MUTATION_GUIDE.md](TEST_MUTATION_GUIDE.md).
 
 ## 🔄 GitHub Copilot Development Loop
 
-This project uses a fully automated **GitHub Copilot Development Loop** to accelerate development and ensure quality.
+Ouroboros features an **automatic development loop** powered by GitHub Copilot that provides:
 
 ### 🤖 Automated Development Cycle ⭐ **NEW**
-The repository is equipped with a self-reinforcing development cycle that runs on a schedule or trigger:
 
-1. **Code Analysis**: Copilot analyzes the codebase for improvement opportunities
-2. **Issue Creation**: An issue is automatically created with a detailed implementation plan
-3. **Branch Creation**: A dedicated branch (e.g., `copilot/refactor-auth`) is created
-4. **Implementation**: Copilot Workspace/Agents implement the changes
-5. **PR & Review**: A Pull Request is opened and automatically reviewed by a separate AI agent
-6. **Merge**: Upon approval, the code is merged, completing the cycle
+Fully automated code improvement workflow:
+- 🔄 Runs twice daily (9 AM and 5 PM UTC)
+- 📊 Maintains max 5 open copilot PRs
+- 🔍 Analyzes codebase for improvements
+- 📝 Auto-generates prioritized improvement tasks
+- 🎭 Uses Playwright to assign @copilot via GitHub UI
+- 🖼️ Captures screenshots for debugging
+- 🔄 Falls back to API if UI automation fails
+- 🚀 Triggers new cycle when PRs are merged
+
+**Features**:
+- TODO/FIXME resolution
+- Documentation gap filling
+- Test coverage improvement
+- Error handling modernization (Result<T> monads)
+- Async/await pattern fixes
 
 ### Automated Code Review
-Every Pull Request is automatically analyzed for:
-- **Functional Patterns**: Ensuring proper use of Monads and Kleisli arrows
-- **Test Coverage**: Verifying that new code is adequately tested
-- **Performance**: Checking for potential bottlenecks
+
+Every pull request automatically receives AI-assisted code review:
+- ✅ Functional programming pattern checks
+- ✅ Monadic error handling validation
+- ✅ Documentation completeness review
+- ✅ Async/await pattern analysis
+- ✅ Architectural convention verification
 
 ### Issue Analysis Assistant
-When a human opens an issue, the system:
-1. Analyzes the requirements
-2. Identifies affected files
-3. Suggests an implementation plan
-4. Generates a "Start Here" prompt for Copilot
+
+When you create an issue, Copilot automatically:
+- 🔍 Classifies the issue type (bug, feature, test, docs, refactor)
+- 📁 Finds relevant files in the codebase
+- 💡 Suggests implementation approaches
+- 📋 Provides step-by-step guidance
+- 👤 Auto-assigns @copilot for analysis ⭐ **NEW**
+
+**Usage**: Add the `copilot-assist` label or mention `@copilot` in comments
 
 ### Continuous Improvement
-Weekly jobs run to:
-- Identify technical debt
-- Suggest refactoring candidates
-- Update documentation
-- Verify architectural compliance
+
+Weekly automated analysis provides:
+- 📊 Code quality metrics and trends
+- 🧪 Test coverage analysis
+- 🔒 Security pattern review
+- 🏗️ Architectural recommendations
+- 📋 Actionable improvement tasks
+- 👤 Auto-assigns @copilot to quality reports ⭐ **NEW**
+
+**Schedule**: Runs every Monday at 9 AM UTC
 
 ### Documentation
-See [GitHub Copilot Development Loop](docs/COPILOT_DEVELOPMENT_LOOP.md) for detailed configuration and workflows.
+
+See these guides for complete documentation:
+- [GitHub Copilot Development Loop Guide](docs/COPILOT_DEVELOPMENT_LOOP.md)
+- [Automated Development Cycle](docs/AUTOMATED_DEVELOPMENT_CYCLE.md)
+- [Playwright Copilot Assignment](docs/PLAYWRIGHT_COPILOT_ASSIGNMENT.md) 🎭 **NEW**
+
+---
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Follow the functional programming patterns established in the codebase
+4. Use monadic error handling consistently
+5. Add comprehensive tests for new functionality
+6. Submit a pull request
 
 ### Coding Standards
-- Use **functional style** where possible (immutability, pure functions)
-- Use **Result monad** for all failure prone operations
-- Follow **C# standard conventions**
+
+- **Functional First**: Prefer pure functions and immutable data structures
+- **Monadic Composition**: Use `Result<T>` and `Option<T>` for error handling
+- **Type Safety**: Leverage the C# type system fully
+- **Documentation**: Include XML documentation for all public APIs
+
+See [`.github/copilot-instructions.md`](.github/copilot-instructions.md) for detailed coding guidelines.
+
+**💡 Tip**: GitHub Copilot will automatically review your PRs and provide suggestions!
 
 ## 📋 Requirements
 
-- .NET 10.0 SDK
-- Ollama (for local LLM execution)
-- Docker (optional, for containerized execution)
+- **Runtime**: .NET 10.0+
+- **LangChain**: 0.17.0
+- **Ollama** (optional): For local LLM providers
 
 ## 🚀 Deployment
+
+Ouroboros supports multiple deployment options for various environments:
 
 ### Docker Deployment
 
 ```bash
-docker build -t ouroboros .
-docker run -p 8080:8080 ouroboros
+# Build Docker image
+docker build -t monadic-pipeline:latest .
+
+# Run with Docker Compose (includes Ollama, Qdrant, Jaeger)
+docker-compose up -d
+
+# Or use the automated script
+./scripts/deploy-docker.sh production
 ```
 
 ### Kubernetes Deployment
 
-Helm charts are provided in `deploy/charts/ouroboros`.
-
+**Local Kubernetes** (Docker Desktop, minikube, kind):
 ```bash
-helm install ouroboros ./deploy/charts/ouroboros
+# Automated deployment - builds and loads images automatically
+./scripts/deploy-k8s.sh monadic-pipeline
+```
+
+**Azure AKS** with Azure Container Registry:
+```bash
+# Automated deployment - builds, pushes to ACR, and deploys
+./scripts/deploy-aks.sh myregistry monadic-pipeline
+```
+
+**AWS EKS, GCP GKE, or Docker Hub**:
+```bash
+# AWS EKS with ECR
+./scripts/deploy-cloud.sh 123456789.dkr.ecr.us-east-1.amazonaws.com
+
+# GCP GKE with GCR
+./scripts/deploy-cloud.sh gcr.io/my-project
+
+# Docker Hub
+./scripts/deploy-cloud.sh docker.io/myusername
+```
+
+**IONOS Cloud** (recommended by Adaptive Systems Inc.):
+
+**Infrastructure as Code (NEW)**:
+```bash
+# Provision infrastructure with Terraform
+./scripts/manage-infrastructure.sh apply production
+
+# Get kubeconfig
+./scripts/manage-infrastructure.sh kubeconfig production
+
+# Deploy application
+./scripts/deploy-ionos.sh monadic-pipeline
+```
+
+**Quick deployment** (assumes infrastructure exists):
+```bash
+# Automated deployment to IONOS Cloud Kubernetes
+# Includes registry authentication, image push, and deployment
+./scripts/deploy-ionos.sh monadic-pipeline
+
+# Or with environment variables
+export IONOS_USERNAME="your-username"
+export IONOS_PASSWORD="your-password"
+./scripts/deploy-ionos.sh
+
+# See docs/IONOS_DEPLOYMENT_GUIDE.md for detailed instructions
+```
+
+**Infrastructure Management**:
+- **Quick Start**: [IONOS IaC Quick Start](docs/IONOS_IAC_QUICKSTART.md)
+- **Full Guide**: [IONOS IaC Guide](docs/IONOS_IAC_GUIDE.md)
+- **Terraform Docs**: [terraform/README.md](terraform/README.md)
+- **Incident Runbook**: [Infrastructure Runbook](docs/INFRASTRUCTURE_RUNBOOK.md) ⚡ NEW
+
+**Key Features**:
+- ✅ **Automated infrastructure provisioning** via Terraform
+- ✅ **Multi-environment support** (dev/staging/production)
+- ✅ **Infrastructure as Code** - version controlled and reproducible
+- ✅ **Cost optimization** - right-sized resources per environment
+- ✅ **Disaster recovery** - infrastructure can be recreated anytime
+
+**IONOS Cloud with GitHub Actions** (CI/CD):
+
+Automated deployment via GitHub Actions is configured in `.github/workflows/ionos-deploy.yml`. Every push to `main` automatically:
+1. Runs tests
+2. Builds and pushes Docker images to IONOS Container Registry
+3. Deploys to IONOS Kubernetes cluster
+
+Setup required secrets in GitHub repository settings:
+- `IONOS_REGISTRY_USERNAME`: IONOS Container Registry username
+- `IONOS_REGISTRY_PASSWORD`: IONOS Container Registry password
+- `IONOS_KUBECONFIG`: Base64-encoded kubeconfig file
+
+See [IONOS Deployment Guide](docs/IONOS_DEPLOYMENT_GUIDE.md#cicd-with-github-actions) for detailed setup.
+
+**Manual deployment**:
+```bash
+# Or manually
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/secrets.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/ollama.yaml
+kubectl apply -f k8s/qdrant.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/webapi-deployment.yaml
 ```
 
 ### Local/Systemd Deployment
-See [Deployment Guide](DEPLOYMENT.md) for setting up Ouroboros as a systemd service.
+
+```bash
+# Publish application
+./scripts/deploy-local.sh /opt/monadic-pipeline
+
+# Install as systemd service (Linux)
+sudo cp scripts/monadic-pipeline.service /etc/systemd/system/
+sudo systemctl enable monadic-pipeline
+sudo systemctl start monadic-pipeline
+```
+
+For comprehensive deployment instructions including configuration management, monitoring, security, and troubleshooting, see:
+- [**Deployment Guide**](DEPLOYMENT.md) - Complete deployment instructions
+- [**Troubleshooting Guide**](TROUBLESHOOTING.md) - Common issues and solutions (including ImagePullBackOff fixes)
+- [**Scripts README**](scripts/README.md) - Deployment scripts documentation
 
 ## 🏗️ Infrastructure & Dependencies
 
-The system relies on a carefully managed set of infrastructure components and dependencies.
+Ouroboros has comprehensive infrastructure documentation covering the complete stack from C# application to Terraform provisioning:
 
 ### Infrastructure Documentation
-- **[Infrastructure Dependencies](docs/INFRASTRUCTURE_DEPENDENCIES.md)**: Comprehensive mapping of all dependencies across C# projects, Kubernetes resources, and Terraform modules.
-- **[Deployment Topology](docs/DEPLOYMENT_TOPOLOGY.md)**: Visual and descriptive overview of how components are deployed and interact.
-- **[Environment Infrastructure Mapping](docs/ENVIRONMENT_INFRASTRUCTURE_MAPPING.md)**: Environment-specific configurations for Development, Staging, and Production.
+
+- [**Infrastructure Dependencies**](docs/INFRASTRUCTURE_DEPENDENCIES.md) - Complete mapping of dependencies across C#, Kubernetes, and Terraform
+- [**Terraform-Kubernetes Integration**](docs/TERRAFORM_K8S_INTEGRATION.md) - Integration patterns, workflows, and automation
+- [**Environment Infrastructure Mapping**](docs/ENVIRONMENT_INFRASTRUCTURE_MAPPING.md) - Environment-specific configurations (dev, staging, production)
+- [**Deployment Topology**](docs/DEPLOYMENT_TOPOLOGY.md) - Visual topological representations of the complete infrastructure
+- [**Infrastructure Migration Guide**](docs/INFRASTRUCTURE_MIGRATION_GUIDE.md) - Safe migration and change management procedures
 
 ### Infrastructure Validation
-To validate your infrastructure configuration:
+
+Before deploying or making infrastructure changes, validate your setup:
 
 ```bash
-# Validate dependencies
-dotnet run -- project src/Ouroboros.Tools/Ouroboros.Tools.csproj -- validate-dependencies
+# Comprehensive infrastructure validation
+./scripts/validate-infrastructure-dependencies.sh
 
-# Check environment configuration
-dotnet run -- project src/Ouroboros.Tools/Ouroboros.Tools.csproj -- validate-env --environment production
+# Checks:
+# ✓ Terraform configuration
+# ✓ Kubernetes manifests
+# ✓ C# application configuration
+# ✓ Configuration consistency
+# ✓ Docker files
+# ✓ Resource requirements
+# ✓ Storage configuration
+# ✓ Network configuration
+# ✓ Security configuration
+# ✓ CI/CD workflows
 ```
 
 ### Key Infrastructure Dependencies
-- **Core Runtime**: .NET 10.0, ASP.NET Core
-- **AI/ML**: Ollama, LangChain
-- **Data**: Qdrant (Vector DB), Redis (Caching)
-- **Observability**: OpenTelemetry, Prometheus, Grafana
-- **Cloud**: IONOS Cloud Kubernetes (DCD)
+
+The system has well-documented dependencies across layers:
+
+```
+C# Application (appsettings.json)
+    ↓ Configuration
+Kubernetes (ConfigMaps, Deployments, Services)
+    ↓ Orchestration
+Terraform (IONOS Cloud Infrastructure)
+    ↓ Provisioning
+IONOS Cloud (Data Center, K8s, Registry, Storage)
+```
+
+**Critical dependencies**:
+- C# → Ollama service (LLM inference): `http://ollama-service:11434`
+- C# → Qdrant service (vector storage): `http://qdrant-service:6333`
+- K8s → Container Registry: `adaptive-systems.cr.de-fra.ionos.com`
+- Terraform → K8s Cluster: Node sizing, storage volumes, networking
+
+See [Infrastructure Dependencies](docs/INFRASTRUCTURE_DEPENDENCIES.md) for complete mapping.
 
 ### Infrastructure Summary
-For a quick overview of the current infrastructure state, see the [Infrastructure Summary Report](docs/INFRASTRUCTURE_SUMMARY.md).
+
+For a high-level overview of all infrastructure work:
+- [**Infrastructure Refinement Summary**](docs/archive/INFRASTRUCTURE_REFINEMENT_SUMMARY.md) - Complete summary of infrastructure documentation and tools
 
 ## 🔧 Troubleshooting
 
 ### Kubernetes Image Pull Errors
-If you see `ImagePullBackOff` errors when deploying to Kubernetes:
 
-1. Check if the image exists in the registry
-2. Verify image pull secrets are correctly configured
-3. Ensure the tag matches the deployed version
+If you encounter errors like:
+```
+Failed to pull image "monadic-pipeline-webapi:latest": failed to pull and unpack image
+"docker.io/library/monadic-pipeline-webapi:latest": failed to resolve reference
+"docker.io/library/monadic-pipeline-webapi:latest": pull access denied, repository does
+not exist or may require authorization
+```
 
-See [Troubleshooting Guide](TROUBLESHOOTING.md) for more solutions.
+Or `ImagePullBackOff` errors in your pods:
+```bash
+kubectl get events -n monadic-pipeline
+# Error: ImagePullBackOff
+```
+
+**Solution**: The image doesn't exist in Docker Hub or your container registry. Use our automated deployment scripts:
+
+**First, validate your setup:**
+```bash
+./scripts/validate-deployment.sh
+```
+This script checks your cluster type and provides specific guidance.
+
+1. **For local clusters** (Docker Desktop, minikube, kind):
+   ```bash
+   ./scripts/deploy-k8s.sh
+   ```
+   The script automatically builds and loads images into your cluster.
+
+2. **For Azure AKS with ACR**:
+   ```bash
+   ./scripts/deploy-aks.sh myregistry monadic-pipeline
+   ```
+   Automatically builds, pushes to ACR, and deploys to AKS.
+
+3. **For IONOS Cloud**:
+   ```bash
+   ./scripts/deploy-ionos.sh monadic-pipeline
+
+   # Check deployment status
+   ./scripts/check-ionos-deployment.sh monadic-pipeline
+   ```
+   Automatically builds, pushes to IONOS registry, and deploys to IONOS Cloud.
+
+4. **For AWS EKS, GCP GKE, or Docker Hub**:
+   ```bash
+   # AWS EKS
+   ./scripts/deploy-cloud.sh 123456789.dkr.ecr.us-east-1.amazonaws.com
+
+   # GCP GKE
+   ./scripts/deploy-cloud.sh gcr.io/my-project
+
+   # Docker Hub
+   ./scripts/deploy-cloud.sh docker.io/myusername
+   ```
+
+**Detailed Troubleshooting**: See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for comprehensive troubleshooting, including ImagePullBackOff solutions.
+
+**Historical Incident Reports**: See [docs/archive/](docs/archive/) for past incident post-mortems and resolutions.
 
 ## 📚 Documentation
 
 ### Essential Guides
-- **[Quick Start Guide](QUICKSTART.md)** - Get up and running in 5 minutes
-- **[Deployment Guide](DEPLOYMENT.md)** - Production deployment instructions
-- **[Configuration Guide](CONFIGURATION.md)** - detailed configuration options
-- **[Contributing Guide](CONTRIBUTING.md)** - Guidelines for contributors
+- [**Deployment Guide**](DEPLOYMENT.md) - Comprehensive deployment instructions for all environments
+- [**Deployment Quick Reference**](DEPLOYMENT-QUICK-REFERENCE.md) - Common deployment commands
+- [**Troubleshooting Guide**](TROUBLESHOOTING.md) - Common issues and solutions
+- [**Configuration and Security**](CONFIGURATION_AND_SECURITY.md) - Security best practices and configuration
+- [**Test Coverage Report**](TEST_COVERAGE_REPORT.md) - Test coverage analysis
 
 ### Technical Documentation
-- **[Architecture Overview](docs/ARCHITECTURE.md)** - High-level system design
-- **[Architectural Layers](docs/ARCHITECTURAL_LAYERS.md)** - Detailed layer breakdown
-- **[Recursive Chunking](docs/RECURSIVE_CHUNKING.md)** - Large context processing
-- **[Self-Improving Agent](docs/SELF_IMPROVING_AGENT.md)** - Agent capabilities
-- **[Iterative Refinement](docs/ITERATIVE_REFINEMENT_ARCHITECTURE.md)** - Reasoning loops
+- [**Documentation Index**](docs/README.md) - Complete documentation catalog
+- [**Phase 0 Architecture**](docs/PHASE_0_ARCHITECTURE.md) - Evolution foundations infrastructure ⭐ **NEW**
+- [**Phase 0 Usage Guide**](docs/PHASE_0_USAGE.md) - Feature flags, DAG operations, and metrics ⭐ **NEW**
+- [**Self-Improving Agent Architecture**](docs/SELF_IMPROVING_AGENT.md) - Agent capabilities and architecture
+- [**IONOS Cloud Deployment**](docs/IONOS_DEPLOYMENT_GUIDE.md) - IONOS-specific deployment guide
+- [**Infrastructure Dependencies**](docs/INFRASTRUCTURE_DEPENDENCIES.md) - Complete infrastructure dependency mapping
+- [**RecursiveChunking Guide**](docs/RECURSIVE_CHUNKING.md) - Large context processing
 
 ### Developer Resources
-- **[Test Coverage Report](TEST_COVERAGE_REPORT.md)** - Current test metrics
-- **[Test Coverage Quick Reference](TEST_COVERAGE_QUICKREF.md)** - Testing commands
-- **[Infrastructure Dependencies](docs/INFRASTRUCTURE_DEPENDENCIES.md)** - System dependencies
+- [**GitHub Copilot Instructions**](.github/copilot-instructions.md) - Development guidelines for contributors
+- [**docs/ Directory**](docs/) - All technical documentation
 
 ## ⚖️ License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is open source. Please check the repository for license details.
 
 ## 🙏 Acknowledgments
 
-- [LangChain](https://github.com/langchain-ai/langchain) for the inspiration
-- [Ollama](https://ollama.ai/) for making local LLMs accessible
-- [MeTTa](https://github.com/trueagi-io/hyperon-experimental) for symbolic reasoning capabilities
+- Built on [LangChain](https://github.com/tryAGI/LangChain) for AI/LLM integration
+- Inspired by category theory and functional programming principles
+- Special thanks to the functional programming community for mathematical foundations
+- Developed by **Adaptive Systems Inc.** for enterprise AI pipeline solutions
+
+---
+
+**Ouroboros by Adaptive Systems Inc.**: Where Category Theory Meets AI Pipeline Engineering 🚀
