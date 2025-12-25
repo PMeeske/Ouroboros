@@ -70,7 +70,7 @@ Ouroboros follows a **Functional Pipeline Architecture** with monadic compositio
 │   Core Layer    │    │  Domain Layer   │    │ Pipeline Layer  │
 │                 │    │                 │    │                 │
 │ • Monads        │───▶│ • Events        │───▶│ • Branches      │
-│ • Kleisli       │    │ • States        │    │ • Vectors       │
+│ • Kleisli       │    │ • States        │    │ • Reasoning     │
 │ • Steps         │    │ • Vectors       │    │ • Ingestion     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
@@ -85,7 +85,7 @@ Ouroboros follows a **Functional Pipeline Architecture** with monadic compositio
                     └─────────────────┘
 ```
 
-📘 **[View Detailed Architectural Layer Diagram](docs/ARCHITECTURAL_LAYERS.md)** - Comprehensive system architecture documentation including component responsibilities, data flow patterns, deployment topology, and cross-cutting concerns.
+📘 **[View Detailed Architectural Layer Diagram](docs/ARCHITECTURAL_LAYERS.md)** - Comprehensive system architecture documentation including component responsibilities, data flow patterns, deployment topology, and extensibility points.
 
 ### Iterative Refinement Architecture
 
