@@ -7,6 +7,9 @@ using System.Text;
 using LangChainPipeline.Agent.MetaAI;
 using Ouroboros.Tools.MeTTa;
 
+// Alias to avoid naming conflict with the OuroborosConfidence method
+using ConfidenceLevel = LangChainPipeline.Agent.MetaAI.OuroborosConfidence;
+
 namespace Ouroboros.Application;
 
 /// <summary>
@@ -181,13 +184,13 @@ public static class OuroborosCliSteps
                 return Task.FromResult(s);
             }
 
-            OuroborosConfidence confidence = _currentAtom.AssessConfidence(action);
+            ConfidenceLevel confidenceLevel = _currentAtom.AssessConfidence(action);
 
-            string confidenceMessage = confidence switch
+            string confidenceMessage = confidenceLevel switch
             {
-                LangChainPipeline.Agent.MetaAI.OuroborosConfidence.High => "High - can proceed confidently",
-                LangChainPipeline.Agent.MetaAI.OuroborosConfidence.Medium => "Medium - proceed with verification",
-                LangChainPipeline.Agent.MetaAI.OuroborosConfidence.Low => "Low - requires careful planning and validation",
+                ConfidenceLevel.High => "High - can proceed confidently",
+                ConfidenceLevel.Medium => "Medium - proceed with verification",
+                ConfidenceLevel.Low => "Low - requires careful planning and validation",
                 _ => "Unknown"
             };
 

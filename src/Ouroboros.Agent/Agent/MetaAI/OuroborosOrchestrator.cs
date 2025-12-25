@@ -25,6 +25,21 @@ namespace LangChainPipeline.Agent.MetaAI;
 /// </summary>
 public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosResult>
 {
+    /// <summary>
+    /// Maximum length for output truncation in MeTTa representation.
+    /// </summary>
+    private const int MeTTaOutputTruncationLength = 100;
+
+    /// <summary>
+    /// Quality threshold for capability updates after successful execution.
+    /// </summary>
+    private const double QualityThresholdForCapabilityUpdate = 0.7;
+
+    /// <summary>
+    /// Confidence boost increment when a capability is successfully used.
+    /// </summary>
+    private const double ConfidenceBoostIncrement = 0.05;
+
     private readonly IChatCompletionModel _llm;
     private readonly ToolRegistry _tools;
     private readonly IMemoryStore _memory;
@@ -279,7 +294,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             (bool verified, double qualityScore) = ParseVerificationResult(verificationText);
 
             // Use MeTTa for symbolic verification
-            string planMetta = $"(plan (goal \"{EscapeMeTTa(goal)}\") (output \"{EscapeMeTTa(output.Substring(0, Math.Min(100, output.Length)))}\"))";
+            string planMetta = $"(plan (goal \"{EscapeMeTTa(goal)}\") (output \"{EscapeMeTTa(output.Substring(0, Math.Min(MeTTaOutputTruncationLength, output.Length)))}\"))";
             Result<bool, string> mettaResult = await _mettaEngine.VerifyPlanAsync(planMetta, ct);
 
             bool mettaVerified = mettaResult.Match(v => v, _ => true);
@@ -351,7 +366,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             await UpdateMeTTaKnowledgeAsync(experience, ct);
 
             // Update capabilities based on success
-            if (overallSuccess && averageQuality > 0.7)
+            if (overallSuccess && averageQuality > QualityThresholdForCapabilityUpdate)
             {
                 // Boost relevant capability confidence
                 IEnumerable<string> relevantCapabilities = goal.ToLower().Split(' ')
@@ -364,7 +379,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
 
                     if (existingCap != null)
                     {
-                        double newConfidence = Math.Min(1.0, existingCap.ConfidenceLevel + 0.05);
+                        double newConfidence = Math.Min(1.0, existingCap.ConfidenceLevel + ConfidenceBoostIncrement);
                         _atom.AddCapability(existingCap with { ConfidenceLevel = newConfidence });
                     }
                 }

@@ -119,6 +119,21 @@ public sealed record OuroborosExperience(
 /// </summary>
 public sealed class OuroborosAtom
 {
+    /// <summary>
+    /// Confidence threshold for determining if a capability is relevant.
+    /// </summary>
+    private const double CapabilityConfidenceThreshold = 0.7;
+
+    /// <summary>
+    /// Success rate threshold for high confidence assessment.
+    /// </summary>
+    private const double HighConfidenceSuccessRateThreshold = 0.8;
+
+    /// <summary>
+    /// Success rate threshold for medium confidence assessment.
+    /// </summary>
+    private const double MediumConfidenceSuccessRateThreshold = 0.5;
+
     private readonly List<OuroborosCapability> _capabilities = new();
     private readonly List<OuroborosLimitation> _limitations = new();
     private readonly List<OuroborosExperience> _experiences = new();
@@ -338,7 +353,7 @@ public sealed class OuroborosAtom
         // Check if we have relevant capabilities
         bool hasRelevantCapability = _capabilities.Any(c =>
             action.Contains(c.Name, StringComparison.OrdinalIgnoreCase) &&
-            c.ConfidenceLevel > 0.7);
+            c.ConfidenceLevel > CapabilityConfidenceThreshold);
 
         // Check success rate with similar goals
         IEnumerable<OuroborosExperience> relevantExperiences = _experiences
@@ -346,14 +361,14 @@ public sealed class OuroborosAtom
 
         double relevantSuccessRate = relevantExperiences.Any()
             ? relevantExperiences.Average(e => e.Success ? 1.0 : 0.0)
-            : 0.5;
+            : MediumConfidenceSuccessRateThreshold;
 
         // Determine confidence level
-        if (hasRelevantCapability && relevantSuccessRate > 0.8)
+        if (hasRelevantCapability && relevantSuccessRate > HighConfidenceSuccessRateThreshold)
         {
             return OuroborosConfidence.High;
         }
-        else if (relevantSuccessRate > 0.5 || hasRelevantCapability)
+        else if (relevantSuccessRate > MediumConfidenceSuccessRateThreshold || hasRelevantCapability)
         {
             return OuroborosConfidence.Medium;
         }
