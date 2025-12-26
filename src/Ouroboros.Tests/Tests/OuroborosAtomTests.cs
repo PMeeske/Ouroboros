@@ -24,7 +24,7 @@ public class OuroborosAtomXUnitTests
         atom.Name.Should().Be("TestOuroboros");
         atom.CurrentPhase.Should().Be(ImprovementPhase.Plan);
         atom.CycleCount.Should().Be(0);
-        atom.Capabilities.Should().HaveCountGreaterOrEqualTo(4);
+        atom.Capabilities.Should().HaveCountGreaterThanOrEqualTo(4);
         atom.SafetyConstraints.Should().HaveFlag(SafetyConstraints.NoSelfDestruction);
     }
 

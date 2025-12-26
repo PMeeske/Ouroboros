@@ -36,6 +36,16 @@ public readonly struct Form : IEquatable<Form>
     public static Form Mark => new(TriState.Mark);
 
     /// <summary>
+    /// Creates a crossed/marked form containing another form (distinction).
+    /// In Laws of Form, crossing is the fundamental operation that creates distinctions.
+    /// CrossForm(CrossForm(Void)) = Void (double crossing cancels)
+    /// CrossForm(Void) = Mark
+    /// </summary>
+    /// <param name="inner">The inner form to cross.</param>
+    /// <returns>A new form with a crossing applied.</returns>
+    public static Form CrossForm(Form inner) => inner.Not();
+
+    /// <summary>
     /// Creates a void form - represents emptiness, negation, or false.
     /// In notation: (empty space)
     /// </summary>
@@ -289,10 +299,17 @@ public readonly struct Form : IEquatable<Form>
     public static Form Imagine(double phase) => Imaginary;
 
     /// <summary>
-    /// Evaluates the form, converting it to a pattern-matchable record type.
+    /// Evaluates the form, returning the simplified canonical form.
+    /// This method is idempotent - evaluating an already-evaluated form returns the same form.
+    /// </summary>
+    /// <returns>The evaluated form (Mark, Void, or Imaginary).</returns>
+    public Form Eval() => this;
+
+    /// <summary>
+    /// Evaluates the form to a pattern-matchable record type.
     /// </summary>
     /// <returns>A record type representing the evaluated form.</returns>
-    public object Eval()
+    public object EvalToRecord()
     {
         return this.State switch
         {

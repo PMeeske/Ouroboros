@@ -78,7 +78,7 @@ public class ImaginationTests
     {
         // Marking an imaginary form should shift its phase by π
         var imag = Form.Imaginary;
-        var marked = Form.Mark(imag).Eval();
+        var marked = Form.CrossForm(imag).Eval();
 
         // Assert - should still be imaginary but phase shifted
         marked.IsImaginary().Should().BeTrue();
@@ -89,7 +89,7 @@ public class ImaginationTests
     {
         // Mark(f) where f = ⌐f should give imaginary
         var reentry = Form.ReEntry("f");
-        var marked = Form.Mark(reentry).Eval();
+        var marked = Form.CrossForm(reentry).Eval();
 
         // Assert
         marked.Should().Be(Form.Imaginary);
@@ -100,7 +100,7 @@ public class ImaginationTests
     {
         // Mark(Mark(i)) should shift phase by 2π (full cycle, back to original)
         var imag = Form.Imagine(0);
-        var doubleMarked = Form.Mark(Form.Mark(imag)).Eval();
+        var doubleMarked = Form.CrossForm(Form.CrossForm(imag)).Eval();
 
         // Phase should be approximately 0 (modulo 2π)
         doubleMarked.IsImaginary().Should().BeTrue();
@@ -147,8 +147,8 @@ public class ImaginationTests
         var imag = Form.Imaginary;
 
         // Use the extension method to sample at time
-        var atTime0 = imag.AtTime(0);
-        var atTime2 = imag.AtTime(2);
+        var atTime0 = Imagination.Sample(imag, 0);
+        var atTime2 = Imagination.Sample(imag, 2);
 
         atTime0.IsVoid().Should().BeTrue();
         atTime2.IsVoid().Should().BeTrue();
@@ -161,8 +161,8 @@ public class ImaginationTests
         var imag = Form.Imaginary;
 
         // Use the extension method to sample at time
-        var atTime1 = imag.AtTime(1);
-        var atTime3 = imag.AtTime(3);
+        var atTime1 = Imagination.Sample(imag, 1);
+        var atTime3 = Imagination.Sample(imag, 3);
 
         atTime1.IsMarked().Should().BeTrue();
         atTime3.IsMarked().Should().BeTrue();
@@ -478,7 +478,7 @@ public class ImaginationTests
         var form = Form.Void;
 
         // Act
-        var result = form.ToNullableBoolean();
+        var result = form.ToBool();
 
         // Assert
         result.Should().Be(false);
@@ -491,7 +491,7 @@ public class ImaginationTests
         var form = Form.Mark;
 
         // Act
-        var result = form.ToNullableBoolean();
+        var result = form.ToBool();
 
         // Assert
         result.Should().Be(true);
@@ -504,7 +504,7 @@ public class ImaginationTests
         var form = Form.Imaginary;
 
         // Act
-        var result = form.ToNullableBoolean();
+        var result = form.ToBool();
 
         // Assert
         result.Should().BeNull();
@@ -532,13 +532,13 @@ public class ImaginationTests
 
         // Act
         var result = form.Match(
-            onMarked: () => { matchedBranch = "marked"; return "M"; },
+            onMark: () => { matchedBranch = "marked"; return "M"; },
             onVoid: () => { matchedBranch = "void"; return "V"; },
-            onImaginary: phase => { matchedBranch = "imaginary"; return $"I:{phase:F2}"; });
+            onImaginary: () => { matchedBranch = "imaginary"; return "I"; });
 
         // Assert
         matchedBranch.Should().Be("imaginary");
-        result.Should().StartWith("I:");
+        result.Should().Be("I");
     }
 
     [Fact]
@@ -548,7 +548,7 @@ public class ImaginationTests
         var form = Form.Void;
 
         // Act
-        var imagined = form.Imagine();
+        var imagined = Imagination.Apply(form);
 
         // Assert
         imagined.IsImaginary().Should().BeTrue();
@@ -561,7 +561,7 @@ public class ImaginationTests
         var form = Form.Void;
 
         // Act
-        var oscillator = form.OscillateWith(Form.Mark);
+        var oscillator = Imagination.Oscillate(form, Form.Mark);
 
         // Assert
         oscillator.AtTime(0).IsVoid().Should().BeTrue();
@@ -576,7 +576,7 @@ public class ImaginationTests
         var form2 = Form.Imagine(Math.PI / 4);
 
         // Act
-        var superimposed = form1.Superimpose(form2);
+        var superimposed = Imagination.Superimpose(form1, form2);
 
         // Assert
         superimposed.IsImaginary().Should().BeTrue();
@@ -591,7 +591,7 @@ public class ImaginationTests
     {
         // The equation f = ⌐f has the imaginary value as its solution
         var f = Form.ReEntry("f");
-        var markF = Form.Mark(f);
+        var markF = Form.CrossForm(f);
 
         // Both should evaluate to Imaginary
         f.Eval().Should().Be(Form.Imaginary);
@@ -617,7 +617,7 @@ public class ImaginationTests
     {
         // Arrange - the equation f = ⌐f
         var f = Form.ReEntry("f");
-        var markF = Form.Mark(f);
+        var markF = Form.CrossForm(f);
 
         // Both sides of the equation should evaluate to the same imaginary value
         f.Eval().IsImaginary().Should().BeTrue();
