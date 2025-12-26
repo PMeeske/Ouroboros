@@ -3,6 +3,9 @@
 
 name: Terraform Tests
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     paths:
@@ -242,6 +245,10 @@ jobs:
     needs: [terraform-validate, module-tests, environment-tests, run-test-suite, security-scan]
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     if: always()
 
     steps:
