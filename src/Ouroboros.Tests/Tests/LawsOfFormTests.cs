@@ -534,7 +534,7 @@ public class LawsOfFormTests
     {
         // A ∨ ¬A = True (Mark)
         var a = Form.Void;
-        var excludedMiddle = a.Or(a.Not()).Eval();
+        var excludedMiddle = a.Or(a.Not());
 
         // Assert
         excludedMiddle.IsMarked().Should().BeTrue("Law of excluded middle should hold");
@@ -545,7 +545,7 @@ public class LawsOfFormTests
     {
         // A ∧ ¬A = False (Void)
         var a = Form.Mark;
-        var contradiction = a.And(a.Not()).Eval();
+        var contradiction = a.And(a.Not());
 
         // Assert
         contradiction.IsVoid().Should().BeTrue("Non-contradiction should hold");
@@ -574,7 +574,7 @@ public class LawsOfFormTests
         var cross2 = Form.Mark;
 
         // These are structurally equal Mark(Void) forms
-        cross1.Eval().IsMarked().Should().Be(cross2.Eval().IsMarked());
+        cross1.IsMarked().Should().Be(cross2.IsMarked());
     }
 
     [Fact]

@@ -247,7 +247,7 @@ public class DecisionPipelineTests
             return AuditableDecision<Application>.Approve(
                 app,
                 "Credit score acceptable",
-                new[] { $"Credit score: {app.CreditScore}" });
+                new Evidence("CreditScore", Form.Mark, $"Credit score: {app.CreditScore}"));
         }
 
         if (app.CreditScore >= 600)
@@ -255,25 +255,26 @@ public class DecisionPipelineTests
             return AuditableDecision<Application>.Inconclusive(
                 0.5,
                 "Borderline credit score - manual review needed",
-                new[] { $"Credit score: {app.CreditScore}" });
+                new Evidence("CreditScore", Form.Imaginary, $"Credit score: {app.CreditScore}"));
         }
 
         return AuditableDecision<Application>.Reject(
             "Credit score too low",
-            new[] { $"Credit score: {app.CreditScore}" });
+            "Credit score below minimum threshold",
+            new Evidence("CreditScore", Form.Void, $"Credit score: {app.CreditScore}"));
     }
 
     private static AuditableDecision<Application> CheckIdVerification(Application app)
     {
         return app.IdVerified
-            ? AuditableDecision<Application>.Approve(app, "ID verified", new[] { "ID check passed" })
-            : AuditableDecision<Application>.Reject("ID not verified", new[] { "ID check failed" });
+            ? AuditableDecision<Application>.Approve(app, "ID verified", new Evidence("IdVerification", Form.Mark, "ID check passed"))
+            : AuditableDecision<Application>.Reject("ID not verified", "ID verification failed", new Evidence("IdVerification", Form.Void, "ID check failed"));
     }
 
     private static AuditableDecision<Application> CheckAddressVerification(Application app)
     {
         return app.AddressVerified
-            ? AuditableDecision<Application>.Approve(app, "Address verified", new[] { "Address check passed" })
-            : AuditableDecision<Application>.Reject("Address not verified", new[] { "Address check failed" });
+            ? AuditableDecision<Application>.Approve(app, "Address verified", new Evidence("AddressVerification", Form.Mark, "Address check passed"))
+            : AuditableDecision<Application>.Reject("Address not verified", "Address verification failed", new Evidence("AddressVerification", Form.Void, "Address check failed"));
     }
 }

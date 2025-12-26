@@ -53,6 +53,26 @@ public sealed record AuditableDecision<T>
     public double? ConfidencePhase { get; init; }
 
     /// <summary>
+    /// Gets a value indicating whether this decision requires human review.
+    /// True when the certainty is Imaginary (uncertain/inconclusive).
+    /// </summary>
+    public bool RequiresHumanReview => this.Certainty.IsImaginary();
+
+    /// <summary>
+    /// Gets the compliance status as a human-readable string.
+    /// Returns "APPROVED", "REJECTED", or "INCONCLUSIVE (confidence%)" based on certainty.
+    /// </summary>
+    public string ComplianceStatus => this.Certainty.State switch
+    {
+        TriState.Mark => "APPROVED",
+        TriState.Void => "REJECTED",
+        TriState.Imaginary => this.ConfidencePhase.HasValue
+            ? $"INCONCLUSIVE ({this.ConfidencePhase.Value:P0})"
+            : "INCONCLUSIVE",
+        _ => "UNKNOWN"
+    };
+
+    /// <summary>
     /// Gets the timestamp when the decision was made.
     /// </summary>
     public DateTime Timestamp { get; init; }
