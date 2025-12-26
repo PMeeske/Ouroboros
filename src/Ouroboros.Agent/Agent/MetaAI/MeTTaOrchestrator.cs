@@ -6,9 +6,9 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using LangChainPipeline.Tools.MeTTa;
+using Ouroboros.Tools.MeTTa;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Meta-AI v3.0 orchestrator with MeTTa-first representation layer.

@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
-namespace LangChainPipeline.Interop.Hosting;
+namespace Ouroboros.Interop.Hosting;
 
 /// <summary>
 /// Elegant minimal host builder using StepDefinition and | composition.

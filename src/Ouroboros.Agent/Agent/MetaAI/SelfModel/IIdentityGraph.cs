@@ -4,7 +4,7 @@
 // Phase 2: Agent identity with capabilities, resources, commitments, performance
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI.SelfModel;
+namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>
 /// Represents a resource tracked by the agent.

@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Domain.Governance;
+namespace Ouroboros.Domain.Governance;
 
 /// <summary>
 /// Defines a governance policy with rules, quotas, and thresholds.

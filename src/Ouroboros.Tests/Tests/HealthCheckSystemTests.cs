@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using System;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using LangChainPipeline.Core.Infrastructure.HealthCheck;
+using Ouroboros.Core.Infrastructure.HealthCheck;
 using Xunit;
 
 /// <summary>

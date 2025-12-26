@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Tools;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Tools;
 using Ouroboros.Tools.MeTTa;
 
 /// <summary>

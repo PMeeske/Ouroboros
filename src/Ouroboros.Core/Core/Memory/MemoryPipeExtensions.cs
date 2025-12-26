@@ -4,7 +4,7 @@
 // Extension methods to integrate memory functionality with existing pipes
 // ============================================================================
 
-namespace LangChainPipeline.Core.Memory;
+namespace Ouroboros.Core.Memory;
 
 /// <summary>
 /// Extension methods to integrate memory-aware operations with the existing Kleisli pipe system

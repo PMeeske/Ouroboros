@@ -70,13 +70,13 @@ Feature: DSL Assistant Simulation Integration Tests
 
   Scenario: Create a new C# class with Roslyn
     Given a class name "TestPipeline"
-    And a namespace "LangChainPipeline.Generated"
+    And a namespace "Ouroboros.Generated"
     And methods including "ExecuteAsync" and "ValidateAsync"
     And properties including "string Name" and "bool IsValid"
     When I generate the class
     Then I should receive valid C# code
     And the code should contain "public class TestPipeline"
-    And the code should contain "namespace LangChainPipeline.Generated"
+    And the code should contain "namespace Ouroboros.Generated"
     And the code should contain "ExecuteAsync"
     And the code should contain "ValidateAsync"
 

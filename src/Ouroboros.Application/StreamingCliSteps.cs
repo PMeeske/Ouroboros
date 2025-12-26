@@ -270,7 +270,7 @@ public static class StreamingCliSteps
     public static Step<CliPipelineState, CliPipelineState> StreamingReasoning(string? args = null)
         => async s =>
         {
-            if (s.Llm.InnerModel is not LangChainPipeline.Providers.IStreamingChatModel streamingModel)
+            if (s.Llm.InnerModel is not Ouroboros.Providers.IStreamingChatModel streamingModel)
             {
                 Console.WriteLine("[error] Current model does not support streaming reasoning.");
                 return s;
@@ -290,7 +290,7 @@ public static class StreamingCliSteps
 
             Console.WriteLine($"[stream] Starting reasoning pipeline for topic: {topic}");
 
-            var pipeline = LangChainPipeline.Pipeline.Reasoning.ReasoningArrows.StreamingReasoningPipeline(
+            var pipeline = Ouroboros.Pipeline.Reasoning.ReasoningArrows.StreamingReasoningPipeline(
                 streamingModel,
                 s.Tools ?? new Ouroboros.Tools.ToolRegistry(),
                 s.Embed,
@@ -330,7 +330,7 @@ public static class StreamingCliSteps
     public static Step<CliPipelineState, CliPipelineState> StreamToConsole(string? args = null)
         => async s =>
         {
-            if (s.Llm.InnerModel is not LangChainPipeline.Providers.IStreamingChatModel streamingModel)
+            if (s.Llm.InnerModel is not Ouroboros.Providers.IStreamingChatModel streamingModel)
             {
                 Console.WriteLine("[error] Current model does not support streaming (IStreamingChatModel required).");
                 return s;
@@ -425,7 +425,7 @@ public static class StreamingCliSteps
     public static Step<CliPipelineState, CliPipelineState> CreateModelStream(string? args = null)
         => s =>
         {
-            if (s.Llm.InnerModel is not LangChainPipeline.Providers.IStreamingChatModel streamingModel)
+            if (s.Llm.InnerModel is not Ouroboros.Providers.IStreamingChatModel streamingModel)
             {
                 Console.WriteLine("[error] Current model does not support streaming (IStreamingChatModel required).");
                 return Task.FromResult(s);

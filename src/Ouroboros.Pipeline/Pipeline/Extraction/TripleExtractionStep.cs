@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Pipeline.Extraction;
+namespace Ouroboros.Pipeline.Extraction;
 
 using System.Text.RegularExpressions;
 

@@ -2,7 +2,7 @@
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 
-namespace LangChainPipeline.Pipeline.Replay;
+namespace Ouroboros.Pipeline.Replay;
 
 /// <summary>
 /// Engine for replaying pipeline execution with fresh context and tool re-execution.

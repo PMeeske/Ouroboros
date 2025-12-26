@@ -5,10 +5,10 @@
 // ==========================================================
 
 using System.Text;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Agent.MetaAI.SelfModel;
-using LangChainPipeline.Network;
-using LangChainPipeline.Domain.Events;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI.SelfModel;
+using Ouroboros.Network;
+using Ouroboros.Domain.Events;
 
 namespace Ouroboros.Application;
 

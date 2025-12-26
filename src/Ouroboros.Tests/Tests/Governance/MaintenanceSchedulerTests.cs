@@ -3,10 +3,10 @@
 // </copyright>
 
 using FluentAssertions;
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Domain.Governance;
+using Ouroboros.Core.Monads;
+using Ouroboros.Domain.Governance;
 
-namespace LangChainPipeline.Tests.Governance;
+namespace Ouroboros.Tests.Governance;
 
 /// <summary>
 /// Tests for the Maintenance Scheduler.

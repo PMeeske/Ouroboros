@@ -7,7 +7,7 @@
 // Automatically extracts reusable skills from research patterns
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Automatically extracts reusable pipeline skills from research analysis patterns.

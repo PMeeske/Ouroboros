@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Configuration;
+namespace Ouroboros.Core.Configuration;
 
 /// <summary>
 /// Feature flags for evolutionary metacognitive control.

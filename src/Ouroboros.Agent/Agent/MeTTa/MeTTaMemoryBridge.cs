@@ -1,7 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI;
 
-namespace LangChainPipeline.Tools.MeTTa;
+namespace Ouroboros.Tools.MeTTa;
 
 /// <summary>
 /// Bridges orchestrator memory/experience to MeTTa symbolic facts.

@@ -2,13 +2,13 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Providers;
-using LangChainPipeline.Tools;
-using LangChainPipeline.Tools.MeTTa;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Providers;
+using Ouroboros.Tools;
+using Ouroboros.Tools.MeTTa;
 
 /// <summary>
 /// Demonstrates MeTTa symbolic reasoning integration with Ouroboros.

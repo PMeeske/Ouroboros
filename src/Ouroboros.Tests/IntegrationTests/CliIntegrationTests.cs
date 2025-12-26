@@ -1,4 +1,4 @@
-using LangChainPipeline.Tests;
+using Ouroboros.Tests;
 
 namespace Ouroboros.Tests.IntegrationTests;
 

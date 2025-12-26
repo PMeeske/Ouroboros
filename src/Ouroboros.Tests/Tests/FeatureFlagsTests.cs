@@ -1,8 +1,8 @@
 using FluentAssertions;
-using LangChainPipeline.Core.Configuration;
+using Ouroboros.Core.Configuration;
 using Xunit;
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Comprehensive tests for FeatureFlags following functional programming principles.

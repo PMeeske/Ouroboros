@@ -6,7 +6,7 @@
 
 using System.Collections.Concurrent;
 
-namespace LangChainPipeline.Agent.MetaAI.SelfModel;
+namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>
 /// Implementation of predictive monitoring for agent self-calibration.

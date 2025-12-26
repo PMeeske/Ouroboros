@@ -1,10 +1,10 @@
 using System.Text;
 using System.Text.Json;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Agent.MetaAI.SelfModel;
-using LangChainPipeline.Pipeline.Branches;
-using LangChainPipeline.Pipeline.Planning;
-using LangChainPipeline.Pipeline.Verification;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI.SelfModel;
+using Ouroboros.Pipeline.Branches;
+using Ouroboros.Pipeline.Planning;
+using Ouroboros.Pipeline.Verification;
 using Ouroboros.CLI.Options;
 using Ouroboros.Tools.MeTTa;
 
@@ -376,13 +376,13 @@ public static class SelfCommands
 
         // Create sample plans for demonstration
         // In practice, these would come from user input or a planner
-        var plan1 = new LangChainPipeline.Pipeline.Verification.Plan("Read configuration files")
+        var plan1 = new Ouroboros.Pipeline.Verification.Plan("Read configuration files")
             .WithAction(new FileSystemAction("read", "/etc/config.yaml"));
 
-        var plan2 = new LangChainPipeline.Pipeline.Verification.Plan("Update system files")
+        var plan2 = new Ouroboros.Pipeline.Verification.Plan("Update system files")
             .WithAction(new FileSystemAction("write", "/etc/config.yaml"));
 
-        var plan3 = new LangChainPipeline.Pipeline.Verification.Plan("Query API endpoint")
+        var plan3 = new Ouroboros.Pipeline.Verification.Plan("Query API endpoint")
             .WithAction(new NetworkAction("get", "https://api.example.com"));
 
         var candidates = new[] { plan1, plan2, plan3 };

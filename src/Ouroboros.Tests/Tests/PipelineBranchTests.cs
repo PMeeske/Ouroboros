@@ -1,6 +1,6 @@
 using LangChain.DocumentLoaders;
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Comprehensive tests for PipelineBranch following functional programming principles.

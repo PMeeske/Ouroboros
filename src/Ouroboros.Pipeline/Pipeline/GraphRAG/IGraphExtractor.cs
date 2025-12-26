@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Pipeline.GraphRAG.Models;
+using Ouroboros.Pipeline.GraphRAG.Models;
 
-namespace LangChainPipeline.Pipeline.GraphRAG;
+namespace Ouroboros.Pipeline.GraphRAG;
 
 /// <summary>
 /// Interface for extracting knowledge graphs from documents.

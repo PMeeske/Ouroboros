@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.LawsOfForm;
+namespace Ouroboros.Core.LawsOfForm;
 
-using LangChainPipeline.Core.Kleisli;
+using Ouroboros.Core.Kleisli;
 
 /// <summary>
 /// Provides Kleisli arrows for distinction-based reasoning using the Laws of Form.

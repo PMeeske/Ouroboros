@@ -3,9 +3,9 @@
 // </copyright>
 
 using System.Text.Json;
-using LangChainPipeline.Domain.Environment;
-using LangChainPipeline.Domain.Reinforcement;
-using LangChainPipeline.Options;
+using Ouroboros.Domain.Environment;
+using Ouroboros.Domain.Reinforcement;
+using Ouroboros.Options;
 using Ouroboros.Application.Services.Reinforcement;
 using Ouroboros.Examples.Environments;
 
@@ -277,7 +277,7 @@ public static class EnvironmentCommands
             this.random = seed.HasValue ? new Random(seed.Value) : new Random();
         }
 
-        public ValueTask<LangChainPipeline.Core.Monads.Result<EnvironmentAction>> SelectActionAsync(
+        public ValueTask<Ouroboros.Core.Monads.Result<EnvironmentAction>> SelectActionAsync(
             EnvironmentState state,
             IReadOnlyList<EnvironmentAction> availableActions,
             CancellationToken cancellationToken = default)
@@ -285,22 +285,22 @@ public static class EnvironmentCommands
             if (availableActions == null || availableActions.Count == 0)
             {
                 return ValueTask.FromResult(
-                    LangChainPipeline.Core.Monads.Result<EnvironmentAction>.Failure("No available actions"));
+                    Ouroboros.Core.Monads.Result<EnvironmentAction>.Failure("No available actions"));
             }
 
             var index = this.random.Next(availableActions.Count);
             return ValueTask.FromResult(
-                LangChainPipeline.Core.Monads.Result<EnvironmentAction>.Success(availableActions[index]));
+                Ouroboros.Core.Monads.Result<EnvironmentAction>.Success(availableActions[index]));
         }
 
-        public ValueTask<LangChainPipeline.Core.Monads.Result<Unit>> UpdateAsync(
+        public ValueTask<Ouroboros.Core.Monads.Result<Unit>> UpdateAsync(
             EnvironmentState state,
             EnvironmentAction action,
             Observation observation,
             CancellationToken cancellationToken = default)
         {
             // Random policy doesn't learn
-            return ValueTask.FromResult(LangChainPipeline.Core.Monads.Result<Unit>.Success(Unit.Value));
+            return ValueTask.FromResult(Ouroboros.Core.Monads.Result<Unit>.Success(Unit.Value));
         }
     }
 }

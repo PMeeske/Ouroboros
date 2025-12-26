@@ -7,7 +7,7 @@ namespace Ouroboros.Tools;
 using System.Data;
 using System.Globalization;
 using System.Text.Json;
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Core.Monads;
 using Ouroboros.Tools.MeTTa;
 
 /// <summary>

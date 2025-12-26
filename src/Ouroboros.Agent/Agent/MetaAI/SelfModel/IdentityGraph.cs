@@ -7,7 +7,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 
-namespace LangChainPipeline.Agent.MetaAI.SelfModel;
+namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>
 /// Implementation of identity graph for agent self-modeling.

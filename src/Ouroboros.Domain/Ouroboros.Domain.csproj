@@ -5,7 +5,7 @@
     <LangVersion>14.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>LangChainPipeline</RootNamespace>
+    <RootNamespace>Ouroboros</RootNamespace>
     <AssemblyName>Ouroboros.Domain</AssemblyName>
     <Product>Ouroboros Domain</Product>
     <Description>Domain models, events, and state management for Ouroboros</Description>

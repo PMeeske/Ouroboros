@@ -7,7 +7,7 @@
 
 using System.Diagnostics;
 
-namespace LangChainPipeline.Agent;
+namespace Ouroboros.Agent;
 
 /// <summary>
 /// Performance-aware chat model that uses an orchestrator to select

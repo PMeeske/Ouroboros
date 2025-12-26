@@ -3,7 +3,7 @@
 // </copyright>
 
 using LangChain.Databases;
-using LangChainPipeline.Core.Configuration;
+using Ouroboros.Core.Configuration;
 
 namespace Ouroboros.Application;
 

@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.Text;
-using LangChainPipeline.Roslynator.Providers;
+using Ouroboros.Roslynator.Providers;
 using System.Collections.Immutable;
 
 namespace Ouroboros.Application.CodeGeneration;
@@ -427,7 +427,7 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
-namespace LangChainPipeline.SourceGenerators
+namespace Ouroboros.SourceGenerators
 {{
     [Generator]
     public class {generatorName} : ISourceGenerator

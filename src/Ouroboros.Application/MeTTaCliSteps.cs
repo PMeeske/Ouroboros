@@ -681,18 +681,18 @@ Generate 5-10 relevant atoms:";
             s.Branch = s.Branch.WithReasoning(new Draft(initialContent), "MeTTa initial output", new List<ToolExecution>());
 
             // Now apply self-critique using the standard agent
-            LangChainPipeline.Agent.SelfCritiqueAgent agent = new(s.Llm, s.Tools, s.Embed);
+            Ouroboros.Agent.SelfCritiqueAgent agent = new(s.Llm, s.Tools, s.Embed);
 
             // We need to extract topic and query
             string topic = !string.IsNullOrWhiteSpace(s.Topic) ? s.Topic : "MeTTa reasoning output";
             string query = !string.IsNullOrWhiteSpace(s.Query) ? s.Query : topic;
 
-            Result<LangChainPipeline.Agent.SelfCritiqueResult, string> result =
+            Result<Ouroboros.Agent.SelfCritiqueResult, string> result =
                 await agent.GenerateWithCritiqueAsync(s.Branch, topic, query, iterations, s.RetrievalK);
 
             if (result.IsSuccess)
             {
-                LangChainPipeline.Agent.SelfCritiqueResult critiqueResult = result.Value;
+                Ouroboros.Agent.SelfCritiqueResult critiqueResult = result.Value;
                 s.Branch = critiqueResult.Branch;
 
                 // Format output to show the critique process

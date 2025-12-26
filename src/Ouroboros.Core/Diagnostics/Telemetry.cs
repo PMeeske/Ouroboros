@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Diagnostics;
+namespace Ouroboros.Diagnostics;
 
 using System.Collections.Concurrent;
 

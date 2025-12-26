@@ -6,9 +6,9 @@
 
 using System.Diagnostics;
 using System.Reflection;
-using LangChainPipeline.Core.Steps;
-using LangChainPipeline.Domain.Events;
-using LangChainPipeline.Pipeline.Branches;
+using Ouroboros.Core.Steps;
+using Ouroboros.Domain.Events;
+using Ouroboros.Pipeline.Branches;
 
 namespace Ouroboros.Application;
 

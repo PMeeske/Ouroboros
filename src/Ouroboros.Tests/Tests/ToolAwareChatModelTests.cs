@@ -1,4 +1,4 @@
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Tests for ToolAwareChatModel covering tool invocation and error handling.

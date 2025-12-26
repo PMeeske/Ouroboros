@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace LangChainPipeline.Specs.Steps;
+namespace Ouroboros.Specs.Steps;
 
 /// <summary>
 /// Step definitions for AndroidBehavior feature simulating CLI executor behavior,

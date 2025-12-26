@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Domain;
+namespace Ouroboros.Domain;
 
 /// <summary>
 /// Represents the execution result of a tool invocation in the pipeline.

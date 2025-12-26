@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Domain.Reinforcement;
+namespace Ouroboros.Domain.Reinforcement;
 
 /// <summary>
 /// Unit type representing a void result in functional programming.

@@ -5,7 +5,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 
-namespace LangChainPipeline.Domain.Persistence;
+namespace Ouroboros.Domain.Persistence;
 
 /// <summary>
 /// File-based implementation of thought storage.

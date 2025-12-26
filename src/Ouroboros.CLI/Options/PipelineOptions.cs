@@ -1,7 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using CommandLine;
 
-namespace LangChainPipeline.Options;
+namespace Ouroboros.Options;
 
 [Verb("pipeline", HelpText = "Run a pipeline DSL. Use --voice for voice mode.")]
 public sealed class PipelineOptions : IVoiceOptions

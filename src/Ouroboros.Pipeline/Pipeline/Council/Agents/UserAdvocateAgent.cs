@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Pipeline.Council.Agents;
+namespace Ouroboros.Pipeline.Council.Agents;
 
 /// <summary>
 /// The User Advocate agent represents end-user perspective, usability, and accessibility.

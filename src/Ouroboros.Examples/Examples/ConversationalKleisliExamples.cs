@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
 /// <summary>
 /// Examples demonstrating the integration of LangChain memory concepts with Kleisli pipes.

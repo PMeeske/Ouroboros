@@ -3,7 +3,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
 
-namespace LangChainPipeline.Pipeline.Ingestion.Zip;
+namespace Ouroboros.Pipeline.Ingestion.Zip;
 
 /// <summary>
 /// Specifies the type of content found in a zip archive entry.

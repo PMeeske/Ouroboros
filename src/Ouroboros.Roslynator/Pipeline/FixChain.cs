@@ -1,7 +1,7 @@
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 
-namespace LangChainPipeline.Roslynator.Pipeline;
+namespace Ouroboros.Roslynator.Pipeline;
 
 /// <summary>
 /// Template for building a lazy fix chain. Subclasses implement DefinePipeline which composes Futures.

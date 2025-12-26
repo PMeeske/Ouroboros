@@ -2,11 +2,11 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Processing;
+namespace Ouroboros.Core.Processing;
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Core.Monads;
 
 /// <summary>
 /// Interface for processing large contexts by recursively chunking them into smaller pieces.

@@ -3,8 +3,8 @@
 // </copyright>
 
 using System.Collections.Immutable;
-using LangChainPipeline.Domain.States;
-using LangChainPipeline.Network;
+using Ouroboros.Domain.States;
+using Ouroboros.Network;
 
 namespace Ouroboros.Examples;
 

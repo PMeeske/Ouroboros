@@ -8,15 +8,15 @@ using System.Text;
 using System.Text.RegularExpressions;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Domain;
-using LangChainPipeline.Network;
-using LangChainPipeline.Options;
-using LangChainPipeline.Providers;
-using LangChainPipeline.Providers.SpeechToText;
-using LangChainPipeline.Providers.TextToSpeech;
-using LangChainPipeline.Speech;
+using Ouroboros.Agent;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Domain;
+using Ouroboros.Network;
+using Ouroboros.Options;
+using Ouroboros.Providers;
+using Ouroboros.Providers.SpeechToText;
+using Ouroboros.Providers.TextToSpeech;
+using Ouroboros.Speech;
 using Ouroboros.Application;
 using Ouroboros.Application.Personality;
 using Ouroboros.Application.Services;
@@ -334,7 +334,7 @@ public static class ImmersiveMode
             if (existingBranch != null)
             {
                 var updatedBranch = existingBranch.WithReasoning(
-                    new LangChainPipeline.Domain.States.Thinking(response),
+                    new Ouroboros.Domain.States.Thinking(response),
                     prompt,
                     null);
                 return (response, updatedBranch);

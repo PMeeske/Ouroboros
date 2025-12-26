@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Genetic.Abstractions;
+namespace Ouroboros.Genetic.Abstractions;
 
 /// <summary>
 /// Represents an evolving solution in a genetic algorithm.

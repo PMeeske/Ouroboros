@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
-namespace LangChainPipeline.Core.Steps;
+namespace Ouroboros.Core.Steps;
 
 /// <summary>
 /// Custom exception thrown when a step execution fails.

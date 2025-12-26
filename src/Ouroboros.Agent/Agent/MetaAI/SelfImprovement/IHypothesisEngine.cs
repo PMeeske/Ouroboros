@@ -4,7 +4,7 @@
 // Scientific reasoning and hypothesis testing
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a hypothesis about system behavior or domain knowledge.

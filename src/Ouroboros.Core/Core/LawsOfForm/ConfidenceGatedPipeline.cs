@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.LawsOfForm;
+namespace Ouroboros.Core.LawsOfForm;
 
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Core.Steps;
+using Ouroboros.Core.Monads;
+using Ouroboros.Core.Steps;
 
 /// <summary>
 /// Pipeline steps for gating LLM responses based on confidence levels.

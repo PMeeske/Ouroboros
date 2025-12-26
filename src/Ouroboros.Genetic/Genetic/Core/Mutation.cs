@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Genetic.Core;
+namespace Ouroboros.Genetic.Core;
 
-using LangChainPipeline.Genetic.Abstractions;
+using Ouroboros.Genetic.Abstractions;
 
 /// <summary>
 /// Implements mutation operations for genetic algorithms.

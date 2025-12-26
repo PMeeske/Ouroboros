@@ -5,10 +5,10 @@
 // ==========================================================
 
 using System.Text.Json;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Tools.MeTTa;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Tools.MeTTa;
 
-namespace LangChainPipeline.Tools;
+namespace Ouroboros.Tools;
 
 /// <summary>
 /// Tool for enumerating valid next execution nodes using symbolic MeTTa reasoning.

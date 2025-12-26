@@ -1,6 +1,6 @@
 using LangChain.DocumentLoaders;
 
-namespace LangChainPipeline.Domain.Vectors;
+namespace Ouroboros.Domain.Vectors;
 
 /// <summary>
 /// Extension methods for vector store operations.

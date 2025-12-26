@@ -1,9 +1,9 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-namespace LangChainPipeline.Domain;
+namespace Ouroboros.Domain;
 
 /// <summary>
 /// Machine capabilities detection utilities.
-/// Note: Uses global:: prefix for System.Environment to avoid conflict with LangChainPipeline.Domain.Environment namespace.
+/// Note: Uses global:: prefix for System.Environment to avoid conflict with Ouroboros.Domain.Environment namespace.
 /// </summary>
 public static class MachineCapabilities
 {

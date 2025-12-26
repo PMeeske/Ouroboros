@@ -2,11 +2,11 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using FluentAssertions;
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Tools;
+using Ouroboros.Core.Monads;
+using Ouroboros.Tools;
 using Xunit;
 
 /// <summary>

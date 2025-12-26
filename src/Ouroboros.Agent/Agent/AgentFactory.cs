@@ -1,7 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-using LangChainPipeline.Diagnostics;
+using Ouroboros.Diagnostics;
 
-namespace LangChainPipeline.Agent;
+namespace Ouroboros.Agent;
 
 /// <summary>
 /// Simplified agent harness. The historical version orchestrated complex

@@ -5,7 +5,7 @@
 
 using System.Collections.Concurrent;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents an agent in the distributed system.

@@ -1,4 +1,4 @@
-namespace LangChainPipeline.Roslynator.Pipeline;
+namespace Ouroboros.Roslynator.Pipeline;
 
 /// <summary>
 /// Lazy Future: wraps a function that returns a Task&lt;T&gt;.

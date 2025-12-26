@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Domain.Events;
+namespace Ouroboros.Domain.Events;
 
 /// <summary>
 /// Event capturing the execution of a pipeline step with its token metadata.

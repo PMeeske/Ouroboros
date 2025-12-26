@@ -26,13 +26,13 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LangChainPipeline.Core.Steps;
-using LangChainPipeline.Pipeline.Reasoning;
-using LangChainPipeline.Providers;
-using LangChainPipeline.Tools;
-using LangChainPipeline.VectorStores;
+using Ouroboros.Core.Steps;
+using Ouroboros.Pipeline.Reasoning;
+using Ouroboros.Providers;
+using Ouroboros.Tools;
+using Ouroboros.VectorStores;
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
 /// <summary>
 /// Represents an optimization proposal with metrics.

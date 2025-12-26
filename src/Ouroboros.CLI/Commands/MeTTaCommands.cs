@@ -4,12 +4,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Diagnostics;
-using LangChainPipeline.Options;
-using LangChainPipeline.Providers;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Diagnostics;
+using Ouroboros.Options;
+using Ouroboros.Providers;
 using Ouroboros.Application.Services;
-using IEmbeddingModel = LangChainPipeline.Domain.IEmbeddingModel;
+using IEmbeddingModel = Ouroboros.Domain.IEmbeddingModel;
 
 namespace Ouroboros.CLI.Commands;
 

@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Genetic.Extensions;
+namespace Ouroboros.Genetic.Extensions;
 
-using LangChainPipeline.Genetic.Abstractions;
-using LangChainPipeline.Genetic.Core;
+using Ouroboros.Genetic.Abstractions;
+using Ouroboros.Genetic.Core;
 
 /// <summary>
 /// Provides genetic evolution as a composable pipeline step.

@@ -1,9 +1,9 @@
 using FluentAssertions;
 using LangChain.DocumentLoaders;
-using LangChainPipeline.Pipeline.Branches;
+using Ouroboros.Pipeline.Branches;
 using Xunit;
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Comprehensive tests for BranchHash following functional programming principles.

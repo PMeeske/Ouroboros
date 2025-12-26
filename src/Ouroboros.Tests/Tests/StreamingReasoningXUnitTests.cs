@@ -1,4 +1,4 @@
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 public class StreamingReasoningXUnitTests
 {

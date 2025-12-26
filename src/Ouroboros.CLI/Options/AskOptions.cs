@@ -1,7 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using CommandLine;
 
-namespace LangChainPipeline.Options;
+namespace Ouroboros.Options;
 
 [Verb("ask", HelpText = "Ask the LLM. Use --rag to enable minimal RAG. Use --voice for voice mode.")]
 public sealed class AskOptions : IVoiceOptions

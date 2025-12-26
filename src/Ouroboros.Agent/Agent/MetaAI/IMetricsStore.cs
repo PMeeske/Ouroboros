@@ -4,7 +4,7 @@
 // Defines contract for persistent storage of performance metrics
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Interface for persistent storage and retrieval of performance metrics.

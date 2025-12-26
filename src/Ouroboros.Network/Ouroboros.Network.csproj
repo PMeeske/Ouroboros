@@ -5,7 +5,7 @@
     <LangVersion>14.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>LangChainPipeline</RootNamespace>
+    <RootNamespace>Ouroboros</RootNamespace>
     <AssemblyName>Ouroboros.Network</AssemblyName>
     <Product>Ouroboros Network State</Product>
     <Description>Emergent network state abstractions with Merkle-DAG reasoning history</Description>

@@ -61,15 +61,15 @@ public static class ReasoningCliSteps
             }
 
             // Create self-critique agent
-            LangChainPipeline.Agent.SelfCritiqueAgent agent = new(s.Llm, s.Tools, s.Embed);
+            Ouroboros.Agent.SelfCritiqueAgent agent = new(s.Llm, s.Tools, s.Embed);
 
             // Generate with critique
-            Result<LangChainPipeline.Agent.SelfCritiqueResult, string> result =
+            Result<Ouroboros.Agent.SelfCritiqueResult, string> result =
                 await agent.GenerateWithCritiqueAsync(s.Branch, topic, query, iterations, s.RetrievalK);
 
             if (result.IsSuccess)
             {
-                LangChainPipeline.Agent.SelfCritiqueResult critiqueResult = result.Value;
+                Ouroboros.Agent.SelfCritiqueResult critiqueResult = result.Value;
                 s.Branch = critiqueResult.Branch;
 
                 // Format output to show Draft → Critique → Improved sections
@@ -110,7 +110,7 @@ public static class ReasoningCliSteps
     public static Step<CliPipelineState, CliPipelineState> UseStreamingSelfCritique(string? args = null)
         => async s =>
         {
-            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
+            Ouroboros.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as Ouroboros.Providers.IStreamingChatModel;
 
             if (streamingModel == null)
             {
@@ -122,7 +122,7 @@ public static class ReasoningCliSteps
                 if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
                     (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
                 {
-                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                    streamingModel = new Ouroboros.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
                 }
             }
 
@@ -236,7 +236,7 @@ public static class ReasoningCliSteps
     public static Step<CliPipelineState, CliPipelineState> UseStreamingDraft(string? args = null)
         => async s =>
         {
-            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
+            Ouroboros.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as Ouroboros.Providers.IStreamingChatModel;
 
             if (streamingModel == null)
             {
@@ -248,7 +248,7 @@ public static class ReasoningCliSteps
                 if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
                     (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
                 {
-                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                    streamingModel = new Ouroboros.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
                 }
             }
 
@@ -282,7 +282,7 @@ public static class ReasoningCliSteps
     public static Step<CliPipelineState, CliPipelineState> UseStreamingCritique(string? args = null)
         => async s =>
         {
-            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
+            Ouroboros.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as Ouroboros.Providers.IStreamingChatModel;
 
             if (streamingModel == null)
             {
@@ -293,7 +293,7 @@ public static class ReasoningCliSteps
                 if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
                     (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
                 {
-                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                    streamingModel = new Ouroboros.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
                 }
             }
 
@@ -327,7 +327,7 @@ public static class ReasoningCliSteps
     public static Step<CliPipelineState, CliPipelineState> UseStreamingImprove(string? args = null)
         => async s =>
         {
-            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
+            Ouroboros.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as Ouroboros.Providers.IStreamingChatModel;
 
             if (streamingModel == null)
             {
@@ -338,7 +338,7 @@ public static class ReasoningCliSteps
                 if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
                     (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
                 {
-                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                    streamingModel = new Ouroboros.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
                 }
             }
 
@@ -373,7 +373,7 @@ public static class ReasoningCliSteps
     public static Step<CliPipelineState, CliPipelineState> UseStreamingPipeline(string? args = null)
         => async s =>
         {
-            LangChainPipeline.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as LangChainPipeline.Providers.IStreamingChatModel;
+            Ouroboros.Providers.IStreamingChatModel? streamingModel = s.Llm.InnerModel as Ouroboros.Providers.IStreamingChatModel;
 
             if (streamingModel == null)
             {
@@ -384,7 +384,7 @@ public static class ReasoningCliSteps
                 if (!string.IsNullOrEmpty(endpoint) && !string.IsNullOrEmpty(apiKey) &&
                     (endpoint.Contains("litellm", StringComparison.OrdinalIgnoreCase) || endpoint.Contains("3asabc.de", StringComparison.OrdinalIgnoreCase)))
                 {
-                    streamingModel = new LangChainPipeline.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
+                    streamingModel = new Ouroboros.Providers.LiteLLMChatModel(endpoint, apiKey, modelName);
                 }
             }
 

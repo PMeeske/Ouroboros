@@ -4,7 +4,7 @@
 // Fluent builder for orchestrator with metacognitive components
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Enhanced builder for creating orchestrator with Phase 2 metacognitive capabilities.

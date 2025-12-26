@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.LangChain;
+namespace Ouroboros.Core.LangChain;
 /// <summary>
 /// LangChain-integrated conversation pipeline that properly uses official LangChain chains
 /// integrated with the existing monadic pipeline patterns.

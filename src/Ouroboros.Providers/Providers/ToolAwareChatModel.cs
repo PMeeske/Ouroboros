@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Providers;
+namespace Ouroboros.Providers;
 
 /// <summary>
 /// A chat model wrapper that can execute tools based on special tool invocation syntax in responses.

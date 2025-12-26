@@ -5,11 +5,11 @@
 
 using System.Diagnostics;
 using FluentAssertions;
-using LangChainPipeline.Agent;
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.Agent;
+using Ouroboros.Agent.MetaAI;
 using Xunit;
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 public sealed class OrchestrationTracingTests : IDisposable
 {

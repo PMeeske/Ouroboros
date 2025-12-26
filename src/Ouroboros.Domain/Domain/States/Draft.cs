@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Domain.States;
+namespace Ouroboros.Domain.States;
 
 /// <summary>
 /// Represents an initial draft response in the reasoning pipeline.

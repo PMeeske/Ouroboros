@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Core.Steps;
+using Ouroboros.Core.Steps;
 
-namespace LangChainPipeline.Pipeline.Council;
+namespace Ouroboros.Pipeline.Council;
 
 /// <summary>
 /// Provides arrow functions for council debate operations in the pipeline.

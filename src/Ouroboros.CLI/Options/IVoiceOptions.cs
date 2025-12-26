@@ -1,6 +1,6 @@
 using CommandLine;
 
-namespace LangChainPipeline.Options;
+namespace Ouroboros.Options;
 
 /// <summary>
 /// Interface for commands that support voice mode.

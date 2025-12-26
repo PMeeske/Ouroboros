@@ -2,9 +2,9 @@
 // Copyright (c) Adaptive Systems Inc. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
-using LangChainPipeline.Agent;
+using Ouroboros.Agent;
 using Xunit;
 using FluentAssertions;
 

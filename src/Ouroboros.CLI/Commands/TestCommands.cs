@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LangChainPipeline.Options;
+using Ouroboros.Options;
 using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.CLI.Commands;
@@ -23,49 +23,49 @@ public static class TestCommands
 
             if (o.All || o.IntegrationOnly)
             {
-                // await LangChainPipeline.Tests.OllamaCloudIntegrationTests.RunAllTests();
+                // await Ouroboros.Tests.OllamaCloudIntegrationTests.RunAllTests();
                 Console.WriteLine();
             }
 
             if (o.All || o.CliOnly)
             {
-                // await LangChainPipeline.Tests.CliEndToEndTests.RunAllTests();
+                // await Ouroboros.Tests.CliEndToEndTests.RunAllTests();
                 Console.WriteLine();
             }
 
             if (o.All)
             {
-                // await LangChainPipeline.Tests.TrackedVectorStoreTests.RunAllTests();
+                // await Ouroboros.Tests.TrackedVectorStoreTests.RunAllTests();
                 Console.WriteLine();
 
-                // LangChainPipeline.Tests.MemoryContextTests.RunAllTests();
+                // Ouroboros.Tests.MemoryContextTests.RunAllTests();
                 Console.WriteLine();
 
-                // await LangChainPipeline.Tests.LangChainConversationTests.RunAllTests();
+                // await Ouroboros.Tests.LangChainConversationTests.RunAllTests();
                 Console.WriteLine();
 
                 // Run meta-AI tests
-                // await LangChainPipeline.Tests.MetaAiTests.RunAllTests();
+                // await Ouroboros.Tests.MetaAiTests.RunAllTests();
                 Console.WriteLine();
 
                 // Run Meta-AI v2 tests
-                // await LangChainPipeline.Tests.MetaAIv2Tests.RunAllTests();
+                // await Ouroboros.Tests.MetaAIv2Tests.RunAllTests();
                 Console.WriteLine();
 
                 // Run Meta-AI Convenience Layer tests
-                // await LangChainPipeline.Tests.MetaAIConvenienceTests.RunAll();
+                // await Ouroboros.Tests.MetaAIConvenienceTests.RunAll();
                 Console.WriteLine();
 
                 // Run orchestrator tests
-                // await LangChainPipeline.Tests.OrchestratorTests.RunAllTests();
+                // await Ouroboros.Tests.OrchestratorTests.RunAllTests();
                 Console.WriteLine();
 
                 // Run MeTTa integration tests
-                // await LangChainPipeline.Tests.MeTTaTests.RunAllTests();
+                // await Ouroboros.Tests.MeTTaTests.RunAllTests();
                 Console.WriteLine();
 
                 // Run MeTTa Orchestrator v3.0 tests
-                // await LangChainPipeline.Tests.MeTTaOrchestratorTests.RunAllTests();
+                // await Ouroboros.Tests.MeTTaOrchestratorTests.RunAllTests();
                 Console.WriteLine();
             }
 

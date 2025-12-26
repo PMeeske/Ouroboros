@@ -3,7 +3,7 @@
 // Evaluation Harness - Measure Meta-AI performance
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Evaluation metrics for a single test case.

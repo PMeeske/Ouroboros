@@ -2,7 +2,7 @@ using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using Ouroboros.Application;
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Tests for the guided installation step and dependency exception handling functionality.

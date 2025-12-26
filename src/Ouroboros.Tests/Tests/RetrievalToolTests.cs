@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using System;
 using System.Collections.Generic;
@@ -10,10 +10,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using LangChain.Databases;
-using LangChainPipeline.Domain;
-using LangChainPipeline.Domain.Vectors;
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Tools;
+using Ouroboros.Domain;
+using Ouroboros.Domain.Vectors;
+using Ouroboros.Core.Monads;
+using Ouroboros.Tools;
 using Xunit;
 
 /// <summary>

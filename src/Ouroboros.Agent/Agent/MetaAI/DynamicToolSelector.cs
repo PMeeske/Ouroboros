@@ -6,7 +6,7 @@
 
 using Ouroboros.Tools;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Provides dynamic tool selection based on use case, context, and tool capabilities.

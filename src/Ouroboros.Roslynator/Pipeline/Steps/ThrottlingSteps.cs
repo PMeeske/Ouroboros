@@ -1,4 +1,6 @@
-namespace LangChainPipeline.Roslynator.Pipeline.Steps;
+using FixState = Ouroboros.Roslynator.Pipeline.FixState;
+
+namespace Ouroboros.Roslynator.Pipeline.Steps;
 
 /// <summary>
 /// Semaphore-based throttling helpers — wrap an async step to limit concurrency.

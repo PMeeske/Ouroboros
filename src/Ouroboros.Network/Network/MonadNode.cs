@@ -5,7 +5,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace LangChainPipeline.Network;
+namespace Ouroboros.Network;
 
 /// <summary>
 /// Represents a reified monadic value as a data object in the Merkle-DAG.

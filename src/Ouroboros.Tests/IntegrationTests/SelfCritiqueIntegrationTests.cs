@@ -2,14 +2,14 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests.IntegrationTests;
+namespace Ouroboros.Tests.IntegrationTests;
 
 using LangChain.DocumentLoaders;
-using LangChainPipeline.Agent;
-using LangChainPipeline.Domain.Vectors;
-using LangChainPipeline.Pipeline.Branches;
-using LangChainPipeline.Providers;
-using LangChainPipeline.Tools;
+using Ouroboros.Agent;
+using Ouroboros.Domain.Vectors;
+using Ouroboros.Pipeline.Branches;
+using Ouroboros.Providers;
+using Ouroboros.Tools;
 using Xunit;
 
 /// <summary>
@@ -58,7 +58,7 @@ public class SelfCritiqueIntegrationTests
         Assert.NotEqual(result.Value.Draft, result.Value.ImprovedResponse);
         
         // Verify event chain is complete
-        var events = result.Value.Branch.Events.OfType<LangChainPipeline.Domain.Events.ReasoningStep>().ToList();
+        var events = result.Value.Branch.Events.OfType<Ouroboros.Domain.Events.ReasoningStep>().ToList();
         Assert.True(events.Count >= 5, $"Expected at least 5 events (Draft + 2*(Critique + Improve)), got {events.Count}");
     }
 
@@ -120,9 +120,9 @@ public class SelfCritiqueIntegrationTests
         
         // Get all FinalSpec states to check progression
         var improvements = result.Value.Branch.Events
-            .OfType<LangChainPipeline.Domain.Events.ReasoningStep>()
+            .OfType<Ouroboros.Domain.Events.ReasoningStep>()
             .Select(e => e.State)
-            .OfType<LangChainPipeline.Domain.States.FinalSpec>()
+            .OfType<Ouroboros.Domain.States.FinalSpec>()
             .ToList();
         
         // Should have 3 improvements (one per iteration)
@@ -178,7 +178,7 @@ public class SelfCritiqueIntegrationTests
         return new ToolAwareChatModel(mockModel, new ToolRegistry());
     }
 
-    private static LangChainPipeline.Domain.IEmbeddingModel CreateMockEmbedding()
+    private static Ouroboros.Domain.IEmbeddingModel CreateMockEmbedding()
     {
         return new MockEmbeddingModel();
     }
@@ -233,7 +233,7 @@ public class SelfCritiqueIntegrationTests
         }
     }
 
-    private class MockEmbeddingModel : LangChainPipeline.Domain.IEmbeddingModel
+    private class MockEmbeddingModel : Ouroboros.Domain.IEmbeddingModel
     {
         public async Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
         {

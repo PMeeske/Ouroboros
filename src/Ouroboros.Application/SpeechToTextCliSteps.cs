@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Providers.SpeechToText;
+using Ouroboros.Providers.SpeechToText;
 
 namespace Ouroboros.Application;
 

@@ -2,14 +2,14 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests.Genetic;
+namespace Ouroboros.Tests.Genetic;
 
 using FluentAssertions;
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Core.Steps;
-using LangChainPipeline.Genetic.Abstractions;
-using LangChainPipeline.Genetic.Core;
-using LangChainPipeline.Genetic.Extensions;
+using Ouroboros.Core.Monads;
+using Ouroboros.Core.Steps;
+using Ouroboros.Genetic.Abstractions;
+using Ouroboros.Genetic.Core;
+using Ouroboros.Genetic.Extensions;
 using Xunit;
 
 /// <summary>

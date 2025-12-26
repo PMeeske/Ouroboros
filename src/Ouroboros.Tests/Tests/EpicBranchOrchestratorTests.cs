@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests.Agent;
+namespace Ouroboros.Tests.Agent;
 
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Core.Monads;
 using Xunit;
 
 /// <summary>

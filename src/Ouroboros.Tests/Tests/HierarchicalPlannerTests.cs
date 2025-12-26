@@ -2,9 +2,9 @@
 // Copyright (c) Adaptive Systems Inc. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI;
 using Xunit;
 using FluentAssertions;
 

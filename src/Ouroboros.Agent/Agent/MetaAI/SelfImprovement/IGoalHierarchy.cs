@@ -4,7 +4,7 @@
 // Hierarchical goal decomposition and value alignment
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Types of goals in the hierarchy.

@@ -6,7 +6,7 @@
 
 using System.Collections.Concurrent;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Implementation of hypothesis generation and scientific reasoning.

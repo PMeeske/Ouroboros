@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
 /// <summary>
 /// Example demonstrating conversational pipeline usage as shown in the PR review.

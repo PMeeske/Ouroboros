@@ -2,7 +2,7 @@
 using LangChain.DocumentLoaders;
 using System.Reactive.Linq;
 
-namespace LangChainPipeline.Pipeline.Reasoning;
+namespace Ouroboros.Pipeline.Reasoning;
 
 /// <summary>
 /// Provides arrow functions for reasoning operations in the pipeline.
@@ -275,7 +275,7 @@ public static class ReasoningArrows
     /// Supports agentic tool calls within the thinking process.
     /// </summary>
     public static IObservable<(string chunk, PipelineBranch branch)> StreamingThinkingArrow(
-        LangChainPipeline.Providers.IStreamingChatModel streamingModel,
+        Ouroboros.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
         string topic,
@@ -392,7 +392,7 @@ public static class ReasoningArrows
     /// <param name="k">Number of documents to retrieve.</param>
     /// <returns>Observable sequence of (chunk, branch) tuples.</returns>
     public static IObservable<(string chunk, PipelineBranch branch)> StreamingDraftArrow(
-        LangChainPipeline.Providers.IStreamingChatModel streamingModel,
+        Ouroboros.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
         PipelineBranch inputBranch,
@@ -428,7 +428,7 @@ public static class ReasoningArrows
          /// Creates a streaming critique arrow that emits critique chunks in real-time.
          /// </summary>
     public static IObservable<(string chunk, PipelineBranch branch)> StreamingCritiqueArrow(
-        LangChainPipeline.Providers.IStreamingChatModel streamingModel,
+        Ouroboros.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
         PipelineBranch inputBranch,
@@ -470,7 +470,7 @@ public static class ReasoningArrows
     /// Creates a streaming improvement arrow that emits improvement chunks in real-time.
     /// </summary>
     public static IObservable<(string chunk, PipelineBranch branch)> StreamingImproveArrow(
-        LangChainPipeline.Providers.IStreamingChatModel streamingModel,
+        Ouroboros.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
         PipelineBranch inputBranch,
@@ -518,7 +518,7 @@ public static class ReasoningArrows
     /// Emits incremental updates as reasoning progresses through each stage.
     /// </summary>
     public static IObservable<(string stage, string chunk, PipelineBranch branch)> StreamingReasoningPipeline(
-        LangChainPipeline.Providers.IStreamingChatModel streamingModel,
+        Ouroboros.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
         string topic,

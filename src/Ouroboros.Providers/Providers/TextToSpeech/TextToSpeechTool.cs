@@ -3,9 +3,9 @@
 // </copyright>
 
 using System.Text.Json;
-using LangChainPipeline.Providers.TextToSpeech;
+using Ouroboros.Providers.TextToSpeech;
 
-namespace LangChainPipeline.Providers;
+namespace Ouroboros.Providers;
 
 /// <summary>
 /// Tool for synthesizing speech from text using text-to-speech services.

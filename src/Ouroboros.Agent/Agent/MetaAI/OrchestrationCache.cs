@@ -7,9 +7,9 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Core.Monads;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Interface for orchestration decision caching.

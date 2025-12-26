@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Genetic.Abstractions;
+namespace Ouroboros.Genetic.Abstractions;
 
 /// <summary>
 /// Evaluates the fitness of a chromosome for the genetic algorithm.

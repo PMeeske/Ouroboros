@@ -1,5 +1,5 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-namespace LangChainPipeline.Pipeline.Reasoning;
+namespace Ouroboros.Pipeline.Reasoning;
 
 public static class Prompts
 {

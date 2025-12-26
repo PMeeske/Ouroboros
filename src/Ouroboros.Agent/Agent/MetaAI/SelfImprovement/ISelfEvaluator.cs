@@ -4,7 +4,7 @@
 // Metacognitive monitoring and self-improvement
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a self-assessment of agent performance.

@@ -6,7 +6,7 @@
 
 using System.Collections.Concurrent;
 
-namespace LangChainPipeline.Agent.MetaAI.Affect;
+namespace Ouroboros.Agent.MetaAI.Affect;
 
 /// <summary>
 /// Implementation of affect-driven priority modulation.

@@ -8,7 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json;
-using LangChainPipeline.Pipeline.Reasoning;
+using Ouroboros.Pipeline.Reasoning;
 using Ouroboros.Tools;
 
 /// <summary>

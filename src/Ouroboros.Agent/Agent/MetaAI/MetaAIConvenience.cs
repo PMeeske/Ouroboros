@@ -4,7 +4,7 @@
 // ==========================================================
 
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Convenience methods for quickly setting up and using Meta-AI orchestrators.

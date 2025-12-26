@@ -1,6 +1,6 @@
-using LangChainPipeline.Core.Configuration;
+using Ouroboros.Core.Configuration;
 
-namespace LangChainPipeline.Specs.Steps;
+namespace Ouroboros.Specs.Steps;
 
 [Binding]
 public class VectorStoreFactorySteps

@@ -3,10 +3,10 @@
 // </copyright>
 
 using System.Collections.Concurrent;
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Domain.Environment;
+using Ouroboros.Core.Monads;
+using Ouroboros.Domain.Environment;
 
-namespace LangChainPipeline.Domain.Reinforcement;
+namespace Ouroboros.Domain.Reinforcement;
 
 /// <summary>
 /// Epsilon-greedy policy for exploration-exploitation balance.

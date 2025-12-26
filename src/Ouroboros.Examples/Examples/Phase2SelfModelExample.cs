@@ -2,8 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Agent.MetaAI.SelfModel;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI.SelfModel;
 
 namespace Ouroboros.Examples.Examples;
 

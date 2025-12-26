@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
 /// <summary>
 /// Demonstration of enhanced monadic operations and functional programming concepts.

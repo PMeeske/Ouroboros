@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Security.Authorization;
+namespace Ouroboros.Core.Security.Authorization;
 
-using LangChainPipeline.Core.Security.Authentication;
+using Ouroboros.Core.Security.Authentication;
 
 /// <summary>
 /// Result of an authorization check.

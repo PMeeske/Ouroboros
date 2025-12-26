@@ -1,7 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using CommandLine;
 
-namespace LangChainPipeline.Options;
+namespace Ouroboros.Options;
 
 [Verb("metta", HelpText = "Run MeTTa orchestrator v3.0 with symbolic reasoning. Use --voice for voice mode.")]
 public sealed class MeTTaOptions : IVoiceOptions

@@ -7,7 +7,7 @@
 // Dynamically exposes learned skills as DSL pipeline tokens
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Extends the DSL pipeline with dynamically learned skills from research and experience.

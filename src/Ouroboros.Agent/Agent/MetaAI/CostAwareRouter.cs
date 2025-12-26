@@ -3,7 +3,7 @@
 // Cost-Aware Router - Balance quality vs. cost
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents cost information for a model or operation.

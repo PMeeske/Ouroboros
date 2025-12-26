@@ -2,11 +2,11 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Genetic.Extensions;
+namespace Ouroboros.Genetic.Extensions;
 
-using LangChainPipeline.Genetic.Abstractions;
-using LangChainPipeline.Genetic.Core;
-using LangChainPipeline.Genetic.Steps;
+using Ouroboros.Genetic.Abstractions;
+using Ouroboros.Genetic.Core;
+using Ouroboros.Genetic.Steps;
 
 /// <summary>
 /// Extension methods for integrating genetic algorithms into monadic pipelines.

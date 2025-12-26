@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Domain.Environment;
+namespace Ouroboros.Domain.Environment;
 
 /// <summary>
 /// Represents an action taken in an environment.

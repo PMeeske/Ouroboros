@@ -2,11 +2,11 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent;
+using Ouroboros.Agent;
 using Ouroboros.Application;
 using Ouroboros.Application.Tools;
 using Ouroboros.Tools;

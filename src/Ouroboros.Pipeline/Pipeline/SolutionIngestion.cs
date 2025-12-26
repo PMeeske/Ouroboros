@@ -5,7 +5,7 @@ using LangChain.Splitters.Text;
 
 // TrackedVectorStore
 
-namespace LangChainPipeline.Pipeline.Ingestion;
+namespace Ouroboros.Pipeline.Ingestion;
 
 /// <summary>
 /// Specialized ingestion for .NET solutions. Produces vector embeddings for:

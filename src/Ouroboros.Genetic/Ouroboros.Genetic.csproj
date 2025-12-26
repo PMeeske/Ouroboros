@@ -5,7 +5,7 @@
     <LangVersion>14.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>LangChainPipeline.Genetic</RootNamespace>
+    <RootNamespace>Ouroboros.Genetic</RootNamespace>
     <AssemblyName>Ouroboros.Genetic</AssemblyName>
     <Product>Ouroboros Genetic</Product>
     <Description>Genetic Algorithm module for evolutionary optimization of monadic pipelines in Ouroboros</Description>
@@ -14,7 +14,7 @@
   <!-- Temporarily relax analyzers to unblock builds/tests -->
   <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   <WarningsNotAsErrors>CS1591;CS1570</WarningsNotAsErrors>
-    <RootNamespace>LangChainPipeline</RootNamespace>
+    <RootNamespace>Ouroboros</RootNamespace>
     <AssemblyName>Ouroboros.Genetic</AssemblyName>
     <Product>Ouroboros Genetic</Product>
     <Description>Genetic Algorithm primitives for monadic pipeline optimization</Description>

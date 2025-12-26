@@ -1,6 +1,6 @@
 using LangChain.Databases;
 
-namespace LangChainPipeline.Specs.Steps;
+namespace Ouroboros.Specs.Steps;
 
 [Binding]
 [Scope(Feature = "Retrieval Tool")]

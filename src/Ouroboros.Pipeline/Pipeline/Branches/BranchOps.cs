@@ -2,7 +2,7 @@
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 
-namespace LangChainPipeline.Pipeline.Branches;
+namespace Ouroboros.Pipeline.Branches;
 
 /// <summary>
 /// Provides operations for working with pipeline branches.

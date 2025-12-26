@@ -6,7 +6,7 @@
 using System.Collections.Concurrent;
 using LangChain.DocumentLoaders;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a sub-issue in an epic with its assigned agent and branch.

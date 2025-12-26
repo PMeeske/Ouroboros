@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core;
+namespace Ouroboros.Core;
 
 /// <summary>
 /// Detects the current runtime environment (local development vs. production/staging).

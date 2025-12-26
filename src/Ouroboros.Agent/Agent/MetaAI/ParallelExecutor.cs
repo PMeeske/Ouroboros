@@ -5,7 +5,7 @@
 
 using System.Collections.Concurrent;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a step dependency graph for parallel execution.

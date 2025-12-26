@@ -1,4 +1,4 @@
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Tests for PromptTemplate covering formatting, validation, and error handling.

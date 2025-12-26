@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Genetic.Abstractions;
+namespace Ouroboros.Genetic.Abstractions;
 
 /// <summary>
 /// Defines a fitness function for evaluating chromosomes in the evolution engine.

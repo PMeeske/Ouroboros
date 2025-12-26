@@ -4,7 +4,7 @@
 // Domain adaptation and analogical reasoning
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents the result of a skill transfer attempt.

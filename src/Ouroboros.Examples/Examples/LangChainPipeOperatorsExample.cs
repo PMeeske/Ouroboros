@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 /// <summary>
 /// Demonstrates the LangChain-style pipe operators that have been added to
 /// the Ouroboros system. These operators mirror the original LangChain
@@ -66,7 +66,7 @@ public static class LangChainPipeOperatorsExample
         Console.WriteLine();
 
         Console.WriteLine("Ouroboros equivalent (Code using static imports):");
-        Console.WriteLine("  using static LangChainPipeline.CLI.Interop.Pipe;");
+        Console.WriteLine("  using static Ouroboros.CLI.Interop.Pipe;");
         Console.WriteLine();
         Console.WriteLine("  var step = Set(\"Who was drinking unicorn blood?\", \"query\")");
         Console.WriteLine("      .Bind(RetrieveSimilarDocuments(5))");

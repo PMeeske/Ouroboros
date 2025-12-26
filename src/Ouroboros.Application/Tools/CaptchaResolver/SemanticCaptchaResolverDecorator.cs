@@ -4,7 +4,7 @@
 
 namespace Ouroboros.Application.Tools.CaptchaResolver;
 
-using LangChainPipeline.Providers;
+using Ouroboros.Providers;
 
 /// <summary>
 /// Semantic analysis result for CAPTCHA content.

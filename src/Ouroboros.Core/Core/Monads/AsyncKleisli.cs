@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Monads;
+namespace Ouroboros.Core.Monads;
 
 /// <summary>
 /// Kleisli arrow for asynchronous streaming computations (IAsyncEnumerable).

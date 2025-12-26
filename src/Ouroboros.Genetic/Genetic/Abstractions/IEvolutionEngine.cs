@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Genetic.Abstractions;
+namespace Ouroboros.Genetic.Abstractions;
 
-using LangChainPipeline.Genetic.Core;
+using Ouroboros.Genetic.Core;
 
 /// <summary>
 /// Defines the main evolution engine for genetic algorithms.

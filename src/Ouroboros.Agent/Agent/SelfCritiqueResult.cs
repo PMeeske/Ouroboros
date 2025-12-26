@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Agent;
+namespace Ouroboros.Agent;
 
 /// <summary>
 /// Represents the result of a self-critique operation.

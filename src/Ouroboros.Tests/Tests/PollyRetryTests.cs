@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace LangChainPipeline.Tests.Providers;
+namespace Ouroboros.Tests.Providers;
 
 /// <summary>
 /// Integration tests for Polly retry policies in HTTP client models.

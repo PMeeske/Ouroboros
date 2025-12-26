@@ -5,7 +5,7 @@
     <LangVersion>14.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>LangChainPipeline</RootNamespace>
+    <RootNamespace>Ouroboros</RootNamespace>
     <AssemblyName>Ouroboros.Pipeline</AssemblyName>
     <Product>Ouroboros Pipeline</Product>
     <Description>Pipeline implementations including reasoning, ingestion, and replay for Ouroboros</Description>

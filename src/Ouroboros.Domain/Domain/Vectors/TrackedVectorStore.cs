@@ -3,7 +3,7 @@ using LangChain.Databases;
 using LangChain.Databases.InMemory;
 using LangChain.DocumentLoaders;
 
-namespace LangChainPipeline.Domain.Vectors;
+namespace Ouroboros.Domain.Vectors;
 
 /// <summary>
 /// A tracked vector store that fixes the state consistency issues identified in the PR.

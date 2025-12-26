@@ -6,7 +6,7 @@ using Polly;
 using Polly.Retry;
 using System.Reactive.Linq;
 
-namespace LangChainPipeline.Providers;
+namespace Ouroboros.Providers;
 
 /// <summary>
 /// Minimal contract used by <see cref="ToolAwareChatModel"/> to obtain text responses.

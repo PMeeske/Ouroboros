@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LangChainPipeline.Domain.States;
+namespace Ouroboros.Domain.States;
 
 /// <summary>
 /// Base class for reasoning states in the pipeline.

@@ -3,8 +3,8 @@
 // </copyright>
 
 using System.Diagnostics;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Agent.MetaAI.SelfModel;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI.SelfModel;
 using Microsoft.OpenApi.Models;
 using Ouroboros.WebApi.Models;
 using Ouroboros.WebApi.Services;
@@ -56,7 +56,7 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
     {
         // Only allow unrestricted access in local development
-        if (LangChainPipeline.Core.EnvironmentDetector.IsLocalDevelopment())
+        if (Ouroboros.Core.EnvironmentDetector.IsLocalDevelopment())
         {
             policy.AllowAnyOrigin()
                   .AllowAnyMethod()
@@ -101,11 +101,11 @@ app.MapGet("/", () => Results.Ok(new
     status = "running",
     environment = new
     {
-        name = LangChainPipeline.Core.EnvironmentDetector.GetEnvironmentName() ?? "Unknown",
-        isLocalDevelopment = LangChainPipeline.Core.EnvironmentDetector.IsLocalDevelopment(),
-        isProduction = LangChainPipeline.Core.EnvironmentDetector.IsProduction(),
-        isStaging = LangChainPipeline.Core.EnvironmentDetector.IsStaging(),
-        isKubernetes = LangChainPipeline.Core.EnvironmentDetector.IsRunningInKubernetes(),
+        name = Ouroboros.Core.EnvironmentDetector.GetEnvironmentName() ?? "Unknown",
+        isLocalDevelopment = Ouroboros.Core.EnvironmentDetector.IsLocalDevelopment(),
+        isProduction = Ouroboros.Core.EnvironmentDetector.IsProduction(),
+        isStaging = Ouroboros.Core.EnvironmentDetector.IsStaging(),
+        isKubernetes = Ouroboros.Core.EnvironmentDetector.IsRunningInKubernetes(),
     },
     endpoints = new[]
     {

@@ -8,7 +8,7 @@ using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using Ouroboros.Application;
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
 /// <summary>
 /// Demonstrates streaming capabilities with System.Reactive.

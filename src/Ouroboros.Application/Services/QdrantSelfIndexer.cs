@@ -10,7 +10,7 @@ using System.Text;
 using System.Text.Json;
 using LangChain.Databases;
 using LangChain.Splitters.Text;
-using LangChainPipeline.Domain;
+using Ouroboros.Domain;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 

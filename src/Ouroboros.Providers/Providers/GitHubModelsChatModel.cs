@@ -1,5 +1,5 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-namespace LangChainPipeline.Providers;
+namespace Ouroboros.Providers;
 
 /// <summary>
 /// HTTP client for GitHub Models API that provides access to various AI models

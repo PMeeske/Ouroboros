@@ -2,13 +2,13 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using LangChainPipeline.Infrastructure.FeatureEngineering;
+using Ouroboros.Infrastructure.FeatureEngineering;
 
 /// <summary>
 /// Examples demonstrating C# code vectorization and stream deduplication.

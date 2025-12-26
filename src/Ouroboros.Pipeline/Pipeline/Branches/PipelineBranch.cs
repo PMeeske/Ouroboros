@@ -2,7 +2,7 @@
 using System.Collections.Immutable;
 using LangChain.DocumentLoaders;
 
-namespace LangChainPipeline.Pipeline.Branches;
+namespace Ouroboros.Pipeline.Branches;
 
 /// <summary>
 /// Immutable representation of a pipeline execution branch.

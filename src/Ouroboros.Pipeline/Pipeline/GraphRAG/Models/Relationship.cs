@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Pipeline.GraphRAG.Models;
+namespace Ouroboros.Pipeline.GraphRAG.Models;
 
 /// <summary>
 /// Represents a relationship between two entities in the knowledge graph.

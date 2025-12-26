@@ -7,7 +7,7 @@
 using System.Text.Json;
 using System.Xml.Linq;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a research paper from external sources.

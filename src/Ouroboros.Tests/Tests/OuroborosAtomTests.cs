@@ -3,9 +3,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI;
 using Ouroboros.Tools.MeTTa;
 
 /// <summary>

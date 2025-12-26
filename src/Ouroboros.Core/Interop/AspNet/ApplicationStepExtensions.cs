@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 #endif
 
-namespace LangChainPipeline.Interop.AspNet;
+namespace Ouroboros.Interop.AspNet;
 
 /// <summary>
 /// ASP.NET Core helpers to wrap middleware/configuration into Step-based composition.

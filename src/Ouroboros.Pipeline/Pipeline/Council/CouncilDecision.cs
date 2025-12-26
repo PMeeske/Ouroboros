@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Pipeline.Council;
+namespace Ouroboros.Pipeline.Council;
 
 /// <summary>
 /// Represents the outcome of a council debate including votes, transcript, and minority opinions.

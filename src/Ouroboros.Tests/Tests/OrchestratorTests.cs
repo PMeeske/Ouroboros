@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
-using LangChainPipeline.Agent;
+using Ouroboros.Agent;
 
 /// <summary>
 /// Tests for AI orchestrator capabilities including model selection,

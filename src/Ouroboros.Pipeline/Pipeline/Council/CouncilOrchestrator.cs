@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Pipeline.Council.Agents;
+using Ouroboros.Pipeline.Council.Agents;
 
-namespace LangChainPipeline.Pipeline.Council;
+namespace Ouroboros.Pipeline.Council;
 
 /// <summary>
 /// Orchestrates multi-agent council debates using the Round Table protocol.

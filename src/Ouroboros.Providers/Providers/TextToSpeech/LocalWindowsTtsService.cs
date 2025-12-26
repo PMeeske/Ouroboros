@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace LangChainPipeline.Providers.TextToSpeech;
+namespace Ouroboros.Providers.TextToSpeech;
 
 /// <summary>
 /// Local text-to-speech service using Windows SAPI (no API key required).

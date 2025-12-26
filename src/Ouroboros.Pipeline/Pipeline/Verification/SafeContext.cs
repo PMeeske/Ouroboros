@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Pipeline.Verification;
+namespace Ouroboros.Pipeline.Verification;
 
 /// <summary>
 /// Represents the security context for pipeline execution.

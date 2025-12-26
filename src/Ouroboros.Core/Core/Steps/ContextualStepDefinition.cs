@@ -4,7 +4,7 @@
 // Implements the Reader/Writer monad pattern with fluent composition
 // ==========================================================
 
-namespace LangChainPipeline.Core.Steps;
+namespace Ouroboros.Core.Steps;
 
 /// <summary>
 /// Append-only builder for contextual pipelines:

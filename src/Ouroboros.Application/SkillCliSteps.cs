@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI;
 
 namespace Ouroboros.Application;
 

@@ -3,7 +3,7 @@
 // Human-in-the-Loop - Interactive refinement and approval
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a human feedback request.

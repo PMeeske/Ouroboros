@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using System.Text;
-using LangChainPipeline.Core.Performance;
+using Ouroboros.Core.Performance;
 using Xunit;
 
 public class ObjectPoolTests

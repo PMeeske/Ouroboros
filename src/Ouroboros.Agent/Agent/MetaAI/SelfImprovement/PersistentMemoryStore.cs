@@ -7,7 +7,7 @@
 using System.Collections.Concurrent;
 using LangChain.Databases;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Memory type classification.

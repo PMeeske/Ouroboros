@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Pipeline.Branches;
+namespace Ouroboros.Pipeline.Branches;
 
 using System.Text;
 using Ouroboros.Tools.MeTTa;

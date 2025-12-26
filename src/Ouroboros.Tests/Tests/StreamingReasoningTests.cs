@@ -1,7 +1,7 @@
 using System.Reactive.Linq;
 using Ouroboros.Application;
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Tests for the streaming reasoning pipeline.

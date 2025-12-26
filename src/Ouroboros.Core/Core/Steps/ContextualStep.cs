@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Steps;
+namespace Ouroboros.Core.Steps;
 
 /// <summary>
 /// A contextual step that depends on context and produces logs (Reader + Writer pattern).

@@ -1,7 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // LangChain-integrated conversation context for monadic composition
 
-namespace LangChainPipeline.Core.LangChain;
+namespace Ouroboros.Core.LangChain;
 
 /// <summary>
 /// LangChain-integrated conversation context that properly bridges with official LangChain chains

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using LangChain.DocumentLoaders;
-using LangChainPipeline.Options;
-using LangChainPipeline.Pipeline.Branches;
+using Ouroboros.Options;
+using Ouroboros.Pipeline.Branches;
 
 namespace Ouroboros.CLI.Commands;
 

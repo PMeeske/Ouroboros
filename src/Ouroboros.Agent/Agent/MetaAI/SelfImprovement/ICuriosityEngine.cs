@@ -4,7 +4,7 @@
 // Intrinsic motivation and curiosity-driven exploration
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a novel exploration opportunity.

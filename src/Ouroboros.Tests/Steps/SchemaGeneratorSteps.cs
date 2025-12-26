@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace LangChainPipeline.Specs.Steps;
+namespace Ouroboros.Specs.Steps;
 
 [Binding]
 public class SchemaGeneratorSteps

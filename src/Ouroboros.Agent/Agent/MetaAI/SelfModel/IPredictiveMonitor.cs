@@ -4,7 +4,7 @@
 // Phase 2: Predictive self-monitoring with forecasts vs outcomes
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI.SelfModel;
+namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>
 /// Represents a forecast made by the agent.

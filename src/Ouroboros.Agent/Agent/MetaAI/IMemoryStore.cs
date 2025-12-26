@@ -3,7 +3,7 @@
 // Persistent Memory Store - Long-term learning and experience
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a learning experience stored in memory.

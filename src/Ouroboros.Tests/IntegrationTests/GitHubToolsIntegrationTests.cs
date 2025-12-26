@@ -7,7 +7,7 @@ namespace Ouroboros.Tests.IntegrationTests;
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Core.Monads;
 using Ouroboros.Tools;
 using Xunit;
 

@@ -1,5 +1,5 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-namespace LangChainPipeline.Providers;
+namespace Ouroboros.Providers;
 
 /// <summary>
 /// Represents the type of remote chat endpoint being used.

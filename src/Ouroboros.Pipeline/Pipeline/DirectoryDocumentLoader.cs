@@ -1,7 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using LangChain.DocumentLoaders;
 
-namespace LangChainPipeline.Pipeline.Ingestion;
+namespace Ouroboros.Pipeline.Ingestion;
 
 /// <summary>
 /// Directory-aware document loader that enumerates all files under a directory (optionally recursively)

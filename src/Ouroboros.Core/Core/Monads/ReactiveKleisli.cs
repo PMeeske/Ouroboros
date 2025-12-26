@@ -4,7 +4,7 @@
 
 using System.Reactive.Linq;
 
-namespace LangChainPipeline.Core.Monads;
+namespace Ouroboros.Core.Monads;
 
 /// <summary>
 /// Kleisli arrow for reactive computations (IObservable).

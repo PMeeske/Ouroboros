@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace LangChainPipeline.Pipeline.Branches;
+namespace Ouroboros.Pipeline.Branches;
 
 /// <summary>
 /// Handles serialization and persistence of pipeline branch snapshots.

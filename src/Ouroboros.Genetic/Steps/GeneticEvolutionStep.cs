@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Genetic.Steps;
+namespace Ouroboros.Genetic.Steps;
 
-using LangChainPipeline.Genetic.Abstractions;
-using LangChainPipeline.Genetic.Core;
+using Ouroboros.Genetic.Abstractions;
+using Ouroboros.Genetic.Core;
 
 /// <summary>
 /// A pipeline step that uses genetic algorithms to evolve and optimize parameters or configurations.

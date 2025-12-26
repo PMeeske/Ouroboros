@@ -4,7 +4,7 @@
 // Automatic extraction of reusable skills from successful executions
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Implementation of automatic skill extraction from successful executions.

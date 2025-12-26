@@ -4,12 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using TechTalk.SpecFlow;
-using LangChainPipeline.CLI;
-using LangChainPipeline.CLI.CodeGeneration;
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.CLI;
+using Ouroboros.CLI.CodeGeneration;
+using Ouroboros.Agent.MetaAI;
 using LangChain.Providers;
 
-namespace LangChainPipeline.Specs.Steps;
+namespace Ouroboros.Specs.Steps;
 
 [Binding]
 public class DslAssistantSimulationSteps

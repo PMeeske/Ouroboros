@@ -5,7 +5,7 @@
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 
-namespace LangChainPipeline.Network;
+namespace Ouroboros.Network;
 
 /// <summary>
 /// Configuration for Qdrant DAG storage.

@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Pipeline.Council;
-using LangChainPipeline.Pipeline.Council.Agents;
+using Ouroboros.Pipeline.Council;
+using Ouroboros.Pipeline.Council.Agents;
 
-namespace LangChainPipeline.Tests.Council;
+namespace Ouroboros.Tests.Council;
 
 /// <summary>
 /// Tests for agent persona implementations.

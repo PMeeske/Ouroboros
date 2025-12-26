@@ -3,10 +3,10 @@
 // </copyright>
 
 using FluentAssertions;
-using LangChainPipeline.Domain.Environment;
+using Ouroboros.Domain.Environment;
 using Ouroboros.Examples.Environments;
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Tests for GridWorldEnvironment.

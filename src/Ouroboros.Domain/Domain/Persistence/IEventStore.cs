@@ -1,5 +1,5 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-namespace LangChainPipeline.Domain.Persistence;
+namespace Ouroboros.Domain.Persistence;
 
 /// <summary>
 /// Interface for persisting and retrieving pipeline events (event sourcing).

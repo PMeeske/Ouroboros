@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Domain.Events;
+namespace Ouroboros.Domain.Events;
 
 /// <summary>
 /// Event representing a batch of documents ingested into the pipeline.

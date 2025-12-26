@@ -4,7 +4,7 @@
 // Phase 2: Shared working memory with attention policies
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI.SelfModel;
+namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>
 /// Priority level for workspace items.

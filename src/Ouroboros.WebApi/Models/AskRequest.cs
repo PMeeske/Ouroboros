@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.WebApi.Models;
+namespace Ouroboros.WebApi.Models;
 
 /// <summary>
 /// Request model for asking questions to the AI pipeline.

@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
-using global::LangChainPipeline.Core.LangChain;
+using global::Ouroboros.Core.LangChain;
 
 /// <summary>
 /// Tests for LangChain-based conversation functionality.

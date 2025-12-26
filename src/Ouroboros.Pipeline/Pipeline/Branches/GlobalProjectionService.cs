@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Core.Monads;
 
-namespace LangChainPipeline.Pipeline.Branches;
+namespace Ouroboros.Pipeline.Branches;
 
 /// <summary>
 /// Represents an epoch snapshot of the global system state.

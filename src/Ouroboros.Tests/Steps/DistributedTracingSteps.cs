@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using LangChainPipeline.Diagnostics;
+using Ouroboros.Diagnostics;
 
-namespace LangChainPipeline.Specs.Steps;
+namespace Ouroboros.Specs.Steps;
 
 [Binding]
 public class DistributedTracingSteps

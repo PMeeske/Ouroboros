@@ -1,4 +1,4 @@
-namespace LangChainPipeline.WebApi.Models;
+namespace Ouroboros.WebApi.Models;
 
 /// <summary>
 /// Generic response wrapper for API endpoints

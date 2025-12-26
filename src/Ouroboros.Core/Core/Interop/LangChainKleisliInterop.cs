@@ -4,9 +4,9 @@
 // Enhanced integration with our unified monadic operations
 // ==========================================================
 
-namespace LangChainPipeline.Core.Interop;
+namespace Ouroboros.Core.Interop;
 
-using LangChainPipeline.Core.Steps;
+using Ouroboros.Core.Steps;
 
 #region Core Integration - Minimal Interop Extensions
 

@@ -4,7 +4,7 @@
 // Agent self-model and capability tracking
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a capability that the agent possesses.

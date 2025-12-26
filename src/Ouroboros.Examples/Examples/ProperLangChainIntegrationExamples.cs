@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
 using LangChain.Chains.HelperChains;
 
@@ -44,7 +44,7 @@ public static class ProperLangChainIntegrationExamples
         var langchainPipeline = setInputChain | setProcessChain;
 
         // Convert to monadic KleisliResult for error handling
-        var monadicChain = langchainPipeline.ToMonadicKleisli();
+        var monadicChain = Ouroboros.ToMonadicKleisli();
 
         // Execute with proper error handling
         var initialContext = new Dictionary<string, object>();

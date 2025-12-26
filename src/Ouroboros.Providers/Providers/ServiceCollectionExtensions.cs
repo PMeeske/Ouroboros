@@ -2,13 +2,13 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Providers;
+namespace Ouroboros.Providers;
 
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Core.Configuration;
-using LangChainPipeline.Domain.Vectors;
-using LangChainPipeline.Providers.SpeechToText;
-using LangChainPipeline.Providers.TextToSpeech;
+using Ouroboros.Core.Configuration;
+using Ouroboros.Domain.Vectors;
+using Ouroboros.Providers.SpeechToText;
+using Ouroboros.Providers.TextToSpeech;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

@@ -3,7 +3,7 @@
 // Skill Composition - Combine skills into higher-level skills
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Marker interface for composite skills.

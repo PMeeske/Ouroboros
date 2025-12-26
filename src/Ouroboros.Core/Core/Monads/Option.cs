@@ -4,7 +4,7 @@
 
 using System.Runtime.CompilerServices;
 
-namespace LangChainPipeline.Core.Monads;
+namespace Ouroboros.Core.Monads;
 
 /// <summary>
 /// Represents an optional value that may or may not contain data.

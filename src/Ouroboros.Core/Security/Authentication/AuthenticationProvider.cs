@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Security.Authentication;
+namespace Ouroboros.Core.Security.Authentication;
 
 /// <summary>
 /// Represents an authenticated principal (user/service).

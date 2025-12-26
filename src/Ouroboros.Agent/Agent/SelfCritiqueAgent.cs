@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Agent;
+namespace Ouroboros.Agent;
 /// <summary>
 /// Agent that wraps LLM calls with self-critique and iterative improvement.
 /// Implements Draft → Critique → Improve loop with configurable iterations.

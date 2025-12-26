@@ -2,7 +2,7 @@
 
 using System.Runtime.CompilerServices;
 
-namespace LangChainPipeline.Core.Steps;
+namespace Ouroboros.Core.Steps;
 
 /// <summary>
 /// Step{TA,TB} is unified with Kleisli{TA,TB} - they represent the same concept.

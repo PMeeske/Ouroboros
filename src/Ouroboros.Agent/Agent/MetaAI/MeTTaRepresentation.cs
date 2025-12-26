@@ -5,9 +5,9 @@
 // ==========================================================
 
 using System.Text;
-using LangChainPipeline.Tools.MeTTa;
+using Ouroboros.Tools.MeTTa;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Translates orchestrator concepts (plans, steps, tools, state) into MeTTa symbolic representation.

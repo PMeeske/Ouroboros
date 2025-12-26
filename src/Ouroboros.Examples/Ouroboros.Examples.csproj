@@ -5,7 +5,7 @@
     <LangVersion>14.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>LangChainPipeline</RootNamespace>
+    <RootNamespace>Ouroboros</RootNamespace>
     <AssemblyName>Ouroboros.Examples</AssemblyName>
     <Product>Ouroboros Examples</Product>
     <Description>Example applications and demonstrations for Ouroboros</Description>

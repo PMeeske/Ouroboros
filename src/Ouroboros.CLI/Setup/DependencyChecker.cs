@@ -4,7 +4,7 @@
 
 namespace Ouroboros.CLI.Setup
 {
-    using LangChainPipeline.Options;
+    using Ouroboros.Options;
 
     /// <summary>
     /// Provides methods for checking for required external dependencies.

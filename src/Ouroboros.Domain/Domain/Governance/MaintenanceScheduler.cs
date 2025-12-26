@@ -3,9 +3,9 @@
 // </copyright>
 
 using System.Collections.Concurrent;
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Core.Monads;
 
-namespace LangChainPipeline.Domain.Governance;
+namespace Ouroboros.Domain.Governance;
 
 /// <summary>
 /// Scheduled maintenance system for DAG compaction, archiving, and anomaly detection.

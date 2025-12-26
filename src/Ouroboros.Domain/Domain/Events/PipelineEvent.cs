@@ -1,7 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.Text.Json.Serialization;
 
-namespace LangChainPipeline.Domain.Events;
+namespace Ouroboros.Domain.Events;
 
 /// <summary>
 /// Base class for all pipeline events that can occur during execution.

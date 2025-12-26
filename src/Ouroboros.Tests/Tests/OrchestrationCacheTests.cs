@@ -4,12 +4,12 @@
 // ==========================================================
 
 using FluentAssertions;
-using LangChainPipeline.Agent;
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.Agent;
+using Ouroboros.Agent.MetaAI;
 using Ouroboros.Tools;
 using Xunit;
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Tests for the InMemoryOrchestrationCache class.

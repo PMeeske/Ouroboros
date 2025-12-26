@@ -3,7 +3,7 @@ using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using Ouroboros.Application;
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Tests for the streaming engine functionality using System.Reactive.

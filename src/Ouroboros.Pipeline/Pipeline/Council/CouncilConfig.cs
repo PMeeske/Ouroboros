@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Pipeline.Council;
+namespace Ouroboros.Pipeline.Council;
 
 /// <summary>
 /// Configuration settings for council debate sessions.

@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace LangChainPipeline.Tests.Android;
+namespace Ouroboros.Tests.Android;
 
 /// <summary>
 /// Integration tests for Android Services used by MainPage

@@ -1,5 +1,5 @@
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Agent.MetaAI.SelfModel;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI.SelfModel;
 using Xunit;
 
 namespace Ouroboros.Tests.Tests.SelfModel;

@@ -4,7 +4,7 @@
 
 using System.Runtime.CompilerServices;
 
-namespace LangChainPipeline.Core.Monads;
+namespace Ouroboros.Core.Monads;
 
 /// <summary>
 /// Additional extension methods for Result monads to support advanced functional programming patterns.

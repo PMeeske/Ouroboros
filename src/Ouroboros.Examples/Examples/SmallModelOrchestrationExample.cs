@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent;
+using Ouroboros.Agent;
 
 /// <summary>
 /// Demonstrates efficient orchestration of complex tasks using small, specialized models.

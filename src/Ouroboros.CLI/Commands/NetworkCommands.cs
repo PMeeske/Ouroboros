@@ -3,9 +3,9 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using LangChainPipeline.Domain.States;
-using LangChainPipeline.Network;
-using LangChainPipeline.Options;
+using Ouroboros.Domain.States;
+using Ouroboros.Network;
+using Ouroboros.Options;
 
 namespace Ouroboros.CLI.Commands;
 

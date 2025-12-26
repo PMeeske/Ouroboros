@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Pipeline.Branches;
+using Ouroboros.Pipeline.Branches;
 
-namespace LangChainPipeline.Network;
+namespace Ouroboros.Network;
 
 /// <summary>
 /// Bridge that reifies PipelineBranch events into MerkleDag nodes and transitions.

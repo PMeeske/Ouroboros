@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Domain.Environment;
+using Ouroboros.Domain.Environment;
 
-namespace LangChainPipeline.Domain.Events;
+namespace Ouroboros.Domain.Events;
 
 /// <summary>
 /// Event representing a complete episode of environment interaction.

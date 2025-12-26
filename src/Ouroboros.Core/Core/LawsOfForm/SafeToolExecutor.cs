@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.LawsOfForm;
+namespace Ouroboros.Core.LawsOfForm;
 
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Core.Monads;
 
 /// <summary>
 /// Interface for tool lookup operations.

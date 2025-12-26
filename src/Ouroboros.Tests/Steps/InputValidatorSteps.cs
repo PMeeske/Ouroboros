@@ -1,6 +1,6 @@
-using LangChainPipeline.Core.Security;
+using Ouroboros.Core.Security;
 
-namespace LangChainPipeline.Specs.Steps;
+namespace Ouroboros.Specs.Steps;
 
 [Binding]
 public class InputValidatorSteps

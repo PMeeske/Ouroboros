@@ -13,7 +13,7 @@ using System.Diagnostics;
 using System.Text;
 using Ouroboros.Agent;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// The Ouroboros Orchestrator is a self-improving AI orchestration system that implements

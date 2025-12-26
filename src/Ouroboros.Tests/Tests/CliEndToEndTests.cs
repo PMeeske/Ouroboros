@@ -2,13 +2,13 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using Ouroboros.Application;
-using LangChainPipeline.Providers;
+using Ouroboros.Providers;
 
 /// <summary>
 /// Comprehensive end-to-end tests for all CLI commands and their variations.
@@ -151,7 +151,7 @@ public static class CliEndToEndTests
         }
 
         // Test agent creation for different modes
-        var agentLc = LangChainPipeline.Agent.AgentFactory.Create("lc", chat, tools, false, 6, false, "nomic-embed-text", false, false);
+        var agentLc = Ouroboros.Agent.AgentFactory.Create("lc", chat, tools, false, 6, false, "nomic-embed-text", false, false);
         if (agentLc.Mode != "lc")
         {
             throw new Exception($"Agent mode should be 'lc', got '{agentLc.Mode}'");
@@ -173,7 +173,7 @@ public static class CliEndToEndTests
         var modes = new[] { "simple", "lc", "react" };
         foreach (var mode in modes)
         {
-            var agent = LangChainPipeline.Agent.AgentFactory.Create(mode, chat, tools, false, 3, false, "nomic-embed-text", false, false);
+            var agent = Ouroboros.Agent.AgentFactory.Create(mode, chat, tools, false, 3, false, "nomic-embed-text", false, false);
             if (agent.Mode != mode)
             {
                 throw new Exception($"Agent mode mismatch: expected '{mode}', got '{agent.Mode}'");
@@ -789,13 +789,13 @@ public static class CliEndToEndTests
         Console.WriteLine("Testing MeTTa command structure...");
 
         // Verify that MeTTa orchestrator types exist
-        var mettaOrchestratorType = typeof(LangChainPipeline.Agent.MetaAI.MeTTaOrchestrator);
+        var mettaOrchestratorType = typeof(Ouroboros.Agent.MetaAI.MeTTaOrchestrator);
         if (mettaOrchestratorType == null)
         {
             throw new Exception("MeTTaOrchestrator type should exist");
         }
 
-        var mettaBuilderType = typeof(LangChainPipeline.Agent.MetaAI.MeTTaOrchestratorBuilder);
+        var mettaBuilderType = typeof(Ouroboros.Agent.MetaAI.MeTTaOrchestratorBuilder);
         if (mettaBuilderType == null)
         {
             throw new Exception("MeTTaOrchestratorBuilder type should exist");

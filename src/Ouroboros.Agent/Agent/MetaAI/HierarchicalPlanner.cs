@@ -3,7 +3,7 @@
 // Hierarchical Planner - Multi-level plan decomposition
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a hierarchical plan with multiple levels.

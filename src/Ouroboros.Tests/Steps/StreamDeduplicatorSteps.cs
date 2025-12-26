@@ -1,6 +1,6 @@
-using LangChainPipeline.Infrastructure.FeatureEngineering;
+using Ouroboros.Infrastructure.FeatureEngineering;
 
-namespace LangChainPipeline.Specs.Steps;
+namespace Ouroboros.Specs.Steps;
 
 [Binding]
 public class StreamDeduplicatorSteps

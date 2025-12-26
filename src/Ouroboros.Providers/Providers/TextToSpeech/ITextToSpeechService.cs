@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Providers.TextToSpeech;
+namespace Ouroboros.Providers.TextToSpeech;
 
 /// <summary>
 /// Represents the result of a text-to-speech synthesis.

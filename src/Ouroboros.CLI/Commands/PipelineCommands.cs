@@ -4,16 +4,16 @@ using CommandLine;
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Diagnostics;
-using LangChainPipeline.Options;
-using LangChainPipeline.Providers.SpeechToText;
-using LangChainPipeline.Providers.TextToSpeech;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Diagnostics;
+using Ouroboros.Options;
+using Ouroboros.Providers.SpeechToText;
+using Ouroboros.Providers.TextToSpeech;
 using Microsoft.Extensions.Hosting;
 using Ouroboros.Application.Tools;
 using Ouroboros.CLI;
 using Ouroboros.Application.Services;
-using IEmbeddingModel = LangChainPipeline.Domain.IEmbeddingModel;
+using IEmbeddingModel = Ouroboros.Domain.IEmbeddingModel;
 
 namespace Ouroboros.CLI.Commands;
 

@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Configuration;
+namespace Ouroboros.Core.Configuration;
 
 /// <summary>
 /// Main configuration for the Ouroboros system.

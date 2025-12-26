@@ -1,5 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
+using FixState = Ouroboros.Roslynator.Pipeline.FixState;
+
 namespace Ouroboros.Roslynator.Pipeline.Steps;
 
 /// <summary>
@@ -16,7 +18,7 @@ public static class StandardFixes
     /// <param name="state">The fix state to check.</param>
     /// <returns><c>true</c> if the state is invalid and should be skipped; otherwise, <c>false</c>.</returns>
     public static bool ShouldSkip(FixState state) =>
-        state is null || !state.IsValid;
+        state is null || state.CurrentRoot is null || state.Diagnostic is null;
 
     /// <summary>
     /// Safely finds a syntax node at the specified text span.
@@ -57,7 +59,7 @@ public static class StandardFixes
         ArgumentNullException.ThrowIfNull(newNode);
 
         SyntaxNode newRoot = state.CurrentRoot.ReplaceNode(oldNode, newNode);
-        return Task.FromResult(state.WithRoot(newRoot));
+        return Task.FromResult(state.WithNewRoot(newRoot, description));
     }
 
     #endregion

@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Pipeline.GraphRAG.Models;
+using Ouroboros.Pipeline.GraphRAG.Models;
 
-namespace LangChainPipeline.Tests.GraphRAG;
+namespace Ouroboros.Tests.GraphRAG;
 
 /// <summary>
 /// Tests for HybridSearchConfig and HybridSearchResult.

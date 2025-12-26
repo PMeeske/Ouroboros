@@ -2,17 +2,17 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using LangChain.DocumentLoaders;
 using LangChain.Providers;
-using LangChainPipeline.Domain.Events;
-using LangChainPipeline.Domain.States;
-using LangChainPipeline.Domain.Vectors;
-using LangChainPipeline.Pipeline.Branches;
-using LangChainPipeline.Pipeline.Reasoning;
-using LangChainPipeline.Providers;
-using LangChainPipeline.Tools;
+using Ouroboros.Domain.Events;
+using Ouroboros.Domain.States;
+using Ouroboros.Domain.Vectors;
+using Ouroboros.Pipeline.Branches;
+using Ouroboros.Pipeline.Reasoning;
+using Ouroboros.Providers;
+using Ouroboros.Tools;
 using Xunit;
 
 /// <summary>
@@ -279,7 +279,7 @@ public class RefinementLoopArchitectureTests
         return new ToolAwareChatModel(mockProvider, tools);
     }
 
-    private static LangChainPipeline.Domain.IEmbeddingModel CreateMockEmbedding()
+    private static Ouroboros.Domain.IEmbeddingModel CreateMockEmbedding()
     {
         return new MockEmbeddingModel();
     }
@@ -300,7 +300,7 @@ public class RefinementLoopArchitectureTests
         }
     }
 
-    private class MockEmbeddingModel : LangChainPipeline.Domain.IEmbeddingModel
+    private class MockEmbeddingModel : Ouroboros.Domain.IEmbeddingModel
     {
         public async Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
         {

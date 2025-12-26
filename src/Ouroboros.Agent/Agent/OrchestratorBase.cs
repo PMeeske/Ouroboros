@@ -9,7 +9,7 @@
 // ==========================================================
 
 using System.Diagnostics;
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI;
 
 namespace Ouroboros.Agent;
 

@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Pipeline.Planning;
+namespace Ouroboros.Pipeline.Planning;
 
 /// <summary>
 /// Binds MeTTa tool expressions to executable C# pipeline steps.

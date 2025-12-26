@@ -7,22 +7,22 @@ global using System.Collections.Generic;
 global using System.Linq;
 global using System.Threading.Tasks;
 // Agent
-global using LangChainPipeline.Agent;
+global using Ouroboros.Agent;
 // CLI interop layer
-global using LangChainPipeline.Core.Conversation;
-global using LangChainPipeline.Core.Kleisli;
-global using LangChainPipeline.Core.Memory;
-global using LangChainPipeline.Core.Monads;
-global using LangChainPipeline.Core.Steps;
+global using Ouroboros.Core.Conversation;
+global using Ouroboros.Core.Kleisli;
+global using Ouroboros.Core.Memory;
+global using Ouroboros.Core.Monads;
+global using Ouroboros.Core.Steps;
 // Domain models and state management
-global using LangChainPipeline.Domain;
-global using LangChainPipeline.Domain.States;
-global using LangChainPipeline.Domain.Vectors;
+global using Ouroboros.Domain;
+global using Ouroboros.Domain.States;
+global using Ouroboros.Domain.Vectors;
 // Examples
 // Pipeline components
-global using LangChainPipeline.Pipeline.Branches;
-global using LangChainPipeline.Pipeline.Reasoning;
-global using LangChainPipeline.Providers;
+global using Ouroboros.Pipeline.Branches;
+global using Ouroboros.Pipeline.Reasoning;
+global using Ouroboros.Providers;
 // Tools and providers
 global using Ouroboros.Tools;
 global using Ouroboros.Tools.MeTTa;

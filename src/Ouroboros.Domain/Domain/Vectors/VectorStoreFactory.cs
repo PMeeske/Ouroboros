@@ -1,8 +1,8 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-using LangChainPipeline.Core.Configuration;
+using Ouroboros.Core.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace LangChainPipeline.Domain.Vectors;
+namespace Ouroboros.Domain.Vectors;
 
 /// <summary>
 /// Factory for creating vector store instances based on configuration.

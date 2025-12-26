@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace LangChainPipeline.Roslynator.Pipeline;
+namespace Ouroboros.Roslynator.Pipeline;
 
 /// <summary>
 /// Light immutable state that flows through the pipeline.

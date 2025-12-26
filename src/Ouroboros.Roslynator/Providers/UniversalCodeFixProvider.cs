@@ -1,10 +1,11 @@
 using Microsoft.CodeAnalysis.CodeFixes;
-using LangChainPipeline.Roslynator.Pipeline;
-using LangChainPipeline.Roslynator.Pipeline.Steps;
+using Ouroboros.Roslynator.Pipeline;
+using Ouroboros.Roslynator.Pipeline.Steps;
 using System.Collections.Immutable;
 using System.Composition;
+using PipelineFixState = Ouroboros.Roslynator.Pipeline.FixState;
 
-namespace LangChainPipeline.Roslynator.Providers;
+namespace Ouroboros.Roslynator.Providers;
 
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(UniversalCodeFixProvider)), Shared]
 public class UniversalCodeFixProvider : CodeFixProvider
@@ -29,9 +30,9 @@ public class UniversalCodeFixProvider : CodeFixProvider
         public class UniversalChain : FixChain
         {
             public override string Title => "Fix (Standard + AI)";
-            public override string EquivalenceKey => "LangChainPipeline.UniversalFix";
+            public override string EquivalenceKey => "Ouroboros.UniversalFix";
 
-            protected override Future<FixState> DefinePipeline(Future<FixState> input)
+            protected override Future<PipelineFixState> DefinePipeline(Future<PipelineFixState> input)
             {
                 return input
                     | StandardSteps.TryResolve               // fast deterministic fixes

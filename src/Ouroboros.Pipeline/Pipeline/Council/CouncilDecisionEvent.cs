@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Domain.Events;
+using Ouroboros.Domain.Events;
 
-namespace LangChainPipeline.Pipeline.Council;
+namespace Ouroboros.Pipeline.Council;
 
 /// <summary>
 /// Event representing a council decision in the pipeline execution.

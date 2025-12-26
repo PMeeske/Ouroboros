@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests.Affect;
+namespace Ouroboros.Tests.Affect;
 
 using FluentAssertions;
-using LangChainPipeline.Agent.MetaAI.Affect;
+using Ouroboros.Agent.MetaAI.Affect;
 using Xunit;
 
 /// <summary>

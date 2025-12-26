@@ -4,7 +4,7 @@
 
 using System.Linq;
 
-namespace LangChainPipeline.Core.Monads;
+namespace Ouroboros.Core.Monads;
 
 /// <summary>
 /// Kleisli arrow for computations that produce multiple results (IEnumerable).

@@ -1,7 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.Collections.Concurrent;
 
-namespace LangChainPipeline.Domain.Persistence;
+namespace Ouroboros.Domain.Persistence;
 
 /// <summary>
 /// In-memory implementation of event store for development and testing.

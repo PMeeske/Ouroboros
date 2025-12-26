@@ -1,5 +1,5 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-namespace LangChainPipeline.Domain.States;
+namespace Ouroboros.Domain.States;
 
 /// <summary>
 /// Represents an LLM-backed rewrite of a markdown document.

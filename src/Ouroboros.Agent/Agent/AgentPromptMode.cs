@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Agent;
+namespace Ouroboros.Agent;
 
 /// <summary>
 /// Defines the different modes for agent prompt processing.

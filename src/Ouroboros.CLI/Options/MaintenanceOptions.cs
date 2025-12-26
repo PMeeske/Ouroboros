@@ -1,7 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using CommandLine;
 
-namespace LangChainPipeline.Options;
+namespace Ouroboros.Options;
 
 [Verb("maintenance", HelpText = "Maintenance operations for DAG compaction, archiving, and anomaly detection.")]
 public sealed class MaintenanceOptions

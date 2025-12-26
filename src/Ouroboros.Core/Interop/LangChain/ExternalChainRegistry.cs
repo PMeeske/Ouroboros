@@ -1,5 +1,5 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-namespace LangChainPipeline.Interop.LangChain;
+namespace Ouroboros.Interop.LangChain;
 
 /// <summary>
 /// Simple in-memory registry for external (NuGet) LangChain BaseStackableChain instances so they can be referenced from DSL tokens.

@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Core.Monads;
 
-namespace LangChainPipeline.Domain.Environment;
+namespace Ouroboros.Domain.Environment;
 
 /// <summary>
 /// Interface for actors that can interact with environments.

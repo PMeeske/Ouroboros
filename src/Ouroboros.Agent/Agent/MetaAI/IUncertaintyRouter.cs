@@ -3,7 +3,7 @@
 // Uncertainty-Aware Router - Route based on confidence
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Routing decision with confidence information.

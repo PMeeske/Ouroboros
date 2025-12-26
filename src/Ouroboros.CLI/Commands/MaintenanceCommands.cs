@@ -1,7 +1,7 @@
 using System.Text.Json;
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Domain.Governance;
-using LangChainPipeline.Options;
+using Ouroboros.Core.Monads;
+using Ouroboros.Domain.Governance;
+using Ouroboros.Options;
 
 namespace Ouroboros.CLI.Commands;
 

@@ -1,4 +1,6 @@
-namespace LangChainPipeline.Roslynator.Pipeline.Steps;
+using FixState = Ouroboros.Roslynator.Pipeline.FixState;
+
+namespace Ouroboros.Roslynator.Pipeline.Steps;
 
 /// <summary>
 /// Minimal placeholders for standard deterministic steps.
@@ -36,7 +38,7 @@ public static class StandardSteps
             {
                 // Check if it's 'var' (which shouldn't happen for CS8600 usually, but good to check)
                 bool isVar = variableDeclaration.Type is IdentifierNameSyntax id && id.Identifier.ValueText == "var";
-                
+
                 if (!isVar)
                 {
                     TypeSyntax type = variableDeclaration.Type;
@@ -62,13 +64,13 @@ public static class StandardSteps
                 // a.b -> a?.b
                 ExpressionSyntax expression = memberAccess.Expression;
                 SimpleNameSyntax name = memberAccess.Name;
-                
+
                 // Create ConditionalAccessExpression
                 // Expression: expression
                 // WhenNotNull: MemberBindingExpression(name)
                 MemberBindingExpressionSyntax memberBinding = SyntaxFactory.MemberBindingExpression(name);
                 ConditionalAccessExpressionSyntax conditionalAccess = SyntaxFactory.ConditionalAccessExpression(expression, memberBinding);
-                
+
                 SyntaxNode? newRoot = root.ReplaceNode(memberAccess, conditionalAccess);
                 if (newRoot != null)
                 {

@@ -7,9 +7,9 @@ namespace Ouroboros.Application.Personality;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
-using LangChainPipeline.Domain;
-using LangChainPipeline.Genetic.Abstractions;
-using LangChainPipeline.Genetic.Core;
+using Ouroboros.Domain;
+using Ouroboros.Genetic.Abstractions;
+using Ouroboros.Genetic.Core;
 using Ouroboros.Application.Tools;
 using Ouroboros.Tools.MeTTa;
 

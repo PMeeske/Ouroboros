@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Domain.Environment;
+using Ouroboros.Core.Monads;
+using Ouroboros.Domain.Environment;
 
-namespace LangChainPipeline.Domain.Reinforcement;
+namespace Ouroboros.Domain.Reinforcement;
 
 /// <summary>
 /// Interface for reinforcement learning policies.

@@ -10,7 +10,7 @@ using Qdrant.Client.Grpc;
 using LCVector = LangChain.Databases.Vector;
 using LCDocument = LangChain.DocumentLoaders.Document;
 
-namespace LangChainPipeline.Domain.Vectors;
+namespace Ouroboros.Domain.Vectors;
 
 /// <summary>
 /// Qdrant vector store implementation for production use.

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace LangChainPipeline.Interop.Hosting;
+namespace Ouroboros.Interop.Hosting;
 
 /// <summary>
 /// Pure Step wrappers for HostApplicationBuilder and ConfigurationManager to enable | pipe composition.

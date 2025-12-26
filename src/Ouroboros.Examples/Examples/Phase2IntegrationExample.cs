@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Complete integration example showing Phase 2 metacognitive agent in action.

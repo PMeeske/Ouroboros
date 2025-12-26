@@ -1,7 +1,7 @@
 using System.Text;
-using LangChainPipeline.Core.Performance;
+using Ouroboros.Core.Performance;
 
-namespace LangChainPipeline.Specs.Steps;
+namespace Ouroboros.Specs.Steps;
 
 [Binding]
 public class ObjectPoolSteps

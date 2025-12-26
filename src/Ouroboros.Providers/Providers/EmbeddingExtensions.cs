@@ -1,7 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-using LangChainPipeline.Diagnostics;
+using Ouroboros.Diagnostics;
 
-namespace LangChainPipeline.Providers;
+namespace Ouroboros.Providers;
 
 public static class EmbeddingExtensions
 {

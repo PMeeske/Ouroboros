@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Performance;
+namespace Ouroboros.Core.Performance;
 
 using System.Collections.Concurrent;
 using System.Text;

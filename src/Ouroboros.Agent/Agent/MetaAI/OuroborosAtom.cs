@@ -10,7 +10,7 @@
 
 using System.Text;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents the improvement cycle phases in the Ouroboros system.

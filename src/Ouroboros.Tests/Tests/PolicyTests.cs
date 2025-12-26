@@ -3,10 +3,10 @@
 // </copyright>
 
 using FluentAssertions;
-using LangChainPipeline.Domain.Environment;
-using LangChainPipeline.Domain.Reinforcement;
+using Ouroboros.Domain.Environment;
+using Ouroboros.Domain.Reinforcement;
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Tests for RL policies.

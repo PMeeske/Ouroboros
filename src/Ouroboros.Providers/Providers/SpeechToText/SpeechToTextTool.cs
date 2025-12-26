@@ -3,9 +3,9 @@
 // </copyright>
 
 using System.Text.Json;
-using LangChainPipeline.Providers.SpeechToText;
+using Ouroboros.Providers.SpeechToText;
 
-namespace LangChainPipeline.Providers;
+namespace Ouroboros.Providers;
 
 /// <summary>
 /// Tool for transcribing audio files to text using speech-to-text services.

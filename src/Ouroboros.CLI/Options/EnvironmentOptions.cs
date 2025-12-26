@@ -4,7 +4,7 @@
 
 using CommandLine;
 
-namespace LangChainPipeline.Options;
+namespace Ouroboros.Options;
 
 /// <summary>
 /// CLI options for environment commands.

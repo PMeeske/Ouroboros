@@ -2,11 +2,11 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples.EpicWorkflow;
+namespace Ouroboros.Examples.EpicWorkflow;
 
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Tools;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Core.Monads;
+using Ouroboros.Tools;
 
 /// <summary>
 /// Example demonstrating Issue #138 workflow for locking scope to prevent uncontrolled scope creep.

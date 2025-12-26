@@ -2,8 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Providers.SpeechToText;
-using LangChainPipeline.Providers.TextToSpeech;
+using Ouroboros.Providers.SpeechToText;
+using Ouroboros.Providers.TextToSpeech;
 
 namespace Ouroboros.Tests;
 

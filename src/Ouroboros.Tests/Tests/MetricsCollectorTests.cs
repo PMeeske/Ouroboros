@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
-using LangChainPipeline.Diagnostics;
+using Ouroboros.Diagnostics;
 using Xunit;
 
 public class MetricsCollectorTests

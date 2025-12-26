@@ -4,7 +4,7 @@
 
 using System.Collections.Concurrent;
 
-namespace LangChainPipeline.Speech;
+namespace Ouroboros.Speech;
 
 /// <summary>
 /// Adaptive Voice Activity Detection (VAD) system that learns from ambient noise

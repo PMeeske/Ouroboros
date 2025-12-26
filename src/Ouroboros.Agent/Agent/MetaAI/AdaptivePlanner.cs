@@ -3,7 +3,7 @@
 // Adaptive Planner - Real-time plan adaptation during execution
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents an adaptation trigger condition.

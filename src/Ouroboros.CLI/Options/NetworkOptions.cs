@@ -1,6 +1,6 @@
 using CommandLine;
 
-namespace LangChainPipeline.Options;
+namespace Ouroboros.Options;
 
 /// <summary>
 /// Options for network state commands.

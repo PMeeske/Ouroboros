@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Pipeline.Council;
+using Ouroboros.Pipeline.Council;
 
-namespace LangChainPipeline.Tests.Council;
+namespace Ouroboros.Tests.Council;
 
 /// <summary>
 /// Tests for CouncilDecision and related records.

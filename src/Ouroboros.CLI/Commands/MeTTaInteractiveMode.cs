@@ -4,8 +4,8 @@
 
 namespace Ouroboros.CLI.Commands;
 
-using LangChainPipeline.Pipeline.Planning;
-using LangChainPipeline.Pipeline.Verification;
+using Ouroboros.Pipeline.Planning;
+using Ouroboros.Pipeline.Verification;
 using Ouroboros.Tools.MeTTa;
 
 /// <summary>
@@ -333,7 +333,7 @@ public static class MeTTaInteractiveMode
         }
 
         // Build the plan
-        var plan = new LangChainPipeline.Pipeline.Verification.Plan(description);
+        var plan = new Ouroboros.Pipeline.Verification.Plan(description);
         foreach (var action in actions)
         {
             plan = plan.WithAction(action);

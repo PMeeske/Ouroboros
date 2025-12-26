@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Domain.States;
+namespace Ouroboros.Domain.States;
 
 /// <summary>
 /// Represents the final, refined specification after iterative improvements.

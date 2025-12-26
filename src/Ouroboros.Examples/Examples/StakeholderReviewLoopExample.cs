@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Example demonstrating stakeholder review loop workflows.

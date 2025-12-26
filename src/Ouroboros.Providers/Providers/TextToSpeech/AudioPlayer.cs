@@ -4,7 +4,7 @@
 
 using System.Diagnostics;
 
-namespace LangChainPipeline.Providers.TextToSpeech;
+namespace Ouroboros.Providers.TextToSpeech;
 
 /// <summary>
 /// Cross-platform audio player for playing audio data directly.

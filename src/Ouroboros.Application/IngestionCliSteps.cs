@@ -4,7 +4,7 @@ using LangChain.DocumentLoaders;
 using Ouroboros.Application.Configuration;
 using Ouroboros.Application.Services;
 using Ouroboros.Application.Utilities;
-using LangChainPipeline.Pipeline.Ingestion.Zip;
+using Ouroboros.Pipeline.Ingestion.Zip;
 
 namespace Ouroboros.Application;
 
@@ -110,7 +110,7 @@ public static class IngestionCliSteps
         {
             try
             {
-                LangChainPipeline.Pipeline.Ingestion.SolutionIngestion.SolutionIngestionOptions opts = LangChainPipeline.Pipeline.Ingestion.SolutionIngestion.ParseOptions(CliSteps.ParseString(args));
+                Ouroboros.Pipeline.Ingestion.SolutionIngestion.SolutionIngestionOptions opts = Ouroboros.Pipeline.Ingestion.SolutionIngestion.ParseOptions(CliSteps.ParseString(args));
                 // Recover root path: prefer last source:set event; fallback to current directory.
                 string root = Environment.CurrentDirectory;
                 string? sourceEvent = s.Branch.Events
@@ -123,8 +123,8 @@ public static class IngestionCliSteps
                     string[] parts = sourceEvent.Split(':', 3);
                     if (parts.Length == 3 && Directory.Exists(parts[2])) root = parts[2];
                 }
-                List<Vector> vectors = await LangChainPipeline.Pipeline.Ingestion.SolutionIngestion.IngestAsync(
-                    s.Branch.Store as LangChainPipeline.Domain.Vectors.TrackedVectorStore ?? new LangChainPipeline.Domain.Vectors.TrackedVectorStore(),
+                List<Vector> vectors = await Ouroboros.Pipeline.Ingestion.SolutionIngestion.IngestAsync(
+                    s.Branch.Store as Ouroboros.Domain.Vectors.TrackedVectorStore ?? new Ouroboros.Domain.Vectors.TrackedVectorStore(),
                     root,
                     s.Embed,
                     opts);

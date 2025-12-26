@@ -3,11 +3,11 @@
 // </copyright>
 
 using FluentAssertions;
-using LangChainPipeline.Domain.Reinforcement;
+using Ouroboros.Domain.Reinforcement;
 using Ouroboros.Application.Services.Reinforcement;
 using Ouroboros.Examples.Environments;
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Tests for EpisodeRunner.
@@ -72,7 +72,7 @@ public class EpisodeRunnerTests
         var runner = new EpisodeRunner(environment, policy, "test-gridworld");
 
         // Act - Run multiple episodes, at least one should reach goal
-        var episodes = new List<LangChainPipeline.Domain.Environment.Episode>();
+        var episodes = new List<Ouroboros.Domain.Environment.Episode>();
         for (var i = 0; i < 10; i++)
         {
             var result = await runner.RunEpisodeAsync(maxSteps: 20);
@@ -160,10 +160,10 @@ public class EpisodeRunnerTests
     public void EpisodeMetrics_FromIncompleteEpisode_ShouldThrow()
     {
         // Arrange
-        var incompleteEpisode = new LangChainPipeline.Domain.Environment.Episode(
+        var incompleteEpisode = new Ouroboros.Domain.Environment.Episode(
             Guid.NewGuid(),
             "test",
-            new List<LangChainPipeline.Domain.Environment.EnvironmentStep>(),
+            new List<Ouroboros.Domain.Environment.EnvironmentStep>(),
             0.0,
             DateTime.UtcNow,
             null); // No end time

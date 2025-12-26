@@ -2,11 +2,11 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Pipeline.Ingestion;
+namespace Ouroboros.Pipeline.Ingestion;
 
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
-using LangChainPipeline.Pipeline.Extraction;
+using Ouroboros.Pipeline.Extraction;
 using Ouroboros.Tools.MeTTa;
 
 /// <summary>

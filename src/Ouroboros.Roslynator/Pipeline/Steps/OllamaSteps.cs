@@ -1,8 +1,9 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using FixState = Ouroboros.Roslynator.Pipeline.FixState;
 
-namespace LangChainPipeline.Roslynator.Pipeline.Steps;
+namespace Ouroboros.Roslynator.Pipeline.Steps;
 
 /// <summary>
 /// Ollama AI pipeline step implemented as a self-contained Kleisli-like function.

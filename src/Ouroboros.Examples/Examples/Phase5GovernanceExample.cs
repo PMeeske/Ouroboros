@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Domain.Governance;
-using LangChainPipeline.Examples;
+using Ouroboros.Core.Monads;
+using Ouroboros.Domain.Governance;
+using Ouroboros.Examples;
 
 namespace Ouroboros.Examples.Examples;
 

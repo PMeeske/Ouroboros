@@ -5,7 +5,7 @@ global using System;
 global using System.Collections.Generic;
 global using System.Linq;
 global using System.Threading.Tasks;
-global using LangChainPipeline.Core.Monads;
+global using Ouroboros.Core.Monads;
 // Domain models and state management
-global using LangChainPipeline.Domain.Events;
-global using LangChainPipeline.Domain.States;
+global using Ouroboros.Domain.Events;
+global using Ouroboros.Domain.States;

@@ -3,7 +3,7 @@ using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Splitters.Text;
 
-namespace LangChainPipeline.Pipeline.Ingestion;
+namespace Ouroboros.Pipeline.Ingestion;
 
 public static class InMemoryIngestion
 {

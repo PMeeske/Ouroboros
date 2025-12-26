@@ -4,11 +4,11 @@
 // </copyright>
 
 using System.Text;
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI;
 using Ouroboros.Tools.MeTTa;
 
 // Alias to avoid naming conflict with the OuroborosConfidence method
-using ConfidenceLevel = LangChainPipeline.Agent.MetaAI.OuroborosConfidence;
+using ConfidenceLevel = Ouroboros.Agent.MetaAI.OuroborosConfidence;
 
 namespace Ouroboros.Application;
 

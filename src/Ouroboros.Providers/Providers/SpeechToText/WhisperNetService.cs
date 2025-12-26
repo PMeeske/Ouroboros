@@ -5,7 +5,7 @@
 using Whisper.net;
 using Whisper.net.Ggml;
 
-namespace LangChainPipeline.Providers.SpeechToText;
+namespace Ouroboros.Providers.SpeechToText;
 
 /// <summary>
 /// Native .NET Whisper speech-to-text service using Whisper.net.

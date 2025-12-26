@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Infrastructure.HealthCheck;
+namespace Ouroboros.Core.Infrastructure.HealthCheck;
 
 using System;
 using System.Collections.Generic;

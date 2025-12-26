@@ -10,7 +10,7 @@ using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Core.Monads;
 using Ouroboros.Application.Services;
 using Ouroboros.Tools;
 

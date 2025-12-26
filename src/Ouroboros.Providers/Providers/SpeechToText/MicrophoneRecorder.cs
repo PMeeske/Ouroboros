@@ -4,7 +4,7 @@
 
 using System.Diagnostics;
 
-namespace LangChainPipeline.Providers.SpeechToText;
+namespace Ouroboros.Providers.SpeechToText;
 
 /// <summary>
 /// Cross-platform microphone recorder using system tools.

@@ -1,7 +1,7 @@
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 
-namespace LangChainPipeline.Specs.Steps;
+namespace Ouroboros.Specs.Steps;
 
 [Binding]
 public class TrackedVectorStoreSteps

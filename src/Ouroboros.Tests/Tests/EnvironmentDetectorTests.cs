@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests.Tests;
+namespace Ouroboros.Tests.Tests;
 
-using LangChainPipeline.Core;
+using Ouroboros.Core;
 using Xunit;
 
 /// <summary>

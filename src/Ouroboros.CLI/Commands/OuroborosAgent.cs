@@ -9,27 +9,27 @@ using System.Text.RegularExpressions;
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Agent.MetaAI.SelfModel;
-using LangChainPipeline.Domain.Events;
-using LangChainPipeline.Network;
-using LangChainPipeline.Agent.MetaAI.Affect;
-using LangChainPipeline.Diagnostics;
-using LangChainPipeline.Pipeline.Branches;
-using LangChainPipeline.Pipeline.Reasoning;
-using LangChainPipeline.Providers;
-using LangChainPipeline.Providers.SpeechToText;
-using LangChainPipeline.Providers.TextToSpeech;
-using LangChainPipeline.Speech;
-using LangChainPipeline.Tools.MeTTa;
+using Ouroboros.Agent;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI.SelfModel;
+using Ouroboros.Domain.Events;
+using Ouroboros.Network;
+using Ouroboros.Agent.MetaAI.Affect;
+using Ouroboros.Diagnostics;
+using Ouroboros.Pipeline.Branches;
+using Ouroboros.Pipeline.Reasoning;
+using Ouroboros.Providers;
+using Ouroboros.Providers.SpeechToText;
+using Ouroboros.Providers.TextToSpeech;
+using Ouroboros.Speech;
+using Ouroboros.Tools.MeTTa;
 using Ouroboros.Application;
 using Ouroboros.Application.Mcp;
 using Ouroboros.Application.Personality;
 using Ouroboros.Application.Services;
 using Ouroboros.Application.Tools;
 using Ouroboros.Tools.MeTTa;
-using IEmbeddingModel = LangChainPipeline.Domain.IEmbeddingModel;
+using IEmbeddingModel = Ouroboros.Domain.IEmbeddingModel;
 
 namespace Ouroboros.CLI.Commands;
 
@@ -2210,7 +2210,7 @@ public sealed class OuroborosAgent : IAsyncDisposable
 
         if (cmd is "show" or "" or "status")
         {
-            var skillList = _skills?.GetAllSkills().ToList() ?? new List<LangChainPipeline.Agent.MetaAI.Skill>();
+            var skillList = _skills?.GetAllSkills().ToList() ?? new List<Ouroboros.Agent.MetaAI.Skill>();
             var tools = _tools.All.ToList();
 
             return $@"Ouroboros Capability DAG:

@@ -2,14 +2,14 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using System;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
-using LangChainPipeline.Tools;
+using Ouroboros.Tools;
 using Xunit;
 
 /// <summary>

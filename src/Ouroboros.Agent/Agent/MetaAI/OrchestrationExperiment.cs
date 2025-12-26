@@ -7,7 +7,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Interface for orchestration A/B testing experiments.

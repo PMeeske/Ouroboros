@@ -2,11 +2,11 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples;
+namespace Ouroboros.Examples;
 
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent;
-using LangChainPipeline.Providers;
+using Ouroboros.Agent;
+using Ouroboros.Providers;
 
 /// <summary>
 /// Demonstrates high-performance divide-and-conquer pattern using TinyLlama.

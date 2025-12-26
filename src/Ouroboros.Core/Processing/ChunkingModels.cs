@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Processing;
+namespace Ouroboros.Core.Processing;
 
 /// <summary>
 /// Defines the chunking strategy for processing large contexts.

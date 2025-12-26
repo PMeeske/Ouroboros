@@ -7,9 +7,9 @@
 
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI;
 
-namespace LangChainPipeline.Agent;
+namespace Ouroboros.Agent;
 
 /// <summary>
 /// Smart orchestrator that analyzes prompts and selects optimal models and tools

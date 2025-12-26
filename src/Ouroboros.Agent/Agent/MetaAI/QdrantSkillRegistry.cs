@@ -15,7 +15,7 @@ using System.Text.Json.Serialization;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Configuration for Qdrant skill storage.

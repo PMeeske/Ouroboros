@@ -6,7 +6,7 @@ namespace Ouroboros.CLI.Setup;
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using LangChainPipeline.Options;
+using Ouroboros.Options;
 
 /// <summary>
 /// Provides guided setup for the local development environment.

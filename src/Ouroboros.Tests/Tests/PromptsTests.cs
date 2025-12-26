@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using FluentAssertions;
-using LangChainPipeline.Pipeline.Reasoning;
+using Ouroboros.Pipeline.Reasoning;
 using Xunit;
 
 /// <summary>

@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Infrastructure.HealthCheck;
+namespace Ouroboros.Core.Infrastructure.HealthCheck;
 
 /// <summary>
 /// Represents the health status of a component.

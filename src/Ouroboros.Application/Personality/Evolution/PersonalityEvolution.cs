@@ -4,7 +4,7 @@
 
 namespace Ouroboros.Application.Personality;
 
-using LangChainPipeline.Genetic.Abstractions;
+using Ouroboros.Genetic.Abstractions;
 
 /// <summary>
 /// Gene type for personality chromosome - represents a single aspect of personality.

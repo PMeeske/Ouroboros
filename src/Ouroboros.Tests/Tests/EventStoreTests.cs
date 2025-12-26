@@ -2,12 +2,12 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using FluentAssertions;
-using LangChainPipeline.Domain.Events;
-using LangChainPipeline.Domain.Persistence;
-using LangChainPipeline.Domain.States;
+using Ouroboros.Domain.Events;
+using Ouroboros.Domain.Persistence;
+using Ouroboros.Domain.States;
 using Xunit;
 
 /// <summary>

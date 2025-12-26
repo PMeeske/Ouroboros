@@ -8,7 +8,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 
-namespace LangChainPipeline.Agent;
+namespace Ouroboros.Agent;
 
 /// <summary>
 /// Configuration for divide-and-conquer execution.

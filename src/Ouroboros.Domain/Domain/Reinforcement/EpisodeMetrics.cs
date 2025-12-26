@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Domain.Environment;
+using Ouroboros.Domain.Environment;
 
-namespace LangChainPipeline.Domain.Reinforcement;
+namespace Ouroboros.Domain.Reinforcement;
 
 /// <summary>
 /// Metrics collected for an episode.

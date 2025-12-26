@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Network;
+namespace Ouroboros.Network;
 
 /// <summary>
 /// Service for projecting global network state from the Merkle-DAG.

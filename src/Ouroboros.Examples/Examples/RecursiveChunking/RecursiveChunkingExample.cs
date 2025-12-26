@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples.RecursiveChunking;
+namespace Ouroboros.Examples.RecursiveChunking;
 
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Core.Processing;
+using Ouroboros.Core.Monads;
+using Ouroboros.Core.Processing;
 
 /// <summary>
 /// Example demonstrating RecursiveChunkProcessor for processing large documents.

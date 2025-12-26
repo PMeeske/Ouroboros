@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests.LawsOfForm;
+namespace Ouroboros.Tests.LawsOfForm;
 
 using FluentAssertions;
-using LangChainPipeline.Core.LawsOfForm;
+using Ouroboros.Core.LawsOfForm;
 using Xunit;
 
 /// <summary>

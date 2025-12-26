@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Pipeline.Retrieval;
+namespace Ouroboros.Pipeline.Retrieval;
 
 using LangChain.DocumentLoaders;
 using Ouroboros.Tools.MeTTa;

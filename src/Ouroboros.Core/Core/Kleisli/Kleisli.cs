@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Kleisli;
+namespace Ouroboros.Core.Kleisli;
 
 /// <summary>
 /// Kleisli arrow for computations in a monadic context.

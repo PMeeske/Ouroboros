@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.LawsOfForm;
+namespace Ouroboros.Core.LawsOfForm;
 
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Core.Monads;
 
 /// <summary>
 /// A state machine that explicitly models indeterminate states using Laws of Form.

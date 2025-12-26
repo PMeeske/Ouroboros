@@ -1,4 +1,4 @@
-namespace LangChainPipeline.Specs.Steps;
+namespace Ouroboros.Specs.Steps;
 
 [Binding]
 public class ToolRegistrySteps

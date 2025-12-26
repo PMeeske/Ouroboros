@@ -3,7 +3,7 @@
 // Safety Guard - Permission-based safe execution
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a permission for executing operations.

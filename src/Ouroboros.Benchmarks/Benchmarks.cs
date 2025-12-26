@@ -1,8 +1,8 @@
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
-using LangChainPipeline.Tools;
-using LangChainPipeline.Domain;
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Tools;
+using Ouroboros.Domain;
+using Ouroboros.Core.Monads;
 
 namespace Ouroboros.Benchmarks;
 

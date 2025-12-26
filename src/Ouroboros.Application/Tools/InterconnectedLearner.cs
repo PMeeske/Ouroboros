@@ -7,10 +7,10 @@ namespace Ouroboros.Application.Tools;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Genetic.Abstractions;
-using LangChainPipeline.Genetic.Core;
-using LangChainPipeline.Providers;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Genetic.Abstractions;
+using Ouroboros.Genetic.Core;
+using Ouroboros.Providers;
 using Ouroboros.Tools;
 using Ouroboros.Tools.MeTTa;
 

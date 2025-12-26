@@ -9,17 +9,17 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Pipeline.Planning;
-using LangChainPipeline.Pipeline.Verification;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Core.Monads;
+using Ouroboros.Pipeline.Planning;
+using Ouroboros.Pipeline.Verification;
 using Ouroboros.Application.Tools;
 using Ouroboros.Tools.MeTTa;
 using Xunit;
 
-// Alias to disambiguate PlanStep from LangChainPipeline.Pipeline.Verification.Plan
-using MetaAIPlanStep = LangChainPipeline.Agent.MetaAI.PlanStep;
-using VerificationPlan = LangChainPipeline.Pipeline.Verification.Plan;
+// Alias to disambiguate PlanStep from Ouroboros.Pipeline.Verification.Plan
+using MetaAIPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using VerificationPlan = Ouroboros.Pipeline.Verification.Plan;
 
 /// <summary>
 /// Integration tests for CLI interactive mode functionality.

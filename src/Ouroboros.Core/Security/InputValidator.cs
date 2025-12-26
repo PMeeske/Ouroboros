@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Security;
+namespace Ouroboros.Core.Security;
 
 /// <summary>
 /// Result of input validation.

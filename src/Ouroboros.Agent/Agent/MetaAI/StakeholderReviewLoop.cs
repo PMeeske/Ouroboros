@@ -3,7 +3,7 @@
 // Stakeholder Review Loop - PR-based approval workflow
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a PR (Pull Request) for stakeholder review.

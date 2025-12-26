@@ -6,7 +6,7 @@
 
 using System.Collections.Concurrent;
 
-namespace LangChainPipeline.Core.Memory;
+namespace Ouroboros.Core.Memory;
 
 /// <summary>
 /// Represents a memory context that maintains conversation history

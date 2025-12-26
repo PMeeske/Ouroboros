@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Steps;
+namespace Ouroboros.Core.Steps;
 
 /// <summary>
 /// Minimal append-only builder for composing <see cref="Step{TIn, TOut}"/> instances

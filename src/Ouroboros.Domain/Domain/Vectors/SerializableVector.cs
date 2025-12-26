@@ -1,4 +1,4 @@
-namespace LangChainPipeline.Domain.Vectors;
+namespace Ouroboros.Domain.Vectors;
 
 /// <summary>
 /// Serializable representation of a vector with associated text and metadata.

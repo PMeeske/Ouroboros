@@ -4,7 +4,7 @@
 // ==========================================================
 
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Builder for configuring and creating Meta-AI v2 orchestrator instances.

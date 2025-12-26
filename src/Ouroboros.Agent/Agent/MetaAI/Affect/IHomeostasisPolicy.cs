@@ -4,7 +4,7 @@
 // Phase 3: Affective Dynamics - SLA regulation & corrective triggers
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI.Affect;
+namespace Ouroboros.Agent.MetaAI.Affect;
 
 /// <summary>
 /// Represents a homeostasis policy for maintaining affective equilibrium.

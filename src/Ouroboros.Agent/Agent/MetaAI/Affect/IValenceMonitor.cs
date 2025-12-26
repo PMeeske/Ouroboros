@@ -4,7 +4,7 @@
 // Phase 3: Affective Dynamics - Synthetic affective states
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI.Affect;
+namespace Ouroboros.Agent.MetaAI.Affect;
 
 /// <summary>
 /// Represents the current affective state of an agent.

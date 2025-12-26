@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Network;
+namespace Ouroboros.Network;
 
 /// <summary>
 /// Represents a snapshot of the global network state at a specific point in time.

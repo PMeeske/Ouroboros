@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Genetic.Extensions;
+namespace Ouroboros.Genetic.Extensions;
 
-using LangChainPipeline.Genetic.Abstractions;
-using LangChainPipeline.Genetic.Core;
+using Ouroboros.Genetic.Abstractions;
+using Ouroboros.Genetic.Core;
 
 /// <summary>
 /// Extension methods for integrating the evolution engine into pipeline composition.

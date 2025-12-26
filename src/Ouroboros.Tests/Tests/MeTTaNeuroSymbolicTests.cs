@@ -2,12 +2,12 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
-using LangChainPipeline.Pipeline.Verification;
-using LangChainPipeline.Pipeline.Extraction;
-using LangChainPipeline.Pipeline.Retrieval;
-using LangChainPipeline.Pipeline.Planning;
+using Ouroboros.Pipeline.Verification;
+using Ouroboros.Pipeline.Extraction;
+using Ouroboros.Pipeline.Retrieval;
+using Ouroboros.Pipeline.Planning;
 
 /// <summary>
 /// Unit tests for MeTTa Neuro-Symbolic Integration components.

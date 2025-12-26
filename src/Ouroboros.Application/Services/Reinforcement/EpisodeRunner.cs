@@ -2,9 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Domain.Environment;
-using LangChainPipeline.Domain.Reinforcement;
+using Ouroboros.Core.Monads;
+using Ouroboros.Domain.Environment;
+using Ouroboros.Domain.Reinforcement;
 
 namespace Ouroboros.Application.Services.Reinforcement;
 

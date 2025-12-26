@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.Conversation;
+namespace Ouroboros.Core.Conversation;
 
 /// <summary>
 /// Builder for creating conversational pipelines with memory management.

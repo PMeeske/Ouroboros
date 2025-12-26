@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Core.LangChain;
+namespace Ouroboros.Core.LangChain;
 /// <summary>
 /// Integration layer that bridges LangChain chains with the monadic pipeline system.
 /// </summary>

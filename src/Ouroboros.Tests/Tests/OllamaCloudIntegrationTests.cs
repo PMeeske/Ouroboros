@@ -2,11 +2,11 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using LangChain.Databases;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Providers;
+using Ouroboros.Providers;
 
 /// <summary>
 /// End-to-end integration tests for Ollama Cloud endpoint support.

@@ -4,7 +4,7 @@
 
 using System.Runtime.CompilerServices;
 
-namespace LangChainPipeline.Core.Monads;
+namespace Ouroboros.Core.Monads;
 
 /// <summary>
 /// Represents the result of an operation that can either succeed with a value or fail with an error.

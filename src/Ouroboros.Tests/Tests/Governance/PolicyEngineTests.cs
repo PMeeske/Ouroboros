@@ -3,9 +3,9 @@
 // </copyright>
 
 using FluentAssertions;
-using LangChainPipeline.Domain.Governance;
+using Ouroboros.Domain.Governance;
 
-namespace LangChainPipeline.Tests.Governance;
+namespace Ouroboros.Tests.Governance;
 
 /// <summary>
 /// Tests for the Policy Engine.

@@ -7,7 +7,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Implementation of the Meta-AI v2 planner/executor/verifier orchestrator.

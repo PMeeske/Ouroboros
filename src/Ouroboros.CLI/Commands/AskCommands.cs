@@ -3,12 +3,12 @@ using CommandLine;
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Diagnostics;
-using LangChainPipeline.Options;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Diagnostics;
+using Ouroboros.Options;
 using Ouroboros.CLI;
 using Ouroboros.Application.Services;
-using IEmbeddingModel = LangChainPipeline.Domain.IEmbeddingModel;
+using IEmbeddingModel = Ouroboros.Domain.IEmbeddingModel;
 
 namespace Ouroboros.CLI.Commands;
 
@@ -90,7 +90,7 @@ public static class AskCommands
                 }
             }
 
-            AgentInstance agentInstance = LangChainPipeline.Agent.AgentFactory.Create(o.AgentMode, chatModel, tools, o.Debug, o.AgentMaxSteps, o.Rag, o.Embed, jsonTools: o.JsonTools, stream: o.Stream);
+            AgentInstance agentInstance = Ouroboros.Agent.AgentFactory.Create(o.AgentMode, chatModel, tools, o.Debug, o.AgentMaxSteps, o.Rag, o.Embed, jsonTools: o.JsonTools, stream: o.Stream);
             try
             {
                 string questionForAgent = o.Question;

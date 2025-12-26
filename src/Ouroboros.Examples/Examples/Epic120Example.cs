@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Examples.EpicWorkflow;
+namespace Ouroboros.Examples.EpicWorkflow;
 
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Core.Monads;
 
 /// <summary>
 /// Example demonstrating epic workflow with automatic agent assignment and branch creation

@@ -3,7 +3,7 @@
 // Skill Registry - Learn and store reusable skills
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a learned skill that can be reused.

@@ -1,4 +1,4 @@
-namespace LangChainPipeline.WebApi.Services;
+namespace Ouroboros.WebApi.Services;
 
 /// <summary>
 /// Service for executing AI pipeline operations.

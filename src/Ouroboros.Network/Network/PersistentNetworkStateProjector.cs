@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Network;
+namespace Ouroboros.Network;
 
 using System.Text.Json;
 using Qdrant.Client;

@@ -4,9 +4,9 @@
 // Fluent builder for creating v3.0 orchestrator instances
 // ==========================================================
 
-using LangChainPipeline.Tools.MeTTa;
+using Ouroboros.Tools.MeTTa;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Fluent builder for creating MeTTa-first Orchestrator v3.0 instances.

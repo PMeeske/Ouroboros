@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using LangChainPipeline.Core.Steps;
-using LangChainPipeline.Pipeline.GraphRAG.Models;
+using Ouroboros.Core.Steps;
+using Ouroboros.Pipeline.GraphRAG.Models;
 
-namespace LangChainPipeline.Pipeline.GraphRAG;
+namespace Ouroboros.Pipeline.GraphRAG;
 
 /// <summary>
 /// Provides arrow functions for graph-based retrieval operations in the pipeline.

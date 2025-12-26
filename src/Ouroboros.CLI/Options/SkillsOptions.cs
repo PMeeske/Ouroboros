@@ -1,7 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using CommandLine;
 
-namespace LangChainPipeline.Options;
+namespace Ouroboros.Options;
 
 [Verb("skills", HelpText = "Manage research-powered skills and DSL tokens. Use --voice for voice mode.")]
 public sealed class SkillsOptions : IVoiceOptions

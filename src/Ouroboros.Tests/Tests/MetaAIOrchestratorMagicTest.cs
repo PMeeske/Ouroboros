@@ -2,12 +2,12 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using FluentAssertions;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Tools;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Tools;
 using Xunit;
 
 /// <summary>

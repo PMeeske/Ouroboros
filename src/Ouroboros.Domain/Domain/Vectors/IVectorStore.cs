@@ -2,7 +2,7 @@
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 
-namespace LangChainPipeline.Domain.Vectors;
+namespace Ouroboros.Domain.Vectors;
 
 /// <summary>
 /// Defines the contract for a vector store that can store and retrieve vectors with similarity search capabilities.

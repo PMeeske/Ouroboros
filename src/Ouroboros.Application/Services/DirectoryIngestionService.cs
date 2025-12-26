@@ -2,7 +2,7 @@ using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Splitters.Text;
 using Ouroboros.Application.Configuration;
-using IEmbeddingModel = LangChainPipeline.Domain.IEmbeddingModel;
+using IEmbeddingModel = Ouroboros.Domain.IEmbeddingModel;
 
 namespace Ouroboros.Application.Services;
 

@@ -1,7 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using CommandLine;
 
-namespace LangChainPipeline.Options;
+namespace Ouroboros.Options;
 
 [Verb("dag", HelpText = "DAG (Directed Acyclic Graph) operations for pipeline branch management.")]
 public sealed class DagOptions

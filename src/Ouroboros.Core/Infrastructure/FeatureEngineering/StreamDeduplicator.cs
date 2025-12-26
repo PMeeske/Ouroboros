@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Infrastructure.FeatureEngineering;
+namespace Ouroboros.Infrastructure.FeatureEngineering;
 
 using System;
 using System.Collections.Generic;

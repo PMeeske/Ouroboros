@@ -3,7 +3,7 @@
 // </copyright>
 
 using System.Text.Json;
-using LangChainPipeline.Domain.Persistence;
+using Ouroboros.Domain.Persistence;
 
 namespace Ouroboros.Application.Personality;
 

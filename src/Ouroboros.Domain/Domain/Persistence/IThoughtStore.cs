@@ -2,7 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Domain.Persistence;
+namespace Ouroboros.Domain.Persistence;
 
 /// <summary>
 /// Interface for persisting and retrieving agent thoughts.

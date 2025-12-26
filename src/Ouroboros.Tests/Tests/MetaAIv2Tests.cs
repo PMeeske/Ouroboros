@@ -2,11 +2,11 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent;
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.Agent;
+using Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Tests for Meta-AI v2 planner/executor/verifier orchestrator.

@@ -2,11 +2,11 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Tools;
-using LangChainPipeline.Tools.MeTTa;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Tools;
+using Ouroboros.Tools.MeTTa;
 
 /// <summary>
 /// Tests for MeTTa-first orchestrator v3.0 with symbolic reasoning.

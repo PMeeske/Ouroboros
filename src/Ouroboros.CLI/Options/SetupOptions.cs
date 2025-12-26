@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Options
+namespace Ouroboros.Options
 {
     using CommandLine;
 

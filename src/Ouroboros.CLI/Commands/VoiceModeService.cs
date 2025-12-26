@@ -3,9 +3,9 @@
 // </copyright>
 
 using System.Reactive.Linq;
-using LangChainPipeline.Providers.SpeechToText;
-using LangChainPipeline.Providers.TextToSpeech;
-using LangChainPipeline.Speech;
+using Ouroboros.Providers.SpeechToText;
+using Ouroboros.Providers.TextToSpeech;
+using Ouroboros.Speech;
 
 namespace Ouroboros.CLI.Commands;
 

@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Pipeline.Planning;
+namespace Ouroboros.Pipeline.Planning;
 
 using Ouroboros.Tools.MeTTa;
-using LangChainPipeline.Pipeline.Verification;
+using Ouroboros.Pipeline.Verification;
 
 /// <summary>
 /// Represents a plan candidate with associated symbolic properties.

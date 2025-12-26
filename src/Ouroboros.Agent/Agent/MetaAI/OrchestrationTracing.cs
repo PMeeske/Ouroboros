@@ -6,9 +6,9 @@
 
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using LangChainPipeline.Diagnostics;
+using Ouroboros.Diagnostics;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Provides OpenTelemetry-compatible tracing and metrics for the orchestration layer.

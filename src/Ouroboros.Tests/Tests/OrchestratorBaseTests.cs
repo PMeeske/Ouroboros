@@ -6,7 +6,7 @@
 namespace Ouroboros.Tests;
 
 using Ouroboros.Agent;
-using LangChainPipeline.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI;
 using Xunit;
 using FluentAssertions;
 

@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace LangChainPipeline.Providers.SpeechToText;
+namespace Ouroboros.Providers.SpeechToText;
 
 /// <summary>
 /// Local Whisper-based speech-to-text service using whisper.cpp or faster-whisper.

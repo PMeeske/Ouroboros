@@ -6,11 +6,11 @@ global using System;
 global using System.Collections.Generic;
 global using System.Linq;
 global using System.Threading.Tasks;
-global using LangChainPipeline.Core.Monads;
-global using LangChainPipeline.Core.Steps;
+global using Ouroboros.Core.Monads;
+global using Ouroboros.Core.Steps;
 // Domain models
-global using LangChainPipeline.Domain;
+global using Ouroboros.Domain;
 // Providers
-global using LangChainPipeline.Providers;
+global using Ouroboros.Providers;
 // Tools
 global using Ouroboros.Tools;

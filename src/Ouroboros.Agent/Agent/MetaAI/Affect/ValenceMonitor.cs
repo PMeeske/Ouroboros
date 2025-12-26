@@ -8,7 +8,7 @@
 using System.Collections.Concurrent;
 using System.Numerics;
 
-namespace LangChainPipeline.Agent.MetaAI.Affect;
+namespace Ouroboros.Agent.MetaAI.Affect;
 
 /// <summary>
 /// Implementation of valence monitoring with spectral stress detection.

@@ -1,8 +1,8 @@
 using LangChain.Providers;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Domain;
-using LangChainPipeline.Providers;
-using IEmbeddingModel = LangChainPipeline.Domain.IEmbeddingModel;
+using Ouroboros.Domain;
+using Ouroboros.Providers;
+using IEmbeddingModel = Ouroboros.Domain.IEmbeddingModel;
 
 namespace Ouroboros.Application.Services;
 

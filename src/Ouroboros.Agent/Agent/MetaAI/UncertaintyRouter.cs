@@ -7,7 +7,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Implementation of uncertainty-aware routing with fallback strategies.

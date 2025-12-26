@@ -1,8 +1,8 @@
 using FluentAssertions;
-using LangChainPipeline.Pipeline.Branches;
+using Ouroboros.Pipeline.Branches;
 using Xunit;
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Comprehensive tests for retention policies and evaluator.

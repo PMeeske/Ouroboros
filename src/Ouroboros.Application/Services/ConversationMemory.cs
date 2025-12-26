@@ -6,7 +6,7 @@ namespace Ouroboros.Application.Services;
 
 using System.Text;
 using System.Text.Json;
-using LangChainPipeline.Domain;
+using Ouroboros.Domain;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 

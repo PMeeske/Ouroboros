@@ -1,4 +1,4 @@
-﻿#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==============================
 // Minimal CLI entry (top-level)
 // ==============================
@@ -9,17 +9,17 @@ using CommandLine;
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
-using LangChainPipeline.Agent;
-using LangChainPipeline.Agent.MetaAI;
-using LangChainPipeline.Diagnostics; // added
-using LangChainPipeline.Options;
-using LangChainPipeline.Providers; // for OllamaEmbeddingAdapter
-using LangChainPipeline.Providers.SpeechToText; // for STT services
-using LangChainPipeline.Providers.TextToSpeech; // for TTS services
+using Ouroboros.Agent;
+using Ouroboros.Agent.MetaAI;
+using Ouroboros.Diagnostics; // added
+using Ouroboros.Options;
+using Ouroboros.Providers; // for OllamaEmbeddingAdapter
+using Ouroboros.Providers.SpeechToText; // for STT services
+using Ouroboros.Providers.TextToSpeech; // for TTS services
 using Microsoft.Extensions.Hosting;
 
-using LangChainPipeline.Tools.MeTTa; // added
-using LangChainPipeline.Speech; // Adaptive speech detection
+using Ouroboros.Tools.MeTTa; // added
+using Ouroboros.Speech; // Adaptive speech detection
 using Ouroboros.Application.Tools; // Dynamic tool factory
 using Ouroboros.Application.Personality; // Personality engine with MeTTa + GA
 using Ouroboros.CLI; // added
@@ -30,7 +30,7 @@ try
     // Optional minimal host
     if (args.Contains("--host-only"))
     {
-        using IHost onlyHost = await LangChainPipeline.Interop.Hosting.MinimalHost.BuildAsync(args);
+        using IHost onlyHost = await Ouroboros.Interop.Hosting.MinimalHost.BuildAsync(args);
         await onlyHost.RunAsync();
         return;
     }

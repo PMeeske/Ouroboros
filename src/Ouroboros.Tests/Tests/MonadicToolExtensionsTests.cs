@@ -2,16 +2,16 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using LangChainPipeline.Core.Kleisli;
-using LangChainPipeline.Core.Monads;
-using LangChainPipeline.Core.Steps;
-using LangChainPipeline.Tools;
+using Ouroboros.Core.Kleisli;
+using Ouroboros.Core.Monads;
+using Ouroboros.Core.Steps;
+using Ouroboros.Tools;
 using Xunit;
 
 /// <summary>

@@ -2,10 +2,10 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests.Genetic;
+namespace Ouroboros.Tests.Genetic;
 
 using FluentAssertions;
-using LangChainPipeline.Genetic.Core;
+using Ouroboros.Genetic.Core;
 using Xunit;
 
 /// <summary>

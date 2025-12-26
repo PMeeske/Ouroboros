@@ -3,12 +3,12 @@
 // </copyright>
 
 using FluentAssertions;
-using LangChainPipeline.Genetic.Abstractions;
-using LangChainPipeline.Genetic.Core;
-using LangChainPipeline.Genetic.Steps;
+using Ouroboros.Genetic.Abstractions;
+using Ouroboros.Genetic.Core;
+using Ouroboros.Genetic.Steps;
 using Xunit;
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 /// <summary>
 /// Tests for the GeneticEvolutionStep class.

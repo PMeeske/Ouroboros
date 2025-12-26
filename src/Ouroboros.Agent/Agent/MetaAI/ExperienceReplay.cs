@@ -3,7 +3,7 @@
 // Experience Replay - Train on stored experiences
 // ==========================================================
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Represents a training batch from experience replay.

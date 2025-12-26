@@ -4,7 +4,7 @@
 
 using System.Collections.Concurrent;
 
-namespace LangChainPipeline.Domain.Persistence;
+namespace Ouroboros.Domain.Persistence;
 
 /// <summary>
 /// In-memory implementation of thought storage for development and testing.

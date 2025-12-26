@@ -10,7 +10,7 @@
 
 using Ouroboros.Agent;
 
-namespace LangChainPipeline.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Fluent builder for creating OuroborosOrchestrator instances.

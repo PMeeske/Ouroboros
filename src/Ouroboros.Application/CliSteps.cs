@@ -6,7 +6,7 @@ using LangChain.Databases; // for Vector, IVectorCollection
 using LangChain.DocumentLoaders;
 using LangChain.Providers; // for IChatModel
 // for TrackedVectorStore
-using LangChainPipeline.Pipeline.Ingestion.Zip;
+using Ouroboros.Pipeline.Ingestion.Zip;
 using Ouroboros.Application.Configuration;
 
 namespace Ouroboros.Application;
@@ -168,7 +168,7 @@ public static class CliSteps
         {
             IEnumerable<Vector> all = s.Branch.Store switch
             {
-                LangChainPipeline.Domain.Vectors.TrackedVectorStore tvs => tvs.GetAll(),
+                Ouroboros.Domain.Vectors.TrackedVectorStore tvs => tvs.GetAll(),
                 _ => Enumerable.Empty<LangChain.Databases.Vector>()
             };
             int count = all.Count();

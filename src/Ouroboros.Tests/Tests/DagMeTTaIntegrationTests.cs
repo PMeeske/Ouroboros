@@ -2,12 +2,12 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace LangChainPipeline.Tests;
+namespace Ouroboros.Tests;
 
 using LangChain.DocumentLoaders;
-using LangChainPipeline.Pipeline.Branches;
-using LangChainPipeline.Pipeline.Planning;
-using LangChainPipeline.Pipeline.Verification;
+using Ouroboros.Pipeline.Branches;
+using Ouroboros.Pipeline.Planning;
+using Ouroboros.Pipeline.Verification;
 using Ouroboros.Tools.MeTTa;
 
 /// <summary>

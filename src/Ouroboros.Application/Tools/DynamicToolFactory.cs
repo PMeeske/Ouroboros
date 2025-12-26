@@ -9,7 +9,7 @@ using System.Runtime.Loader;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using LangChainPipeline.Providers;
+using Ouroboros.Providers;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
@@ -157,7 +157,7 @@ public class DynamicToolFactory
             {
                 // Try to fix compilation errors with LLM
                 string fixPrompt = $@"The following C# code has compilation errors. Fix them and return ONLY the corrected code.
-IMPORTANT: Make sure to include 'using LangChainPipeline.Core.Monads;' for the Result type.
+IMPORTANT: Make sure to include 'using Ouroboros.Core.Monads;' for the Result type.
 
 ERRORS:
 {compileResult.Error}
@@ -638,7 +638,7 @@ using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Core.Monads;
 using Ouroboros.Tools;
 
 namespace Ouroboros.DynamicTools
@@ -818,7 +818,7 @@ Generate ONLY the complete C# code, no explanations.";
             "using System;",
             "using System.Threading;",
             "using System.Threading.Tasks;",
-            "using LangChainPipeline.Core.Monads;",
+            "using Ouroboros.Core.Monads;",
             "using Ouroboros.Tools;",
         };
 
