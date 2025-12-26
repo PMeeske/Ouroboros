@@ -12,6 +12,9 @@ on:
       - 'src/Ouroboros.Android/**'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 # Cancel in-progress builds for the same branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
