@@ -3,6 +3,9 @@
 
 name: Terraform Infrastructure
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
     inputs:
@@ -207,6 +210,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
+    permissions: {}
 
     steps:
       - name: Notification
