@@ -15,6 +15,9 @@ on:
       - '.github/workflows/ollama-integration-test.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 # Cancel in-progress runs for the same workflow on the same branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
