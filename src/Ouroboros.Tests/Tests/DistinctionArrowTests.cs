@@ -199,7 +199,7 @@ public class DistinctionArrowTests
     public async Task Evaluate_SimplifiesDoubleMarkedForm()
     {
         // Arrange - a record with a doubly-marked form
-        var input = new FormRecord("test", Form.Mark(Form.Mark(Form.Void)));
+        var input = new FormRecord("test", Form.CrossForm(Form.CrossForm(Form.Void)));
         var arrow = DistinctionArrow.Evaluate<FormRecord>(
             extractor: r => r.Distinction,
             combiner: (r, f) => r with { Distinction = f });

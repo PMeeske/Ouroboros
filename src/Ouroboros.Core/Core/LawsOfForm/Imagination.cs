@@ -70,8 +70,8 @@ public static class Imagination
     /// <returns>The superimposed form.</returns>
     public static Form Superimpose(Form form1, Form form2)
     {
-        var eval1 = form1.Eval();
-        var eval2 = form2.Eval();
+        var eval1 = form1.EvalToRecord();
+        var eval2 = form2.EvalToRecord();
 
         // If both are imaginary, combine phases (interference)
         if (eval1 is Form.ImaginaryForm imag1 && eval2 is Form.ImaginaryForm imag2)
@@ -103,7 +103,7 @@ public static class Imagination
     /// <returns>The form after one imagination cycle.</returns>
     public static Form Apply(Form form)
     {
-        var evaluated = form.Eval();
+        var evaluated = form.EvalToRecord();
 
         return evaluated switch
         {
@@ -132,7 +132,7 @@ public static class Imagination
     /// <returns>The conjugated form.</returns>
     public static Form Conjugate(Form form)
     {
-        var evaluated = form.Eval();
+        var evaluated = form.EvalToRecord();
 
         if (evaluated is Form.ImaginaryForm imag)
         {
@@ -152,7 +152,7 @@ public static class Imagination
     /// <returns>The magnitude as a double.</returns>
     public static double Magnitude(Form form)
     {
-        var evaluated = form.Eval();
+        var evaluated = form.EvalToRecord();
 
         return evaluated switch
         {
@@ -172,7 +172,7 @@ public static class Imagination
     /// <returns>The phase in radians.</returns>
     public static double Phase(Form form)
     {
-        var evaluated = form.Eval();
+        var evaluated = form.EvalToRecord();
 
         return evaluated switch
         {
@@ -192,7 +192,7 @@ public static class Imagination
     /// <returns>Void or Mark based on the form's phase.</returns>
     public static Form Project(Form form)
     {
-        var evaluated = form.Eval();
+        var evaluated = form.EvalToRecord();
 
         if (evaluated is Form.ImaginaryForm imag)
         {
@@ -218,7 +218,7 @@ public static class Imagination
     /// <returns>The apparent form at that time (Void or Mark).</returns>
     public static Form Sample(Form form, int time)
     {
-        var evaluated = form.Eval();
+        var evaluated = form.EvalToRecord();
 
         if (evaluated is Form.ImaginaryForm imag)
         {

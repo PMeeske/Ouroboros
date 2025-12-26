@@ -235,4 +235,65 @@ public static class FormExtensions
     {
         return form.IsMark() ? Option<TValue>.Some(value) : Option<TValue>.None();
     }
+
+    /// <summary>
+    /// Converts a Form to a TriState.
+    /// </summary>
+    /// <param name="form">The form to convert.</param>
+    /// <returns>The corresponding TriState.</returns>
+    public static TriState ToTriState(this Form form) => form.State;
+
+    /// <summary>
+    /// Converts a Form to a boolean.
+    /// Mark -> true, anything else -> false.
+    /// </summary>
+    /// <param name="form">The form to convert.</param>
+    /// <returns>True if marked, false otherwise.</returns>
+    public static bool ToBoolean(this Form form) => form.IsMark();
+
+    /// <summary>
+    /// Logical implication: A implies B = Not(A) Or B.
+    /// </summary>
+    /// <param name="form">The antecedent.</param>
+    /// <param name="other">The consequent.</param>
+    /// <returns>The result of the implication.</returns>
+    public static Form Implies(this Form form, Form other)
+    {
+        return form.Not().Or(other);
+    }
+
+    /// <summary>
+    /// Maps the form by applying a transformation function.
+    /// </summary>
+    /// <param name="form">The form to transform.</param>
+    /// <param name="f">The transformation function.</param>
+    /// <returns>The transformed form.</returns>
+    public static Form Map(this Form form, Func<Form, Form> f)
+    {
+        return f(form);
+    }
+
+    /// <summary>
+    /// Creates a Form from an Option.
+    /// Some -> Mark, None -> Void.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="option">The option to convert.</param>
+    /// <returns>Mark if Some, Void if None.</returns>
+    public static Form FromOption<T>(Option<T> option)
+    {
+        return option.HasValue ? Form.Mark : Form.Void;
+    }
+
+    /// <summary>
+    /// Creates a Form from a Result.
+    /// Success -> Mark, Failure -> Void.
+    /// </summary>
+    /// <typeparam name="T">The success type.</typeparam>
+    /// <param name="result">The result to convert.</param>
+    /// <returns>Mark if Success, Void if Failure.</returns>
+    public static Form FromResult<T>(Result<T, string> result)
+    {
+        return result.IsSuccess ? Form.Mark : Form.Void;
+    }
 }

@@ -44,7 +44,7 @@ public class LawsOfFormTests
     public void Mark_CreatesDistinction()
     {
         // Arrange & Act
-        var form = Form.Mark(Form.Void);
+        var form = Form.CrossForm(Form.Void);
 
         // Assert
         form.IsMarked().Should().BeTrue();
@@ -70,7 +70,7 @@ public class LawsOfFormTests
     {
         // Law of Crossing: Mark(Mark(Void)) = Void
         // The fundamental cancellation law
-        var form = Form.Mark(Form.Mark(Form.Void));
+        var form = Form.CrossForm(Form.CrossForm(Form.Void));
 
         // Act
         var result = form.Eval();
@@ -83,7 +83,7 @@ public class LawsOfFormTests
     public void LawOfCrossing_TripleMark_EqualsMark()
     {
         // Mark(Mark(Mark(Void))) = Mark(Void) since inner double mark cancels
-        var form = Form.Mark(Form.Mark(Form.Mark(Form.Void)));
+        var form = Form.CrossForm(Form.CrossForm(Form.CrossForm(Form.Void)));
 
         // Act
         var result = form.Eval();
@@ -96,7 +96,7 @@ public class LawsOfFormTests
     public void LawOfCrossing_QuadrupleMark_EqualsVoid()
     {
         // Mark(Mark(Mark(Mark(Void)))) = Void (two pairs cancel)
-        var form = Form.Mark(Form.Mark(Form.Mark(Form.Mark(Form.Void))));
+        var form = Form.CrossForm(Form.CrossForm(Form.CrossForm(Form.CrossForm(Form.Void))));
 
         // Act
         var result = form.Eval();
@@ -112,7 +112,7 @@ public class LawsOfFormTests
         var form = Form.Void;
         for (int i = 0; i < 6; i++)
         {
-            form = Form.Mark(form);
+            form = Form.CrossForm(form);
         }
 
         // Act
@@ -129,7 +129,7 @@ public class LawsOfFormTests
         var form = Form.Void;
         for (int i = 0; i < 5; i++)
         {
-            form = Form.Mark(form);
+            form = Form.CrossForm(form);
         }
 
         // Act
@@ -386,7 +386,7 @@ public class LawsOfFormTests
     public void FromResult_Success_ReturnsMarked()
     {
         // Arrange
-        var result = Result<int>.Success(42);
+        var result = Result<int, string>.Success(42);
 
         // Act
         var form = FormExtensions.FromResult(result);
@@ -399,7 +399,7 @@ public class LawsOfFormTests
     public void FromResult_Failure_ReturnsVoid()
     {
         // Arrange
-        var result = Result<int>.Failure("error");
+        var result = Result<int, string>.Failure("error");
 
         // Act
         var form = FormExtensions.FromResult(result);
@@ -420,8 +420,9 @@ public class LawsOfFormTests
 
         // Act
         var result = form.Match(
-            onMarked: () => "marked",
-            onVoid: () => "void");
+            onMark: () => "marked",
+            onVoid: () => "void",
+            onImaginary: () => "imaginary");
 
         // Assert
         result.Should().Be("marked");
@@ -435,8 +436,9 @@ public class LawsOfFormTests
 
         // Act
         var result = form.Match(
-            onMarked: () => "marked",
-            onVoid: () => "void");
+            onMark: () => "marked",
+            onVoid: () => "void",
+            onImaginary: () => "imaginary");
 
         // Assert
         result.Should().Be("void");
@@ -449,7 +451,7 @@ public class LawsOfFormTests
         var form = Form.Mark;
 
         // Act
-        var result = form.Map(f => Form.Mark(f));
+        var result = form.Map(f => Form.CrossForm(f));
 
         // Assert - mapping adds another mark
         result.Eval().IsVoid().Should().BeTrue("Mark(Mark(x)) should be void");
