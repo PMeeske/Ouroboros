@@ -1,5 +1,8 @@
 name: Mutation Testing
 
+permissions:
+  contents: read
+
 on:
   # Run mutation tests on a schedule (nightly at 2 AM UTC)
   schedule:
