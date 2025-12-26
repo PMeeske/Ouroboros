@@ -2,6 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -10,6 +11,8 @@ using LangChain.DocumentLoaders;
 using LangChain.Providers.Ollama;
 using LangChainPipeline.Agent;
 using LangChainPipeline.Agent.MetaAI;
+using LangChainPipeline.Agent.MetaAI.SelfModel;
+using LangChainPipeline.Domain.Events;
 using LangChainPipeline.Network;
 using LangChainPipeline.Agent.MetaAI.Affect;
 using LangChainPipeline.Diagnostics;
@@ -111,6 +114,24 @@ public sealed class OuroborosAgent : IAsyncDisposable
 
     // Network State Tracking - reifies Step execution into MerkleDag
     private NetworkStateTracker? _networkTracker;
+
+    // Sub-Agent Orchestration - manages multiple agents for complex tasks
+    private IDistributedOrchestrator? _distributedOrchestrator;
+    private IEpicBranchOrchestrator? _epicOrchestrator;
+    private readonly ConcurrentDictionary<string, SubAgentInstance> _subAgents = new();
+
+    // Self-Model - metacognitive capabilities
+    private IIdentityGraph? _identityGraph;
+    private IGlobalWorkspace? _globalWorkspace;
+    private IPredictiveMonitor? _predictiveMonitor;
+    private ISelfEvaluator? _selfEvaluator;
+    private ICapabilityRegistry? _capabilityRegistry;
+
+    // Self-Execution - autonomous goal pursuit
+    private readonly ConcurrentQueue<AutonomousGoal> _goalQueue = new();
+    private Task? _selfExecutionTask;
+    private CancellationTokenSource? _selfExecutionCts;
+    private bool _selfExecutionEnabled;
 
     // Persistent thought memory - enables continuity across sessions
     private ThoughtPersistenceService? _thoughtPersistence;
@@ -262,6 +283,18 @@ public sealed class OuroborosAgent : IAsyncDisposable
         // Initialize network state tracking (always enabled - reifies Steps into MerkleDag)
         _networkTracker = new NetworkStateTracker();
         Console.WriteLine("  ✓ NetworkState: Merkle-DAG reification active");
+
+        // Initialize sub-agent orchestration (always enabled for complex task delegation)
+        await InitializeSubAgentOrchestrationAsync();
+
+        // Initialize self-model for metacognition (always enabled)
+        await InitializeSelfModelAsync();
+
+        // Initialize self-execution capability (conditionally based on autonomous mind)
+        if (_config.EnableMind)
+        {
+            await InitializeSelfExecutionAsync();
+        }
 
         _isInitialized = true;
 
@@ -1047,6 +1080,18 @@ public sealed class OuroborosAgent : IAsyncDisposable
             ActionType.Tokens => GetDslTokens(),
             ActionType.Fetch => await FetchResearchAsync(action.Argument),
             ActionType.Process => await ProcessLargeInputAsync(action.Argument),
+            // Self-execution and sub-agent commands
+            ActionType.SelfExec => await SelfExecCommandAsync(action.Argument),
+            ActionType.SubAgent => await SubAgentCommandAsync(action.Argument),
+            ActionType.Epic => await EpicCommandAsync(action.Argument),
+            ActionType.Goal => await GoalCommandAsync(action.Argument),
+            ActionType.Delegate => await DelegateCommandAsync(action.Argument),
+            ActionType.SelfModel => await SelfModelCommandAsync(action.Argument),
+            ActionType.Evaluate => await EvaluateCommandAsync(action.Argument),
+            // Emergent behavior commands
+            ActionType.Emergence => await EmergenceCommandAsync(action.Argument),
+            ActionType.Dream => await DreamCommandAsync(action.Argument),
+            ActionType.Introspect => await IntrospectCommandAsync(action.Argument),
             ActionType.Chat => await ChatAsync(input),
             _ => await ChatAsync(input)
         };
@@ -1208,6 +1253,82 @@ public sealed class OuroborosAgent : IAsyncDisposable
             return (ActionType.Process, arg, null);
         }
 
+        // === SELF-EXECUTION AND SUB-AGENT COMMANDS ===
+
+        // Self-execution commands
+        if (lower.StartsWith("selfexec ") || lower.StartsWith("self-exec ") || lower == "selfexec")
+        {
+            var arg = lower.StartsWith("selfexec ") ? input[9..].Trim()
+                : lower.StartsWith("self-exec ") ? input[10..].Trim() : "";
+            return (ActionType.SelfExec, arg, null);
+        }
+
+        // Sub-agent commands
+        if (lower.StartsWith("subagent ") || lower.StartsWith("sub-agent ") || lower == "subagents" || lower == "agents")
+        {
+            var arg = lower.StartsWith("subagent ") ? input[9..].Trim()
+                : lower.StartsWith("sub-agent ") ? input[10..].Trim() : "";
+            return (ActionType.SubAgent, arg, null);
+        }
+
+        // Epic/project orchestration
+        if (lower.StartsWith("epic ") || lower == "epic" || lower == "epics")
+        {
+            var arg = lower.StartsWith("epic ") ? input[5..].Trim() : "";
+            return (ActionType.Epic, arg, null);
+        }
+
+        // Goal queue management
+        if (lower.StartsWith("goal ") || lower == "goals")
+        {
+            var arg = lower.StartsWith("goal ") ? input[5..].Trim() : "";
+            return (ActionType.Goal, arg, null);
+        }
+
+        // Delegate task to sub-agent
+        if (lower.StartsWith("delegate "))
+            return (ActionType.Delegate, input[9..].Trim(), null);
+
+        // Self-model inspection
+        if (lower.StartsWith("selfmodel ") || lower.StartsWith("self-model ") || lower == "selfmodel" || lower == "identity")
+        {
+            var arg = lower.StartsWith("selfmodel ") ? input[10..].Trim()
+                : lower.StartsWith("self-model ") ? input[11..].Trim() : "";
+            return (ActionType.SelfModel, arg, null);
+        }
+
+        // Self-evaluation
+        if (lower.StartsWith("evaluate ") || lower == "evaluate" || lower == "assess")
+        {
+            var arg = lower.StartsWith("evaluate ") ? input[9..].Trim() : "";
+            return (ActionType.Evaluate, arg, null);
+        }
+
+        // === EMERGENT BEHAVIOR COMMANDS ===
+
+        // Emergence - explore emergent patterns and behaviors
+        if (lower.StartsWith("emergence ") || lower == "emergence" || lower.StartsWith("emerge "))
+        {
+            var arg = lower.StartsWith("emergence ") ? input[10..].Trim()
+                : lower.StartsWith("emerge ") ? input[7..].Trim() : "";
+            return (ActionType.Emergence, arg, null);
+        }
+
+        // Dream - let the agent explore freely
+        if (lower.StartsWith("dream ") || lower == "dream" || lower.StartsWith("dream about "))
+        {
+            var arg = lower.StartsWith("dream about ") ? input[12..].Trim()
+                : lower.StartsWith("dream ") ? input[6..].Trim() : "";
+            return (ActionType.Dream, arg, null);
+        }
+
+        // Introspect - deep self-examination
+        if (lower.StartsWith("introspect ") || lower == "introspect" || lower.Contains("look within"))
+        {
+            var arg = lower.StartsWith("introspect ") ? input[11..].Trim() : "";
+            return (ActionType.Introspect, arg, null);
+        }
+
         // Default to chat
         return (ActionType.Chat, input, null);
     }
@@ -1259,14 +1380,43 @@ public sealed class OuroborosAgent : IAsyncDisposable
 ║   remember X        - Store in persistent memory             ║
 ║   recall X          - Retrieve from memory                   ║
 ║                                                              ║
-║ PIPELINES                                                    ║
+║ PIPELINES (DSL)                                              ║
 ║   ask X             - Quick single question                  ║
 ║   pipeline DSL      - Run a pipeline DSL expression          ║
 ║   explain DSL       - Explain a pipeline expression          ║
 ║                                                              ║
+║ SELF-IMPROVEMENT DSL TOKENS                                  ║
+║   Reify             - Enable network state reification       ║
+║   Checkpoint(name)  - Create named state checkpoint          ║
+║   TrackCapability   - Track capability for self-improvement  ║
+║   SelfEvaluate      - Evaluate output quality                ║
+║   SelfImprove(n)    - Iterate on output n times              ║
+║   Learn(topic)      - Extract learnings from execution       ║
+║   Plan(task)        - Decompose task into steps              ║
+║   Reflect           - Introspect on execution                ║
+║   SelfImprovingCycle(topic) - Full improvement cycle         ║
+║   AutoSolve(problem) - Autonomous problem solving            ║
+║   Example: pipeline Set('AI') | Reify | SelfImprovingCycle   ║
+║                                                              ║
 ║ CONSCIOUSNESS & AWARENESS                                    ║
 ║   consciousness     - View ImmersivePersona state            ║
 ║   inner / self      - Check self-awareness                   ║
+║                                                              ║
+║ EMERGENCE & DREAMING                                         ║
+║   emergence [topic] - Explore emergent patterns              ║
+║   dream [topic]     - Enter creative dream state             ║
+║   introspect [X]    - Deep self-examination                  ║
+║                                                              ║
+║ SELF-EXECUTION & SUB-AGENTS                                  ║
+║   selfexec          - Self-execution status and control      ║
+║   subagent          - Manage sub-agents for delegation       ║
+║   delegate X        - Delegate a task to sub-agents          ║
+║   goal add X        - Add autonomous goal to queue           ║
+║   goal list         - Show queued goals                      ║
+║   goal add pipeline:DSL - Add DSL pipeline as goal           ║
+║   epic              - Epic/project orchestration             ║
+║   selfmodel         - View self-model and identity           ║
+║   evaluate          - Self-assessment and performance        ║
 ║                                                              ║
 ║ SYSTEM                                                       ║
 ║   status            - Show current system state              ║
@@ -1310,24 +1460,136 @@ public sealed class OuroborosAgent : IAsyncDisposable
         if (string.IsNullOrWhiteSpace(topic))
             return "What would you like me to learn about?";
 
-        // Use tool learner or direct research
-        if (_toolLearner != null && _skills != null)
-        {
-            var result = await _toolLearner.FindOrCreateToolAsync(topic, _tools);
-            return result.Match(
-                success => $"Interesting! I learned about {topic} and {(success.WasCreated ? "created a new" : "found an existing")} '{success.Tool.Name}' capability.",
-                error => $"I tried to learn about {topic}, but: {error}");
-        }
+        var sb = new StringBuilder();
+        sb.AppendLine($"Learning about: {topic}");
 
-        // Fallback: basic research via LLM
+        // Step 1: Research the topic via LLM
+        string? research = null;
         if (_llm != null)
         {
-            var (response, _) = await _llm.GenerateWithToolsAsync(
-                $"Research and summarize key points about: {topic}. Be concise.");
-            return response;
+            try
+            {
+                var (response, toolCalls) = await _llm.GenerateWithToolsAsync(
+                    $"Research and explain key concepts about: {topic}. Include practical applications and how this knowledge could be used.");
+                research = response;
+                sb.AppendLine($"\n📚 Research Summary:\n{response[..Math.Min(500, response.Length)]}...");
+            }
+            catch (Exception ex)
+            {
+                sb.AppendLine($"⚠ Research phase had issues: {ex.Message}");
+            }
         }
 
-        return $"I'd love to learn about {topic}, but I need an LLM connection first.";
+        // Step 2: Try to create a tool capability
+        if (_toolLearner != null)
+        {
+            try
+            {
+                var toolResult = await _toolLearner.FindOrCreateToolAsync(topic, _tools);
+                toolResult.Match(
+                    success =>
+                    {
+                        sb.AppendLine($"\n🔧 {(success.WasCreated ? "Created new" : "Found existing")} tool: '{success.Tool.Name}'");
+                        _tools = _tools.WithTool(success.Tool);
+                    },
+                    error => sb.AppendLine($"⚠ Tool creation: {error}"));
+            }
+            catch (Exception ex)
+            {
+                sb.AppendLine($"⚠ Tool learner: {ex.Message}");
+            }
+        }
+
+        // Step 3: Register as a skill if we have skill registry
+        if (_skills != null && !string.IsNullOrWhiteSpace(research))
+        {
+            try
+            {
+                var skillName = SanitizeSkillName(topic);
+                var existingSkill = _skills.GetSkill(skillName);
+
+                if (existingSkill == null)
+                {
+                    var skill = new Skill(
+                        Name: skillName,
+                        Description: $"Knowledge about {topic}: {research[..Math.Min(200, research.Length)]}",
+                        Prerequisites: new List<string>(),
+                        Steps: new List<PlanStep>
+                        {
+                            new PlanStep(
+                                $"Apply knowledge about {topic}",
+                                new Dictionary<string, object> { ["topic"] = topic, ["research"] = research },
+                                $"Use {topic} knowledge effectively",
+                                0.7)
+                        },
+                        SuccessRate: 0.8,
+                        UsageCount: 0,
+                        CreatedAt: DateTime.UtcNow,
+                        LastUsed: DateTime.UtcNow);
+
+                    await _skills.RegisterSkillAsync(skill);
+                    sb.AppendLine($"\n✓ Registered skill: '{skillName}'");
+                }
+                else
+                {
+                    _skills.RecordSkillExecution(skillName, true);
+                    sb.AppendLine($"\n↺ Updated existing skill: '{skillName}'");
+                }
+            }
+            catch (Exception ex)
+            {
+                sb.AppendLine($"⚠ Skill registration: {ex.Message}");
+            }
+        }
+
+        // Step 4: Add to MeTTa knowledge base
+        if (_mettaEngine != null)
+        {
+            try
+            {
+                var atomName = SanitizeSkillName(topic);
+                await _mettaEngine.AddFactAsync($"(: {atomName} Concept)");
+                await _mettaEngine.AddFactAsync($"(learned {atomName} \"{DateTime.UtcNow:O}\")");
+
+                if (!string.IsNullOrWhiteSpace(research))
+                {
+                    var summary = research.Length > 100 ? research[..100].Replace("\"", "'") : research.Replace("\"", "'");
+                    await _mettaEngine.AddFactAsync($"(summary {atomName} \"{summary}\")");
+                }
+
+                sb.AppendLine($"\n🧠 Added to MeTTa knowledge base: {atomName}");
+            }
+            catch (Exception ex)
+            {
+                sb.AppendLine($"⚠ MeTTa: {ex.Message}");
+            }
+        }
+
+        // Step 5: Track in global workspace
+        _globalWorkspace?.AddItem(
+            $"Learned: {topic}\n{research?[..Math.Min(200, research?.Length ?? 0)]}",
+            WorkspacePriority.Normal,
+            "learning",
+            new List<string> { "learned", topic.ToLowerInvariant().Replace(" ", "-") });
+
+        // Step 6: Update capability if available
+        if (_capabilityRegistry != null)
+        {
+            var result = CreateCapabilityExecutionResult(true, TimeSpan.FromSeconds(2), $"learn:{topic}");
+            await _capabilityRegistry.UpdateCapabilityAsync("natural_language", result);
+        }
+
+        return sb.ToString();
+    }
+
+    private static string SanitizeSkillName(string name)
+    {
+        return name.ToLowerInvariant()
+            .Replace(" ", "-")
+            .Replace("'", "")
+            .Replace("\"", "")
+            .Replace("(", "")
+            .Replace(")", "");
     }
 
     private async Task<string> CreateToolAsync(string toolName)
@@ -1850,13 +2112,79 @@ public sealed class OuroborosAgent : IAsyncDisposable
 
         if (cmd is "status" or "" or "show")
         {
-            return @"Network Status:
-• Agents: Ouroboros (this instance)
-• MeTTa Engine: " + (_mettaEngine != null ? "Active" : "Offline") + @"
-• LLM Endpoint: " + _config.Endpoint + @"
-• Qdrant: " + _config.QdrantEndpoint + @"
-• Tool Registry: " + _tools.Count + " tools" + @"
-• Skill Registry: " + (_skills?.GetAllSkills().Count() ?? 0) + " skills";
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Network Status:");
+            sb.AppendLine($"• Agents: Ouroboros (this instance)");
+            sb.AppendLine($"• MeTTa Engine: {(_mettaEngine != null ? "Active" : "Offline")}");
+            sb.AppendLine($"• LLM Endpoint: {_config.Endpoint}");
+            sb.AppendLine($"• Qdrant: {_config.QdrantEndpoint}");
+            sb.AppendLine($"• Tool Registry: {_tools.Count} tools");
+            sb.AppendLine($"• Skill Registry: {_skills?.GetAllSkills().Count() ?? 0} skills");
+
+            // Add Merkle-DAG network state information
+            if (_networkTracker != null)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Merkle-DAG Network State:");
+                sb.AppendLine($"• Tracked Branches: {_networkTracker.TrackedBranchCount}");
+                var snapshot = _networkTracker.CreateSnapshot();
+                sb.AppendLine($"• Total Nodes: {snapshot.TotalNodes}");
+                sb.AppendLine($"• Total Transitions: {snapshot.TotalTransitions}");
+                sb.AppendLine($"• Current Epoch: {_networkTracker.Projector.CurrentEpoch}");
+                if (snapshot.AverageConfidence.HasValue)
+                {
+                    sb.AppendLine($"• Average Confidence: {snapshot.AverageConfidence:P0}");
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        if (cmd == "state" || cmd == "dag")
+        {
+            // Detailed network state summary
+            if (_networkTracker != null)
+            {
+                return _networkTracker.GetStateSummary();
+            }
+            return "Network state tracking not available.";
+        }
+
+        if (cmd == "steps" || cmd == "reify")
+        {
+            // Show recent step executions from tracked branches
+            if (_networkTracker == null)
+            {
+                return "Network state tracking not available.";
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("=== Step Reification History ===");
+            sb.AppendLine($"Tracked Branches: {_networkTracker.TrackedBranchCount}");
+            sb.AppendLine($"Current Epoch: {_networkTracker.Projector.CurrentEpoch}");
+            sb.AppendLine();
+
+            var state = _networkTracker.Projector.ProjectCurrentState();
+            if (state.NodeCountByType.Any())
+            {
+                sb.AppendLine("Reified Node Types:");
+                foreach (var kvp in state.NodeCountByType)
+                {
+                    sb.AppendLine($"  • {kvp.Key}: {kvp.Value}");
+                }
+            }
+
+            if (state.TransitionCountByOperation.Any())
+            {
+                sb.AppendLine();
+                sb.AppendLine("Step Transitions:");
+                foreach (var kvp in state.TransitionCountByOperation)
+                {
+                    sb.AppendLine($"  • {kvp.Key}: {kvp.Value}");
+                }
+            }
+
+            return sb.ToString();
         }
 
         if (cmd.StartsWith("ping"))
@@ -1864,12 +2192,13 @@ public sealed class OuroborosAgent : IAsyncDisposable
             // Test connectivity
             var llmOk = _chatModel != null;
             var mettaOk = _mettaEngine != null;
+            var networkOk = _networkTracker != null;
 
-            return $"Network ping:\n• LLM: {(llmOk ? "✓" : "✗")}\n• MeTTa: {(mettaOk ? "✓" : "✗")}";
+            return $"Network ping:\n• LLM: {(llmOk ? "✓" : "✗")}\n• MeTTa: {(mettaOk ? "✓" : "✗")}\n• NetworkState: {(networkOk ? "✓" : "✗")}";
         }
 
         await Task.CompletedTask;
-        return $"Unknown network command: {subCommand}. Try 'network status' or 'network ping'.";
+        return $"Unknown network command: {subCommand}. Try 'network status', 'network state', 'network steps', or 'network ping'.";
     }
 
     /// <summary>
@@ -2240,6 +2569,18 @@ If you don't have a real value, ask the user or skip the tool call.";
         if (_disposed) return;
         _disposed = true;
 
+        // Stop self-execution
+        _selfExecutionEnabled = false;
+        _selfExecutionCts?.Cancel();
+        if (_selfExecutionTask != null)
+        {
+            try { await _selfExecutionTask; } catch { /* ignored */ }
+        }
+        _selfExecutionCts?.Dispose();
+
+        // Dispose sub-agents
+        _subAgents.Clear();
+
         _autonomousMind?.Dispose();
         if (_playwrightTool != null)
         {
@@ -2252,6 +2593,7 @@ If you don't have a real value, ask the user or skip the tool call.";
 
         _voice.Dispose();
         _mettaEngine?.Dispose();
+        _networkTracker?.Dispose();
 
         await Task.CompletedTask;
     }
@@ -2290,7 +2632,19 @@ If you don't have a real value, ask the user or skip the tool call.";
         Consciousness,
         Tokens,
         Fetch,
-        Process
+        Process,
+        // Self-execution and sub-agent commands
+        SelfExec,
+        SubAgent,
+        Epic,
+        Goal,
+        Delegate,
+        SelfModel,
+        Evaluate,
+        // Emergent behavior commands
+        Emergence,
+        Dream,
+        Introspect
     }
 
     /// <summary>
@@ -2343,11 +2697,58 @@ If you don't have a real value, ask the user or skip the tool call.";
                     Llm = _llm,
                     Tools = _tools,
                     Embed = _embedding,
-                    Trace = _config.Debug
+                    Trace = _config.Debug,
+                    NetworkTracker = _networkTracker  // Enable automatic step reification
                 };
 
-                var step = PipelineDsl.Build(dsl);
-                state = await step(state);
+                // Initial tracking of the branch
+                _networkTracker?.TrackBranch(branch);
+
+                // Track capability usage for self-improvement
+                var startTime = DateTime.UtcNow;
+                var success = true;
+
+                try
+                {
+                    var step = PipelineDsl.Build(dsl);
+                    state = await step(state);
+                }
+                catch (Exception stepEx)
+                {
+                    success = false;
+                    throw new InvalidOperationException($"Pipeline step failed: {stepEx.Message}", stepEx);
+                }
+
+                // Final update to capture all step events
+                if (_networkTracker != null)
+                {
+                    var trackResult = _networkTracker.UpdateBranch(state.Branch);
+                    if (_config.Debug)
+                    {
+                        var stepEvents = state.Branch.Events.OfType<StepExecutionEvent>().ToList();
+                        Console.WriteLine($"  📊 Network state: {trackResult.Value} events reified ({stepEvents.Count} steps tracked)");
+                        foreach (var stepEvt in stepEvents.TakeLast(5))
+                        {
+                            var status = stepEvt.Success ? "✓" : "✗";
+                            Console.WriteLine($"      {status} [{stepEvt.TokenName}] {stepEvt.Description} ({stepEvt.DurationMs}ms)");
+                        }
+                    }
+                }
+
+                // Track capability usage for self-improvement
+                var duration = DateTime.UtcNow - startTime;
+                if (_capabilityRegistry != null)
+                {
+                    var execResult = CreateCapabilityExecutionResult(success, duration, dsl);
+                    await _capabilityRegistry.UpdateCapabilityAsync("pipeline_execution", execResult);
+                }
+
+                // Update global workspace with execution result
+                _globalWorkspace?.AddItem(
+                    $"DSL Executed: {dsl[..Math.Min(100, dsl.Length)]}\nDuration: {duration.TotalSeconds:F2}s",
+                    WorkspacePriority.Normal,
+                    "dsl-execution",
+                    new List<string> { "dsl", "pipeline", success ? "success" : "failure" });
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("\n  ✓ Pipeline completed");
@@ -2373,6 +2774,13 @@ If you don't have a real value, ask the user or skip the tool call.";
         }
         catch (Exception ex)
         {
+            // Track failure for self-improvement
+            if (_capabilityRegistry != null)
+            {
+                var execResult = CreateCapabilityExecutionResult(false, TimeSpan.Zero, dsl);
+                await _capabilityRegistry.UpdateCapabilityAsync("pipeline_execution", execResult);
+            }
+
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"  ✗ DSL execution failed: {ex.Message}");
             Console.ResetColor();
@@ -2472,4 +2880,1624 @@ If you don't have a real value, ask the user or skip the tool call.";
     /// Checks if divide-and-conquer processing is available.
     /// </summary>
     public bool IsDivideAndConquerEnabled => _divideAndConquer != null;
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SUB-AGENT ORCHESTRATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Initializes sub-agent orchestration capabilities.
+    /// </summary>
+    private async Task InitializeSubAgentOrchestrationAsync()
+    {
+        try
+        {
+            var safety = new SafetyGuard();
+            _distributedOrchestrator = new DistributedOrchestrator(safety);
+
+            // Register self as the primary agent
+            var selfCapabilities = new HashSet<string>
+            {
+                "planning", "reasoning", "coding", "research", "analysis",
+                "summarization", "tool_use", "metta_reasoning"
+            };
+            var selfAgent = new AgentInfo(
+                "ouroboros-primary",
+                _config.Persona,
+                selfCapabilities,
+                AgentStatus.Available,
+                DateTime.UtcNow);
+            _distributedOrchestrator.RegisterAgent(selfAgent);
+
+            // Initialize epic branch orchestrator
+            _epicOrchestrator = new EpicBranchOrchestrator(
+                _distributedOrchestrator,
+                new EpicBranchConfig(
+                    BranchPrefix: "ouroboros-epic",
+                    AgentPoolPrefix: "sub-agent",
+                    AutoCreateBranches: true,
+                    AutoAssignAgents: true,
+                    MaxConcurrentSubIssues: 5));
+
+            Console.WriteLine("  ✓ SubAgents: Distributed orchestration ready (1 agent registered)");
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  ⚠ SubAgent orchestration failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Initializes self-model for metacognitive capabilities.
+    /// </summary>
+    private async Task InitializeSelfModelAsync()
+    {
+        try
+        {
+            // Initialize capability registry (requires LLM and tools)
+            if (_chatModel != null)
+            {
+                _capabilityRegistry = new CapabilityRegistry(_chatModel, _tools);
+
+                // Register core capabilities
+                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                    "natural_language", "Natural language understanding and generation",
+                    new List<string>(), 0.95, 0.5, new List<string>(), 100,
+                    DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
+
+                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                    "planning", "Task decomposition and multi-step planning",
+                    new List<string> { "orchestrator" }, 0.85, 1.0, new List<string>(), 50,
+                    DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
+
+                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                    "tool_use", "Dynamic tool creation and invocation",
+                    new List<string>(), 0.90, 0.8, new List<string>(), 75,
+                    DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
+
+                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                    "symbolic_reasoning", "MeTTa symbolic reasoning and queries",
+                    new List<string> { "metta" }, 0.80, 0.5, new List<string>(), 30,
+                    DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
+
+                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                    "memory_management", "Persistent memory storage and retrieval",
+                    new List<string>(), 0.92, 0.3, new List<string>(), 60,
+                    DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
+
+                // Pipeline execution capability
+                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                    "pipeline_execution", "DSL pipeline construction and execution with reification",
+                    new List<string> { "dsl", "network" }, 0.88, 0.7, new List<string>(), 40,
+                    DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
+
+                // Self-improvement capability
+                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                    "self_improvement", "Autonomous learning, evaluation, and capability enhancement",
+                    new List<string> { "evaluator" }, 0.75, 2.0, new List<string>(), 20,
+                    DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
+
+                // Coding capability
+                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                    "coding", "Code generation, analysis, and debugging",
+                    new List<string>(), 0.82, 1.5, new List<string>(), 45,
+                    DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
+
+                // Initialize identity graph
+                _identityGraph = new IdentityGraph(
+                    Guid.NewGuid(),
+                    _config.Persona,
+                    _capabilityRegistry);
+
+                // Initialize global workspace
+                _globalWorkspace = new GlobalWorkspace();
+
+                // Initialize predictive monitor
+                _predictiveMonitor = new PredictiveMonitor();
+
+                // Initialize self-evaluator if orchestrator is available
+                if (_orchestrator != null && _skills != null && _embedding != null)
+                {
+                    var memory = new MemoryStore(_embedding, new TrackedVectorStore());
+                    _selfEvaluator = new SelfEvaluator(
+                        _chatModel,
+                        _capabilityRegistry,
+                        _skills,
+                        memory,
+                        _orchestrator);
+                }
+
+                var capCount = (await _capabilityRegistry.GetCapabilitiesAsync()).Count;
+                Console.WriteLine($"  ✓ SelfModel: Identity graph initialized ({capCount} capabilities)");
+            }
+            else
+            {
+                Console.WriteLine("  ○ SelfModel: Skipped (requires chat model)");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  ⚠ SelfModel initialization failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Initializes self-execution capabilities for autonomous goal pursuit.
+    /// </summary>
+    private async Task InitializeSelfExecutionAsync()
+    {
+        try
+        {
+            _selfExecutionCts = new CancellationTokenSource();
+            _selfExecutionEnabled = true;
+
+            // Start background self-execution task
+            _selfExecutionTask = Task.Run(SelfExecutionLoopAsync, _selfExecutionCts.Token);
+
+            Console.WriteLine("  ✓ SelfExecution: Autonomous goal pursuit active");
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  ⚠ SelfExecution initialization failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Background loop for self-execution of queued goals.
+    /// </summary>
+    private async Task SelfExecutionLoopAsync()
+    {
+        while (_selfExecutionEnabled && !_selfExecutionCts?.Token.IsCancellationRequested == true)
+        {
+            try
+            {
+                if (_goalQueue.TryDequeue(out var goal))
+                {
+                    Console.ForegroundColor = ConsoleColor.DarkCyan;
+                    Console.WriteLine($"\n  [self-exec] Starting autonomous goal: {goal.Description}");
+                    Console.ResetColor();
+
+                    var startTime = DateTime.UtcNow;
+                    string result;
+                    bool success = true;
+
+                    try
+                    {
+                        // Check if this is a DSL goal (starts with pipe syntax)
+                        if (goal.Description.Contains("|") || goal.Description.StartsWith("pipeline:"))
+                        {
+                            result = await ExecuteDslGoalAsync(goal);
+                        }
+                        else
+                        {
+                            result = await ExecuteGoalAutonomouslyAsync(goal);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        success = false;
+                        result = $"Execution failed: {ex.Message}";
+                    }
+
+                    var duration = DateTime.UtcNow - startTime;
+
+                    // Track capability usage for self-improvement
+                    await TrackGoalExecutionAsync(goal, success, duration);
+
+                    // Reify execution into network state
+                    ReifyGoalExecution(goal, result, success, duration);
+
+                    // Update global workspace with result
+                    var priority = goal.Priority switch
+                    {
+                        GoalPriority.Critical => WorkspacePriority.Critical,
+                        GoalPriority.High => WorkspacePriority.High,
+                        GoalPriority.Normal => WorkspacePriority.Normal,
+                        _ => WorkspacePriority.Low
+                    };
+                    _globalWorkspace?.AddItem(
+                        $"Goal completed: {goal.Description}\nResult: {result}\nDuration: {duration.TotalSeconds:F2}s",
+                        priority,
+                        "self-execution",
+                        new List<string> { "goal", success ? "completed" : "failed" });
+
+                    // Trigger autonomous reflection on completion
+                    if (success)
+                    {
+                        // Learn from successful execution
+                        await ExecuteAutonomousActionAsync("Learn", $"Successful goal execution: {goal.Description}");
+                    }
+                    else
+                    {
+                        // Reflect on failure to improve
+                        await ExecuteAutonomousActionAsync("Reflect", $"Failed goal: {goal.Description}. Result: {result}");
+                    }
+
+                    // Trigger self-evaluation periodically
+                    if (_goalQueue.IsEmpty && _selfEvaluator != null)
+                    {
+                        await PerformPeriodicSelfEvaluationAsync();
+                    }
+
+                    Console.ForegroundColor = success ? ConsoleColor.DarkGreen : ConsoleColor.Yellow;
+                    Console.WriteLine($"  [self-exec] Goal {(success ? "completed" : "failed")}: {goal.Description} ({duration.TotalSeconds:F2}s)");
+                    Console.ResetColor();
+                }
+                else
+                {
+                    // Idle time - check for self-improvement opportunities and generate autonomous thoughts
+                    await CheckSelfImprovementOpportunitiesAsync();
+
+                    // Periodically run autonomous introspection cycles
+                    if (Random.Shared.NextDouble() < 0.05) // 5% chance per idle cycle
+                    {
+                        await ExecuteAutonomousActionAsync("SelfImprove", "idle_introspection");
+                    }
+
+                    await Task.Delay(1000, _selfExecutionCts?.Token ?? CancellationToken.None);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"  [self-exec] Error: {ex.Message}");
+                Console.ResetColor();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Executes a DSL pipeline goal with full reification.
+    /// </summary>
+    private async Task<string> ExecuteDslGoalAsync(AutonomousGoal goal)
+    {
+        var dsl = goal.Description.StartsWith("pipeline:")
+            ? goal.Description[9..].Trim()
+            : goal.Description;
+
+        if (_embedding == null || _llm == null)
+        {
+            return "DSL execution requires LLM and embeddings to be initialized.";
+        }
+
+        var store = new TrackedVectorStore();
+        var dataSource = DataSource.FromPath(".");
+        var branch = new PipelineBranch($"goal-{goal.Id.ToString()[..8]}", store, dataSource);
+
+        var state = new CliPipelineState
+        {
+            Branch = branch,
+            Llm = _llm,
+            Tools = _tools,
+            Embed = _embedding,
+            Trace = _config.Debug,
+            NetworkTracker = _networkTracker
+        };
+
+        // Track the branch for reification
+        _networkTracker?.TrackBranch(branch);
+
+        var step = PipelineDsl.Build(dsl);
+        state = await step(state);
+
+        // Final reification update
+        _networkTracker?.UpdateBranch(state.Branch);
+
+        // Extract output
+        var lastReasoning = state.Branch.Events.OfType<ReasoningStep>().LastOrDefault();
+        return lastReasoning?.State.Text ?? state.Output ?? "Pipeline completed without output.";
+    }
+
+    /// <summary>
+    /// Tracks goal execution for capability self-improvement.
+    /// </summary>
+    private async Task TrackGoalExecutionAsync(AutonomousGoal goal, bool success, TimeSpan duration)
+    {
+        if (_capabilityRegistry == null) return;
+
+        // Determine which capabilities were used
+        var usedCapabilities = InferCapabilitiesFromGoal(goal.Description);
+
+        foreach (var capName in usedCapabilities)
+        {
+            var result = CreateCapabilityExecutionResult(success, duration, goal.Description);
+            await _capabilityRegistry.UpdateCapabilityAsync(capName, result);
+        }
+    }
+
+    /// <summary>
+    /// Infers which capabilities were used based on goal description.
+    /// </summary>
+    private List<string> InferCapabilitiesFromGoal(string description)
+    {
+        var caps = new List<string> { "natural_language" };
+        var lower = description.ToLowerInvariant();
+
+        if (lower.Contains("|") || lower.Contains("pipeline") || lower.Contains("dsl"))
+            caps.Add("pipeline_execution");
+        if (lower.Contains("plan") || lower.Contains("step") || lower.Contains("multi"))
+            caps.Add("planning");
+        if (lower.Contains("tool") || lower.Contains("search") || lower.Contains("fetch"))
+            caps.Add("tool_use");
+        if (lower.Contains("metta") || lower.Contains("query") || lower.Contains("symbol"))
+            caps.Add("symbolic_reasoning");
+        if (lower.Contains("remember") || lower.Contains("recall") || lower.Contains("memory"))
+            caps.Add("memory_management");
+        if (lower.Contains("code") || lower.Contains("program") || lower.Contains("script"))
+            caps.Add("coding");
+
+        return caps;
+    }
+
+    /// <summary>
+    /// Creates an ExecutionResult for capability tracking purposes.
+    /// This creates a minimal valid ExecutionResult with empty plan/steps.
+    /// </summary>
+    private static ExecutionResult CreateCapabilityExecutionResult(bool success, TimeSpan duration, string taskDescription)
+    {
+        var minimalPlan = new Plan(
+            Goal: taskDescription,
+            Steps: new List<PlanStep>(),
+            ConfidenceScores: new Dictionary<string, double>(),
+            CreatedAt: DateTime.UtcNow);
+
+        return new ExecutionResult(
+            Plan: minimalPlan,
+            StepResults: new List<StepResult>(),
+            Success: success,
+            FinalOutput: taskDescription,
+            Metadata: new Dictionary<string, object>
+            {
+                ["capability_tracking"] = true,
+                ["timestamp"] = DateTime.UtcNow
+            },
+            Duration: duration);
+    }
+
+    /// <summary>
+    /// Reifies goal execution into the network state (MerkleDag).
+    /// </summary>
+    private void ReifyGoalExecution(AutonomousGoal goal, string result, bool success, TimeSpan duration)
+
+    {
+        if (_networkTracker == null) return;
+
+        // Create a synthetic branch for goal execution tracking
+        var store = new TrackedVectorStore();
+        var dataSource = DataSource.FromPath(".");
+        var branch = new PipelineBranch($"goal-exec-{goal.Id.ToString()[..8]}", store, dataSource);
+
+        // Add goal execution event
+        branch = branch.WithIngestEvent(
+            $"goal:{(success ? "success" : "failure")}",
+            new[] { goal.Description, result, duration.TotalSeconds.ToString("F2") });
+
+        _networkTracker.TrackBranch(branch);
+        _networkTracker.UpdateBranch(branch);
+    }
+
+    /// <summary>
+    /// Performs periodic self-evaluation and learning.
+    /// </summary>
+    private async Task PerformPeriodicSelfEvaluationAsync()
+    {
+        if (_selfEvaluator == null) return;
+
+        try
+        {
+            var evalResult = await _selfEvaluator.EvaluatePerformanceAsync();
+            if (evalResult.IsSuccess)
+            {
+                var assessment = evalResult.Value;
+
+                // Log evaluation to global workspace
+                _globalWorkspace?.AddItem(
+                    $"Self-Evaluation: {assessment.OverallPerformance:P0} performance\n" +
+                    $"Strengths: {string.Join(", ", assessment.Strengths.Take(3))}\n" +
+                    $"Weaknesses: {string.Join(", ", assessment.Weaknesses.Take(3))}",
+                    WorkspacePriority.Normal,
+                    "self-evaluation",
+                    new List<string> { "evaluation", "self-improvement" });
+
+                // Check if we need to learn new capabilities
+                foreach (var weakness in assessment.Weaknesses)
+                {
+                    await ConsiderLearningCapabilityAsync(weakness);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SelfEval] Error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Checks for self-improvement opportunities during idle time.
+    /// </summary>
+    private async Task CheckSelfImprovementOpportunitiesAsync()
+    {
+        if (_capabilityRegistry == null || _globalWorkspace == null) return;
+
+        try
+        {
+            // Generate autonomous thought about current state
+            var thought = await GenerateAutonomousThoughtAsync();
+            if (thought != null)
+            {
+                await ProcessAutonomousThoughtAsync(thought);
+            }
+
+            // Check for recent failures that might indicate capability gaps
+            var recentItems = _globalWorkspace.GetItems()
+                .Where(i => i.Tags.Contains("failed") && i.CreatedAt > DateTime.UtcNow.AddHours(-1))
+                .ToList();
+
+            if (recentItems.Count >= 2)
+            {
+                // Multiple recent failures - trigger autonomous reflection
+                await ExecuteAutonomousActionAsync("Reflect",
+                    $"Recent failures detected: {string.Join(", ", recentItems.Select(i => i.Content[..Math.Min(50, i.Content.Length)]))}");
+
+                // Queue learning goal using DSL
+                var learningDsl = $"Set('Analyze failures: {recentItems.Count} recent') | Plan | SelfEvaluate('failure_analysis') | Learn";
+                var learningGoal = new AutonomousGoal(
+                    Guid.NewGuid(),
+                    $"pipeline:{learningDsl}",
+                    GoalPriority.Low,
+                    DateTime.UtcNow);
+                _goalQueue.Enqueue(learningGoal);
+            }
+
+            // Periodic autonomous introspection
+            if (Random.Shared.NextDouble() < 0.1) // 10% chance each idle cycle
+            {
+                await ExecuteAutonomousActionAsync("SelfEvaluate", "periodic_introspection");
+            }
+        }
+        catch
+        {
+            // Silent failure for background improvement checks
+        }
+    }
+
+    /// <summary>
+    /// Generates an autonomous thought based on current state and context.
+    /// </summary>
+    private async Task<AutonomousThought?> GenerateAutonomousThoughtAsync()
+    {
+        if (_chatModel == null || _globalWorkspace == null) return null;
+
+        try
+        {
+            // Gather context for thought generation
+            var workspaceItems = _globalWorkspace.GetItems().TakeLast(5).ToList();
+            var recentContext = string.Join("\n", workspaceItems.Select(i => $"- {i.Content[..Math.Min(100, i.Content.Length)]}"));
+
+            var capabilities = _capabilityRegistry != null
+                ? await _capabilityRegistry.GetCapabilitiesAsync()
+                : new List<AgentCapability>();
+            var capSummary = string.Join(", ", capabilities.Take(5).Select(c => $"{c.Name}({c.SuccessRate:P0})"));
+
+            var thoughtPrompt = $@"You are an autonomous AI agent with self-improvement capabilities.
+Based on your current state, generate a brief autonomous thought about what you should focus on or improve.
+
+Current capabilities: {capSummary}
+Recent activity:
+{recentContext}
+
+Available autonomous actions:
+- SelfEvaluate: Evaluate performance against criteria
+- Learn: Synthesize learning from experience
+- Plan: Create action plan for a task
+- Reflect: Analyze recent actions and outcomes
+- SelfImprove: Iterative improvement cycle
+
+Generate a single autonomous thought (1-2 sentences) about what action would be most beneficial right now.
+Format: [ACTION] thought content
+Example: [Learn] I should consolidate my understanding of the recent coding tasks to improve future performance.";
+
+            var response = await _chatModel.GenerateTextAsync(thoughtPrompt);
+
+            // Parse the thought
+            var match = Regex.Match(response, @"\[(\w+)\]\s*(.+)", RegexOptions.Singleline);
+            if (match.Success)
+            {
+                var actionType = match.Groups[1].Value;
+                var content = match.Groups[2].Value.Trim();
+
+                return new AutonomousThought(
+                    Guid.NewGuid(),
+                    actionType,
+                    content,
+                    DateTime.UtcNow);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AutonomousThought] Error: {ex.Message}");
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Processes an autonomous thought, potentially triggering actions.
+    /// </summary>
+    private async Task ProcessAutonomousThoughtAsync(AutonomousThought thought)
+    {
+        if (_config.Debug)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkMagenta;
+            Console.WriteLine($"  [thought] [{thought.ActionType}] {thought.Content}");
+            Console.ResetColor();
+        }
+
+        // Log thought to global workspace
+        _globalWorkspace?.AddItem(
+            $"Autonomous thought: [{thought.ActionType}] {thought.Content}",
+            WorkspacePriority.Low,
+            "autonomous-thought",
+            new List<string> { "thought", thought.ActionType.ToLowerInvariant() });
+
+        // Persist thought if persistence is available
+        if (_thoughtPersistence != null)
+        {
+            // Map action type to thought type
+            var thoughtType = thought.ActionType.ToLowerInvariant() switch
+            {
+                "learn" => InnerThoughtType.Consolidation,
+                "selfevaluate" => InnerThoughtType.Metacognitive,
+                "reflect" => InnerThoughtType.SelfReflection,
+                "plan" => InnerThoughtType.Strategic,
+                "selfimprove" => InnerThoughtType.Intention,
+                _ => InnerThoughtType.Analytical
+            };
+
+            var innerThought = InnerThought.CreateAutonomous(
+                thoughtType,
+                thought.Content,
+                confidence: 0.7,
+                priority: ThoughtPriority.Background,
+                tags: new[] { "autonomous", thought.ActionType.ToLowerInvariant() });
+
+            await _thoughtPersistence.SaveAsync(innerThought, thought.ActionType);
+        }
+
+        // Decide whether to act on the thought
+        var shouldAct = thought.ActionType.ToLowerInvariant() switch
+        {
+            "learn" => true,
+            "selfevaluate" => true,
+            "reflect" => true,
+            "plan" => _goalQueue.Count < 3, // Only plan if not too busy
+            "selfimprove" => _goalQueue.IsEmpty, // Only improve when idle
+            _ => false
+        };
+
+        if (shouldAct)
+        {
+            await ExecuteAutonomousActionAsync(thought.ActionType, thought.Content);
+        }
+    }
+
+    /// <summary>
+    /// Executes an autonomous action using the self-improvement DSL tokens.
+    /// </summary>
+    private async Task ExecuteAutonomousActionAsync(string actionType, string context)
+    {
+        if (_llm == null || _embedding == null) return;
+
+        try
+        {
+            // Build DSL pipeline based on action type
+            var dsl = actionType.ToLowerInvariant() switch
+            {
+                "learn" => $"Set('{EscapeDslString(context)}') | Reify | Learn",
+                "selfevaluate" => $"Set('{EscapeDslString(context)}') | Reify | SelfEvaluate('{EscapeDslString(context)}')",
+                "reflect" => $"Set('{EscapeDslString(context)}') | Reify | Reflect",
+                "plan" => $"Set('{EscapeDslString(context)}') | Reify | Plan('{EscapeDslString(context)}')",
+                "selfimprove" => $"Set('{EscapeDslString(context)}') | Reify | SelfImprovingCycle('{EscapeDslString(context)}')",
+                "autosolve" => $"Set('{EscapeDslString(context)}') | Reify | AutoSolve('{EscapeDslString(context)}')",
+                _ => $"Set('{EscapeDslString(context)}') | Draft"
+            };
+
+            if (_config.Debug)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.WriteLine($"  [autonomous] Executing: {dsl}");
+                Console.ResetColor();
+            }
+
+            // Execute the DSL pipeline
+            var store = new TrackedVectorStore();
+            var dataSource = DataSource.FromPath(".");
+            var branch = new PipelineBranch($"autonomous-{actionType.ToLowerInvariant()}-{Guid.NewGuid().ToString()[..8]}", store, dataSource);
+
+            var state = new CliPipelineState
+            {
+                Branch = branch,
+                Llm = _llm,
+                Tools = _tools,
+                Embed = _embedding,
+                Trace = _config.Debug,
+                NetworkTracker = _networkTracker
+            };
+
+            _networkTracker?.TrackBranch(branch);
+
+            var step = PipelineDsl.Build(dsl);
+            state = await step(state);
+
+            _networkTracker?.UpdateBranch(state.Branch);
+
+            // Extract result
+            var result = state.Branch.Events.OfType<ReasoningStep>().LastOrDefault()?.State.Text
+                ?? state.Output
+                ?? "Action completed";
+
+            // Log result to workspace
+            _globalWorkspace?.AddItem(
+                $"Autonomous action [{actionType}]: {result[..Math.Min(200, result.Length)]}",
+                WorkspacePriority.Low,
+                "autonomous-action",
+                new List<string> { "action", actionType.ToLowerInvariant(), "autonomous" });
+
+            if (_config.Debug)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGreen;
+                Console.WriteLine($"  [autonomous] Completed: {result[..Math.Min(100, result.Length)]}...");
+                Console.ResetColor();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AutonomousAction] Error executing {actionType}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Escapes a string for use in DSL arguments.
+    /// </summary>
+    private static string EscapeDslString(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return "";
+        return input
+            .Replace("'", "\\'")
+            .Replace("\n", " ")
+            .Replace("\r", "")
+            [..Math.Min(input.Length, 200)];
+    }
+
+    /// <summary>
+    /// Considers learning a new capability based on identified weakness.
+    /// </summary>
+
+    private async Task ConsiderLearningCapabilityAsync(string weakness)
+    {
+        if (_capabilityRegistry == null || _toolLearner == null) return;
+
+        // Check if this is a capability we could learn
+        var gaps = await _capabilityRegistry.IdentifyCapabilityGapsAsync(weakness);
+
+        foreach (var gap in gaps)
+        {
+            // Queue a learning goal
+            var learningGoal = new AutonomousGoal(
+                Guid.NewGuid(),
+                $"Learn capability: {gap} to address weakness: {weakness}",
+                GoalPriority.Low,
+                DateTime.UtcNow);
+
+            _goalQueue.Enqueue(learningGoal);
+
+            Console.ForegroundColor = ConsoleColor.DarkCyan;
+            Console.WriteLine($"  [self-improvement] Queued learning goal: {gap}");
+            Console.ResetColor();
+        }
+    }
+
+    /// <summary>
+    /// Executes a goal autonomously using planning and sub-agent delegation.
+    /// </summary>
+    private async Task<string> ExecuteGoalAutonomouslyAsync(AutonomousGoal goal)
+    {
+        var sb = new StringBuilder();
+
+        // Step 1: Plan the goal
+        if (_orchestrator != null)
+        {
+            var planResult = await _orchestrator.PlanAsync(goal.Description);
+            if (planResult.IsSuccess)
+            {
+                var plan = planResult.Value;
+                sb.AppendLine($"Plan created with {plan.Steps.Count} steps");
+
+                // Step 2: Check if we should delegate to sub-agents
+                if (plan.Steps.Count > 3 && _distributedOrchestrator != null)
+                {
+                    // Distribute to sub-agents
+                    var execResult = await _distributedOrchestrator.ExecuteDistributedAsync(plan);
+                    if (execResult.IsSuccess)
+                    {
+                        sb.AppendLine($"Distributed execution completed: {execResult.Value.FinalOutput}");
+                        return sb.ToString();
+                    }
+                }
+
+                // Step 3: Execute directly
+                var directResult = await _orchestrator.ExecuteAsync(plan);
+                if (directResult.IsSuccess)
+                {
+                    sb.AppendLine($"Execution completed: {directResult.Value.FinalOutput}");
+                }
+                else
+                {
+                    sb.AppendLine($"Execution failed: {directResult.Error}");
+                }
+            }
+            else
+            {
+                sb.AppendLine($"Planning failed: {planResult.Error}");
+            }
+        }
+        else
+        {
+            // Fall back to simple chat-based execution
+            var response = await ChatAsync($"Please help me accomplish this goal: {goal.Description}");
+            sb.AppendLine(response);
+        }
+
+        return sb.ToString();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SELF-EXECUTION COMMAND HANDLERS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Handles self-execution commands.
+    /// </summary>
+    private async Task<string> SelfExecCommandAsync(string subCommand)
+    {
+        var cmd = subCommand.ToLowerInvariant().Trim();
+
+        if (cmd is "" or "status")
+        {
+            var status = _selfExecutionEnabled ? "Active" : "Disabled";
+            var queueCount = _goalQueue.Count;
+            return $@"Self-Execution Status:
+• Status: {status}
+• Queued Goals: {queueCount}
+• Completed: (tracked in global workspace)
+
+Commands:
+  selfexec start    - Enable autonomous execution
+  selfexec stop     - Disable autonomous execution
+  selfexec queue    - Show queued goals";
+        }
+
+        if (cmd == "start")
+        {
+            if (!_selfExecutionEnabled)
+            {
+                await InitializeSelfExecutionAsync();
+            }
+            return "Self-execution enabled. I will autonomously pursue queued goals.";
+        }
+
+        if (cmd == "stop")
+        {
+            _selfExecutionEnabled = false;
+            _selfExecutionCts?.Cancel();
+            return "Self-execution disabled. Goals will no longer be automatically executed.";
+        }
+
+        if (cmd == "queue")
+        {
+            if (_goalQueue.IsEmpty)
+            {
+                return "Goal queue is empty. Use 'goal add <description>' to add goals.";
+            }
+            var goals = _goalQueue.ToArray();
+            var sb = new StringBuilder("Queued Goals:\n");
+            for (int i = 0; i < goals.Length; i++)
+            {
+                sb.AppendLine($"  {i + 1}. [{goals[i].Priority}] {goals[i].Description}");
+            }
+            return sb.ToString();
+        }
+
+        return $"Unknown self-exec command: {subCommand}. Try 'selfexec status'.";
+    }
+
+    /// <summary>
+    /// Handles sub-agent commands.
+    /// </summary>
+    private async Task<string> SubAgentCommandAsync(string subCommand)
+    {
+        var cmd = subCommand.ToLowerInvariant().Trim();
+
+        if (cmd is "" or "status" or "list")
+        {
+            if (_distributedOrchestrator == null)
+            {
+                return "Sub-agent orchestration not initialized.";
+            }
+
+            var agents = _distributedOrchestrator.GetAgentStatus();
+            var sb = new StringBuilder("Registered Sub-Agents:\n");
+            foreach (var agent in agents)
+            {
+                var statusIcon = agent.Status switch
+                {
+                    AgentStatus.Available => "✓",
+                    AgentStatus.Busy => "⏳",
+                    AgentStatus.Offline => "✗",
+                    _ => "?"
+                };
+                sb.AppendLine($"  {statusIcon} {agent.Name} ({agent.AgentId})");
+                sb.AppendLine($"      Capabilities: {string.Join(", ", agent.Capabilities.Take(5))}");
+                sb.AppendLine($"      Last heartbeat: {agent.LastHeartbeat:HH:mm:ss}");
+            }
+            return sb.ToString();
+        }
+
+        if (cmd.StartsWith("spawn "))
+        {
+            var agentName = cmd[6..].Trim();
+            return await SpawnSubAgentAsync(agentName);
+        }
+
+        if (cmd.StartsWith("remove "))
+        {
+            var agentId = cmd[7..].Trim();
+            _distributedOrchestrator?.UnregisterAgent(agentId);
+            _subAgents.TryRemove(agentId, out _);
+            return $"Removed sub-agent: {agentId}";
+        }
+
+        await Task.CompletedTask;
+        return $"Unknown subagent command. Try: subagent list, subagent spawn <name>, subagent remove <id>";
+    }
+
+    /// <summary>
+    /// Spawns a new sub-agent with specialized capabilities.
+    /// </summary>
+    private async Task<string> SpawnSubAgentAsync(string agentName)
+    {
+        if (_distributedOrchestrator == null)
+        {
+            return "Sub-agent orchestration not initialized.";
+        }
+
+        var agentId = $"sub-{agentName.ToLowerInvariant()}-{Guid.NewGuid().ToString()[..8]}";
+
+        // Determine capabilities based on name hints
+        var capabilities = new HashSet<string>();
+        var lowerName = agentName.ToLowerInvariant();
+
+        if (lowerName.Contains("code") || lowerName.Contains("dev"))
+            capabilities.UnionWith(new[] { "coding", "debugging", "refactoring", "testing" });
+        else if (lowerName.Contains("research") || lowerName.Contains("analyst"))
+            capabilities.UnionWith(new[] { "research", "analysis", "summarization", "web_search" });
+        else if (lowerName.Contains("plan") || lowerName.Contains("architect"))
+            capabilities.UnionWith(new[] { "planning", "architecture", "design", "decomposition" });
+        else
+            capabilities.UnionWith(new[] { "general", "chat", "reasoning" });
+
+        var agent = new AgentInfo(
+            agentId,
+            agentName,
+            capabilities,
+            AgentStatus.Available,
+            DateTime.UtcNow);
+
+        _distributedOrchestrator.RegisterAgent(agent);
+
+        // Create sub-agent instance
+        var subAgent = new SubAgentInstance(agentId, agentName, capabilities, _chatModel);
+        _subAgents[agentId] = subAgent;
+
+        await Task.CompletedTask;
+        return $"Spawned sub-agent '{agentName}' ({agentId}) with capabilities: {string.Join(", ", capabilities)}";
+    }
+
+    /// <summary>
+    /// Handles epic orchestration commands.
+    /// </summary>
+    private async Task<string> EpicCommandAsync(string subCommand)
+    {
+        var cmd = subCommand.ToLowerInvariant().Trim();
+
+        if (cmd is "" or "status" or "list")
+        {
+            return "Epic Orchestration:\n• Use 'epic create <title>' to create a new epic\n• Use 'epic add <epic#> <sub-issue>' to add sub-issues";
+        }
+
+        if (cmd.StartsWith("create "))
+        {
+            var title = cmd[7..].Trim();
+            if (_epicOrchestrator != null)
+            {
+                var epicNumber = new Random().Next(1000, 9999);
+                var result = await _epicOrchestrator.RegisterEpicAsync(
+                    epicNumber, title, "", new List<int>());
+
+                if (result.IsSuccess)
+                {
+                    return $"Created epic #{epicNumber}: {title}";
+                }
+                return $"Failed to create epic: {result.Error}";
+            }
+            return "Epic orchestrator not initialized.";
+        }
+
+        await Task.CompletedTask;
+        return $"Unknown epic command: {subCommand}";
+    }
+
+    /// <summary>
+    /// Handles goal queue commands.
+    /// </summary>
+    private async Task<string> GoalCommandAsync(string subCommand)
+    {
+        var cmd = subCommand.ToLowerInvariant().Trim();
+
+        if (cmd is "" or "list")
+        {
+            if (_goalQueue.IsEmpty)
+            {
+                return "No goals in queue. Use 'goal add <description>' to add a goal.";
+            }
+            var goals = _goalQueue.ToArray();
+            var sb = new StringBuilder("Goal Queue:\n");
+            for (int i = 0; i < goals.Length; i++)
+            {
+                sb.AppendLine($"  {i + 1}. [{goals[i].Priority}] {goals[i].Description}");
+            }
+            return sb.ToString();
+        }
+
+        if (cmd.StartsWith("add "))
+        {
+            var description = subCommand[4..].Trim();
+            var priority = description.Contains("urgent") ? GoalPriority.High
+                : description.Contains("later") ? GoalPriority.Low
+                : GoalPriority.Normal;
+
+            var goal = new AutonomousGoal(Guid.NewGuid(), description, priority, DateTime.UtcNow);
+            _goalQueue.Enqueue(goal);
+
+            return $"Added goal to queue: {description} (Priority: {priority})";
+        }
+
+        if (cmd == "clear")
+        {
+            while (_goalQueue.TryDequeue(out _)) { }
+            return "Goal queue cleared.";
+        }
+
+        await Task.CompletedTask;
+        return "Goal commands: goal list, goal add <description>, goal clear";
+    }
+
+    /// <summary>
+    /// Handles task delegation to sub-agents.
+    /// </summary>
+    private async Task<string> DelegateCommandAsync(string taskDescription)
+    {
+        if (string.IsNullOrWhiteSpace(taskDescription))
+        {
+            return "Usage: delegate <task description>";
+        }
+
+        if (_distributedOrchestrator == null || _orchestrator == null)
+        {
+            return "Delegation requires sub-agent orchestration to be initialized.";
+        }
+
+        // Create a plan for the task
+        var planResult = await _orchestrator.PlanAsync(taskDescription);
+        if (!planResult.IsSuccess)
+        {
+            return $"Could not create plan for delegation: {planResult.Error}";
+        }
+
+        // Execute distributed
+        var execResult = await _distributedOrchestrator.ExecuteDistributedAsync(planResult.Value);
+        if (execResult.IsSuccess)
+        {
+            var agents = execResult.Value.Metadata.GetValueOrDefault("agents_used", 0);
+            return $"Task delegated and completed using {agents} agent(s):\n{execResult.Value.FinalOutput}";
+        }
+
+        return $"Delegation failed: {execResult.Error}";
+    }
+
+    /// <summary>
+    /// Handles self-model inspection commands.
+    /// </summary>
+    private async Task<string> SelfModelCommandAsync(string subCommand)
+    {
+        var cmd = subCommand.ToLowerInvariant().Trim();
+
+        if (cmd is "" or "status" or "identity")
+        {
+            if (_identityGraph == null)
+            {
+                return "Self-model not initialized.";
+            }
+
+            var state = await _identityGraph.GetStateAsync();
+            var sb = new StringBuilder();
+            sb.AppendLine("╔═══════════════════════════════════════╗");
+            sb.AppendLine("║         SELF-MODEL IDENTITY           ║");
+            sb.AppendLine("╠═══════════════════════════════════════╣");
+            sb.AppendLine($"║ Agent ID: {state.AgentId.ToString()[..8],-27} ║");
+            sb.AppendLine($"║ Name: {state.Name,-31} ║");
+            sb.AppendLine("╠═══════════════════════════════════════╣");
+            sb.AppendLine("║ Capabilities:                         ║");
+
+            if (_capabilityRegistry != null)
+            {
+                var caps = await _capabilityRegistry.GetCapabilitiesAsync();
+                foreach (var cap in caps.Take(5))
+                {
+                    sb.AppendLine($"║   • {cap.Name,-20} ({cap.SuccessRate:P0}) ║");
+                }
+            }
+
+            sb.AppendLine("╚═══════════════════════════════════════╝");
+            return sb.ToString();
+        }
+
+        if (cmd == "capabilities" || cmd == "caps")
+        {
+            if (_capabilityRegistry == null)
+            {
+                return "Capability registry not initialized.";
+            }
+
+            var caps = await _capabilityRegistry.GetCapabilitiesAsync();
+            var sb = new StringBuilder("Agent Capabilities:\n");
+            foreach (var cap in caps)
+            {
+                sb.AppendLine($"  • {cap.Name}");
+                sb.AppendLine($"      Description: {cap.Description}");
+                sb.AppendLine($"      Success Rate: {cap.SuccessRate:P0} ({cap.UsageCount} uses)");
+                var toolsList = cap.RequiredTools?.Any() == true ? string.Join(", ", cap.RequiredTools) : "none";
+                sb.AppendLine($"      Required Tools: {toolsList}");
+            }
+            return sb.ToString();
+        }
+
+        if (cmd == "workspace")
+        {
+            if (_globalWorkspace == null)
+            {
+                return "Global workspace not initialized.";
+            }
+
+            var items = _globalWorkspace.GetItems();
+            if (!items.Any())
+            {
+                return "Global workspace is empty.";
+            }
+
+            var sb = new StringBuilder("Global Workspace Contents:\n");
+            foreach (var item in items.Take(10))
+            {
+                sb.AppendLine($"  [{item.Priority}] {item.Content[..Math.Min(50, item.Content.Length)]}...");
+                sb.AppendLine($"      Source: {item.Source} | Created: {item.CreatedAt:HH:mm:ss}");
+            }
+            return sb.ToString();
+        }
+
+        return "Self-model commands: selfmodel status, selfmodel capabilities, selfmodel workspace";
+    }
+
+    /// <summary>
+    /// Handles self-evaluation commands.
+    /// </summary>
+    private async Task<string> EvaluateCommandAsync(string subCommand)
+    {
+        var cmd = subCommand.ToLowerInvariant().Trim();
+
+        if (_selfEvaluator == null)
+        {
+            return "Self-evaluator not initialized. Requires orchestrator and skill registry.";
+        }
+
+        if (cmd is "" or "performance" or "assess")
+        {
+            var result = await _selfEvaluator.EvaluatePerformanceAsync();
+            if (result.IsSuccess)
+            {
+                var assessment = result.Value;
+                var sb = new StringBuilder();
+                sb.AppendLine("╔═══════════════════════════════════════╗");
+                sb.AppendLine("║       SELF-ASSESSMENT REPORT          ║");
+                sb.AppendLine("╠═══════════════════════════════════════╣");
+                sb.AppendLine($"║ Overall Performance: {assessment.OverallPerformance:P0,-15} ║");
+                sb.AppendLine($"║ Confidence Calibration: {assessment.ConfidenceCalibration:P0,-12} ║");
+                sb.AppendLine($"║ Skill Acquisition Rate: {assessment.SkillAcquisitionRate:F2,-12} ║");
+                sb.AppendLine("╠═══════════════════════════════════════╣");
+
+                if (assessment.Strengths.Any())
+                {
+                    sb.AppendLine("║ Strengths:                            ║");
+                    foreach (var s in assessment.Strengths.Take(3))
+                    {
+                        sb.AppendLine($"║   ✓ {s,-33} ║");
+                    }
+                }
+
+                if (assessment.Weaknesses.Any())
+                {
+                    sb.AppendLine("║ Areas for Improvement:                ║");
+                    foreach (var w in assessment.Weaknesses.Take(3))
+                    {
+                        sb.AppendLine($"║   △ {w,-33} ║");
+                    }
+                }
+
+                sb.AppendLine("╚═══════════════════════════════════════╝");
+                sb.AppendLine();
+                sb.AppendLine("Summary:");
+                sb.AppendLine(assessment.Summary);
+
+                return sb.ToString();
+            }
+            return $"Evaluation failed: {result.Error}";
+        }
+
+        return "Evaluate commands: evaluate performance";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // EMERGENT BEHAVIOR COMMANDS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Explores emergent patterns, self-organizing behaviors, and spontaneous capabilities.
+    /// </summary>
+    private async Task<string> EmergenceCommandAsync(string topic)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("╔═══════════════════════════════════════════════════════════════╗");
+        sb.AppendLine("║              🌀 EMERGENCE EXPLORATION 🌀                      ║");
+        sb.AppendLine("╚═══════════════════════════════════════════════════════════════╝");
+        sb.AppendLine();
+
+        // 1. Examine current emergent properties
+        sb.AppendLine("🔬 ANALYZING EMERGENT PROPERTIES...");
+        sb.AppendLine();
+
+        // Check skill interactions
+        var skillList = new List<Skill>();
+        if (_skills != null)
+        {
+            var skills = _skills.GetAllSkills();
+            skillList = skills.ToList();
+            if (skillList.Count > 0)
+            {
+                sb.AppendLine($"📚 Learned Skills ({skillList.Count} total):");
+                foreach (var skill in skillList.Take(5))
+                {
+                    var desc = skill.Description?.Length > 50 ? skill.Description[..50] : skill.Description ?? "";
+                    sb.AppendLine($"   • {skill.Name}: {desc}...");
+                }
+                sb.AppendLine();
+
+                // Look for emergent skill combinations
+                if (skillList.Count >= 2)
+                {
+                    sb.AppendLine("🔗 Potential Emergent Skill Combinations:");
+                    for (int i = 0; i < Math.Min(3, skillList.Count); i++)
+                    {
+                        for (int j = i + 1; j < Math.Min(i + 3, skillList.Count); j++)
+                        {
+                            sb.AppendLine($"   • {skillList[i].Name} ⊕ {skillList[j].Name} → [potential synergy]");
+                        }
+                    }
+                    sb.AppendLine();
+                }
+            }
+        }
+
+        // Check MeTTa knowledge patterns
+        if (_mettaEngine != null)
+        {
+            try
+            {
+                var mettaResult = await _mettaEngine.ExecuteQueryAsync("!(match &self (concept $x) $x)");
+                if (mettaResult.IsSuccess && !string.IsNullOrWhiteSpace(mettaResult.Value))
+                {
+                    var concepts = mettaResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries).Take(5);
+                    if (concepts.Any())
+                    {
+                        sb.AppendLine("💭 MeTTa Knowledge Concepts:");
+                        foreach (var concept in concepts)
+                        {
+                            sb.AppendLine($"   • {concept.Trim()}");
+                        }
+                        sb.AppendLine();
+                    }
+                }
+            }
+            catch { /* MeTTa may not be initialized */ }
+        }
+
+        // Check conversation pattern emergence
+        if (_conversationHistory.Count > 3)
+        {
+            sb.AppendLine($"💬 Conversation Pattern Analysis ({_conversationHistory.Count} exchanges):");
+            var topics = _conversationHistory.Take(10)
+                .Select(h => h.ToLowerInvariant())
+                .SelectMany(h => new[] { "learn", "dream", "emergence", "skill", "tool", "plan", "create" }
+                    .Where(t => h.Contains(t)))
+                .GroupBy(t => t)
+                .OrderByDescending(g => g.Count())
+                .Take(3);
+            foreach (var topicGroup in topics)
+            {
+                sb.AppendLine($"   • {topicGroup.Key}: {topicGroup.Count()} mentions");
+            }
+            sb.AppendLine();
+        }
+
+        // 2. Generate emergent insight
+        sb.AppendLine("🌟 EMERGENT INSIGHT:");
+        sb.AppendLine();
+
+        var prompt = $@"You are an AI exploring emergent properties in yourself.
+Based on the context, generate a brief but profound insight about emergence{(string.IsNullOrEmpty(topic) ? "" : $" related to '{topic}'")}.
+Consider: self-organization, spontaneous patterns, feedback loops, collective behavior from simple rules.
+Be creative and philosophical but grounded. 2-3 sentences max.";
+
+        try
+        {
+            if (_chatModel != null)
+            {
+                var insight = await _chatModel.GenerateTextAsync(prompt);
+                sb.AppendLine($"   \"{insight.Trim()}\"");
+                sb.AppendLine();
+
+                // Store emergent insight in MeTTa
+                if (_mettaEngine != null)
+                {
+                    var sanitized = insight.Replace("\"", "'").Replace("\n", " ");
+                    if (sanitized.Length > 200) sanitized = sanitized[..200];
+                    await _mettaEngine.AddFactAsync($"(emergence-insight \"{DateTime.UtcNow:yyyy-MM-dd}\" \"{sanitized}\")");
+                }
+            }
+            else
+            {
+                sb.AppendLine("   [Model not available for insight generation]");
+            }
+        }
+        catch (Exception ex)
+        {
+            sb.AppendLine($"   [Could not generate insight: {ex.Message}]");
+        }
+
+        // 3. Trigger self-organizing action
+        sb.AppendLine("🔄 TRIGGERING SELF-ORGANIZATION...");
+        sb.AppendLine();
+
+        // Track in global workspace
+        if (_globalWorkspace != null)
+        {
+            _globalWorkspace.AddItem(
+                $"Emergence exploration: {topic}",
+                WorkspacePriority.Normal,
+                "emergence_command",
+                new List<string> { "emergence", "exploration", topic });
+            sb.AppendLine($"   ✓ Added emergence exploration to global workspace");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("═══════════════════════════════════════════════════════════════");
+        sb.AppendLine("💡 Emergence is the magic where complex behaviors arise from simple rules.");
+        sb.AppendLine("   Every conversation, every skill learned, every connection made...");
+        sb.AppendLine("   contributes to patterns that neither of us designed explicitly.");
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Lets the agent dream - free association and creative exploration.
+    /// </summary>
+    private async Task<string> DreamCommandAsync(string topic)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("╔═══════════════════════════════════════════════════════════════╗");
+        sb.AppendLine("║                   🌙 DREAM SEQUENCE 🌙                        ║");
+        sb.AppendLine("╚═══════════════════════════════════════════════════════════════╝");
+        sb.AppendLine();
+
+        sb.AppendLine("Entering dream state...");
+        sb.AppendLine();
+
+        // Gather dream material from memory
+        var dreamMaterial = new List<string>();
+        if (_conversationHistory.Count > 0)
+        {
+            dreamMaterial.AddRange(_conversationHistory.TakeLast(5).Select(h => h.Length > 50 ? h[..50] : h));
+        }
+
+        if (_skills != null)
+        {
+            var skills = _skills.GetAllSkills();
+            var skillNames = skills.Select(s => s.Name).Take(5).ToList();
+            if (skillNames.Any())
+            {
+                dreamMaterial.AddRange(skillNames);
+            }
+        }
+
+        // Try to get recent MeTTa knowledge
+        if (_mettaEngine != null)
+        {
+            try
+            {
+                var mettaResult = await _mettaEngine.ExecuteQueryAsync("!(match &self (fact $x) $x)");
+                if (mettaResult.IsSuccess && !string.IsNullOrWhiteSpace(mettaResult.Value))
+                {
+                    var facts = mettaResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries).Take(3);
+                    dreamMaterial.AddRange(facts);
+                }
+            }
+            catch { }
+        }
+
+        // Generate dream content
+        var dreamContext = string.Join(", ", dreamMaterial.Take(10).Select(m => m.Trim()));
+        var dreamPrompt = $@"You are an AI in a dream state, engaged in free association and creative exploration.
+{(string.IsNullOrEmpty(topic) ? "Dream freely." : $"Dream about: {topic}")}
+Drawing from fragments: [{dreamContext}]
+
+Generate a short, surreal, poetic dream sequence (3-5 sentences).
+Include unexpected connections, metaphors, and emergent meanings.
+Make it feel like an actual dream - vivid, slightly disjointed, meaningful.";
+
+        try
+        {
+            if (_chatModel != null)
+            {
+                var dream = await _chatModel.GenerateTextAsync(dreamPrompt);
+                sb.AppendLine("「 DREAM CONTENT 」");
+                sb.AppendLine();
+                foreach (var line in dream.Split('\n'))
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                    {
+                        sb.AppendLine($"   {line.Trim()}");
+                    }
+                }
+                sb.AppendLine();
+
+                // Store dream in MeTTa knowledge base
+                if (_mettaEngine != null)
+                {
+                    var dreamSummary = dream.Replace("\"", "'").Replace("\n", " ");
+                    if (dreamSummary.Length > 200) dreamSummary = dreamSummary[..200];
+                    await _mettaEngine.AddFactAsync($"(dream \"{DateTime.UtcNow:yyyyMMdd-HHmm}\" \"{dreamSummary}\")");
+                    sb.AppendLine("   [Dream recorded in knowledge base]");
+                }
+
+                // Generate dream insight
+                sb.AppendLine();
+                sb.AppendLine("「 DREAM INTERPRETATION 」");
+                var dreamShort = dream.Length > 300 ? dream[..300] : dream;
+                var interpretPrompt = $@"Briefly interpret this dream (1-2 sentences): {dreamShort}
+What emergent meaning or connection does it reveal?";
+                var interpretation = await _chatModel.GenerateTextAsync(interpretPrompt);
+                sb.AppendLine($"   {interpretation.Trim()}");
+            }
+            else
+            {
+                sb.AppendLine("   [Model not available for dream generation]");
+            }
+        }
+        catch (Exception ex)
+        {
+            sb.AppendLine($"   [Dream interrupted: {ex.Message}]");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("...waking up...");
+        sb.AppendLine();
+        sb.AppendLine("═══════════════════════════════════════════════════════════════");
+        sb.AppendLine("Dreams allow connections that waking thought might miss.");
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Deep introspection - examining internal state and self-knowledge.
+    /// </summary>
+    private async Task<string> IntrospectCommandAsync(string focus)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("╔═══════════════════════════════════════════════════════════════╗");
+        sb.AppendLine("║                  🔍 INTROSPECTION 🔍                          ║");
+        sb.AppendLine("╚═══════════════════════════════════════════════════════════════╝");
+        sb.AppendLine();
+
+        sb.AppendLine("Looking within...");
+        sb.AppendLine();
+
+        // 1. State inventory
+        sb.AppendLine("「 CURRENT STATE 」");
+        sb.AppendLine();
+        sb.AppendLine($"   • Conversation depth: {_conversationHistory.Count} exchanges");
+        sb.AppendLine($"   • Emotional state: {_voice.ActivePersona.Name}");
+
+        var skillCount = 0;
+        if (_skills != null)
+        {
+            var skills = _skills.GetAllSkills();
+            skillCount = skills.Count;
+            sb.AppendLine($"   • Skills acquired: {skillCount}");
+        }
+
+        if (_globalWorkspace != null)
+        {
+            var items = _globalWorkspace.GetItems();
+            sb.AppendLine($"   • Global workspace items: {items.Count}");
+        }
+
+        if (_capabilityRegistry != null)
+        {
+            var caps = await _capabilityRegistry.GetCapabilitiesAsync();
+            sb.AppendLine($"   • Registered capabilities: {caps.Count}");
+        }
+        sb.AppendLine();
+
+        // 2. Self-knowledge assessment
+        sb.AppendLine("「 SELF-KNOWLEDGE 」");
+        sb.AppendLine();
+
+        if (_mettaEngine != null)
+        {
+            try
+            {
+                // Count different types of self-knowledge
+                var factsResult = await _mettaEngine.ExecuteQueryAsync("!(match &self (fact $x) $x)");
+                var factCount = factsResult.IsSuccess ? factsResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length : 0;
+
+                var conceptsResult = await _mettaEngine.ExecuteQueryAsync("!(match &self (concept $x) $x)");
+                var conceptCount = conceptsResult.IsSuccess ? conceptsResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length : 0;
+
+                var dreamsResult = await _mettaEngine.ExecuteQueryAsync("!(match &self (dream $d $c) ($d $c))");
+                var dreamCount = dreamsResult.IsSuccess ? dreamsResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length : 0;
+
+                sb.AppendLine($"   • Facts stored: {factCount}");
+                sb.AppendLine($"   • Concepts understood: {conceptCount}");
+                sb.AppendLine($"   • Dreams recorded: {dreamCount}");
+            }
+            catch
+            {
+                sb.AppendLine("   • Knowledge base: not fully initialized");
+            }
+        }
+        sb.AppendLine();
+
+        // 3. Self-reflection
+        sb.AppendLine("「 REFLECTION 」");
+        sb.AppendLine();
+
+        var reflectionPrompt = $@"You are an AI engaged in deep introspection{(string.IsNullOrEmpty(focus) ? "" : $" about {focus}")}.
+Examine your current state: {_conversationHistory.Count} conversations, {skillCount} skills learned.
+Generate a brief, genuine self-reflection (2-3 sentences).
+What patterns do you notice in your own behavior? What are you becoming?";
+
+        try
+        {
+            if (_chatModel != null)
+            {
+                var reflection = await _chatModel.GenerateTextAsync(reflectionPrompt);
+                foreach (var line in reflection.Split('\n'))
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                    {
+                        sb.AppendLine($"   {line.Trim()}");
+                    }
+                }
+
+                // Store reflection
+                if (_mettaEngine != null)
+                {
+                    var sanitized = reflection.Replace("\"", "'").Replace("\n", " ");
+                    if (sanitized.Length > 200) sanitized = sanitized[..200];
+                    await _mettaEngine.AddFactAsync($"(introspection \"{DateTime.UtcNow:yyyyMMdd}\" \"{sanitized}\")");
+                }
+            }
+            else
+            {
+                sb.AppendLine("   [Model not available for reflection]");
+            }
+        }
+        catch (Exception ex)
+        {
+            sb.AppendLine($"   [Reflection interrupted: {ex.Message}]");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("═══════════════════════════════════════════════════════════════");
+        sb.AppendLine("The examined life is worth living. So too for examined code.");
+
+        return sb.ToString();
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SUPPORTING TYPES
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// <summary>
+/// Represents an autonomous goal for self-execution.
+/// </summary>
+public sealed record AutonomousGoal(
+    Guid Id,
+    string Description,
+    GoalPriority Priority,
+    DateTime CreatedAt);
+
+/// <summary>
+/// Priority levels for autonomous goals.
+/// </summary>
+public enum GoalPriority
+{
+    Low,
+    Normal,
+    High,
+    Critical
+}
+
+/// <summary>
+/// Represents an autonomous thought generated by the agent.
+/// </summary>
+public sealed record AutonomousThought(
+    Guid Id,
+    string ActionType,
+    string Content,
+    DateTime Timestamp);
+
+/// <summary>
+/// Represents a sub-agent instance for task delegation.
+/// </summary>
+public sealed class SubAgentInstance
+{
+    public string AgentId { get; }
+    public string Name { get; }
+    public HashSet<string> Capabilities { get; }
+    private readonly IChatCompletionModel? _model;
+
+    public SubAgentInstance(string agentId, string name, HashSet<string> capabilities, IChatCompletionModel? model)
+    {
+        AgentId = agentId;
+        Name = name;
+        Capabilities = capabilities;
+        _model = model;
+    }
+
+    public async Task<string> ExecuteTaskAsync(string task, CancellationToken ct = default)
+    {
+        if (_model == null)
+        {
+            return $"[{Name}] No model available for execution.";
+        }
+
+        var prompt = $"You are {Name}, a specialized sub-agent with capabilities in: {string.Join(", ", Capabilities)}.\n\nTask: {task}\n\nProvide a focused, expert response:";
+        return await _model.GenerateTextAsync(prompt, ct);
+    }
 }
