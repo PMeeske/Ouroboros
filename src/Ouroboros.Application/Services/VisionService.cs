@@ -106,6 +106,7 @@ public class VisionService : IDisposable
     /// </summary>
     public async Task<VisionResult> CaptureAndAnalyzeScreenAsync(string? prompt = null, Rectangle? region = null, CancellationToken ct = default)
     {
+#if NET10_0_OR_GREATER_WINDOWS
         try
         {
             var screen = System.Windows.Forms.Screen.PrimaryScreen!.Bounds;
@@ -122,6 +123,10 @@ public class VisionService : IDisposable
         {
             return VisionResult.Failure($"Screen capture failed: {ex.Message}");
         }
+#else
+        await Task.CompletedTask; // Suppress async warning
+        return VisionResult.Failure("Screen capture is only supported on Windows");
+#endif
     }
 
     /// <summary>

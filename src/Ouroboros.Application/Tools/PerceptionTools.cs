@@ -105,6 +105,7 @@ public static class PerceptionTools
         public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
         {
             await Task.CompletedTask;
+#if NET10_0_OR_GREATER_WINDOWS
             try
             {
                 Directory.CreateDirectory(CaptureDirectory);
@@ -153,6 +154,9 @@ public static class PerceptionTools
             {
                 return Result<string, string>.Failure($"Screen capture failed: {ex.Message}");
             }
+#else
+            return Result<string, string>.Failure("Screen capture is only supported on Windows");
+#endif
         }
     }
 
@@ -334,6 +338,7 @@ public static class PerceptionTools
 
         public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
         {
+#if NET10_0_OR_GREATER_WINDOWS
             try
             {
                 // Parse parameters
@@ -416,6 +421,10 @@ public static class PerceptionTools
             {
                 return Result<string, string>.Failure($"Screen watch failed: {ex.Message}");
             }
+#else
+            await Task.CompletedTask; // Suppress async warning
+            return Result<string, string>.Failure("Screen watching is only supported on Windows");
+#endif
         }
 
         private static double CompareImages(Bitmap img1, Bitmap img2)
