@@ -106,7 +106,7 @@ jobs:
             --config-file stryker-config.json \
             --mutation-level "${ML}" \
             --verbosity "${VERBOSITY}" \
-            --reporters "html" "progress" "json" "cleartext"
+            --reporter "html" "progress" "json" "cleartext"
         fi
 
     - name: Extract mutation score
