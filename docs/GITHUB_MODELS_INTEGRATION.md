@@ -249,7 +249,8 @@ Console.WriteLine(response);
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GITHUB_TOKEN` | GitHub Personal Access Token | Required (no default) |
+| `MODEL_TOKEN` | Primary token for GitHub Models API (highest priority) | None |
+| `GITHUB_TOKEN` | GitHub Personal Access Token | Falls back to MODEL_TOKEN |
 | `GITHUB_MODELS_TOKEN` | Alternative to GITHUB_TOKEN | Falls back to GITHUB_TOKEN |
 | `GITHUB_MODELS_ENDPOINT` | API endpoint URL | `https://models.inference.ai.azure.com` |
 | `CHAT_ENDPOINT` | Generic endpoint (works with all providers) | None |
