@@ -14,4 +14,5 @@ namespace Ouroboros.Domain.States;
 [JsonDerivedType(typeof(FinalSpec), "Final")]
 [JsonDerivedType(typeof(DocumentRevision), "DocumentRevision")]
 [JsonDerivedType(typeof(Thinking), "Thinking")]
+[JsonDerivedType(typeof(OperatingCostAuditResult), "OperatingCostAudit")]
 public abstract record ReasoningState(string Kind, string Text);
