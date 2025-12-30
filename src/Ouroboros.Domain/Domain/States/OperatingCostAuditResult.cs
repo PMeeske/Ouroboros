@@ -82,6 +82,11 @@ public sealed record OperatingCostAuditResult(
     string Note = "This output does not contain legal evaluation or statements on validity or enforceability.")
     : ReasoningState("OperatingCostAudit", SummaryShort)
 {
+    private static readonly System.Text.Json.JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+    };
+
     /// <summary>
     /// Gets the JSON representation of the audit result.
     /// </summary>
@@ -106,5 +111,5 @@ public sealed record OperatingCostAuditResult(
             summary_short = SummaryShort,
             note = Note,
         },
-        new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        JsonOptions);
 }

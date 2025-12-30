@@ -314,11 +314,30 @@ public static class OperatingCostAuditArrows
     /// </summary>
     private static string GetAllAnalysisResults(PipelineBranch branch)
     {
-        IEnumerable<string> analyses = branch.Events
+        List<ReasoningStep> steps = branch.Events
             .OfType<ReasoningStep>()
-            .Select(e => $"[{e.State.Kind}]\n{e.State.Text}");
+            .ToList();
 
-        return string.Join("\n\n---\n\n", analyses);
+        if (steps.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < steps.Count; i++)
+        {
+            if (i > 0)
+            {
+                sb.Append("\n\n---\n\n");
+            }
+
+            sb.Append('[');
+            sb.Append(steps[i].State.Kind);
+            sb.Append("]\n");
+            sb.Append(steps[i].State.Text);
+        }
+
+        return sb.ToString();
     }
 
     /// <summary>
@@ -326,12 +345,13 @@ public static class OperatingCostAuditArrows
     /// </summary>
     private static string ExtractCriticalGaps(PipelineBranch branch)
     {
-        IEnumerable<string> critiques = branch.Events
+        List<string> critiques = branch.Events
             .OfType<ReasoningStep>()
             .Where(e => e.State is Critique)
-            .Select(e => e.State.Text);
+            .Select(e => e.State.Text)
+            .ToList();
 
-        if (!critiques.Any())
+        if (critiques.Count == 0)
         {
             return "No specific gaps identified during analysis.";
         }
