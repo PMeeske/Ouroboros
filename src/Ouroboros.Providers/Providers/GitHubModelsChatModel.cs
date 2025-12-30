@@ -32,20 +32,21 @@ public sealed class GitHubModelsChatModel : OpenAiCompatibleChatModelBase
 
     /// <summary>
     /// Factory method to create a GitHubModelsChatModel from environment variables.
-    /// Uses GITHUB_TOKEN or GITHUB_MODELS_TOKEN for authentication.
+    /// Uses MODEL_TOKEN, GITHUB_TOKEN, or GITHUB_MODELS_TOKEN for authentication (in that order).
     /// </summary>
     /// <param name="model">Model name.</param>
     /// <param name="settings">Optional runtime settings.</param>
     /// <returns>A configured GitHubModelsChatModel instance.</returns>
     public static GitHubModelsChatModel FromEnvironment(string model, ChatRuntimeSettings? settings = null)
     {
-        string? token = Environment.GetEnvironmentVariable("GITHUB_TOKEN") 
+        string? token = Environment.GetEnvironmentVariable("MODEL_TOKEN")
+                       ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN") 
                        ?? Environment.GetEnvironmentVariable("GITHUB_MODELS_TOKEN");
         
         if (string.IsNullOrWhiteSpace(token))
         {
             throw new InvalidOperationException(
-                "GitHub token not found. Set GITHUB_TOKEN or GITHUB_MODELS_TOKEN environment variable.");
+                "GitHub token not found. Set MODEL_TOKEN, GITHUB_TOKEN, or GITHUB_MODELS_TOKEN environment variable.");
         }
 
         string? endpoint = Environment.GetEnvironmentVariable("GITHUB_MODELS_ENDPOINT");

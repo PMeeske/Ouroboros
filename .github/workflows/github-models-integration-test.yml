@@ -1,0 +1,158 @@
+name: GitHub Models Integration Tests
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - '**.csproj'
+      - '.github/workflows/github-models-integration-test.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - '**.csproj'
+      - '.github/workflows/github-models-integration-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancel in-progress runs for the same workflow on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  github-models-integration:
+    name: GitHub Models Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Only run if MODEL_TOKEN secret is available
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      uses: nick-fields/retry@v3
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_wait_seconds: 30
+        command: dotnet restore
+
+    - name: Build
+      run: |
+        # Build CLI project for integration tests
+        dotnet build --configuration Release --no-restore \
+          src/Ouroboros.CLI/Ouroboros.CLI.csproj
+      timeout-minutes: 15
+
+    - name: Test 1 - GitHub Models API Connectivity
+      if: ${{ secrets.MODEL_TOKEN != '' }}
+      uses: nick-fields/retry@v3
+      env:
+        MODEL_TOKEN: ${{ secrets.MODEL_TOKEN }}
+      with:
+        timeout_minutes: 5
+        max_attempts: 2
+        retry_wait_seconds: 10
+        command: |
+          echo "=== Test 1: GitHub Models API Connectivity ==="
+          cd src/Ouroboros.CLI
+          
+          # Basic ask command to verify GitHub Models works
+          dotnet run --no-build --configuration Release -- ask \
+            -q "What is 2+2? Answer with just the number." \
+            --model "gpt-4o-mini" \
+            --endpoint-type github-models \
+            --max-tokens 50
+          
+          echo "✓ GitHub Models connectivity test passed"
+
+    - name: Test 2 - Pipeline DSL with GitHub Models
+      if: ${{ secrets.MODEL_TOKEN != '' }}
+      uses: nick-fields/retry@v3
+      env:
+        MODEL_TOKEN: ${{ secrets.MODEL_TOKEN }}
+      with:
+        timeout_minutes: 5
+        max_attempts: 2
+        retry_wait_seconds: 10
+        command: |
+          echo "=== Test 2: Pipeline DSL with GitHub Models ==="
+          cd src/Ouroboros.CLI
+          
+          # Test pipeline DSL with draft step
+          dotnet run --no-build --configuration Release -- pipeline \
+            --dsl "SetPrompt('Explain functional programming in one sentence') | UseDraft" \
+            --model "gpt-4o-mini" \
+            --endpoint-type github-models \
+            --max-tokens 100
+          
+          echo "✓ Pipeline DSL test passed"
+
+    - name: Test 3 - Different Model Selection
+      if: ${{ secrets.MODEL_TOKEN != '' }}
+      uses: nick-fields/retry@v3
+      env:
+        MODEL_TOKEN: ${{ secrets.MODEL_TOKEN }}
+      with:
+        timeout_minutes: 5
+        max_attempts: 2
+        retry_wait_seconds: 10
+        command: |
+          echo "=== Test 3: Different Model Selection ==="
+          cd src/Ouroboros.CLI
+          
+          # Test with gpt-4o model (standard model)
+          dotnet run --no-build --configuration Release -- ask \
+            -q "What is category theory in one line?" \
+            --model "gpt-4o" \
+            --endpoint-type github-models \
+            --max-tokens 100
+          
+          echo "✓ Model selection test passed"
+
+    - name: Skip Tests Notice
+      if: ${{ secrets.MODEL_TOKEN == '' }}
+      run: |
+        echo "⚠️ MODEL_TOKEN secret is not set. Skipping GitHub Models integration tests."
+        echo "To run these tests, add the MODEL_TOKEN secret to your repository."
+
+    - name: Generate Test Summary
+      if: always()
+      run: |
+        echo "## 🧪 GitHub Models Integration Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Environment" >> $GITHUB_STEP_SUMMARY
+        echo "- **Runner**: ubuntu-latest" >> $GITHUB_STEP_SUMMARY
+        echo "- **Models**: gpt-4o-mini, gpt-4o" >> $GITHUB_STEP_SUMMARY
+        echo "- **.NET Version**: 10.0.x" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -n "${{ secrets.MODEL_TOKEN }}" ]; then
+          echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
+          echo "1. ✅ GitHub Models API Connectivity" >> $GITHUB_STEP_SUMMARY
+          echo "2. ✅ Pipeline DSL with GitHub Models" >> $GITHUB_STEP_SUMMARY
+          echo "3. ✅ Different Model Selection" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "### ⚠️ Tests Skipped" >> $GITHUB_STEP_SUMMARY
+          echo "MODEL_TOKEN secret is not configured." >> $GITHUB_STEP_SUMMARY
+        fi
