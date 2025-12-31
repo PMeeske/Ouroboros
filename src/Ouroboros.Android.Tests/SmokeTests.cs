@@ -18,11 +18,16 @@ public class BuildSmokeTests
     [Fact]
     public void Smoke_TestProject_CanExecute()
     {
-        // Arrange & Act
-        var testProjectWorks = true;
+        // Arrange
+        var currentAssembly = System.Reflection.Assembly.GetExecutingAssembly();
+
+        // Act
+        var assemblyName = currentAssembly.GetName().Name;
 
         // Assert
-        testProjectWorks.Should().BeTrue("Test project must be functional");
+        assemblyName.Should().Be("Ouroboros.Android.Tests", 
+            "Test project assembly should have expected name");
+        currentAssembly.Should().NotBeNull("Test project must be functional");
     }
 
     /// <summary>
@@ -103,15 +108,16 @@ public class BuildSmokeTests
         // Arrange
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        // Act
-        var iterations = 1000;
-        for (int i = 0; i < iterations; i++)
+        // Act - Perform computational work
+        var sum = 0;
+        for (int i = 0; i < 1000; i++)
         {
-            var result = i * 2;
+            sum += i * 2;
         }
         stopwatch.Stop();
 
         // Assert
+        sum.Should().Be(999000, "Calculation should produce expected result");
         stopwatch.ElapsedMilliseconds.Should().BeLessThan(100, 
             "Simple operations should be fast");
     }

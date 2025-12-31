@@ -54,6 +54,12 @@ The Android APK is automatically built by CI/CD and available as an artifact:
 3. Download the `monadic-pipeline-android-apk` artifact
 4. Extract and install the APK on your Android device
 
+**📱 For Testers:** See the comprehensive [Android Testing Guide](../../docs/ANDROID_TESTING_GUIDE.md) for:
+- How to access test builds (including QR codes)
+- Detailed installation instructions
+- What to test and how to report issues
+- Testing checklist and FAQ
+
 ### Option 2: Build Locally
 
 #### Prerequisites
