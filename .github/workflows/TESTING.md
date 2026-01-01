@@ -99,8 +99,24 @@ dotnet test --configuration Release \
 # Check if Android project exists
 ls -la src/Ouroboros.Android/
 
+# Check if test project exists
+ls -la src/Ouroboros.Android.Tests/
+
+# Run smoke tests locally
+cd src/Ouroboros.Android.Tests
+dotnet restore
+dotnet test --filter "Category=SmokeTests" --verbosity normal
+
 # Trigger via push to develop branch or workflow_dispatch
 ```
+
+**New Features (2025-12-31):**
+- ✅ Automated smoke tests run before APK distribution
+- ✅ Build metadata generation (version, commit, date)
+- ✅ QR code generation for mobile downloads
+- ✅ Enhanced email notifications with testing guidance
+- ✅ Comprehensive tester documentation
+- 📖 See [Android Testing Guide](../../docs/ANDROID_TESTING_GUIDE.md) for full details
 
 #### Testing terraform-tests.yml
 ```bash
