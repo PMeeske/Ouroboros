@@ -282,4 +282,160 @@ public class OptionMonadTests
         // Assert
         bound.HasValue.Should().BeFalse();
     }
+
+    [Fact]
+    public void ToString_OnSome_ReturnsSomeFormat()
+    {
+        // Arrange
+        var option = Option<int>.Some(42);
+
+        // Act
+        var result = option.ToString();
+
+        // Assert
+        result.Should().Be("Some(42)");
+    }
+
+    [Fact]
+    public void ToString_OnNone_ReturnsNone()
+    {
+        // Arrange
+        var option = Option<string>.None();
+
+        // Act
+        var result = option.ToString();
+
+        // Assert
+        result.Should().Be("None");
+    }
+
+    [Fact]
+    public void Equals_SameValues_ReturnsTrue()
+    {
+        // Arrange
+        var option1 = Option<int>.Some(42);
+        var option2 = Option<int>.Some(42);
+
+        // Act & Assert
+        option1.Equals(option2).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Equals_DifferentValues_ReturnsFalse()
+    {
+        // Arrange
+        var option1 = Option<int>.Some(42);
+        var option2 = Option<int>.Some(99);
+
+        // Act & Assert
+        option1.Equals(option2).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Equals_BothNone_ReturnsTrue()
+    {
+        // Arrange
+        var option1 = Option<string>.None();
+        var option2 = Option<string>.None();
+
+        // Act & Assert
+        option1.Equals(option2).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Equals_SomeAndNone_ReturnsFalse()
+    {
+        // Arrange
+        var option1 = Option<int>.Some(42);
+        var option2 = Option<int>.None();
+
+        // Act & Assert
+        option1.Equals(option2).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Equals_WithObject_ReturnsCorrectResult()
+    {
+        // Arrange
+        var option = Option<int>.Some(42);
+        object boxed = Option<int>.Some(42);
+
+        // Act & Assert
+        option.Equals(boxed).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Equals_WithInvalidObject_ReturnsFalse()
+    {
+        // Arrange
+        var option = Option<int>.Some(42);
+        object invalid = "not an option";
+
+        // Act & Assert
+        option.Equals(invalid).Should().BeFalse();
+    }
+
+    [Fact]
+    public void GetHashCode_SameValues_ReturnsSameHash()
+    {
+        // Arrange
+        var option1 = Option<int>.Some(42);
+        var option2 = Option<int>.Some(42);
+
+        // Act & Assert
+        option1.GetHashCode().Should().Be(option2.GetHashCode());
+    }
+
+    [Fact]
+    public void GetHashCode_None_ReturnsZero()
+    {
+        // Arrange
+        var option = Option<string>.None();
+
+        // Act & Assert
+        option.GetHashCode().Should().Be(0);
+    }
+
+    [Fact]
+    public void EqualityOperator_SameValues_ReturnsTrue()
+    {
+        // Arrange
+        var option1 = Option<int>.Some(42);
+        var option2 = Option<int>.Some(42);
+
+        // Act & Assert
+        (option1 == option2).Should().BeTrue();
+    }
+
+    [Fact]
+    public void InequalityOperator_DifferentValues_ReturnsTrue()
+    {
+        // Arrange
+        var option1 = Option<int>.Some(42);
+        var option2 = Option<int>.Some(99);
+
+        // Act & Assert
+        (option1 != option2).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ImplicitConversion_FromValue_CreatesOption()
+    {
+        // Arrange & Act
+        Option<int> option = 42;
+
+        // Assert
+        option.HasValue.Should().BeTrue();
+        option.Value.Should().Be(42);
+    }
+
+    [Fact]
+    public void ImplicitConversion_FromNull_CreatesNone()
+    {
+        // Arrange & Act
+        Option<string> option = null!;
+
+        // Assert
+        option.HasValue.Should().BeFalse();
+    }
 }
