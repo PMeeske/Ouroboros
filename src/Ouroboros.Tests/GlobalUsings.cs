@@ -9,7 +9,7 @@ global using System.Threading.Tasks;
 global using System.Threading;
 global using FluentAssertions;
 global using Xunit;
-global using TechTalk.SpecFlow;
+global using Reqnroll;
 // Agent
 global using Ouroboros.Agent;
 global using Ouroboros.Core.Kleisli;

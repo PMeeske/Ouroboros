@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
-using TechTalk.SpecFlow;
+using Reqnroll;
 using Ouroboros.CLI;
 using Ouroboros.CLI.CodeGeneration;
 using Ouroboros.Agent.MetaAI;
@@ -34,7 +34,7 @@ public class DslAssistantSimulationSteps
     private string? _codeDescription;
     private string? _codeContext;
     private Dictionary<string, object>? _mcpParameters;
-    
+
     private Result<List<DslSuggestion>, string>? _suggestions;
     private Result<List<string>, string>? _completions;
     private Result<DslValidationResult, string>? _validationResult;
@@ -373,7 +373,7 @@ namespace Test
     public void ThenAnalyzerFindingsShouldIncludeAsyncPatternIssues()
     {
         _analysisResult.Should().NotBeNull();
-        _analysisResult!.Value.AnalyzerResults.Should().Contain(f => 
+        _analysisResult!.Value.AnalyzerResults.Should().Contain(f =>
             f.Contains("async", StringComparison.OrdinalIgnoreCase) ||
             f.Contains(".Result", StringComparison.Ordinal) ||
             f.Contains(".Wait()", StringComparison.Ordinal));
@@ -434,7 +434,7 @@ namespace Test
         _codeTool.Should().NotBeNull();
         _className.Should().NotBeNullOrEmpty();
         _namespaceName.Should().NotBeNullOrEmpty();
-        
+
         _generatedCode = _codeTool!.CreateClass(
             _className!,
             _namespaceName!,
@@ -492,7 +492,7 @@ namespace Test
         _csharpCode.Should().NotBeNullOrEmpty();
         _className.Should().NotBeNullOrEmpty();
         _methodSignature.Should().NotBeNullOrEmpty();
-        
+
         _generatedCode = _codeTool!.AddMethodToClass(
             _csharpCode!,
             _className!,
@@ -537,7 +537,7 @@ namespace Test
     public class Example
     {{
         private string {varName} = ""test"";
-        
+
         public void UseVariable()
         {{
             Console.WriteLine({varName});
@@ -553,7 +553,7 @@ namespace Test
         _csharpCode.Should().NotBeNullOrEmpty();
         _oldSymbolName = oldName;
         _newSymbolName = newName;
-        
+
         _generatedCode = _codeTool!.RenameSymbol(_csharpCode!, oldName, newName);
     }
 
@@ -613,7 +613,7 @@ namespace Test
         _codeTool.Should().NotBeNull();
         _csharpCode.Should().NotBeNullOrEmpty();
         _newMethodName.Should().NotBeNullOrEmpty();
-        
+
         _generatedCode = _codeTool!.ExtractMethod(
             _csharpCode!,
             _startLine,
@@ -655,10 +655,10 @@ namespace Test
         _codeTool.Should().NotBeNull();
         _simulatedLlm.Should().NotBeNull();
         _codeDescription.Should().NotBeNullOrEmpty();
-        
+
         ToolRegistry tools = ToolRegistry.CreateDefault();
         ToolAwareChatModel llm = new ToolAwareChatModel(_simulatedLlm!, tools);
-        
+
         _generatedCode = await _codeTool!.GenerateCodeFromDescriptionAsync(
             _codeDescription!,
             _codeContext ?? string.Empty,
@@ -670,7 +670,7 @@ namespace Test
     {
         _generatedCode.Should().NotBeNull();
         _codeTool.Should().NotBeNull();
-        
+
         Result<CodeAnalysisResult, string> analysis = await _codeTool!.AnalyzeCodeAsync(_generatedCode!.Value);
         analysis.IsSuccess.Should().BeTrue();
         analysis.Value.IsValid.Should().BeTrue();
@@ -905,7 +905,7 @@ namespace Test
         _generatedCode.Should().NotBeNull();
         _generatedCode!.IsSuccess.Should().BeTrue();
         string code = _generatedCode.Value.Value;
-        bool hasMonadicPattern = code.Contains("Result<", StringComparison.Ordinal) || 
+        bool hasMonadicPattern = code.Contains("Result<", StringComparison.Ordinal) ||
                                   code.Contains("Option<", StringComparison.Ordinal);
         hasMonadicPattern.Should().BeTrue();
     }
@@ -933,7 +933,7 @@ namespace Test
         {
             var result = AsyncMethod().Result; // Blocking call
         }
-        
+
         private async Task<int> AsyncMethod()
         {
             await Task.Delay(100);
@@ -958,17 +958,17 @@ internal class SimulatedLlm : IChatCompletionModel
 2. UseCritique - Analyze and critique the current draft to identify improvements.
 3. UseImprove - Refine the draft based on critique feedback.");
         }
-        
+
         if (prompt.Contains("build", StringComparison.OrdinalIgnoreCase) && prompt.Contains("DSL", StringComparison.OrdinalIgnoreCase))
         {
             return Task.FromResult("SetTopic('document analysis') | UseIngest | UseDraft | UseCritique | UseImprove");
         }
-        
+
         if (prompt.Contains("explain", StringComparison.OrdinalIgnoreCase))
         {
             return Task.FromResult("This pipeline starts with a topic, generates a draft, critiques it, and improves the response.");
         }
-        
+
         if (prompt.Contains("Generate complete, production-quality C#", StringComparison.OrdinalIgnoreCase))
         {
             return Task.FromResult(@"```csharp
@@ -977,10 +977,10 @@ public readonly struct Result<TValue, TError>
     private readonly TValue? value;
     private readonly TError? error;
     private readonly bool isSuccess;
-    
+
     public static Result<TValue, TError> Success(TValue value) => new(value);
     public static Result<TValue, TError> Failure(TError error) => new(error);
-    
+
     private Result(TValue value)
     {
         this.value = value;
