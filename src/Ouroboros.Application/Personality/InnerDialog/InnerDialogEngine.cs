@@ -1133,6 +1133,7 @@ public sealed class InnerDialogEngine
         if (_autonomousThinkingTask != null) return;
 
         interval = interval == default ? TimeSpan.FromSeconds(30) : interval;
+        _autonomousThinkingCts?.Dispose(); // Dispose previous instance if any
         _autonomousThinkingCts = new CancellationTokenSource();
 
         _autonomousThinkingTask = Task.Run(async () =>
@@ -1235,6 +1236,8 @@ public sealed class InnerDialogEngine
             {
                 await _autonomousThinkingTask;
             }
+            
+            _autonomousThinkingCts.Dispose();
             _autonomousThinkingCts = null;
             _autonomousThinkingTask = null;
         }

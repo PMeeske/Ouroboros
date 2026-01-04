@@ -91,11 +91,9 @@ public class AutonomousMindTests
     {
         // Arrange
         var mind = new AutonomousMind();
-        var wasCalled = false;
 
         mind.PipelineThinkFunction = async (prompt, branch, ct) =>
         {
-            wasCalled = true;
             return ("test response", branch!);
         };
 

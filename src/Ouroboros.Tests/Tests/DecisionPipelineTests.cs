@@ -188,7 +188,6 @@ public class DecisionPipelineTests
 
         // Assert
         result.State.Should().Be(Form.Mark);
-        (result.Value != null).Should().BeTrue();
         result.Value.Should().Be(25); // (10 * 2) + 5
         result.Reasoning.Should().Contain("Initial");
         result.Reasoning.Should().Contain("Doubled");

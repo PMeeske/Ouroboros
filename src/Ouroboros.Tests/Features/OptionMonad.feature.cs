@@ -39,9 +39,9 @@ namespace Ouroboros.Features
         public static async System.Threading.Tasks.Task FeatureSetupAsync()
         {
             testRunner = TechTalk.SpecFlow.TestRunnerManager.GetTestRunnerForAssembly(null, TechTalk.SpecFlow.xUnit.SpecFlowPlugin.XUnitParallelWorkerTracker.Instance.GetWorkerId());
-            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Option Monad", "    As a developer\r\n    I want to handle optional values safely without null refe" +
-                    "rence exceptions\r\n    So that I can write robust null-safe code following monadi" +
-                    "c principles", ProgrammingLanguage.CSharp, featureTags);
+            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Option Monad", "    As a developer\n    I want to handle optional values safely without null refer" +
+                    "ence exceptions\n    So that I can write robust null-safe code following monadic " +
+                    "principles", ProgrammingLanguage.CSharp, featureTags);
             await testRunner.OnFeatureStartAsync(featureInfo);
         }
         

@@ -28,7 +28,6 @@ using Ouroboros.Application.Mcp;
 using Ouroboros.Application.Personality;
 using Ouroboros.Application.Services;
 using Ouroboros.Application.Tools;
-using Ouroboros.Tools.MeTTa;
 using IEmbeddingModel = Ouroboros.Domain.IEmbeddingModel;
 
 namespace Ouroboros.CLI.Commands;
@@ -3029,6 +3028,7 @@ If you don't have a real value, ask the user or skip the tool call.";
     {
         try
         {
+            _selfExecutionCts?.Dispose(); // Dispose previous instance if any
             _selfExecutionCts = new CancellationTokenSource();
             _selfExecutionEnabled = true;
 
