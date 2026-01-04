@@ -271,7 +271,13 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
             return;
         }
 
-        this.@lock.Wait();
+        // Use WaitAsync with timeout instead of blocking Wait()
+        if (!this.@lock.Wait(TimeSpan.FromSeconds(5)))
+        {
+            // If we can't acquire the lock in 5 seconds, proceed anyway
+            // as we're disposing and need to clean up
+        }
+
         try
         {
             this.stdin?.Close();

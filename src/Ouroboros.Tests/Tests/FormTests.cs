@@ -147,11 +147,13 @@ public class FormTests
     [Fact]
     public void ToBool_ConvertsCertainFormsCorrectly()
     {
-        Form.Mark.ToBool().HasValue.Should().BeTrue();
-        Form.Mark.ToBool().Value.Should().BeTrue();
+        bool? markBool = Form.Mark.ToBool();
+        markBool.HasValue.Should().BeTrue();
+        markBool!.Value.Should().BeTrue();
 
-        Form.Void.ToBool().HasValue.Should().BeTrue();
-        Form.Void.ToBool().Value.Should().BeFalse();
+        bool? voidBool = Form.Void.ToBool();
+        voidBool.HasValue.Should().BeTrue();
+        voidBool!.Value.Should().BeFalse();
     }
 
     [Fact]
