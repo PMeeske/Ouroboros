@@ -123,10 +123,12 @@ public static class SyncStepExtensions
         => new(func);
 
     /// <summary>
-    /// Convert async Step to sync (blocking - use with caution)
+    /// Convert async Step to sync (blocking - use with caution).
+    /// WARNING: This can cause deadlocks if called from a synchronization context.
+    /// Prefer using async/await throughout your call stack.
     /// </summary>
     public static SyncStep<TIn, TOut> ToSync<TIn, TOut>(this Step<TIn, TOut> asyncStep)
-        => new(input => Task.Run(() => asyncStep(input)).GetAwaiter().GetResult());
+        => new(input => asyncStep(input).ConfigureAwait(false).GetAwaiter().GetResult());
 
     /// <summary>
     /// Compose sync step with async step
