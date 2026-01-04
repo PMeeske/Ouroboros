@@ -264,6 +264,10 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Uses a timeout on semaphore acquisition to prevent deadlocks during disposal.
+    /// This is necessary because the interface is IDisposable (synchronous), not IAsyncDisposable.
+    /// </remarks>
     public void Dispose()
     {
         if (this.disposed)
@@ -271,11 +275,11 @@ public sealed class SubprocessMeTTaEngine : IMeTTaEngine
             return;
         }
 
-        // Use WaitAsync with timeout instead of blocking Wait()
+        // Use timeout instead of blocking Wait() to prevent potential deadlocks
+        // If we can't acquire the lock in 5 seconds, proceed anyway as we're disposing
         if (!this.@lock.Wait(TimeSpan.FromSeconds(5)))
         {
-            // If we can't acquire the lock in 5 seconds, proceed anyway
-            // as we're disposing and need to clean up
+            // Log warning if needed - couldn't acquire lock but continuing disposal
         }
 
         try
