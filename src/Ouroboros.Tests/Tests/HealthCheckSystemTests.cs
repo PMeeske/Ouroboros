@@ -16,6 +16,7 @@ using Xunit;
 /// <summary>
 /// Tests for the health check system.
 /// </summary>
+[Trait("Category", "Unit")]
 public class HealthCheckSystemTests
 {
     [Fact]

@@ -13,6 +13,7 @@ using Xunit;
 /// Tests for the ToolRegistry implementation.
 /// Validates tool registration, retrieval, and immutability.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ToolRegistryTests
 {
     // Test tool implementation

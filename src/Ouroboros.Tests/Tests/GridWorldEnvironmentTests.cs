@@ -11,6 +11,7 @@ namespace Ouroboros.Tests;
 /// <summary>
 /// Tests for GridWorldEnvironment.
 /// </summary>
+[Trait("Category", "Unit")]
 public class GridWorldEnvironmentTests
 {
     [Fact]

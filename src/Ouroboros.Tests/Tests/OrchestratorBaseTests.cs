@@ -14,6 +14,7 @@ using FluentAssertions;
 /// Comprehensive unit tests for OrchestratorBase and IOrchestrator interface.
 /// Tests unified orchestrator patterns, metrics, tracing, and error handling.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class OrchestratorBaseTests
 {
     /// <summary>

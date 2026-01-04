@@ -8,6 +8,7 @@ using System.Text;
 using Ouroboros.Core.Performance;
 using Xunit;
 
+[Trait("Category", "Unit")]
 public class ObjectPoolTests
 {
     [Fact]

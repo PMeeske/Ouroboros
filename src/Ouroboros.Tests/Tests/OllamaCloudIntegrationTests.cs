@@ -12,6 +12,7 @@ using Ouroboros.Providers;
 /// End-to-end integration tests for Ollama Cloud endpoint support.
 /// Tests both remote Ollama Cloud endpoints and local Ollama to ensure nothing is broken.
 /// </summary>
+[Trait("Category", "Integration")]
 public static class OllamaCloudIntegrationTests
 {
     public static async Task RunAllTests()

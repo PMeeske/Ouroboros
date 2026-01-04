@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for AutonomousMind emotional state and persistence functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public class AutonomousMindTests
 {
     [Fact]

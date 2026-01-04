@@ -14,6 +14,7 @@ namespace Ouroboros.Tests;
 /// <summary>
 /// Tests for the OrchestrationExperiment A/B testing framework.
 /// </summary>
+[Trait("Category", "Unit")]
 public class OrchestrationExperimentTests
 {
     [Fact]

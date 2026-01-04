@@ -6,6 +6,7 @@ namespace Ouroboros.Tests;
 /// Comprehensive tests for PipelineBranch following functional programming principles.
 /// Tests focus on immutability, pure functions, and monadic composition.
 /// </summary>
+[Trait("Category", "Unit")]
 public class PipelineBranchTests
 {
     #region Constructor Tests

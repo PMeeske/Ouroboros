@@ -6,6 +6,7 @@ namespace Ouroboros.Tests.Android;
 /// Integration tests for Android Services used by MainPage
 /// Tests the actual service implementations to verify they handle initialization gracefully
 /// </summary>
+[Trait("Category", "Unit")]
 public class AndroidServicesIntegrationTests
 {
     /// <summary>
@@ -114,6 +115,7 @@ public class AndroidServicesIntegrationTests
 /// UI State tests for MainPage using Android Activity lifecycle patterns
 /// Simulates the Android Activity lifecycle (onCreate, onStart, onResume, onPause, onStop, onDestroy)
 /// </summary>
+[Trait("Category", "Unit")]
 public class AndroidMainPageLifecycleTests
 {
     private enum ActivityState
@@ -395,6 +397,7 @@ public class AndroidMainPageLifecycleTests
 /// Behavior-Driven Development (BDD) style tests for the purple screen issue
 /// Uses Given-When-Then pattern common in Android testing
 /// </summary>
+[Trait("Category", "Unit")]
 public class AndroidPurpleScreenBehaviorTests
 {
     [Fact]

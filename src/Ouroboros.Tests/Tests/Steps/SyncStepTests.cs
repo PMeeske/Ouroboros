@@ -12,6 +12,7 @@ using Xunit;
 /// <summary>
 /// Unit tests for SyncStep and Step delegates.
 /// </summary>
+[Trait("Category", "Unit")]
 public class SyncStepTests
 {
     [Fact]
@@ -218,6 +219,7 @@ public class SyncStepTests
 /// <summary>
 /// Unit tests for SyncStepExtensions.
 /// </summary>
+[Trait("Category", "Unit")]
 public class SyncStepExtensionsTests
 {
     [Fact]

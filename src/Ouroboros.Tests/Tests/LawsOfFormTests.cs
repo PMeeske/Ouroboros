@@ -14,6 +14,7 @@ using Xunit;
 /// Validates Spencer-Brown's calculus of indications and its integration
 /// with the monadic pipeline system.
 /// </summary>
+[Trait("Category", "Unit")]
 public class LawsOfFormTests
 {
     #region Basic Form Tests

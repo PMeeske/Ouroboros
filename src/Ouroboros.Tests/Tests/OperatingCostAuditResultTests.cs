@@ -7,6 +7,7 @@ namespace Ouroboros.Tests;
 /// <summary>
 /// Tests for the OperatingCostAuditResult model and related types.
 /// </summary>
+[Trait("Category", "Unit")]
 public class OperatingCostAuditResultTests
 {
     [Fact]

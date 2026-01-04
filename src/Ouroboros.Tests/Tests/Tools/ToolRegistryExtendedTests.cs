@@ -13,6 +13,7 @@ using Xunit;
 /// <summary>
 /// Extended tests for the ToolRegistry implementation covering additional edge cases.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ToolRegistryExtendedTests
 {
     #region WithFunction Tests

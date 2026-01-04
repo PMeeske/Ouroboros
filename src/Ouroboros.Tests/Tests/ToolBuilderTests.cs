@@ -15,6 +15,7 @@ using Xunit;
 /// <summary>
 /// Tests for the ToolBuilder helper methods that compose tools.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ToolBuilderTests
 {
     [Fact]

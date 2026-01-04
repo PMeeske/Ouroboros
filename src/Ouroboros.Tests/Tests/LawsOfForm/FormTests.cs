@@ -12,6 +12,7 @@ using Xunit;
 /// Tests for the Form type from Laws of Form.
 /// Validates three-valued logic and Laws of Form axioms.
 /// </summary>
+[Trait("Category", "Unit")]
 public class FormTests
 {
     [Fact]
@@ -51,9 +52,10 @@ public class FormTests
     }
 
     [Fact]
-    public void Not_DoubleNegation_ReturnsVoid()
+    public void Not_DoubleNegation_ReturnsOriginal()
     {
-        // Law of Form: ⌐⌐ = void (double negation cancels)
+        // Law of Form: ⌐⌐M = M (double negation returns to original)
+        // Mark.Not() = Void, Void.Not() = Mark
         // Arrange
         var form = Form.Mark;
 
@@ -61,7 +63,7 @@ public class FormTests
         var result = form.Not().Not();
 
         // Assert
-        result.IsVoid().Should().BeTrue();
+        result.IsMark().Should().BeTrue();
     }
 
     [Fact]

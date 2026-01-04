@@ -12,6 +12,7 @@ namespace Ouroboros.Tests.Governance;
 /// Tests for the Maintenance Scheduler.
 /// Phase 5: Governance, Safety, and Ops.
 /// </summary>
+[Trait("Category", "Unit")]
 public class MaintenanceSchedulerTests
 {
     [Fact]

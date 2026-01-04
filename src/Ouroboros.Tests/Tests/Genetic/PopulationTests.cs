@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for the Population class.
 /// </summary>
+[Trait("Category", "Unit")]
 public class PopulationTests
 {
     [Fact]

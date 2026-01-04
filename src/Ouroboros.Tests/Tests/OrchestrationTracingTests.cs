@@ -11,6 +11,7 @@ using Xunit;
 
 namespace Ouroboros.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class OrchestrationTracingTests : IDisposable
 {
     private readonly List<Activity> _startedActivities = new();
@@ -202,6 +203,7 @@ public sealed class OrchestrationTracingTests : IDisposable
     }
 }
 
+[Trait("Category", "Unit")]
 public sealed class OrchestrationScopeTests
 {
     [Fact]
@@ -272,6 +274,7 @@ public sealed class OrchestrationScopeTests
     }
 }
 
+[Trait("Category", "Unit")]
 public sealed class OrchestrationInstrumentationIntegrationTests
 {
     [Fact]

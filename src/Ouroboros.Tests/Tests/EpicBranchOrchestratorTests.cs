@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for the Epic Branch Orchestration system.
 /// </summary>
+[Trait("Category", "Unit")]
 public class EpicBranchOrchestratorTests
 {
     private IEpicBranchOrchestrator CreateTestOrchestrator(EpicBranchConfig? config = null)

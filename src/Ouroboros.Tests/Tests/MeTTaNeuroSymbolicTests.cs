@@ -16,6 +16,7 @@ using Ouroboros.Pipeline.Planning;
 /// 2. Grounded Knowledge Graph (SymbolicIngestionStep, TripleExtractionStep, SymbolicRetrievalStep)
 /// 3. Neuro-Symbolic Tool Discovery (MeTTaPlanner, ToolBinder)
 /// </summary>
+[Trait("Category", "Unit")]
 public class MeTTaNeuroSymbolicTests
 {
     #region Component 1: Symbolic Guard Rails Tests

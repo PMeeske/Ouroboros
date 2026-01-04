@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for the MathTool implementation.
 /// </summary>
+[Trait("Category", "Unit")]
 public class MathToolTests
 {
     [Fact]

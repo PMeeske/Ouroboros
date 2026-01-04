@@ -10,6 +10,7 @@ using LangChain.Providers;
 /// <summary>
 /// Tests for the OperatingCostAuditArrows reasoning steps.
 /// </summary>
+[Trait("Category", "Unit")]
 public class OperatingCostAuditArrowsTests
 {
     private readonly ToolRegistry _tools = ToolRegistry.CreateDefault();

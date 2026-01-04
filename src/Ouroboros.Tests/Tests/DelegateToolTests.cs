@@ -12,6 +12,7 @@ using Xunit;
 /// <summary>
 /// Tests for the DelegateTool implementation.
 /// </summary>
+[Trait("Category", "Unit")]
 public class DelegateToolTests
 {
     [Fact]

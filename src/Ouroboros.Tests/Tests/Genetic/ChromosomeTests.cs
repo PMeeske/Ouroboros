@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for the Chromosome implementation.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ChromosomeTests
 {
     [Fact]

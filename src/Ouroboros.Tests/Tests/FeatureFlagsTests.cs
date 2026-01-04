@@ -8,6 +8,7 @@ namespace Ouroboros.Tests;
 /// Comprehensive tests for FeatureFlags following functional programming principles.
 /// Tests focus on immutability, property correctness, and helper method behavior.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class FeatureFlagsTests
 {
     #region Constructor and Default Tests

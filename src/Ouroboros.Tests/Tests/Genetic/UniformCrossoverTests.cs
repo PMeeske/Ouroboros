@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for the UniformCrossover class.
 /// </summary>
+[Trait("Category", "Unit")]
 public class UniformCrossoverTests
 {
     [Fact]

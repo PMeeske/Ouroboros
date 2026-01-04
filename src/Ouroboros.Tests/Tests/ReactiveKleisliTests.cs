@@ -13,6 +13,7 @@ using Xunit;
 /// Tests for the ReactiveKleisli implementation.
 /// Validates monadic composition and reactive stream operations.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ReactiveKleisliTests
 {
     [Fact]

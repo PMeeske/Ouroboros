@@ -12,6 +12,7 @@ using Xunit;
 /// Tests for the Form enum and FormExtensions.
 /// Validates Laws of Form algebraic properties.
 /// </summary>
+[Trait("Category", "Unit")]
 public class FormTests
 {
     [Fact]
@@ -93,8 +94,8 @@ public class FormTests
 
     public static IEnumerable<object[]> OrImaginaryData()
     {
-        yield return new object[] { Form.Mark, Form.Imaginary };
-        yield return new object[] { Form.Imaginary, Form.Mark };
+        // When either side is Mark, Mark wins (Mark OR anything = Mark)
+        // So only test cases where Imaginary propagates are Void+Imaginary and Imaginary+Imaginary
         yield return new object[] { Form.Void, Form.Imaginary };
         yield return new object[] { Form.Imaginary, Form.Void };
         yield return new object[] { Form.Imaginary, Form.Imaginary };
@@ -105,6 +106,14 @@ public class FormTests
     public void Or_ImaginaryPropagates(Form left, Form right)
     {
         left.Or(right).Should().Be(Form.Imaginary);
+    }
+
+    [Fact]
+    public void Or_MarkWithImaginary_ReturnsMark()
+    {
+        // Mark OR anything = Mark (Mark takes precedence)
+        Form.Mark.Or(Form.Imaginary).Should().Be(Form.Mark);
+        Form.Imaginary.Or(Form.Mark).Should().Be(Form.Mark);
     }
 
     [Fact]

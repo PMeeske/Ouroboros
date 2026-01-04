@@ -1,5 +1,6 @@
 namespace Ouroboros.Tests;
 
+[Trait("Category", "Unit")]
 public class StreamingReasoningXUnitTests
 {
     [Fact]

@@ -9,6 +9,7 @@ namespace Ouroboros.Tests.GraphRAG;
 /// <summary>
 /// Tests for Entity and Relationship records.
 /// </summary>
+[Trait("Category", "Unit")]
 public class EntityRelationshipTests
 {
     [Fact]

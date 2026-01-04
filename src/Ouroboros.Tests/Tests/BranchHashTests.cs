@@ -9,6 +9,7 @@ namespace Ouroboros.Tests;
 /// Comprehensive tests for BranchHash following functional programming principles.
 /// Tests focus on deterministic hashing, integrity verification, and edge cases.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class BranchHashTests
 {
     #region ComputeHash Tests

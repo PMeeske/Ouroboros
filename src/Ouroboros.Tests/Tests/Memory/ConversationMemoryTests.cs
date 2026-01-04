@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Unit tests for ConversationMemory and MemoryContext.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ConversationMemoryTests
 {
     [Fact]
@@ -162,6 +163,7 @@ public class ConversationMemoryTests
 /// <summary>
 /// Unit tests for MemoryContext.
 /// </summary>
+[Trait("Category", "Unit")]
 public class MemoryContextTests
 {
     [Fact]

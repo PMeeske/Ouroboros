@@ -12,6 +12,7 @@ using Xunit;
 /// Comprehensive tests for the Option monad implementation.
 /// Tests monadic laws, null safety, and edge cases.
 /// </summary>
+[Trait("Category", "Unit")]
 public class OptionTests
 {
     #region Creation Tests

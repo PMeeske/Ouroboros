@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for AuditableDecision and Evidence types.
 /// </summary>
+[Trait("Category", "Unit")]
 public class AuditableDecisionTests
 {
     [Fact]

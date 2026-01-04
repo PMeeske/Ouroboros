@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for CAPTCHA resolver strategies.
 /// </summary>
+[Trait("Category", "Unit")]
 public class CaptchaResolverTests
 {
     [Fact]

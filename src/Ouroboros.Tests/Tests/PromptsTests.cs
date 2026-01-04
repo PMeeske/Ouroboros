@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for the Prompts static class.
 /// </summary>
+[Trait("Category", "Unit")]
 public class PromptsTests
 {
     [Fact]

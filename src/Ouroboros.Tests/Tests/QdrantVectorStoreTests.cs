@@ -14,6 +14,7 @@ using Xunit;
 /// Note: These tests verify construction and basic error handling.
 /// Integration tests with a real Qdrant instance would require docker-compose setup.
 /// </summary>
+[Trait("Category", "Unit")]
 public class QdrantVectorStoreTests
 {
     [Fact]

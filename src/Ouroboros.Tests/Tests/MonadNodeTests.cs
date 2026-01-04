@@ -14,6 +14,7 @@ using Xunit;
 /// Tests for the MonadNode implementation.
 /// Validates node creation, hashing, and serialization.
 /// </summary>
+[Trait("Category", "Unit")]
 public class MonadNodeTests
 {
     [Fact]

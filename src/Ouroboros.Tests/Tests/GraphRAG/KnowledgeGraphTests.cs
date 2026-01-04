@@ -9,6 +9,7 @@ namespace Ouroboros.Tests.GraphRAG;
 /// <summary>
 /// Tests for KnowledgeGraph and related models.
 /// </summary>
+[Trait("Category", "Unit")]
 public class KnowledgeGraphTests
 {
     [Fact]

@@ -10,6 +10,7 @@ using Xunit;
 
 namespace Ouroboros.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class PersistentMetricsStoreTests : IDisposable
 {
     private readonly string _testStoragePath;
@@ -297,6 +298,7 @@ public sealed class PersistentMetricsStoreTests : IDisposable
     }
 }
 
+[Trait("Category", "Unit")]
 public sealed class InMemoryMetricsStoreTests
 {
     [Fact]
@@ -332,6 +334,7 @@ public sealed class InMemoryMetricsStoreTests
     }
 }
 
+[Trait("Category", "Unit")]
 public sealed class SmartModelOrchestratorPersistenceTests
 {
     [Fact]

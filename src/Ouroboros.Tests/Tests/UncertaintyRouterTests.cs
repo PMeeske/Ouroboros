@@ -13,6 +13,7 @@ using FluentAssertions;
 /// Comprehensive unit tests for UncertaintyRouter.
 /// Tests confidence-based routing, fallback strategy selection, and learning mechanisms.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class UncertaintyRouterTests
 {
     /// <summary>

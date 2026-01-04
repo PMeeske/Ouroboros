@@ -16,6 +16,7 @@ using Xunit;
 /// Integration tests demonstrating self-critique improvement over baseline drafts.
 /// Tests the complete DSL pipeline integration with self-critique.
 /// </summary>
+[Trait("Category", "Integration")]
 public class SelfCritiqueIntegrationTests
 {
     /// <summary>

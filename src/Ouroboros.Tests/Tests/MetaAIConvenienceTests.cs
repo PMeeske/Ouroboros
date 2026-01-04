@@ -10,6 +10,7 @@ using Ouroboros.Agent.MetaAI;
 /// <summary>
 /// Tests for the Meta-AI convenience layer.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class MetaAIConvenienceTests
 {
     /// <summary>

@@ -10,6 +10,7 @@ using Ouroboros.Agent.MetaAI;
 /// <summary>
 /// Tests for Phase 3 emergent intelligence capabilities.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class Phase3EmergentIntelligenceTests
 {
     /// <summary>

@@ -13,6 +13,7 @@ using Xunit;
 /// <summary>
 /// Integration tests for genetic algorithm pipeline extensions.
 /// </summary>
+[Trait("Category", "Integration")]
 public class GeneticPipelineIntegrationTests
 {
     [Fact]

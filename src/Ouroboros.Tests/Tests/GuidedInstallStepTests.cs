@@ -7,6 +7,7 @@ namespace Ouroboros.Tests;
 /// <summary>
 /// Tests for the guided installation step and dependency exception handling functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class GuidedInstallStepTests
 {
     /// <summary>

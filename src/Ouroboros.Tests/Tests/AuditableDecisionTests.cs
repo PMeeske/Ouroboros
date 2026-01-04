@@ -12,6 +12,7 @@ using Xunit;
 /// Tests for AuditableDecision type.
 /// Validates decision creation, evidence tracking, and compliance features.
 /// </summary>
+[Trait("Category", "Unit")]
 public class AuditableDecisionTests
 {
     [Fact]

@@ -18,6 +18,7 @@ using Xunit;
 /// Tests for the ReplayEngine implementation.
 /// Note: These tests use mocks and don't require external services.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ReplayEngineTests
 {
     #region Basic Branch Tests

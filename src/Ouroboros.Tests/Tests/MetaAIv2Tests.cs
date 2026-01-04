@@ -11,6 +11,7 @@ using Ouroboros.Agent.MetaAI;
 /// <summary>
 /// Tests for Meta-AI v2 planner/executor/verifier orchestrator.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class MetaAIv2Tests
 {
     /// <summary>

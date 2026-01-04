@@ -12,6 +12,7 @@ using Xunit;
 /// <summary>
 /// Tests for SafeToolExecutor.
 /// </summary>
+[Trait("Category", "Unit")]
 public class SafeToolExecutorTests
 {
     [Fact]

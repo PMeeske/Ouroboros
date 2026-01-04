@@ -7,6 +7,7 @@ namespace Ouroboros.Tests;
 /// <summary>
 /// Tests for memory context functionality including conversation management.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class MemoryContextTests
 {
     /// <summary>

@@ -9,6 +9,7 @@ using Ouroboros.Tools.MeTTa;
 /// <summary>
 /// Tests for MeTTa symbolic reasoning integration.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class MeTTaTests
 {
     /// <summary>

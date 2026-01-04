@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for the Mutation class.
 /// </summary>
+[Trait("Category", "Unit")]
 public class MutationTests
 {
     [Fact]

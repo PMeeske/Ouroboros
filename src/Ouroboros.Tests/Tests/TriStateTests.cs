@@ -12,6 +12,7 @@ using Xunit;
 /// Tests for TriState enum and three-valued configuration logic.
 /// Validates inheritance resolution and algebraic properties.
 /// </summary>
+[Trait("Category", "Unit")]
 public class TriStateTests
 {
     [Fact]

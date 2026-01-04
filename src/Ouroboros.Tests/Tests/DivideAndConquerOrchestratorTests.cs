@@ -7,6 +7,7 @@ namespace Ouroboros.Tests;
 /// <summary>
 /// Tests for DivideAndConquerOrchestrator.
 /// </summary>
+[Trait("Category", "Unit")]
 public class DivideAndConquerOrchestratorTests
 {
     /// <summary>

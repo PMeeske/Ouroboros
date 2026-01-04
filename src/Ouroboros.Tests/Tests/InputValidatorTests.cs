@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for input validation and sanitization functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public class InputValidatorTests
 {
     [Fact]

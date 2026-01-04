@@ -424,7 +424,7 @@ public class AndroidBehaviorSteps
     [Then("the output should not contain \"(.*)\"")]
     public void ThenTheOutputShouldNotContain(string value) => _appOutput.ToString().Should().NotContain(value);
 
-    [Then("the output should contain \"(.*)\"")]
+    [Then("the app output should contain \"(.*)\"")]
     public void ThenTheAppOutputShouldContain(string value) => _appOutput.ToString().Should().Contain(value);
 
     [Then("the specific error \"(.*)\" should be shown to user")]

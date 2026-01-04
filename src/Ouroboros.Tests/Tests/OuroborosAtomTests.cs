@@ -11,6 +11,7 @@ using Ouroboros.Tools.MeTTa;
 /// <summary>
 /// xUnit tests for OuroborosAtom and OuroborosOrchestrator.
 /// </summary>
+[Trait("Category", "Unit")]
 public class OuroborosAtomXUnitTests
 {
     [Fact]

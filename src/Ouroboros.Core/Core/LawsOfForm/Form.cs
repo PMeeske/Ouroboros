@@ -323,11 +323,12 @@ public readonly struct Form : IEquatable<Form>
     /// <summary>
     /// Calls (applies) this form to another form.
     /// This implements the "calling" operation from Laws of Form.
-    /// Stub implementation using AND logic.
+    /// In calling, Void is the identity element: f call Void = f.
+    /// Mark dominates: anything call Mark = Mark.
     /// </summary>
     /// <param name="other">The form to apply to.</param>
     /// <returns>The result of the call.</returns>
-    public Form Call(Form other) => this.And(other);
+    public Form Call(Form other) => this.Or(other);
 
     /// <summary>
     /// Represents a void form for pattern matching.

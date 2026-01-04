@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for ToolApprovalQueue.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ToolApprovalQueueTests
 {
     [Fact]

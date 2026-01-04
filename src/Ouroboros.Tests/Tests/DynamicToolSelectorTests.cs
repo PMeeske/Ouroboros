@@ -14,6 +14,7 @@ namespace Ouroboros.Tests;
 /// <summary>
 /// Tests for the DynamicToolSelector class.
 /// </summary>
+[Trait("Category", "Unit")]
 public class DynamicToolSelectorTests
 {
     private readonly ToolRegistry _baseTools;

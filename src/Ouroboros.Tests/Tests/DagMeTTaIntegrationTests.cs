@@ -13,6 +13,7 @@ using Ouroboros.Tools.MeTTa;
 /// <summary>
 /// Tests for Phase 4: Neuro-Symbolic Integration - DAG to MeTTa encoding and constraint checking.
 /// </summary>
+[Trait("Category", "Integration")]
 public class DagMeTTaIntegrationTests
 {
     #region DAG Encoding Tests

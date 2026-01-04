@@ -14,6 +14,7 @@ using Xunit;
 /// Tests for the MerkleDag implementation.
 /// Validates DAG operations, integrity, and traversal.
 /// </summary>
+[Trait("Category", "Unit")]
 public class MerkleDagTests
 {
     [Fact]

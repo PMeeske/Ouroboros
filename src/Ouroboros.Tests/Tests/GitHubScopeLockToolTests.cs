@@ -13,6 +13,7 @@ using Xunit;
 /// Note: These tests validate the tool structure and basic behavior.
 /// Integration tests with actual GitHub API require credentials and are tested separately.
 /// </summary>
+[Trait("Category", "Unit")]
 public class GitHubScopeLockToolTests
 {
     [Fact]

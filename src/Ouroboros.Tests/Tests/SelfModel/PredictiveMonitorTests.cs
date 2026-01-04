@@ -7,6 +7,7 @@ namespace Ouroboros.Tests.Tests.SelfModel;
 /// <summary>
 /// Tests for PredictiveMonitor implementation.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class PredictiveMonitorTests
 {
     [Fact]

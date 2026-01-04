@@ -47,13 +47,13 @@ Feature: Tool Registry
     Scenario: GetTool returns Some for existing tool
         Given a registry with tool "test-tool"
         When I get tool "test-tool"
-        Then the option should have a value
+        Then the tool option should have a value
         And the tool should be the same instance
 
     Scenario: GetTool returns None for non-existent tool
         Given an empty tool registry
         When I get tool "non-existent"
-        Then the option should not have a value
+        Then the tool option should not have a value
 
     Scenario: GetTool with null throws exception
         Given an empty tool registry
@@ -63,7 +63,7 @@ Feature: Tool Registry
     Scenario Outline: GetTool is case insensitive
         Given a registry with tool "Test-Tool"
         When I get tool "<search_name>"
-        Then the option should have a value
+        Then the tool option should have a value
         And the tool should be the same instance
 
         Examples:

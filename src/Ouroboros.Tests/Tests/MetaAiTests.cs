@@ -13,6 +13,7 @@ using Ouroboros.Application.Tools;
 /// Tests for meta-AI capabilities where the pipeline can reason about and modify its own execution.
 /// Demonstrates the LLM using pipeline step tools to build upon itself.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class MetaAiTests
 {
     /// <summary>

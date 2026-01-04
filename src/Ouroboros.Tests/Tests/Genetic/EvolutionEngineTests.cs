@@ -33,6 +33,7 @@ internal sealed class TargetValueFitnessFunction : IEvolutionFitnessFunction<Sim
 /// <summary>
 /// Tests for the EvolutionEngine class.
 /// </summary>
+[Trait("Category", "Unit")]
 public class EvolutionEngineTests
 {
     [Fact]

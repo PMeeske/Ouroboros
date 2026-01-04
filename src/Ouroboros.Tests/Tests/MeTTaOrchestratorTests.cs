@@ -11,6 +11,7 @@ using Ouroboros.Tools.MeTTa;
 /// <summary>
 /// Tests for MeTTa-first orchestrator v3.0 with symbolic reasoning.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class MeTTaOrchestratorTests
 {
     /// <summary>

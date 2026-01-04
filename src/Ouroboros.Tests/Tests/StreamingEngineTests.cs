@@ -9,6 +9,7 @@ namespace Ouroboros.Tests;
 /// Tests for the streaming engine functionality using System.Reactive.
 /// Verifies stream creation, windowing, aggregation, and resource cleanup.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class StreamingEngineTests
 {
     public static async Task RunAllTests()

@@ -283,15 +283,15 @@ public class ToolRegistrySteps
         tool!.Description.Should().Be(expectedDescription);
     }
 
-    [Then("the option should have a value")]
-    public void ThenTheOptionShouldHaveAValue()
+    [Then("the tool option should have a value")]
+    public void ThenTheToolOptionShouldHaveAValue()
     {
         _toolOption.Should().NotBeNull();
         _toolOption!.Value.HasValue.Should().BeTrue();
     }
 
-    [Then("the option should not have a value")]
-    public void ThenTheOptionShouldNotHaveAValue()
+    [Then("the tool option should not have a value")]
+    public void ThenTheToolOptionShouldNotHaveAValue()
     {
         _toolOption.Should().NotBeNull();
         _toolOption!.Value.HasValue.Should().BeFalse();

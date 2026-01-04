@@ -12,6 +12,7 @@ using Xunit;
 /// Comprehensive tests for the Result monad implementation.
 /// Tests monadic laws, error handling patterns, and edge cases.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ResultTests
 {
     #region Creation Tests

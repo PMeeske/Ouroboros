@@ -353,7 +353,7 @@ namespace Ouroboros.Features
         await testRunner.WhenAsync("I get tool \"test-tool\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 50
-        await testRunner.ThenAsync("the option should have a value", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        await testRunner.ThenAsync("the tool option should have a value", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 51
         await testRunner.AndAsync("the tool should be the same instance", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
@@ -390,7 +390,7 @@ namespace Ouroboros.Features
         await testRunner.WhenAsync("I get tool \"non-existent\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 56
-        await testRunner.ThenAsync("the option should not have a value", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        await testRunner.ThenAsync("the tool option should not have a value", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -462,7 +462,7 @@ namespace Ouroboros.Features
         await testRunner.WhenAsync(string.Format("I get tool \"{0}\"", search_Name), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 66
-        await testRunner.ThenAsync("the option should have a value", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        await testRunner.ThenAsync("the tool option should have a value", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 67
         await testRunner.AndAsync("the tool should be the same instance", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");

@@ -9,6 +9,7 @@ namespace Ouroboros.Tests;
 /// Comprehensive tests for GlobalProjectionService.
 /// Tests focus on epoch management, metrics computation, and Result monad patterns.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class GlobalProjectionServiceTests
 {
     #region CreateEpochAsync Tests

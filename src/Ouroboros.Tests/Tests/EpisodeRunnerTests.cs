@@ -12,6 +12,7 @@ namespace Ouroboros.Tests;
 /// <summary>
 /// Tests for EpisodeRunner.
 /// </summary>
+[Trait("Category", "Unit")]
 public class EpisodeRunnerTests
 {
     [Fact]

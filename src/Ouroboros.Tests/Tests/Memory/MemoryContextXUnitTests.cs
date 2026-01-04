@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// xUnit tests for MemoryContext and ConversationMemory functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public class MemoryContextXUnitTests
 {
     #region ConversationMemory Tests

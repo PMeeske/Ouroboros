@@ -14,6 +14,7 @@ using Xunit;
 /// Comprehensive tests for the Step and Kleisli arrow implementations.
 /// Tests monadic composition, laws, and async behavior.
 /// </summary>
+[Trait("Category", "Unit")]
 public class StepTests
 {
     #region Step Delegate Tests

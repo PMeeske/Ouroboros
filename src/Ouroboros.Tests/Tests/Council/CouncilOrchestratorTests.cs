@@ -10,6 +10,7 @@ namespace Ouroboros.Tests.Council;
 /// <summary>
 /// Tests for CouncilOrchestrator functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public class CouncilOrchestratorTests
 {
     /// <summary>

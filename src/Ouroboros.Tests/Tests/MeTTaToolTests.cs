@@ -12,6 +12,7 @@ using Xunit;
 /// <summary>
 /// Tests for the MeTTaTool implementation.
 /// </summary>
+[Trait("Category", "Unit")]
 public class MeTTaToolTests
 {
     // Test mock engine that returns predictable results

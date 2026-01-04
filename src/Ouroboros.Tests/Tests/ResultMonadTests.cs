@@ -12,6 +12,7 @@ using Xunit;
 /// Tests for the Result monad implementation.
 /// Validates monadic laws and error handling.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ResultMonadTests
 {
     [Fact]
@@ -478,6 +479,7 @@ public class ResultMonadTests
 /// <summary>
 /// Tests for the convenience Result{TValue} type with string errors.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ResultWithStringErrorTests
 {
     [Fact]

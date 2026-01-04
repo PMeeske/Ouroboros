@@ -10,6 +10,7 @@ using Xunit;
 /// <summary>
 /// Tests for stakeholder review loop functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public class StakeholderReviewLoopTests
 {
     /// <summary>

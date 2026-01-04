@@ -9,6 +9,7 @@ namespace Ouroboros.Tests.GraphRAG;
 /// <summary>
 /// Tests for HybridSearchConfig and HybridSearchResult.
 /// </summary>
+[Trait("Category", "Unit")]
 public class HybridSearchTests
 {
     [Fact]

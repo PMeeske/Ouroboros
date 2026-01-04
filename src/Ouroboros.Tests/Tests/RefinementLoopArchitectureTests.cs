@@ -20,6 +20,7 @@ using Xunit;
 /// Validates that multi-iteration refinement loops properly chain iterations
 /// by using the most recent reasoning state (Draft or FinalSpec) as input.
 /// </summary>
+[Trait("Category", "Unit")]
 public class RefinementLoopArchitectureTests
 {
     /// <summary>

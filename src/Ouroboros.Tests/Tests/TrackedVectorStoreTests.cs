@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for the TrackedVectorStore fix to verify the PR issues are resolved.
 /// </summary>
+[Trait("Category", "Unit")]
 public class TrackedVectorStoreTests
 {
     [Fact]

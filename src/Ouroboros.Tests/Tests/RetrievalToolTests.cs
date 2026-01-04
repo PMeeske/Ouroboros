@@ -19,6 +19,7 @@ using Xunit;
 /// <summary>
 /// Tests for the RetrievalTool to ensure semantic search responses are formatted correctly.
 /// </summary>
+[Trait("Category", "Unit")]
 public class RetrievalToolTests
 {
     [Fact]

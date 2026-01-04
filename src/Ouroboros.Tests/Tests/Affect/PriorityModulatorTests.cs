@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for PriorityModulator - Phase 3 Affective Dynamics.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class PriorityModulatorTests
 {
     [Fact]

@@ -7,6 +7,7 @@ namespace Ouroboros.Tests;
 using Ouroboros.Diagnostics;
 using Xunit;
 
+[Trait("Category", "Unit")]
 public class MetricsCollectorTests
 {
     [Fact]

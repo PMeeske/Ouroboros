@@ -10,6 +10,7 @@ using Ouroboros.Agent.MetaAI;
 /// <summary>
 /// Tests for Phase 2 metacognitive capabilities.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class Phase2MetacognitionTests
 {
     /// <summary>

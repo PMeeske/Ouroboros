@@ -11,6 +11,7 @@ namespace Ouroboros.Tests;
 /// <summary>
 /// Tests for RL policies.
 /// </summary>
+[Trait("Category", "Unit")]
 public class PolicyTests
 {
     [Fact]

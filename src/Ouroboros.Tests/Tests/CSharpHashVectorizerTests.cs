@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for CSharpHashVectorizer functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public class CSharpHashVectorizerTests
 {
     /// <summary>

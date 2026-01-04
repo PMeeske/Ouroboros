@@ -6,6 +6,7 @@ namespace Ouroboros.Tests.Providers;
 /// Integration tests for Polly retry policies in HTTP client models.
 /// These tests verify that exponential backoff is properly configured.
 /// </summary>
+[Trait("Category", "Unit")]
 public class PollyRetryTests
 {
     /// <summary>

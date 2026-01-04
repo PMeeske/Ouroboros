@@ -9,6 +9,7 @@ namespace Ouroboros.Tests.Council;
 /// <summary>
 /// Tests for CouncilDecision and related records.
 /// </summary>
+[Trait("Category", "Unit")]
 public class CouncilDecisionTests
 {
     [Fact]

@@ -14,6 +14,7 @@ using Xunit;
 /// Tests for the NetworkStateProjector implementation.
 /// Validates global state projection and snapshot functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public class NetworkStateProjectorTests
 {
     [Fact]

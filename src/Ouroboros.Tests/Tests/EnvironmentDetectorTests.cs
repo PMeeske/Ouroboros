@@ -10,6 +10,7 @@ using Xunit;
 /// <summary>
 /// Tests for EnvironmentDetector utility class.
 /// </summary>
+[Trait("Category", "Unit")]
 public class EnvironmentDetectorTests
 {
     [Fact]

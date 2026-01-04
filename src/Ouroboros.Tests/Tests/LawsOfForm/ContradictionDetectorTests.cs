@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for ContradictionDetector.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ContradictionDetectorTests
 {
     [Fact]

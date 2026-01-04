@@ -71,12 +71,12 @@ public static class OrchestrationTracing
     /// <summary>
     /// Starts tracing a model selection operation.
     /// </summary>
-    public static Activity? StartModelSelection(string prompt, string? contextInfo = null)
+    public static Activity? StartModelSelection(string? prompt, string? contextInfo = null)
     {
         var tags = new Dictionary<string, object?>
         {
             ["orchestrator.operation"] = "model_selection",
-            ["orchestrator.prompt_length"] = prompt.Length.ToString(),
+            ["orchestrator.prompt_length"] = (prompt?.Length ?? 0).ToString(),
             ["orchestrator.has_context"] = (contextInfo != null).ToString(),
         };
 
@@ -119,12 +119,12 @@ public static class OrchestrationTracing
     /// <summary>
     /// Starts tracing a routing decision.
     /// </summary>
-    public static Activity? StartRouting(string task)
+    public static Activity? StartRouting(string? task)
     {
         var tags = new Dictionary<string, object?>
         {
             ["orchestrator.operation"] = "routing",
-            ["orchestrator.task_length"] = task.Length.ToString(),
+            ["orchestrator.task_length"] = (task?.Length ?? 0).ToString(),
         };
 
         return ActivitySource.StartActivity("orchestrator.route", ActivityKind.Internal, default(ActivityContext), tags!);
@@ -172,12 +172,12 @@ public static class OrchestrationTracing
     /// <summary>
     /// Starts tracing a plan creation.
     /// </summary>
-    public static Activity? StartPlanCreation(string goal, int maxDepth)
+    public static Activity? StartPlanCreation(string? goal, int maxDepth)
     {
         var tags = new Dictionary<string, object?>
         {
             ["orchestrator.operation"] = "plan_creation",
-            ["orchestrator.goal_length"] = goal.Length.ToString(),
+            ["orchestrator.goal_length"] = (goal?.Length ?? 0).ToString(),
             ["orchestrator.max_depth"] = maxDepth.ToString(),
         };
 

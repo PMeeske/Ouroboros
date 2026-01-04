@@ -12,6 +12,7 @@ using Xunit;
 /// <summary>
 /// Tests for the GeneticAlgorithm class.
 /// </summary>
+[Trait("Category", "Unit")]
 public class GeneticAlgorithmTests
 {
     [Fact]

@@ -12,6 +12,7 @@ using Xunit;
 /// <summary>
 /// Tests for RecursiveChunkProcessor functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public class RecursiveChunkProcessorTests
 {
     [Fact]

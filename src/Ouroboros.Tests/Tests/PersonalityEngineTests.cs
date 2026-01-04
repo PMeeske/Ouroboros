@@ -12,6 +12,7 @@ using Xunit;
 /// <summary>
 /// Tests for the PersonalityEngine mood detection and trait management.
 /// </summary>
+[Trait("Category", "Unit")]
 public class PersonalityEngineTests
 {
     private readonly PersonalityEngine _engine;

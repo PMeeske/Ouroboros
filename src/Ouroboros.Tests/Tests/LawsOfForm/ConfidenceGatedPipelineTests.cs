@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for ConfidenceGatedPipeline.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ConfidenceGatedPipelineTests
 {
     [Fact]
@@ -158,8 +159,9 @@ public class ConfidenceGatedPipelineTests
         var result = await gate(response);
 
         // Assert
+        // 0.5 is between lowThreshold (0.4) and highThreshold (0.8), so it's Imaginary state
         result.IsFailure.Should().BeTrue();
-        result.Error.Should().Contain("below threshold");
+        result.Error.Should().Contain("Uncertain state");
     }
 
     [Fact]

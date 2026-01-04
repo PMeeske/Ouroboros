@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for HomeostasisPolicy - Phase 3 Affective Dynamics.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class HomeostasisPolicyTests
 {
     [Fact]

@@ -592,16 +592,16 @@ namespace Ouroboros.Features
         await testRunner.ThenAsync("the UI should render", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 100
-        await testRunner.AndAsync("the output should contain \"Ouroboros CLI v1.0\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.AndAsync("the app output should contain \"Ouroboros CLI v1.0\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 101
-        await testRunner.AndAsync("the output should contain \"⚠ Initialization error\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.AndAsync("the app output should contain \"⚠ Initialization error\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 102
-        await testRunner.AndAsync("the output should contain \"SQLite Error\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.AndAsync("the app output should contain \"SQLite Error\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 103
-        await testRunner.AndAsync("the output should contain \">\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.AndAsync("the app output should contain \">\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -641,10 +641,10 @@ namespace Ouroboros.Features
         await testRunner.AndAsync("the output should not contain \"⚠\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 110
-        await testRunner.AndAsync("the output should contain \"Ouroboros CLI v1.0\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.AndAsync("the app output should contain \"Ouroboros CLI v1.0\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 111
-        await testRunner.AndAsync("the output should contain \">\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.AndAsync("the app output should contain \">\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -684,10 +684,10 @@ namespace Ouroboros.Features
         await testRunner.AndAsync("the CLI executor should be available via fallback", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 118
-        await testRunner.AndAsync("the output should contain \"⚠ Initialization error\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.AndAsync("the app output should contain \"⚠ Initialization error\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 119
-        await testRunner.AndAsync("the output should contain \">\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.AndAsync("the app output should contain \">\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -729,10 +729,10 @@ namespace Ouroboros.Features
         await testRunner.ThenAsync(string.Format("the specific error \"{0}\" should be shown to user", error_Message), ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 125
-        await testRunner.AndAsync("the output should contain \"Ouroboros CLI v1.0\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.AndAsync("the app output should contain \"Ouroboros CLI v1.0\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 126
-        await testRunner.AndAsync("the output should contain \">\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        await testRunner.AndAsync("the app output should contain \">\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();

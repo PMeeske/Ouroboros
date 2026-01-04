@@ -3,6 +3,7 @@ namespace Ouroboros.Tests;
 /// <summary>
 /// Tests for PromptTemplate covering formatting, validation, and error handling.
 /// </summary>
+[Trait("Category", "Unit")]
 public class PromptTemplateTests
 {
     [Fact]

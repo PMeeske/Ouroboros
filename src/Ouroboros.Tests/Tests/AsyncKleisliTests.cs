@@ -12,6 +12,7 @@ using Xunit;
 /// Tests for the AsyncKleisli implementation.
 /// Validates monadic composition and async stream operations.
 /// </summary>
+[Trait("Category", "Unit")]
 public class AsyncKleisliTests
 {
     [Fact]

@@ -12,6 +12,7 @@ using Xunit;
 /// <summary>
 /// Tests for StreamDeduplicator functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public class StreamDeduplicatorTests
 {
     /// <summary>

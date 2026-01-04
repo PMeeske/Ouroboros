@@ -14,6 +14,7 @@ namespace Ouroboros.Tests;
 /// <summary>
 /// Tests for the InMemoryOrchestrationCache class.
 /// </summary>
+[Trait("Category", "Unit")]
 public class OrchestrationCacheTests : IDisposable
 {
     private readonly InMemoryOrchestrationCache _cache;
@@ -244,6 +245,7 @@ public class OrchestrationCacheTests : IDisposable
 /// <summary>
 /// Tests for the CachingModelOrchestrator decorator.
 /// </summary>
+[Trait("Category", "Unit")]
 public class CachingModelOrchestratorTests : IDisposable
 {
     private readonly InMemoryOrchestrationCache _cache;

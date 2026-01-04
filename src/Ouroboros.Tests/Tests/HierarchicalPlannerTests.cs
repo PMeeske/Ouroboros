@@ -12,6 +12,7 @@ using FluentAssertions;
 /// Comprehensive unit tests for HierarchicalPlanner.
 /// Tests hierarchical task decomposition, sub-plan creation, and recursive execution.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class HierarchicalPlannerTests
 {
     /// <summary>

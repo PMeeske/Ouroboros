@@ -8,6 +8,7 @@ namespace Ouroboros.Tests;
 /// Comprehensive tests for retention policies and evaluator.
 /// Tests focus on age-based, count-based, and combined retention strategies.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class RetentionPolicyTests
 {
     #region RetentionPolicy Factory Tests

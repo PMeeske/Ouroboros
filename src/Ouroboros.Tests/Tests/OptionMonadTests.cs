@@ -12,6 +12,7 @@ using Xunit;
 /// Tests for the Option monad implementation.
 /// Validates monadic laws and null safety.
 /// </summary>
+[Trait("Category", "Unit")]
 public class OptionMonadTests
 {
     [Fact]

@@ -13,6 +13,7 @@ using Xunit;
 /// Integration tests demonstrating the full LLM safety pipeline.
 /// Shows how all Laws of Form components work together for safe tool execution.
 /// </summary>
+[Trait("Category", "Integration")]
 public class LawsOfFormIntegrationTests
 {
     [Fact]

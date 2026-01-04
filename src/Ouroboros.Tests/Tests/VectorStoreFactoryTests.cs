@@ -12,6 +12,7 @@ using Xunit;
 /// <summary>
 /// Tests for vector store factory functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public class VectorStoreFactoryTests
 {
     [Fact]

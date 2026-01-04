@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for the RouletteWheelSelection class.
 /// </summary>
+[Trait("Category", "Unit")]
 public class RouletteWheelSelectionTests
 {
     [Fact]

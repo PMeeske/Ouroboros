@@ -7,6 +7,7 @@ namespace Ouroboros.Tests.Tests.SelfModel;
 /// <summary>
 /// Tests for GlobalWorkspace implementation.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class GlobalWorkspaceTests
 {
     [Fact]

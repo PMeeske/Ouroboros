@@ -12,6 +12,7 @@ using Xunit;
 /// Tests for FormStateMachine with indeterminate state support.
 /// Validates state transitions, oscillation, and leader election scenarios.
 /// </summary>
+[Trait("Category", "Unit")]
 public class FormStateMachineTests
 {
     private enum ServerRole { Follower, Candidate, Leader }

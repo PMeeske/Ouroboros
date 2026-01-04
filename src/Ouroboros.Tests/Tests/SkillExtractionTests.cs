@@ -10,6 +10,7 @@ using Ouroboros.Agent.MetaAI;
 /// <summary>
 /// Tests for skill extraction and learning capabilities.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class SkillExtractionTests
 {
     /// <summary>

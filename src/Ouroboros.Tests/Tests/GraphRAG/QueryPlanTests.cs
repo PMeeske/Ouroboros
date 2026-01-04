@@ -9,6 +9,7 @@ namespace Ouroboros.Tests.GraphRAG;
 /// <summary>
 /// Tests for QueryPlan and related types.
 /// </summary>
+[Trait("Category", "Unit")]
 public class QueryPlanTests
 {
     [Fact]

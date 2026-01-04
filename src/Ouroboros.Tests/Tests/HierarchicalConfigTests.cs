@@ -12,6 +12,7 @@ using Xunit;
 /// Tests for HierarchicalConfig multi-level configuration resolution.
 /// Validates feature flag scenarios and organizational hierarchy.
 /// </summary>
+[Trait("Category", "Unit")]
 public class HierarchicalConfigTests
 {
     [Fact]

@@ -13,6 +13,7 @@ namespace Ouroboros.Tests;
 /// <summary>
 /// Tests for the GeneticEvolutionStep class.
 /// </summary>
+[Trait("Category", "Unit")]
 public class GeneticEvolutionStepTests
 {
     /// <summary>

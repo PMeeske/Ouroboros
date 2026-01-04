@@ -12,6 +12,7 @@ using Xunit;
 /// End-to-end tests for Android MainPage initialization and error handling
 /// These tests verify that the app handles initialization failures gracefully.
 /// </summary>
+[Trait("Category", "Unit")]
 public class AndroidMainPageInitializationTests
 {
     /// <summary>

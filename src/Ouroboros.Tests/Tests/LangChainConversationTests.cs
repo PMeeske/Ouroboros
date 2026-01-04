@@ -9,6 +9,7 @@ using global::Ouroboros.Core.LangChain;
 /// <summary>
 /// Tests for LangChain-based conversation functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class LangChainConversationTests
 {
     /// <summary>

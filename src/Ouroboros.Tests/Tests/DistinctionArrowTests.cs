@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Tests for the DistinctionArrow - Kleisli arrows based on Laws of Form.
 /// </summary>
+[Trait("Category", "Unit")]
 public class DistinctionArrowTests
 {
     #region Gate Tests

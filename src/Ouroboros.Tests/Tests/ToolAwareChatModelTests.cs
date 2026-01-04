@@ -3,6 +3,7 @@ namespace Ouroboros.Tests;
 /// <summary>
 /// Tests for ToolAwareChatModel covering tool invocation and error handling.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ToolAwareChatModelTests
 {
     private class MockChatModel : IChatCompletionModel

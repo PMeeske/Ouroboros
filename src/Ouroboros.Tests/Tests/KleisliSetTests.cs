@@ -12,6 +12,7 @@ using Xunit;
 /// Tests for the KleisliSet implementation.
 /// Validates monadic composition and set-theoretic operations.
 /// </summary>
+[Trait("Category", "Unit")]
 public class KleisliSetTests
 {
     [Fact]

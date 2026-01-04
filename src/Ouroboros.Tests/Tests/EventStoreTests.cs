@@ -13,6 +13,7 @@ using Xunit;
 /// <summary>
 /// Tests for event store functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public class EventStoreTests
 {
     [Fact]

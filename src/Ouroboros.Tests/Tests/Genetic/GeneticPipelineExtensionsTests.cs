@@ -15,6 +15,7 @@ using Xunit;
 /// <summary>
 /// Tests for the GeneticPipelineExtensions class.
 /// </summary>
+[Trait("Category", "Unit")]
 public class GeneticPipelineExtensionsTests
 {
     [Fact]

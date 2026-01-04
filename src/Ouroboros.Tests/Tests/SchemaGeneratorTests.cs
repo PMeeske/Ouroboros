@@ -15,6 +15,7 @@ using Xunit;
 /// <summary>
 /// Tests for the SchemaGenerator utility.
 /// </summary>
+[Trait("Category", "Unit")]
 public class SchemaGeneratorTests
 {
     private sealed class ComplexArgs

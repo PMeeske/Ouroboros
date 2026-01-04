@@ -11,6 +11,7 @@ using Xunit;
 /// <summary>
 /// Extended tests for the MathTool implementation covering edge cases and various operations.
 /// </summary>
+[Trait("Category", "Unit")]
 public class MathToolExtendedTests
 {
     private readonly MathTool tool = new();

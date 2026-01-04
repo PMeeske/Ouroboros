@@ -17,6 +17,7 @@ using Xunit;
 /// <summary>
 /// Tests for monadic helpers that adapt tools into pipeline steps.
 /// </summary>
+[Trait("Category", "Unit")]
 public class MonadicToolExtensionsTests
 {
     [Fact]

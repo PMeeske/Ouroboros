@@ -220,11 +220,10 @@ public static class Imagination
     {
         var evaluated = form.EvalToRecord();
 
-        if (evaluated is Form.ImaginaryForm imag)
+        if (evaluated is Form.ImaginaryForm)
         {
-            // AtTime returns object, but we know for imaginary forms we should alternate
-            // Stub: just return Form.Imaginary
-            return Form.Imaginary;
+            // Imaginary alternates between Void (even) and Mark (odd)
+            return time % 2 == 0 ? Form.Void : Form.Mark;
         }
 
         // Real forms are constant across time

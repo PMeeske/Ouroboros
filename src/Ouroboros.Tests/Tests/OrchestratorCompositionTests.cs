@@ -13,6 +13,7 @@ using FluentAssertions;
 /// Comprehensive unit tests for orchestrator composition helpers.
 /// Tests chaining, mapping, parallel execution, fallback, and conditional routing.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class OrchestratorCompositionTests
 {
     private sealed class SimpleOrchestrator : OrchestratorBase<string, string>

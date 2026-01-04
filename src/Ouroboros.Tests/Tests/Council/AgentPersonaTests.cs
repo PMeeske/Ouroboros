@@ -10,6 +10,7 @@ namespace Ouroboros.Tests.Council;
 /// <summary>
 /// Tests for agent persona implementations.
 /// </summary>
+[Trait("Category", "Unit")]
 public class AgentPersonaTests
 {
     [Fact]

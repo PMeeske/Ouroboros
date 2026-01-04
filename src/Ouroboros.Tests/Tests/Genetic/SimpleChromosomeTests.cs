@@ -63,6 +63,7 @@ internal sealed class SimpleChromosome : IChromosome
 /// <summary>
 /// Tests for the SimpleChromosome implementation.
 /// </summary>
+[Trait("Category", "Unit")]
 public class SimpleChromosomeTests
 {
     [Fact]

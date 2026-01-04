@@ -19,6 +19,7 @@ using Xunit;
 /// Tests for the SelfCritiqueAgent functionality.
 /// Validates draft-critique-improve cycles, confidence ratings, and safety constraints.
 /// </summary>
+[Trait("Category", "Unit")]
 public class SelfCritiqueAgentTests
 {
     /// <summary>

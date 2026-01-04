@@ -12,6 +12,7 @@ using FluentAssertions;
 /// Comprehensive unit tests for SmartModelOrchestrator.
 /// Tests model selection, use case classification, performance tracking, and error handling.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class SmartModelOrchestratorTests
 {
     /// <summary>

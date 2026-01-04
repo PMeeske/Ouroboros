@@ -13,6 +13,7 @@ using FluentAssertions;
 /// Integration tests for unified orchestration infrastructure.
 /// Tests end-to-end scenarios with composed orchestrators.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class UnifiedOrchestrationIntegrationTests
 {
     private sealed class StepOrchestrator : OrchestratorBase<string, string>

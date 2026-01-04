@@ -12,6 +12,7 @@ using Xunit;
 /// <summary>
 /// Tests for FormExtensions utility methods.
 /// </summary>
+[Trait("Category", "Unit")]
 public class FormExtensionsTests
 {
     [Fact]

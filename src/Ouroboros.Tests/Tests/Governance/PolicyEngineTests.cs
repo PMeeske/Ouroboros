@@ -11,6 +11,7 @@ namespace Ouroboros.Tests.Governance;
 /// Tests for the Policy Engine.
 /// Phase 5: Governance, Safety, and Ops.
 /// </summary>
+[Trait("Category", "Unit")]
 public class PolicyEngineTests
 {
     [Fact]

@@ -14,6 +14,7 @@ using Ouroboros.Providers;
 /// Comprehensive end-to-end tests for all CLI commands and their variations.
 /// Tests command execution, option handling, and integration with cloud implementations.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class CliEndToEndTests
 {
     public static async Task RunAllTests()

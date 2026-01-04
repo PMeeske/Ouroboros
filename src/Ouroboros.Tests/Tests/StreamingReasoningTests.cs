@@ -7,6 +7,7 @@ namespace Ouroboros.Tests;
 /// Tests for the streaming reasoning pipeline.
 /// Verifies that the pipeline correctly streams chunks and executes tools.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class StreamingReasoningTests
 {
     public static async Task RunAllTests()

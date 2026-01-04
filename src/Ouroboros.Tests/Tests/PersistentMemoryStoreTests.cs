@@ -9,6 +9,7 @@ using Ouroboros.Agent.MetaAI;
 /// <summary>
 /// Tests for persistent memory store functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class PersistentMemoryStoreTests
 {
     /// <summary>

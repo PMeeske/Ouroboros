@@ -14,6 +14,7 @@ using Xunit;
 /// Tests for the TransitionReplayEngine implementation.
 /// Validates replay and query functionality.
 /// </summary>
+[Trait("Category", "Unit")]
 public class TransitionReplayEngineTests
 {
     [Fact]

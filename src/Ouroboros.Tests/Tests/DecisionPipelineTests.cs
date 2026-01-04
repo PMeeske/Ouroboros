@@ -12,6 +12,7 @@ using Xunit;
 /// Tests for DecisionPipeline composition and evaluation.
 /// Validates KYC-style scenarios and multi-criteria decision-making.
 /// </summary>
+[Trait("Category", "Unit")]
 public class DecisionPipelineTests
 {
     private record Application(string Name, int CreditScore, bool IdVerified, bool AddressVerified);

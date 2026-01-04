@@ -10,6 +10,7 @@ using Ouroboros.Agent;
 /// Tests for AI orchestrator capabilities including model selection,
 /// use case classification, and performance tracking.
 /// </summary>
+[Trait("Category", "Unit")]
 public static class OrchestratorTests
 {
     /// <summary>

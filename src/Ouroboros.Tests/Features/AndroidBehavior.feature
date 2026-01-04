@@ -97,33 +97,33 @@ Feature: Android Behavior
         Given database initialization will fail with "SQLite Error: unable to open database file"
         When the app starts
         Then the UI should render
-        And the output should contain "Ouroboros CLI v1.0"
-        And the output should contain "⚠ Initialization error"
-        And the output should contain "SQLite Error"
-        And the output should contain ">"
+        And the app output should contain "Ouroboros CLI v1.0"
+        And the app output should contain "⚠ Initialization error"
+        And the app output should contain "SQLite Error"
+        And the app output should contain ">"
 
     Scenario: All services healthy provides full functionality
         Given all services are healthy
         When the app starts
         Then full functionality should be available
         And the output should not contain "⚠"
-        And the output should contain "Ouroboros CLI v1.0"
-        And the output should contain ">"
+        And the app output should contain "Ouroboros CLI v1.0"
+        And the app output should contain ">"
 
     Scenario: Partial service failure enables degraded mode
         Given primary service fails but fallback succeeds
         When the app starts
         Then degraded mode should work
         And the CLI executor should be available via fallback
-        And the output should contain "⚠ Initialization error"
-        And the output should contain ">"
+        And the app output should contain "⚠ Initialization error"
+        And the app output should contain ">"
 
     Scenario Outline: Various initialization errors are displayed
         Given initialization will fail with "<error_message>"
         When the app starts
         Then the specific error "<error_message>" should be shown to user
-        And the output should contain "Ouroboros CLI v1.0"
-        And the output should contain ">"
+        And the app output should contain "Ouroboros CLI v1.0"
+        And the app output should contain ">"
 
         Examples:
             | error_message                            |

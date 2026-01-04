@@ -11,6 +11,7 @@ using Ouroboros.Providers;
 /// Tests the GitHubModelsChatModel with various model endpoints.
 /// These tests require MODEL_TOKEN, GITHUB_TOKEN, or GITHUB_MODELS_TOKEN environment variable to be set.
 /// </summary>
+[Trait("Category", "Integration")]
 public static class GitHubModelsIntegrationTests
 {
     /// <summary>

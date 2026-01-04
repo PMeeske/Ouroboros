@@ -14,6 +14,7 @@ using Xunit;
 /// <summary>
 /// Extended tests for the ToolAwareChatModel implementation.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ToolAwareChatModelExtendedTests
 {
     #region Constructor Tests

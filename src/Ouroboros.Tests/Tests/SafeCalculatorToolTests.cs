@@ -12,6 +12,7 @@ using Xunit;
 /// <summary>
 /// Tests for the SafeCalculatorTool implementation.
 /// </summary>
+[Trait("Category", "Unit")]
 public class SafeCalculatorToolTests
 {
     // Test mock engine for symbolic verification
