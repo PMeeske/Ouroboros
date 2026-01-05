@@ -32,7 +32,8 @@ public class LawsOfFormIntegrationTests
                 {
                     SafetyLevel.Safe => Form.Mark,
                     SafetyLevel.Unsafe => Form.Void,
-                    SafetyLevel.Uncertain => Form.Imaginary
+                    SafetyLevel.Uncertain => Form.Imaginary,
+                    _ => Form.Void // Default to unsafe for unknown values
                 })
             .AddCriterion("model_confidence", (call, ctx) =>
                 call.Confidence.ToForm(highThreshold: 0.85, lowThreshold: 0.4));

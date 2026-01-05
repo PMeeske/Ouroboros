@@ -475,7 +475,7 @@ public static class ImmersiveMode
                 }
                 else
                 {
-                    input = ReadLinePreservingBuffer(ct);
+                    input = await ReadLinePreservingBufferAsync(ct);
                 }
 
                 if (string.IsNullOrWhiteSpace(input)) continue;
@@ -750,7 +750,7 @@ public static class ImmersiveMode
     /// <summary>
     /// Reads a line of input while tracking the buffer so proactive messages can restore it.
     /// </summary>
-    private static string? ReadLinePreservingBuffer(CancellationToken ct = default)
+    private static async Task<string?> ReadLinePreservingBufferAsync(CancellationToken ct = default)
     {
         lock (_inputLock)
         {
@@ -761,7 +761,7 @@ public static class ImmersiveMode
         {
             if (!Console.KeyAvailable)
             {
-                Thread.Sleep(10);
+                await Task.Delay(10, ct);
                 continue;
             }
 
