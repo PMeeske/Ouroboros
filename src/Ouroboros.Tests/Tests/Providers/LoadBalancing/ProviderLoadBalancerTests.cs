@@ -19,20 +19,23 @@ public sealed class ProviderLoadBalancerTests
     /// <summary>
     /// Test that load balancer can be created with different strategies.
     /// </summary>
-    [Theory]
-    [InlineData(ProviderRotationStrategy.RoundRobin)]
-    [InlineData(ProviderRotationStrategy.WeightedRandom)]
-    [InlineData(ProviderRotationStrategy.LeastLatency)]
-    [InlineData(ProviderRotationStrategy.AdaptiveHealth)]
-    public void Constructor_WithStrategy_ShouldSetStrategy(ProviderRotationStrategy strategy)
+    [Fact]
+    public void Constructor_WithStrategy_ShouldSetStrategy()
     {
-        // Act
-        var loadBalancer = new ProviderLoadBalancer<IChatCompletionModel>(strategy);
+        // Arrange & Act
+        var lb1 = new ProviderLoadBalancer<IChatCompletionModel>(ProviderSelectionStrategies.RoundRobin);
+        var lb2 = new ProviderLoadBalancer<IChatCompletionModel>(ProviderSelectionStrategies.WeightedRandom);
+        var lb3 = new ProviderLoadBalancer<IChatCompletionModel>(ProviderSelectionStrategies.LeastLatency);
+        var lb4 = new ProviderLoadBalancer<IChatCompletionModel>(ProviderSelectionStrategies.AdaptiveHealth);
 
         // Assert
-        loadBalancer.Strategy.Should().Be(strategy);
-        loadBalancer.ProviderCount.Should().Be(0);
-        loadBalancer.HealthyProviderCount.Should().Be(0);
+        lb1.Strategy.Name.Should().Be("RoundRobin");
+        lb1.ProviderCount.Should().Be(0);
+        lb1.HealthyProviderCount.Should().Be(0);
+        
+        lb2.Strategy.Name.Should().Be("WeightedRandom");
+        lb3.Strategy.Name.Should().Be("LeastLatency");
+        lb4.Strategy.Name.Should().Be("AdaptiveHealth");
     }
 
     /// <summary>
@@ -130,7 +133,7 @@ public sealed class ProviderLoadBalancerTests
     public async Task SelectProviderAsync_WithRoundRobin_ShouldDistributeEvenly()
     {
         // Arrange
-        var loadBalancer = new ProviderLoadBalancer<IChatCompletionModel>(ProviderRotationStrategy.RoundRobin);
+        var loadBalancer = new ProviderLoadBalancer<IChatCompletionModel>(ProviderSelectionStrategies.RoundRobin);
         loadBalancer.RegisterProvider("p1", new MockChatModel("p1"));
         loadBalancer.RegisterProvider("p2", new MockChatModel("p2"));
         loadBalancer.RegisterProvider("p3", new MockChatModel("p3"));
@@ -160,7 +163,7 @@ public sealed class ProviderLoadBalancerTests
     public async Task SelectProviderAsync_WithLeastLatency_ShouldSelectFastest()
     {
         // Arrange
-        var loadBalancer = new ProviderLoadBalancer<IChatCompletionModel>(ProviderRotationStrategy.LeastLatency);
+        var loadBalancer = new ProviderLoadBalancer<IChatCompletionModel>(ProviderSelectionStrategies.LeastLatency);
         loadBalancer.RegisterProvider("slow", new MockChatModel("slow"));
         loadBalancer.RegisterProvider("fast", new MockChatModel("fast"));
         loadBalancer.RegisterProvider("medium", new MockChatModel("medium"));
@@ -187,7 +190,7 @@ public sealed class ProviderLoadBalancerTests
     public async Task SelectProviderAsync_WithAdaptiveHealth_ShouldSelectHealthiest()
     {
         // Arrange
-        var loadBalancer = new ProviderLoadBalancer<IChatCompletionModel>(ProviderRotationStrategy.AdaptiveHealth);
+        var loadBalancer = new ProviderLoadBalancer<IChatCompletionModel>(ProviderSelectionStrategies.AdaptiveHealth);
         loadBalancer.RegisterProvider("unreliable", new MockChatModel("unreliable"));
         loadBalancer.RegisterProvider("reliable", new MockChatModel("reliable"));
 

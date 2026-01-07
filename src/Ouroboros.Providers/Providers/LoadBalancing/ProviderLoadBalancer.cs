@@ -12,6 +12,7 @@ namespace Ouroboros.Providers.LoadBalancing;
 /// Load balancer that distributes requests across multiple provider instances
 /// using configurable strategies to prevent rate limiting and optimize performance.
 /// Implements functional programming patterns with monadic error handling.
+/// Uses the Strategy design pattern for pluggable provider selection algorithms.
 /// </summary>
 /// <typeparam name="T">Type of provider being load balanced.</typeparam>
 public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
@@ -22,22 +23,19 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
 
     private readonly ConcurrentDictionary<string, T> _providers = new();
     private readonly ConcurrentDictionary<string, ProviderHealthStatus> _healthStatus = new();
-    private readonly ProviderRotationStrategy _strategy;
-    private int _roundRobinIndex = 0;
-    private readonly Random _random = new();
-    private readonly object _selectionLock = new();
+    private readonly IProviderSelectionStrategy _strategy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProviderLoadBalancer{T}"/> class.
     /// </summary>
-    /// <param name="strategy">The rotation strategy to use.</param>
-    public ProviderLoadBalancer(ProviderRotationStrategy strategy = ProviderRotationStrategy.AdaptiveHealth)
+    /// <param name="strategy">The selection strategy to use. If null, defaults to AdaptiveHealth.</param>
+    public ProviderLoadBalancer(IProviderSelectionStrategy? strategy = null)
     {
-        _strategy = strategy;
+        _strategy = strategy ?? ProviderSelectionStrategies.AdaptiveHealth;
     }
 
     /// <inheritdoc/>
-    public ProviderRotationStrategy Strategy => _strategy;
+    public IProviderSelectionStrategy Strategy => _strategy;
 
     /// <inheritdoc/>
     public int ProviderCount => _providers.Count;
@@ -144,15 +142,8 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
             }
         }
 
-        // Select provider based on strategy
-        string selectedId = _strategy switch
-        {
-            ProviderRotationStrategy.RoundRobin => SelectRoundRobin(healthyProviders),
-            ProviderRotationStrategy.WeightedRandom => SelectWeightedRandom(healthyProviders),
-            ProviderRotationStrategy.LeastLatency => SelectLeastLatency(healthyProviders),
-            ProviderRotationStrategy.AdaptiveHealth => SelectAdaptiveHealth(healthyProviders),
-            _ => SelectRoundRobin(healthyProviders)
-        };
+        // Select provider using the configured strategy
+        string selectedId = _strategy.SelectProvider(healthyProviders, _healthStatus);
 
         if (!_providers.TryGetValue(selectedId, out T? provider))
         {
@@ -166,7 +157,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
         ProviderSelectionResult<T> result = new(
             Provider: provider,
             ProviderId: selectedId,
-            Strategy: _strategy.ToString(),
+            Strategy: _strategy.Name,
             Reason: reason,
             Health: health);
 
@@ -263,54 +254,6 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
         Console.WriteLine($"[ProviderLoadBalancer] Provider '{providerId}' marked healthy");
     }
 
-    private string SelectRoundRobin(List<string> healthyProviders)
-    {
-        lock (_selectionLock)
-        {
-            int index = _roundRobinIndex % healthyProviders.Count;
-            _roundRobinIndex++;
-            return healthyProviders[index];
-        }
-    }
-
-    private string SelectWeightedRandom(List<string> healthyProviders)
-    {
-        // Weight by health score
-        var weights = healthyProviders
-            .Select(id => (_healthStatus[id].HealthScore, id))
-            .ToList();
-
-        double totalWeight = weights.Sum(w => w.Item1);
-        if (totalWeight <= 0)
-            return healthyProviders[_random.Next(healthyProviders.Count)];
-
-        double randomValue = _random.NextDouble() * totalWeight;
-        double cumulative = 0;
-
-        foreach (var (weight, id) in weights)
-        {
-            cumulative += weight;
-            if (randomValue <= cumulative)
-                return id;
-        }
-
-        return healthyProviders.Last();
-    }
-
-    private string SelectLeastLatency(List<string> healthyProviders)
-    {
-        return healthyProviders
-            .OrderBy(id => _healthStatus[id].AverageLatencyMs)
-            .First();
-    }
-
-    private string SelectAdaptiveHealth(List<string> healthyProviders)
-    {
-        return healthyProviders
-            .OrderByDescending(id => _healthStatus[id].HealthScore)
-            .First();
-    }
-
     private TimeSpan CalculateCooldownDuration(ProviderHealthStatus health)
     {
         // Exponential backoff based on how recently it was rate limited
@@ -325,7 +268,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
 
     private string GenerateSelectionReason(string providerId, ProviderHealthStatus health)
     {
-        return $"Strategy: {_strategy}, Health Score: {health.HealthScore:F2}, " +
+        return $"Strategy: {_strategy.Name}, Health Score: {health.HealthScore:F2}, " +
                $"Success Rate: {health.SuccessRate:P0}, Avg Latency: {health.AverageLatencyMs:F0}ms";
     }
 }

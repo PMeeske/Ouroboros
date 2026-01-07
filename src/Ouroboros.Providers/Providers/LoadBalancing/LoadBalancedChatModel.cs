@@ -25,8 +25,8 @@ public sealed class LoadBalancedChatModel : IChatCompletionModel, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="LoadBalancedChatModel"/> class.
     /// </summary>
-    /// <param name="strategy">The load balancing strategy to use.</param>
-    public LoadBalancedChatModel(ProviderRotationStrategy strategy = ProviderRotationStrategy.AdaptiveHealth)
+    /// <param name="strategy">The load balancing strategy to use. If null, defaults to AdaptiveHealth.</param>
+    public LoadBalancedChatModel(IProviderSelectionStrategy? strategy = null)
     {
         _loadBalancer = new ProviderLoadBalancer<IChatCompletionModel>(strategy);
         _retryPolicy = CreateRetryPolicy();
@@ -87,7 +87,7 @@ public sealed class LoadBalancedChatModel : IChatCompletionModel, IDisposable
     /// <summary>
     /// Gets the load balancing strategy being used.
     /// </summary>
-    public ProviderRotationStrategy Strategy => _loadBalancer.Strategy;
+    public IProviderSelectionStrategy Strategy => _loadBalancer.Strategy;
 
     /// <summary>
     /// Gets the total number of registered providers.

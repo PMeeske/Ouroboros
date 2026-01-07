@@ -19,18 +19,21 @@ public sealed class LoadBalancedChatModelTests
     /// <summary>
     /// Test that load balanced model can be created with different strategies.
     /// </summary>
-    [Theory]
-    [InlineData(ProviderRotationStrategy.RoundRobin)]
-    [InlineData(ProviderRotationStrategy.AdaptiveHealth)]
-    public void Constructor_WithStrategy_ShouldCreateModel(ProviderRotationStrategy strategy)
+    [Fact]
+    public void Constructor_WithStrategy_ShouldCreateModel()
     {
-        // Act
-        var model = new LoadBalancedChatModel(strategy);
+        // Arrange & Act
+        var model1 = new LoadBalancedChatModel(ProviderSelectionStrategies.RoundRobin);
+        var model2 = new LoadBalancedChatModel(ProviderSelectionStrategies.AdaptiveHealth);
 
         // Assert
-        model.Should().NotBeNull();
-        model.Strategy.Should().Be(strategy);
-        model.ProviderCount.Should().Be(0);
+        model1.Should().NotBeNull();
+        model1.Strategy.Should().NotBeNull();
+        model1.Strategy.Name.Should().Be("RoundRobin");
+        
+        model2.Should().NotBeNull();
+        model2.Strategy.Should().NotBeNull();
+        model2.Strategy.Name.Should().Be("AdaptiveHealth");
     }
 
     /// <summary>
@@ -76,7 +79,7 @@ public sealed class LoadBalancedChatModelTests
     public async Task GenerateTextAsync_WithRoundRobin_ShouldRotate()
     {
         // Arrange
-        var model = new LoadBalancedChatModel(ProviderRotationStrategy.RoundRobin);
+        var model = new LoadBalancedChatModel(ProviderSelectionStrategies.RoundRobin);
         model.RegisterProvider("p1", new MockChatModel("Response from p1"));
         model.RegisterProvider("p2", new MockChatModel("Response from p2"));
         model.RegisterProvider("p3", new MockChatModel("Response from p3"));
@@ -108,7 +111,7 @@ public sealed class LoadBalancedChatModelTests
     public async Task GenerateTextAsync_WithRateLimitedProvider_ShouldFailover()
     {
         // Arrange
-        var model = new LoadBalancedChatModel(ProviderRotationStrategy.RoundRobin);
+        var model = new LoadBalancedChatModel(ProviderSelectionStrategies.RoundRobin);
         
         // First provider will be rate limited
         var rateLimitedProvider = new RateLimitedMockChatModel("rate-limited");

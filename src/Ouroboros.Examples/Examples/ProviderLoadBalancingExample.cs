@@ -22,7 +22,7 @@ public static class ProviderLoadBalancingExample
         Console.WriteLine("=== Basic Round Robin Load Balancing ===\n");
 
         // Create load-balanced model with Round Robin strategy
-        var loadBalancedModel = new LoadBalancedChatModel(ProviderRotationStrategy.RoundRobin);
+        var loadBalancedModel = new LoadBalancedChatModel(ProviderSelectionStrategies.RoundRobin);
 
         // Register multiple OpenAI-compatible providers
         var provider1 = new HttpOpenAiCompatibleChatModel(
@@ -68,7 +68,7 @@ public static class ProviderLoadBalancingExample
         Console.WriteLine("\n=== Adaptive Health Load Balancing ===\n");
 
         // Create load-balanced model with Adaptive Health strategy
-        var loadBalancedModel = new LoadBalancedChatModel(ProviderRotationStrategy.AdaptiveHealth);
+        var loadBalancedModel = new LoadBalancedChatModel(ProviderSelectionStrategies.AdaptiveHealth);
 
         // Register multiple providers with different characteristics
         var fastProvider = new OllamaCloudChatModel(
@@ -114,7 +114,7 @@ public static class ProviderLoadBalancingExample
     {
         Console.WriteLine("\n=== Rate Limit Handling Example ===\n");
 
-        var loadBalancedModel = new LoadBalancedChatModel(ProviderRotationStrategy.AdaptiveHealth);
+        var loadBalancedModel = new LoadBalancedChatModel(ProviderSelectionStrategies.AdaptiveHealth);
 
         // Primary provider (might get rate limited)
         var primaryProvider = new LiteLLMChatModel(
@@ -175,7 +175,7 @@ public static class ProviderLoadBalancingExample
     {
         Console.WriteLine("\n=== Least Latency Strategy Example ===\n");
 
-        var loadBalancedModel = new LoadBalancedChatModel(ProviderRotationStrategy.LeastLatency);
+        var loadBalancedModel = new LoadBalancedChatModel(ProviderSelectionStrategies.LeastLatency);
 
         // Providers at different geographical locations (simulated)
         var usEastProvider = new HttpOpenAiCompatibleChatModel(
@@ -223,7 +223,7 @@ public static class ProviderLoadBalancingExample
 
         // Create custom load balancer with direct access
         var loadBalancer = new ProviderLoadBalancer<IChatCompletionModel>(
-            ProviderRotationStrategy.WeightedRandom);
+            ProviderSelectionStrategies.WeightedRandom);
 
         // Register providers
         var provider1 = new MockProvider("provider-1");

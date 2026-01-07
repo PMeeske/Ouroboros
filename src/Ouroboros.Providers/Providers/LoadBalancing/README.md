@@ -22,9 +22,12 @@ The Provider Load Balancing system automatically distributes requests across mul
 ```csharp
 using Ouroboros.Providers.LoadBalancing;
 
-// Create load-balanced chat model
+// Create load-balanced chat model with default strategy (AdaptiveHealth)
+var loadBalancedModel = new LoadBalancedChatModel();
+
+// Or specify a strategy using the factory
 var loadBalancedModel = new LoadBalancedChatModel(
-    ProviderRotationStrategy.AdaptiveHealth);
+    ProviderSelectionStrategies.AdaptiveHealth);
 
 // Register multiple providers
 loadBalancedModel.RegisterProvider("provider-1", provider1);
@@ -56,7 +59,7 @@ var backup2 = new LiteLLMChatModel(
     "gpt-3.5-turbo");
 
 var loadBalancer = new LoadBalancedChatModel(
-    ProviderRotationStrategy.AdaptiveHealth);
+    ProviderSelectionStrategies.AdaptiveHealth);
 
 loadBalancer.RegisterProvider("primary", primary);
 loadBalancer.RegisterProvider("backup-1", backup1);
@@ -69,13 +72,19 @@ for (int i = 0; i < 100; i++)
 }
 ```
 
-## Rotation Strategies
+## Selection Strategies (Strategy Pattern)
+
+The load balancer implements the **Strategy design pattern** for pluggable provider selection algorithms. This allows for flexible, extensible selection logic without modifying the core load balancer code.
+
+### Built-in Strategies
+
+Access pre-configured strategies via `ProviderSelectionStrategies`:
 
 ### 1. Round Robin
 Distributes requests evenly across all healthy providers in sequence.
 
 ```csharp
-var model = new LoadBalancedChatModel(ProviderRotationStrategy.RoundRobin);
+var model = new LoadBalancedChatModel(ProviderSelectionStrategies.RoundRobin);
 ```
 
 **Use Case**: Equal load distribution when all providers have similar characteristics.
@@ -84,7 +93,7 @@ var model = new LoadBalancedChatModel(ProviderRotationStrategy.RoundRobin);
 Probabilistically selects providers based on their health scores.
 
 ```csharp
-var model = new LoadBalancedChatModel(ProviderRotationStrategy.WeightedRandom);
+var model = new LoadBalancedChatModel(ProviderSelectionStrategies.WeightedRandom);
 ```
 
 **Use Case**: Gradually shift traffic toward better-performing providers.
@@ -93,7 +102,7 @@ var model = new LoadBalancedChatModel(ProviderRotationStrategy.WeightedRandom);
 Always selects the provider with the lowest average latency.
 
 ```csharp
-var model = new LoadBalancedChatModel(ProviderRotationStrategy.LeastLatency);
+var model = new LoadBalancedChatModel(ProviderSelectionStrategies.LeastLatency);
 ```
 
 **Use Case**: Performance-critical applications requiring minimum response time.
@@ -102,10 +111,32 @@ var model = new LoadBalancedChatModel(ProviderRotationStrategy.LeastLatency);
 Selects providers based on composite health score combining success rate (70%) and latency (30%).
 
 ```csharp
-var model = new LoadBalancedChatModel(ProviderRotationStrategy.AdaptiveHealth);
+var model = new LoadBalancedChatModel(ProviderSelectionStrategies.AdaptiveHealth);
 ```
 
 **Use Case**: General purpose load balancing with optimal balance of reliability and performance.
+
+### Custom Strategies
+
+Implement `IProviderSelectionStrategy` for custom selection logic:
+
+```csharp
+public class MyCustomStrategy : IProviderSelectionStrategy
+{
+    public string Name => "MyCustom";
+    
+    public string SelectProvider(
+        List<string> healthyProviders, 
+        IReadOnlyDictionary<string, ProviderHealthStatus> healthStatus)
+    {
+        // Your custom selection logic here
+        return healthyProviders.First();
+    }
+}
+
+// Use your custom strategy
+var model = new LoadBalancedChatModel(new MyCustomStrategy());
+```
 
 ## Rate Limit Handling
 

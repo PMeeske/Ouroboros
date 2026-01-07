@@ -6,32 +6,6 @@
 namespace Ouroboros.Providers.LoadBalancing;
 
 /// <summary>
-/// Strategy for selecting providers from a pool.
-/// </summary>
-public enum ProviderRotationStrategy
-{
-    /// <summary>
-    /// Distribute requests evenly across all healthy providers in sequence.
-    /// </summary>
-    RoundRobin,
-
-    /// <summary>
-    /// Randomly select providers with weights based on historical performance.
-    /// </summary>
-    WeightedRandom,
-
-    /// <summary>
-    /// Always select the provider with the lowest average latency.
-    /// </summary>
-    LeastLatency,
-
-    /// <summary>
-    /// Adaptive selection based on health scores combining latency, success rate, and availability.
-    /// </summary>
-    AdaptiveHealth
-}
-
-/// <summary>
 /// Health status of a provider including performance metrics and availability.
 /// </summary>
 public sealed record ProviderHealthStatus(
@@ -85,9 +59,9 @@ public sealed record ProviderSelectionResult<T>(
 public interface IProviderLoadBalancer<T>
 {
     /// <summary>
-    /// Gets the currently configured rotation strategy.
+    /// Gets the currently configured selection strategy.
     /// </summary>
-    ProviderRotationStrategy Strategy { get; }
+    IProviderSelectionStrategy Strategy { get; }
 
     /// <summary>
     /// Gets the current health status of all providers.
