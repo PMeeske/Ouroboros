@@ -5,17 +5,21 @@
 
 using System.Diagnostics;
 using System.Net;
+using Polly;
+using Polly.Retry;
 
 namespace Ouroboros.Providers.LoadBalancing;
 
 /// <summary>
 /// Chat model wrapper that provides load balancing across multiple provider instances.
 /// Automatically handles rate limiting (429) by rotating to healthy providers.
+/// Uses Polly for resilient retry logic with exponential backoff.
 /// Implements IChatCompletionModel for seamless integration with existing code.
 /// </summary>
 public sealed class LoadBalancedChatModel : IChatCompletionModel, IDisposable
 {
     private readonly IProviderLoadBalancer<IChatCompletionModel> _loadBalancer;
+    private readonly AsyncRetryPolicy _retryPolicy;
     private bool _disposed;
 
     /// <summary>
@@ -25,6 +29,7 @@ public sealed class LoadBalancedChatModel : IChatCompletionModel, IDisposable
     public LoadBalancedChatModel(ProviderRotationStrategy strategy = ProviderRotationStrategy.AdaptiveHealth)
     {
         _loadBalancer = new ProviderLoadBalancer<IChatCompletionModel>(strategy);
+        _retryPolicy = CreateRetryPolicy();
     }
 
     /// <summary>
@@ -34,6 +39,24 @@ public sealed class LoadBalancedChatModel : IChatCompletionModel, IDisposable
     public LoadBalancedChatModel(IProviderLoadBalancer<IChatCompletionModel> loadBalancer)
     {
         _loadBalancer = loadBalancer ?? throw new ArgumentNullException(nameof(loadBalancer));
+        _retryPolicy = CreateRetryPolicy();
+    }
+
+    /// <summary>
+    /// Creates Polly retry policy for handling provider failures and selection retries.
+    /// </summary>
+    private static AsyncRetryPolicy CreateRetryPolicy()
+    {
+        return Policy
+            .Handle<HttpRequestException>(ex => IsRateLimitError(ex))
+            .Or<InvalidOperationException>(ex => ex.Message.Contains("No healthy providers"))
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt - 1)),
+                onRetry: (exception, timespan, retryCount, context) =>
+                {
+                    Console.WriteLine($"[LoadBalancedChatModel] Retry {retryCount} after {timespan.TotalSeconds}s due to {exception.GetType().Name}: {exception.Message}");
+                });
     }
 
     /// <summary>
@@ -79,99 +102,96 @@ public sealed class LoadBalancedChatModel : IChatCompletionModel, IDisposable
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
-        const int maxRetries = 3;
-        int attempt = 0;
         List<string> attemptedProviders = new();
 
-        while (attempt < maxRetries)
+        try
         {
-            attempt++;
-
-            // Select a provider
-            Result<ProviderSelectionResult<IChatCompletionModel>, string> selectionResult =
-                await _loadBalancer.SelectProviderAsync();
-
-            if (selectionResult.IsFailure)
+            return await _retryPolicy.ExecuteAsync(async () =>
             {
-                // No healthy providers available
-                string error = selectionResult.Match(_ => string.Empty, err => err);
-                Console.WriteLine($"[LoadBalancedChatModel] Provider selection failed: {error}");
+                // Select a provider
+                Result<ProviderSelectionResult<IChatCompletionModel>, string> selectionResult =
+                    await _loadBalancer.SelectProviderAsync();
 
-                if (attempt >= maxRetries)
+                if (selectionResult.IsFailure)
                 {
-                    return $"[load-balanced-error] All providers exhausted: {error}";
+                    // No healthy providers available
+                    string error = selectionResult.Match(_ => string.Empty, err => err);
+                    Console.WriteLine($"[LoadBalancedChatModel] Provider selection failed: {error}");
+                    
+                    // Throw to trigger Polly retry
+                    throw new InvalidOperationException($"No healthy providers available: {error}");
                 }
 
-                // Wait before retry
-                await Task.Delay(TimeSpan.FromSeconds(1), ct);
-                continue;
-            }
+                ProviderSelectionResult<IChatCompletionModel> selection = selectionResult.Match(
+                    result => result,
+                    _ => throw new InvalidOperationException("Should not reach here"));
 
-            ProviderSelectionResult<IChatCompletionModel> selection = selectionResult.Match(
-                result => result,
-                _ => throw new InvalidOperationException("Should not reach here"));
+                attemptedProviders.Add(selection.ProviderId);
+                Stopwatch sw = Stopwatch.StartNew();
 
-            attemptedProviders.Add(selection.ProviderId);
-            Stopwatch sw = Stopwatch.StartNew();
-
-            try
-            {
-                string result = await selection.Provider.GenerateTextAsync(prompt, ct);
-                sw.Stop();
-
-                // Record successful execution
-                _loadBalancer.RecordExecution(
-                    selection.ProviderId,
-                    sw.Elapsed.TotalMilliseconds,
-                    success: true,
-                    wasRateLimited: false);
-
-                Console.WriteLine($"[LoadBalancedChatModel] Success with provider '{selection.ProviderId}' " +
-                                $"in {sw.Elapsed.TotalMilliseconds:F0}ms");
-
-                return result;
-            }
-            catch (HttpRequestException ex) when (IsRateLimitError(ex))
-            {
-                sw.Stop();
-
-                // Record rate limited execution
-                _loadBalancer.RecordExecution(
-                    selection.ProviderId,
-                    sw.Elapsed.TotalMilliseconds,
-                    success: false,
-                    wasRateLimited: true);
-
-                Console.WriteLine($"[LoadBalancedChatModel] Provider '{selection.ProviderId}' rate limited (429). " +
-                                $"Attempting with another provider...");
-
-                // Continue to next provider immediately
-                continue;
-            }
-            catch (Exception ex)
-            {
-                sw.Stop();
-
-                // Record failed execution
-                _loadBalancer.RecordExecution(
-                    selection.ProviderId,
-                    sw.Elapsed.TotalMilliseconds,
-                    success: false,
-                    wasRateLimited: false);
-
-                Console.WriteLine($"[LoadBalancedChatModel] Provider '{selection.ProviderId}' failed: {ex.Message}");
-
-                if (attempt >= maxRetries)
+                try
                 {
-                    return $"[load-balanced-error] All retries exhausted after attempting: {string.Join(", ", attemptedProviders)}";
-                }
+                    string result = await selection.Provider.GenerateTextAsync(prompt, ct);
+                    sw.Stop();
 
-                // Wait before retry
-                await Task.Delay(TimeSpan.FromSeconds(1), ct);
-            }
+                    // Record successful execution
+                    _loadBalancer.RecordExecution(
+                        selection.ProviderId,
+                        sw.Elapsed.TotalMilliseconds,
+                        success: true,
+                        wasRateLimited: false);
+
+                    Console.WriteLine($"[LoadBalancedChatModel] Success with provider '{selection.ProviderId}' " +
+                                    $"in {sw.Elapsed.TotalMilliseconds:F0}ms");
+
+                    return result;
+                }
+                catch (HttpRequestException ex) when (IsRateLimitError(ex))
+                {
+                    sw.Stop();
+
+                    // Record rate limited execution
+                    _loadBalancer.RecordExecution(
+                        selection.ProviderId,
+                        sw.Elapsed.TotalMilliseconds,
+                        success: false,
+                        wasRateLimited: true);
+
+                    Console.WriteLine($"[LoadBalancedChatModel] Provider '{selection.ProviderId}' rate limited (429). " +
+                                    $"Attempting with another provider...");
+
+                    // Re-throw to trigger Polly retry with exponential backoff
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    sw.Stop();
+
+                    // Record failed execution
+                    _loadBalancer.RecordExecution(
+                        selection.ProviderId,
+                        sw.Elapsed.TotalMilliseconds,
+                        success: false,
+                        wasRateLimited: false);
+
+                    Console.WriteLine($"[LoadBalancedChatModel] Provider '{selection.ProviderId}' failed: {ex.Message}");
+
+                    // Re-throw to trigger Polly retry
+                    throw;
+                }
+            }).ConfigureAwait(false);
         }
-
-        return $"[load-balanced-error] Maximum retries exceeded";
+        catch (Exception ex)
+        {
+            // All retries exhausted - return error message for graceful degradation
+            Console.WriteLine($"[LoadBalancedChatModel] All retries exhausted: {ex.Message}");
+            
+            string providersAttempted = attemptedProviders.Count > 0 
+                ? $"Attempted: {string.Join(", ", attemptedProviders)}" 
+                : "No providers could be selected";
+            
+            return $"[load-balanced-error] All providers exhausted. {providersAttempted}. Error: {ex.Message}";
+        }
     }
 
     /// <summary>

@@ -1,10 +1,10 @@
 # Provider Load Balancing
 
-Comprehensive load balancing and provider rotation system to handle rate limiting (HTTP 429), improve reliability, and optimize performance through intelligent provider distribution.
+Comprehensive load balancing and provider rotation system to handle rate limiting (HTTP 429), improve reliability, and optimize performance through intelligent provider distribution. Uses **Polly** for resilient retry logic with exponential backoff.
 
 ## Overview
 
-The Provider Load Balancing system automatically distributes requests across multiple provider instances, handling rate limits gracefully and maintaining high availability even when individual providers become unavailable.
+The Provider Load Balancing system automatically distributes requests across multiple provider instances, handling rate limits gracefully and maintaining high availability even when individual providers become unavailable. Built on top of Polly's battle-tested resilience patterns.
 
 ## Key Features
 
@@ -12,7 +12,7 @@ The Provider Load Balancing system automatically distributes requests across mul
 - ✅ **Circuit Breaker**: Marks providers unhealthy after consecutive failures
 - ✅ **Multiple Strategies**: RoundRobin, WeightedRandom, LeastLatency, AdaptiveHealth
 - ✅ **Health Tracking**: Real-time metrics for latency, success rates, and availability
-- ✅ **Exponential Backoff**: Increases cooldown duration for repeated rate limits
+- ✅ **Polly Integration**: Exponential backoff retry policies (1s, 2s, 4s intervals)
 - ✅ **Automatic Recovery**: Providers automatically recover after cooldown expires
 
 ## Quick Start
@@ -109,12 +109,12 @@ var model = new LoadBalancedChatModel(ProviderRotationStrategy.AdaptiveHealth);
 
 ## Rate Limit Handling
 
-The system automatically detects and handles HTTP 429 (Too Many Requests) errors:
+The system automatically detects and handles HTTP 429 (Too Many Requests) errors using Polly's resilient retry policies:
 
 1. **Detection**: Recognizes 429 status codes in HTTP exceptions
 2. **Cooldown**: Applies 60-second cooldown period to rate-limited provider
 3. **Failover**: Immediately routes requests to healthy providers
-4. **Exponential Backoff**: Doubles cooldown for repeated rate limits
+4. **Polly Retry**: Uses exponential backoff (1s, 2s, 4s) for provider rotation
 5. **Recovery**: Automatically restores provider after cooldown expires
 
 ```csharp
@@ -291,15 +291,47 @@ if (result.Contains("[load-balanced-error]"))
 - Provider selection adds ~1-5ms overhead
 - Health checks are performed in-memory (no I/O)
 - Metrics use exponential moving averages for efficiency
+- Polly retry adds backoff delays: 1s, 2s, 4s (total ~7s on complete failure)
 
 ### Memory Usage
 - Each provider: ~1KB for health metrics
 - Total overhead: ~100KB for 100 providers
+- Polly policies: Negligible memory footprint
 
 ### Concurrency
 - Thread-safe using `ConcurrentDictionary`
 - No locking on request path (lock-free reads)
 - Selection operations are atomic
+- Polly retry policies are thread-safe
+
+## Polly Integration
+
+The load balancer uses **Polly** (version 8.5.0) for resilient retry logic:
+
+### Retry Policy Configuration
+
+```csharp
+// Automatic exponential backoff: 1s, 2s, 4s
+Policy
+    .Handle<HttpRequestException>(ex => IsRateLimitError(ex))
+    .Or<InvalidOperationException>(ex => ex.Message.Contains("No healthy providers"))
+    .WaitAndRetryAsync(
+        retryCount: 3,
+        sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt - 1)));
+```
+
+### Handled Scenarios
+
+- **HTTP 429 (Too Many Requests)**: Triggers immediate provider rotation with retry
+- **Provider Selection Failure**: Retries provider selection with backoff
+- **General Exceptions**: Caught and logged, triggers provider health tracking
+
+### Benefits
+
+- **Battle-tested**: Polly is production-proven across thousands of applications
+- **Configurable**: Retry counts and backoff strategies can be customized
+- **Observable**: Built-in logging on each retry attempt
+- **Composable**: Can be combined with other Polly policies (circuit breaker, timeout)
 
 ## Troubleshooting
 
