@@ -399,7 +399,17 @@ public sealed class VoiceModeService : IDisposable
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .Take(1)
             .Timeout(TimeSpan.FromMinutes(5))
-            .Finally(() => cts.Cancel());
+            .Finally(() =>
+            {
+                try
+                {
+                    cts.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // CTS already disposed - safe to ignore
+                }
+            });
 
         try
         {
