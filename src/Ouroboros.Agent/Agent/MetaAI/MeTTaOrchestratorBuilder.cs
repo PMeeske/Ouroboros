@@ -2,14 +2,17 @@
 // ==========================================================
 // MeTTa Orchestrator v3.0 Builder
 // Fluent builder for creating v3.0 orchestrator instances
+// Now with Laws of Form integration for distinction-gated reasoning
 // ==========================================================
 
+using Ouroboros.Core.Hyperon;
 using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Fluent builder for creating MeTTa-first Orchestrator v3.0 instances.
+/// Supports Laws of Form integration for distinction-gated symbolic reasoning.
 /// </summary>
 public sealed class MeTTaOrchestratorBuilder
 {
@@ -20,6 +23,8 @@ public sealed class MeTTaOrchestratorBuilder
     private IUncertaintyRouter? _router;
     private ISafetyGuard? _safety;
     private IMeTTaEngine? _mettaEngine;
+    private FormMeTTaBridge? _formBridge;
+    private bool _enableFormReasoning;
 
     /// <summary>
     /// Sets the language model for the orchestrator.
@@ -86,6 +91,34 @@ public sealed class MeTTaOrchestratorBuilder
     }
 
     /// <summary>
+    /// Enables Laws of Form reasoning with an existing FormMeTTaBridge.
+    /// </summary>
+    /// <param name="bridge">The FormMeTTaBridge instance to use.</param>
+    /// <returns>This builder for chaining.</returns>
+    public MeTTaOrchestratorBuilder WithFormReasoning(FormMeTTaBridge bridge)
+    {
+        _formBridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
+        _enableFormReasoning = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Enables Laws of Form reasoning, creating a new FormMeTTaBridge.
+    /// The bridge will be created during Build() using the MeTTa engine's AtomSpace.
+    /// </summary>
+    /// <returns>This builder for chaining.</returns>
+    public MeTTaOrchestratorBuilder WithFormReasoning()
+    {
+        _enableFormReasoning = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Gets whether Laws of Form reasoning is enabled.
+    /// </summary>
+    public bool FormReasoningEnabled => _enableFormReasoning;
+
+    /// <summary>
     /// Builds the MeTTa Orchestrator v3.0 instance.
     /// </summary>
     /// <returns>Configured MeTTaOrchestrator instance.</returns>
@@ -118,6 +151,32 @@ public sealed class MeTTaOrchestratorBuilder
             tools = tools.WithMeTTaTools(mettaEngine);
         }
 
+        // Initialize Laws of Form bridge if enabled
+        FormMeTTaBridge? formBridge = _formBridge;
+        if (_enableFormReasoning && formBridge == null)
+        {
+            // Create FormMeTTaBridge from HyperonMeTTaEngine if available
+            if (mettaEngine is HyperonMeTTaEngine hyperonEngine)
+            {
+                formBridge = new FormMeTTaBridge(hyperonEngine.AtomSpace);
+            }
+            else
+            {
+                // Create with a new AtomSpace for non-Hyperon engines
+                formBridge = new FormMeTTaBridge(new AtomSpace());
+            }
+        }
+
+        // Add Laws of Form tools if bridge is available
+        if (formBridge != null)
+        {
+            bool hasLofTools = tools.All.Any(t => t.Name.StartsWith("lof_"));
+            if (!hasLofTools)
+            {
+                tools = tools.WithFormReasoningTools(formBridge);
+            }
+        }
+
         return new MeTTaOrchestrator(
             _llm,
             tools,
@@ -125,7 +184,8 @@ public sealed class MeTTaOrchestratorBuilder
             _skills,
             _router,
             _safety,
-            mettaEngine
+            mettaEngine,
+            formBridge
         );
     }
 

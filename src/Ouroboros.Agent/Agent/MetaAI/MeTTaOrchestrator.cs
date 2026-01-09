@@ -2,10 +2,13 @@
 // ==========================================================
 // Meta-AI Layer v3.0 - MeTTa-First Orchestrator
 // Integrates symbolic reasoning with neural planning
+// Now with Laws of Form integration for distinction-gated reasoning
 // ==========================================================
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using Ouroboros.Core.Hyperon;
+using Ouroboros.Core.LawsOfForm;
 using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Agent.MetaAI;
@@ -13,6 +16,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// <summary>
 /// Meta-AI v3.0 orchestrator with MeTTa-first representation layer.
 /// Mirrors all orchestration concepts as MeTTa atoms and uses symbolic reasoning for next-node selection.
+/// Supports Laws of Form integration for distinction-gated inference.
 /// </summary>
 public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 {
@@ -24,7 +28,18 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     private readonly ISafetyGuard _safety;
     private readonly IMeTTaEngine _mettaEngine;
     private readonly MeTTaRepresentation _representation;
+    private readonly FormMeTTaBridge? _formBridge;
     private readonly ConcurrentDictionary<string, PerformanceMetrics> _metrics = new();
+
+    /// <summary>
+    /// Gets the Laws of Form bridge if enabled.
+    /// </summary>
+    public FormMeTTaBridge? FormBridge => _formBridge;
+
+    /// <summary>
+    /// Gets whether Laws of Form reasoning is enabled.
+    /// </summary>
+    public bool FormReasoningEnabled => _formBridge != null;
 
     public MeTTaOrchestrator(
         IChatCompletionModel llm,
@@ -33,7 +48,8 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         ISkillRegistry skills,
         IUncertaintyRouter router,
         ISafetyGuard safety,
-        IMeTTaEngine mettaEngine)
+        IMeTTaEngine mettaEngine,
+        FormMeTTaBridge? formBridge = null)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _tools = tools ?? throw new ArgumentNullException(nameof(tools));
@@ -42,7 +58,51 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         _router = router ?? throw new ArgumentNullException(nameof(router));
         _safety = safety ?? throw new ArgumentNullException(nameof(safety));
         _mettaEngine = mettaEngine ?? throw new ArgumentNullException(nameof(mettaEngine));
-        _representation = new MeTTaRepresentation(mettaEngine);
+        _representation = new MeTTaRepresentation(mettaEngine, formBridge);
+        _formBridge = formBridge;
+
+        // Subscribe to form reasoning events if bridge is available
+        if (_formBridge != null)
+        {
+            _formBridge.DistinctionChanged += OnDistinctionChanged;
+            _formBridge.TruthValueEvaluated += OnTruthValueEvaluated;
+        }
+    }
+
+    private void OnDistinctionChanged(object? sender, DistinctionEventArgs e)
+    {
+        // Track distinction events for metrics
+        RecordMetric($"form_distinction_{e.EventType}", 1.0, true);
+    }
+
+    private void OnTruthValueEvaluated(object? sender, TruthValueEventArgs e)
+    {
+        // Track certainty evaluations
+        string certainty = e.TruthValue.IsMarked() ? "certain" : e.TruthValue.IsVoid() ? "negated" : "uncertain";
+        RecordMetric($"form_certainty_{certainty}", 1.0, true);
+    }
+
+    /// <summary>
+    /// Draws a distinction in the given context (requires FormBridge).
+    /// </summary>
+    /// <param name="context">The context name.</param>
+    /// <returns>The resulting form, or null if FormBridge not available.</returns>
+    public Form? DrawDistinction(string context)
+    {
+        return _formBridge?.DrawDistinction(context);
+    }
+
+    /// <summary>
+    /// Evaluates whether a step should proceed based on distinction certainty.
+    /// </summary>
+    /// <param name="context">The distinction context to check.</param>
+    /// <returns>True if the distinction is marked (certain), false otherwise.</returns>
+    public bool IsDistinctionCertain(string context)
+    {
+        if (_formBridge == null) return true; // No form reasoning = always proceed
+
+        var form = _formBridge.EvaluateTruthValue(Atom.Sym(context));
+        return form.IsMarked();
     }
 
     /// <summary>

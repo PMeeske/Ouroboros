@@ -2,9 +2,12 @@
 // ==========================================================
 // Meta-AI Layer v3.0 - MeTTa-First Representation Layer
 // Translates orchestrator concepts to MeTTa symbolic atoms
+// Now with Laws of Form integration for certainty tracking
 // ==========================================================
 
 using System.Text;
+using Ouroboros.Core.Hyperon;
+using Ouroboros.Core.LawsOfForm;
 using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Agent.MetaAI;
@@ -12,19 +15,68 @@ namespace Ouroboros.Agent.MetaAI;
 /// <summary>
 /// Translates orchestrator concepts (plans, steps, tools, state) into MeTTa symbolic representation.
 /// Enables symbolic reasoning over orchestration flow.
+/// Supports Laws of Form integration for distinction-gated planning.
 /// </summary>
 public sealed class MeTTaRepresentation
 {
     private readonly IMeTTaEngine _engine;
+    private readonly FormMeTTaBridge? _formBridge;
     private readonly Dictionary<string, string> _stateAtoms = new();
+    private readonly Dictionary<string, Form> _stepCertainty = new();
 
-    public MeTTaRepresentation(IMeTTaEngine engine)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MeTTaRepresentation"/> class.
+    /// </summary>
+    /// <param name="engine">The MeTTa engine.</param>
+    /// <param name="formBridge">Optional Laws of Form bridge for certainty tracking.</param>
+    public MeTTaRepresentation(IMeTTaEngine engine, FormMeTTaBridge? formBridge = null)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        _formBridge = formBridge;
+    }
+
+    /// <summary>
+    /// Gets whether Laws of Form reasoning is available.
+    /// </summary>
+    public bool FormReasoningEnabled => _formBridge != null;
+
+    /// <summary>
+    /// Gets the certainty (Form) for a step if tracked.
+    /// </summary>
+    /// <param name="stepId">The step identifier.</param>
+    /// <returns>The Form representing certainty, or null if not tracked.</returns>
+    public Form? GetStepCertainty(string stepId)
+    {
+        return _stepCertainty.TryGetValue(stepId, out var form) ? form : null;
+    }
+
+    /// <summary>
+    /// Marks a step as certain (draws a distinction).
+    /// </summary>
+    /// <param name="stepId">The step identifier.</param>
+    /// <returns>The resulting Form.</returns>
+    public Form MarkStepCertain(string stepId)
+    {
+        var form = _formBridge?.DrawDistinction(stepId) ?? Form.Mark;
+        _stepCertainty[stepId] = form;
+        return form;
+    }
+
+    /// <summary>
+    /// Marks a step as uncertain (creates re-entry/imaginary state).
+    /// </summary>
+    /// <param name="stepId">The step identifier.</param>
+    /// <returns>The resulting Form.</returns>
+    public Form MarkStepUncertain(string stepId)
+    {
+        var form = _formBridge?.CreateReEntry(stepId) ?? Form.Imaginary;
+        _stepCertainty[stepId] = form;
+        return form;
     }
 
     /// <summary>
     /// Translates a plan into MeTTa atoms and adds them to the knowledge base.
+    /// If FormBridge is available, also tracks certainty for each step.
     /// </summary>
     public async Task<Result<Unit, string>> TranslatePlanAsync(Plan plan, CancellationToken ct = default)
     {
@@ -45,6 +97,27 @@ public sealed class MeTTaRepresentation
                 sb.AppendLine($"(step {planId} {stepId} {i} \"{EscapeMeTTa(step.Action)}\")");
                 sb.AppendLine($"(expected {stepId} \"{EscapeMeTTa(step.ExpectedOutcome)}\")");
                 sb.AppendLine($"(confidence {stepId} {step.ConfidenceScore:F2})");
+
+                // Track certainty using Laws of Form if available
+                if (_formBridge != null)
+                {
+                    // High confidence (>= 0.8) = Mark (certain), low confidence = Imaginary (uncertain)
+                    if (step.ConfidenceScore >= 0.8)
+                    {
+                        MarkStepCertain(stepId);
+                        sb.AppendLine($"(certainty {stepId} Mark)");
+                    }
+                    else if (step.ConfidenceScore <= 0.2)
+                    {
+                        _stepCertainty[stepId] = Form.Void; // Negated/unlikely
+                        sb.AppendLine($"(certainty {stepId} Void)");
+                    }
+                    else
+                    {
+                        MarkStepUncertain(stepId);
+                        sb.AppendLine($"(certainty {stepId} Imaginary)");
+                    }
+                }
 
                 // Add step parameters
                 foreach (KeyValuePair<string, object> param in step.Parameters)
@@ -173,8 +246,8 @@ public sealed class MeTTaRepresentation
         try
         {
             // Build query to find valid next nodes
-            string query = $@"!(match &self 
-                (and 
+            string query = $@"!(match &self
+                (and
                     (step $plan {currentStepId} $order $action)
                     (step $plan $next-step $next-order $next-action)
                     (> $next-order $order)
@@ -215,8 +288,8 @@ public sealed class MeTTaRepresentation
         string goal,
         CancellationToken ct = default)
     {
-        string query = $@"!(match &self 
-            (and 
+        string query = $@"!(match &self
+            (and
                 (goal $plan ""{EscapeMeTTa(goal)}"")
                 (capability $tool $cap)
             )

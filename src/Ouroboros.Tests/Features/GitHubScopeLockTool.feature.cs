@@ -39,8 +39,8 @@ namespace Ouroboros.Features
         public static async System.Threading.Tasks.Task FeatureSetupAsync()
         {
             testRunner = TechTalk.SpecFlow.TestRunnerManager.GetTestRunnerForAssembly(null, TechTalk.SpecFlow.xUnit.SpecFlowPlugin.XUnitParallelWorkerTracker.Instance.GetWorkerId());
-            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "GitHub Scope Lock Tool", "    As a developer\n    I want to use the GitHub Scope Lock Tool\n    So that I can" +
-                    " manage scope-locked issues in GitHub", ProgrammingLanguage.CSharp, featureTags);
+            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "GitHub Scope Lock Tool", "    As a developer\r\n    I want to use the GitHub Scope Lock Tool\r\n    So that I c" +
+                    "an manage scope-locked issues in GitHub", ProgrammingLanguage.CSharp, featureTags);
             await testRunner.OnFeatureStartAsync(featureInfo);
         }
         
