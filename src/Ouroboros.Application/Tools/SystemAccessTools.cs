@@ -972,11 +972,11 @@ public static class SystemAccessTools
 
                 if (results.Count == 0)
                 {
-                    return Result<string, string>.Success($"I couldn't find code related to '{query}' in my indexed source. Try 'reindex' first, or ask about something else.");
+                    return Result<string, string>.Success($"I couldn't find code related to '{query}' in my indexed source.");
                 }
 
                 var sb = new StringBuilder();
-                sb.AppendLine($"🔍 **Introspecting my code for: {query}**\n");
+                sb.AppendLine($"Found {results.Count} relevant files for '{query}':\n");
 
                 foreach (var result in results)
                 {
@@ -987,22 +987,41 @@ public static class SystemAccessTools
                     }
                     catch { }
 
-                    sb.AppendLine($"📂 **{relativePath}** (relevance: {result.Score:P0})");
-                    sb.AppendLine("```");
-                    sb.AppendLine(result.Content.Trim());
-                    sb.AppendLine("```");
-                    sb.AppendLine();
+                    // Extract a brief summary (first meaningful line or truncated content)
+                    string summary = ExtractBriefSummary(result.Content, 80);
+                    sb.AppendLine($"• **{relativePath}** ({result.Score:P0}) - {summary}");
                 }
 
-                sb.AppendLine("---");
-                sb.AppendLine("_This is my actual source code. I can read and understand my own implementation._");
-
-                return Result<string, string>.Success(sb.ToString());
+                return Result<string, string>.Success(sb.ToString().Trim());
             }
             catch (Exception ex)
             {
                 return Result<string, string>.Failure($"Code introspection failed: {ex.Message}");
             }
+        }
+
+        private static string ExtractBriefSummary(string content, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+                return "empty";
+
+            // Find first non-empty, non-comment line
+            var lines = content.Split('\n')
+                .Select(l => l.Trim())
+                .Where(l => !string.IsNullOrWhiteSpace(l) &&
+                           !l.StartsWith("//") &&
+                           !l.StartsWith("/*") &&
+                           !l.StartsWith("*") &&
+                           !l.StartsWith("#") &&
+                           !l.StartsWith("using ") &&
+                           !l.StartsWith("namespace "));
+
+            string firstLine = lines.FirstOrDefault() ?? content.Trim();
+
+            if (firstLine.Length > maxLength)
+                return firstLine[..maxLength] + "...";
+
+            return firstLine;
         }
     }
 

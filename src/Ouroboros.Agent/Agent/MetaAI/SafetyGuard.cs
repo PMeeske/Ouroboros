@@ -211,6 +211,13 @@ public sealed class SafetyGuard : ISafetyGuard
             "File write operations",
             PermissionLevel.UserDataWithConfirmation,
             new List<string> { "write_file", "save_file" }));
+
+        // Ouroboros's own memory admin - safe for self-management
+        RegisterPermission(new Permission(
+            "qdrant_admin",
+            "Qdrant vector database administration",
+            PermissionLevel.UserData,
+            new List<string> { "status", "diagnose", "fix", "compact", "stats", "collections", "compress" }));
     }
 
     private bool ContainsDangerousPatterns(string operation, Dictionary<string, object> parameters)

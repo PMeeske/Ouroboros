@@ -47,6 +47,36 @@ public class ThoughtPersistenceService
     }
 
     /// <summary>
+    /// Creates a service with Qdrant neuro-symbolic storage.
+    /// Thoughts are persisted as embeddings with symbolic relations forming a knowledge graph.
+    /// </summary>
+    /// <param name="sessionId">Session identifier.</param>
+    /// <param name="qdrantEndpoint">Qdrant gRPC endpoint (default: http://localhost:6334).</param>
+    /// <param name="embeddingFunc">Function to generate embeddings (optional, enables semantic search).</param>
+    /// <param name="vectorSize">Embedding dimension (default: 768 for nomic-embed-text).</param>
+    public static async Task<ThoughtPersistenceService> CreateWithQdrantAsync(
+        string sessionId,
+        string qdrantEndpoint = "http://localhost:6334",
+        Func<string, Task<float[]>>? embeddingFunc = null,
+        int vectorSize = 768)
+    {
+        var config = new QdrantNeuroSymbolicConfig(
+            Endpoint: qdrantEndpoint,
+            VectorSize: vectorSize);
+        var store = new QdrantNeuroSymbolicThoughtStore(config, embeddingFunc);
+        await store.InitializeAsync();
+        return new ThoughtPersistenceService(store, sessionId);
+    }
+
+    /// <summary>
+    /// Gets the underlying store if it's a neuro-symbolic store (for advanced operations).
+    /// </summary>
+    public QdrantNeuroSymbolicThoughtStore? AsNeuroSymbolicStore()
+    {
+        return _store as QdrantNeuroSymbolicThoughtStore;
+    }
+
+    /// <summary>
     /// Saves a thought to persistent storage.
     /// </summary>
     /// <param name="thought">The thought to save.</param>

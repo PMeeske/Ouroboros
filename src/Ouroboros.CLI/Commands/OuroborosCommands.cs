@@ -1,4 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+using Microsoft.Extensions.Configuration;
+using Ouroboros.Application.Tools;
 using Ouroboros.Options;
 
 namespace Ouroboros.CLI.Commands;
@@ -13,6 +15,22 @@ public static class OuroborosCommands
     /// </summary>
     public static async Task RunOuroborosAsync(OuroborosOptions opts)
     {
+        // Load configuration (includes user secrets in Development)
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production"}.json", optional: true)
+            .AddUserSecrets<OuroborosAgent>(optional: true)
+            .AddEnvironmentVariables()
+            .Build();
+
+        // Set configuration for API key provider (used by Firecrawl, etc.)
+        ApiKeyProvider.SetConfiguration(configuration);
+
+        // Set configuration for Azure Speech TTS
+        OuroborosAgent.SetConfiguration(configuration);
+        VoiceModeService.SetConfiguration(configuration);
+
         // Clear console safely (may fail when output is redirected)
         try
         {
@@ -41,9 +59,12 @@ public static class OuroborosCommands
                 EmbedEndpoint: opts.EmbedEndpoint,
                 QdrantEndpoint: opts.QdrantEndpoint,
                 ApiKey: opts.ApiKey ?? Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY"),
-                Voice: opts.Voice && !opts.TextOnly,
+                // Voice is disabled in push/yolo mode by default unless --push-voice is used
+                Voice: (opts.Push || opts.Yolo) ? opts.PushVoice : (opts.Voice && !opts.TextOnly),
                 VoiceOnly: opts.VoiceOnly,
                 LocalTts: opts.LocalTts,
+                VoiceChannel: opts.VoiceChannel,
+                Listen: opts.Listen,
                 Debug: opts.Debug,
                 Temperature: opts.Temperature,
                 MaxTokens: opts.MaxTokens,
@@ -54,6 +75,12 @@ public static class OuroborosCommands
                 EnablePersonality: !opts.NoPersonality,
                 EnableMind: !opts.NoMind,
                 EnableBrowser: !opts.NoBrowser,
+                // Autonomous/Push mode
+                EnablePush: opts.Push,
+                YoloMode: opts.Yolo,
+                AutoApproveCategories: opts.AutoApprove,
+                IntentionIntervalSeconds: opts.IntentionInterval,
+                DiscoveryIntervalSeconds: opts.DiscoveryInterval,
                 // Additional config
                 ThinkingIntervalSeconds: opts.ThinkingInterval,
                 AgentMaxSteps: opts.AgentMaxSteps,

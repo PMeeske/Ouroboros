@@ -271,10 +271,10 @@ public sealed class PersonalityEngine : IAsyncDisposable
 
         try
         {
-            // Sanitize and truncate inputs to prevent encoding issues
-            string safeUserMessage = SanitizeForEmbedding(userMessage, maxLength: 2000);
-            string safeAssistantResponse = SanitizeForEmbedding(assistantResponse, maxLength: 4000);
-            string safeTopic = SanitizeForEmbedding(topic ?? "general", maxLength: 200);
+            // Sanitize and truncate inputs to prevent encoding issues - use smaller limits
+            string safeUserMessage = SanitizeForEmbedding(userMessage, maxLength: 1000);
+            string safeAssistantResponse = SanitizeForEmbedding(assistantResponse, maxLength: 2000);
+            string safeTopic = SanitizeForEmbedding(topic ?? "general", maxLength: 100);
 
             var memory = new ConversationMemory(
                 Id: Guid.NewGuid(),
@@ -287,16 +287,22 @@ public sealed class PersonalityEngine : IAsyncDisposable
                 Keywords: ExtractKeywords(safeUserMessage + " " + safeAssistantResponse),
                 Timestamp: DateTime.UtcNow);
 
-            // Generate embedding for the conversation (truncate search text)
-            string searchText = SanitizeForEmbedding(memory.ToSearchText(), maxLength: 4000);
-            var embedding = await _embeddingModel.CreateEmbeddingsAsync(searchText);
+            // Generate embedding for the conversation (use smaller limit for embedding)
+            string searchText = SanitizeForEmbedding(memory.ToSearchText(), maxLength: 2000);
+
+            // The embedding adapter handles errors internally with fallback
+            float[] embedding = await _embeddingModel.CreateEmbeddingsAsync(searchText);
+
+            // Ensure payload values are clean UTF-8
+            string cleanUserMessage = CleanForPayload(safeUserMessage);
+            string cleanAssistantResponse = CleanForPayload(safeAssistantResponse);
 
             // Create payload
             var payload = new Dictionary<string, Qdrant.Client.Grpc.Value>
             {
                 ["persona_name"] = personaName,
-                ["user_message"] = safeUserMessage,
-                ["assistant_response"] = safeAssistantResponse,
+                ["user_message"] = cleanUserMessage,
+                ["assistant_response"] = cleanAssistantResponse,
                 ["topic"] = safeTopic,
                 ["mood"] = detectedMood ?? "neutral",
                 ["significance"] = significance,
@@ -357,6 +363,26 @@ public sealed class PersonalityEngine : IAsyncDisposable
         }
 
         return sanitized.ToString();
+    }
+
+    /// <summary>
+    /// Cleans text for Qdrant payload by ensuring valid UTF-8 encoding.
+    /// </summary>
+    private static string CleanForPayload(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+
+        // Convert to UTF-8 bytes and back to ensure valid encoding
+        try
+        {
+            var bytes = System.Text.Encoding.UTF8.GetBytes(text);
+            return System.Text.Encoding.UTF8.GetString(bytes);
+        }
+        catch
+        {
+            // If encoding fails, strip all non-ASCII
+            return new string(text.Where(c => c < 128).ToArray());
+        }
     }
 
     /// <summary>

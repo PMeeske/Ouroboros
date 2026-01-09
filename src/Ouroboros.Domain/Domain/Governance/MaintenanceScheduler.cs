@@ -40,6 +40,7 @@ public sealed class MaintenanceScheduler : IMaintenanceScheduler
             return Result<bool>.Failure("Scheduler is already running");
         }
 
+        _schedulerCts?.Dispose(); // Dispose any previous instance
         _schedulerCts = new CancellationTokenSource();
         _schedulerTask = RunSchedulerAsync(_schedulerCts.Token);
         

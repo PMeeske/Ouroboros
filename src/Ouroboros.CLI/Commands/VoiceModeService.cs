@@ -17,6 +17,7 @@ public sealed record VoiceModeConfig(
     bool VoiceOnly = false,
     bool LocalTts = true,
     bool VoiceLoop = true,
+    bool DisableStt = false,
     string Model = "llama3",
     string Endpoint = "http://localhost:11434",
     string EmbedModel = "nomic-embed-text",
@@ -37,6 +38,17 @@ public sealed record PersonaDefinition(
 /// </summary>
 public sealed class VoiceModeService : IDisposable
 {
+    // Static configuration for Azure credentials (set from OuroborosCommands)
+    private static Microsoft.Extensions.Configuration.IConfiguration? _staticConfiguration;
+
+    /// <summary>
+    /// Sets the configuration for Azure Speech credentials.
+    /// </summary>
+    public static void SetConfiguration(Microsoft.Extensions.Configuration.IConfiguration configuration)
+    {
+        _staticConfiguration = configuration;
+    }
+
     private static readonly Dictionary<string, PersonaDefinition> Personas = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Ouroboros"] = new("Ouroboros", "onyx",
@@ -68,6 +80,7 @@ public sealed class VoiceModeService : IDisposable
 
     private ITextToSpeechService? _ttsService;
     private LocalWindowsTtsService? _localTts;
+    private AzureNeuralTtsService? _azureTts;
     private ISpeechToTextService? _sttService;
     private AdaptiveSpeechDetector? _speechDetector;
 
@@ -132,8 +145,29 @@ public sealed class VoiceModeService : IDisposable
             AdaptationRate: 0.015,
             SpeechToNoiseRatio: 2.0));
 
-        // Initialize TTS - prefer local for offline operation
-        if (_config.LocalTts && hasLocalTts)
+        // Initialize TTS - prefer Azure Neural TTS, then local SAPI, then OpenAI
+        // Check user secrets (via static configuration) first, then environment variables
+        var azureKey = _staticConfiguration?["Azure:Speech:Key"]
+            ?? Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY");
+        var azureRegion = _staticConfiguration?["Azure:Speech:Region"]
+            ?? Environment.GetEnvironmentVariable("AZURE_SPEECH_REGION");
+        bool hasAzureTts = !string.IsNullOrEmpty(azureKey) && !string.IsNullOrEmpty(azureRegion);
+
+        if (hasAzureTts)
+        {
+            try
+            {
+                _azureTts = new AzureNeuralTtsService(azureKey!, azureRegion!, _persona.Name);
+                _ttsService = _azureTts;
+                Console.WriteLine($"  [OK] TTS initialized (Azure Neural - Jenny/Cortana-like)");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  [!] Azure TTS failed: {ex.Message}");
+            }
+        }
+
+        if (_ttsService == null && _config.LocalTts && hasLocalTts)
         {
             try
             {
@@ -170,7 +204,11 @@ public sealed class VoiceModeService : IDisposable
         // 1. Whisper.net native (auto-downloads model if needed)
         // 2. Local Whisper CLI
         // 3. OpenAI Whisper API
-        try
+        if (_config.DisableStt)
+        {
+            Console.WriteLine("  [STT] Disabled (use --listen for Azure speech recognition)");
+        }
+        else try
         {
             Console.WriteLine("  [STT] Initializing speech-to-text...");
 
@@ -222,11 +260,31 @@ public sealed class VoiceModeService : IDisposable
 
     /// <summary>
     /// Speaks text using TTS with console output.
+    /// Uses Rx-based SpeechQueue for proper serialization with VoiceSideChannel.
     /// </summary>
     public async Task SayAsync(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
 
+        // Sanitize for TTS
+        string sanitized = SanitizeForTts(text);
+        if (string.IsNullOrWhiteSpace(sanitized)) return;
+
+        // Initialize SpeechQueue with our TTS
+        Ouroboros.Domain.Autonomous.SpeechQueue.Instance.SetSynthesizer(async (t, p, ct) =>
+        {
+            await SpeakInternalAsync(t);
+        });
+
+        // Use Rx queue for proper serialization
+        await Ouroboros.Domain.Autonomous.SpeechQueue.Instance.EnqueueAndWaitAsync(sanitized, _persona.Name);
+    }
+
+    /// <summary>
+    /// Internal speech method - does the actual TTS work.
+    /// </summary>
+    private async Task SpeakInternalAsync(string sanitized)
+    {
         _isSpeaking = true;
         _speechDetector?.NotifySelfSpeechStarted();
 
@@ -237,15 +295,13 @@ public sealed class VoiceModeService : IDisposable
                 Console.Write($"  [>] {_persona.Name}: ");
             }
 
-            // Sanitize for TTS
-            string sanitized = SanitizeForTts(text);
-            if (string.IsNullOrWhiteSpace(sanitized))
+            // Priority: Azure Neural TTS > Local SAPI > Cloud TTS
+            if (_azureTts != null)
             {
-                if (!_config.VoiceOnly) Console.WriteLine();
-                return;
+                if (!_config.VoiceOnly) Console.WriteLine(sanitized);
+                await _azureTts.SpeakAsync(sanitized);
             }
-
-            if (_localTts != null)
+            else if (_localTts != null)
             {
                 await SpeakWithLocalTtsAsync(sanitized);
             }
@@ -399,7 +455,17 @@ public sealed class VoiceModeService : IDisposable
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .Take(1)
             .Timeout(TimeSpan.FromMinutes(5))
-            .Finally(() => cts.Cancel());
+            .Finally(() =>
+            {
+                try
+                {
+                    cts.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // CTS already disposed - safe to ignore
+                }
+            });
 
         try
         {
@@ -459,11 +525,26 @@ SPEAK NATURALLY:
 
     private static string SanitizeForTts(string text)
     {
-        var sanitized = System.Text.RegularExpressions.Regex.Replace(text, @"`[^`]*`", " ");
-        sanitized = System.Text.RegularExpressions.Regex.Replace(sanitized, @"```[\s\S]*?```", " ");
-        sanitized = sanitized.Replace("\"", "'").Replace("$", "").Replace("`", "'");
-        sanitized = System.Text.RegularExpressions.Regex.Replace(sanitized, @"[^\w\s.,!?;:'\-()]+", " ");
-        return System.Text.RegularExpressions.Regex.Replace(sanitized, @"\s+", " ").Trim();
+        // Remove code blocks and inline code
+        var sanitized = System.Text.RegularExpressions.Regex.Replace(text, @"```[\s\S]*?```", " ");
+        sanitized = System.Text.RegularExpressions.Regex.Replace(sanitized, @"`[^`]+`", " ");
+
+        // Remove emojis - keep only ASCII printable and extended Latin
+        var sb = new System.Text.StringBuilder();
+        foreach (var c in sanitized)
+        {
+            if ((c >= 32 && c <= 126) || (c >= 192 && c <= 255))
+            {
+                sb.Append(c);
+            }
+            else if (char.IsWhiteSpace(c))
+            {
+                sb.Append(' ');
+            }
+        }
+
+        // Normalize whitespace
+        return System.Text.RegularExpressions.Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
     }
 
     private async Task SpeakWithLocalTtsAsync(string text)

@@ -30,7 +30,9 @@ public static class PerceptionTools
     /// <summary>
     /// Event fired when screen content changes significantly.
     /// </summary>
+#pragma warning disable CS0067 // Event is used in conditional compilation
     public static event Action<string>? OnScreenChanged;
+#pragma warning restore CS0067
 
     /// <summary>
     /// Event fired when user activity is detected.
@@ -333,8 +335,10 @@ public static class PerceptionTools
         public string Description => "Start watching the screen for changes. Input JSON: {\"duration_seconds\": 60, \"interval_ms\": 1000, \"sensitivity\": 0.1}. Reports when significant screen changes occur.";
         public string? JsonSchema => """{"type":"object","properties":{"duration_seconds":{"type":"integer"},"interval_ms":{"type":"integer"},"sensitivity":{"type":"number"}}}""";
 
+#pragma warning disable CS0169, CS0414 // Field is used in conditional compilation
         private static CancellationTokenSource? _watchCts;
         private static bool _isWatching = false;
+#pragma warning restore CS0169, CS0414
 
         public async Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
         {
@@ -360,10 +364,13 @@ public static class PerceptionTools
                 if (_isWatching)
                 {
                     _watchCts?.Cancel();
+                    _watchCts?.Dispose();
+                    _watchCts = null;
                     _isWatching = false;
                     return Result<string, string>.Success("⏹️ Stopped screen watching.");
                 }
 
+                _watchCts?.Dispose(); // Dispose previous instance if any
                 _watchCts = new CancellationTokenSource();
                 _isWatching = true;
 
@@ -411,6 +418,9 @@ public static class PerceptionTools
                     finally
                     {
                         previousFrame?.Dispose();
+                        linkedCts.Dispose();
+                        _watchCts?.Dispose();
+                        _watchCts = null;
                         _isWatching = false;
                     }
                 }, linkedCts.Token);
@@ -481,10 +491,13 @@ public static class PerceptionTools
                 if (_isWatchingActivity)
                 {
                     _activityCts?.Cancel();
+                    _activityCts?.Dispose();
+                    _activityCts = null;
                     _isWatchingActivity = false;
                     return Result<string, string>.Success("⏹️ Stopped activity monitoring.");
                 }
 
+                _activityCts?.Dispose(); // Dispose previous instance if any
                 _activityCts = new CancellationTokenSource();
                 _isWatchingActivity = true;
                 var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _activityCts.Token);
@@ -540,6 +553,9 @@ public static class PerceptionTools
                     catch (OperationCanceledException) { }
                     finally
                     {
+                        linkedCts.Dispose();
+                        _activityCts?.Dispose();
+                        _activityCts = null;
                         _isWatchingActivity = false;
                     }
                 }, linkedCts.Token);
