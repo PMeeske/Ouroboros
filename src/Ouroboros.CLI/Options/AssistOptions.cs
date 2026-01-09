@@ -58,6 +58,9 @@ public class AssistOptions : BaseModelOptions, IVoiceOptions
     [Option("local-tts", Required = false, HelpText = "Prefer local TTS (Windows SAPI) over cloud", Default = true)]
     public bool LocalTts { get; set; } = true;
 
+    [Option("voice-channel", Required = false, HelpText = "Enable parallel voice side channel for persona-specific audio", Default = false)]
+    public bool VoiceChannel { get; set; }
+
     [Option("voice-loop", Required = false, HelpText = "Continue voice conversation after command", Default = false)]
     public bool VoiceLoop { get; set; }
 }

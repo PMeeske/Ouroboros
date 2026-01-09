@@ -1,5 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using Ouroboros.Agent.MetaAI;
+using MetaAIMemoryStatistics = Ouroboros.Agent.MetaAI.MemoryStatistics;
 
 namespace Ouroboros.Tools.MeTTa;
 
@@ -31,7 +32,7 @@ public sealed class MeTTaMemoryBridge
     {
         try
         {
-            MemoryStatistics stats = await _memory.GetStatisticsAsync();
+            MetaAIMemoryStatistics stats = await _memory.GetStatisticsAsync();
             List<Experience> experiences = new List<Experience>();
 
             // Retrieve all experiences (this is a simplified approach)

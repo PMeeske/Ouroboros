@@ -22,6 +22,7 @@ using Ouroboros.Application.Personality;
 using Ouroboros.Application.Services;
 using Ouroboros.Application.Tools;
 using Ouroboros.Tools.MeTTa;
+using static Ouroboros.Application.Tools.AutonomousTools;
 
 /// <summary>
 /// Unified immersive AI persona experience combining:
@@ -389,6 +390,61 @@ public static class ImmersiveMode
                 return result.Match(s => s, e => $"Error: {e}");
             }
             return "Tool not found";
+        };
+
+        // Sanitize raw outputs through LLM for natural language
+        _autonomousMind.SanitizeOutputFunction = async (rawOutput, token) =>
+        {
+            var model = _orchestratedModel ?? _baseModel;
+            if (model == null || string.IsNullOrWhiteSpace(rawOutput))
+                return rawOutput;
+
+            try
+            {
+                string prompt = $@"Summarize this in ONE brief, natural sentence (max 50 words). No markdown:
+{rawOutput}";
+
+                string sanitized = await model.GenerateTextAsync(prompt, token);
+                return string.IsNullOrWhiteSpace(sanitized) ? rawOutput : sanitized.Trim();
+            }
+            catch
+            {
+                return rawOutput;
+            }
+        };
+
+        // Wire up limitation-busting tools with LLM functions
+        VerifyClaimTool.SearchFunction = _autonomousMind.SearchFunction;
+        VerifyClaimTool.EvaluateFunction = async (prompt, token) =>
+        {
+            var model = _orchestratedModel ?? _baseModel;
+            return model != null ? await model.GenerateTextAsync(prompt, token) : "";
+        };
+        ReasoningChainTool.ReasonFunction = async (prompt, token) =>
+        {
+            var model = _orchestratedModel ?? _baseModel;
+            return model != null ? await model.GenerateTextAsync(prompt, token) : "";
+        };
+        ParallelToolsTool.ExecuteToolFunction = _autonomousMind.ExecuteToolFunction;
+        CompressContextTool.SummarizeFunction = async (prompt, token) =>
+        {
+            var model = _orchestratedModel ?? _baseModel;
+            return model != null ? await model.GenerateTextAsync(prompt, token) : "";
+        };
+        SelfDoubtTool.CritiqueFunction = async (prompt, token) =>
+        {
+            var model = _orchestratedModel ?? _baseModel;
+            return model != null ? await model.GenerateTextAsync(prompt, token) : "";
+        };
+        ParallelMeTTaThinkTool.OllamaFunction = async (prompt, token) =>
+        {
+            var model = _orchestratedModel ?? _baseModel;
+            return model != null ? await model.GenerateTextAsync(prompt, token) : "";
+        };
+        OuroborosMeTTaTool.OllamaFunction = async (prompt, token) =>
+        {
+            var model = _orchestratedModel ?? _baseModel;
+            return model != null ? await model.GenerateTextAsync(prompt, token) : "";
         };
 
         // Wire up autonomous mind events

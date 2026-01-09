@@ -279,7 +279,12 @@ CODE:
             $"Search the web using {searchProvider} and return results",
             async (query) =>
             {
-                using var http = new HttpClient();
+                // Use handler with automatic decompression
+                using var handler = new HttpClientHandler
+                {
+                    AutomaticDecompression = System.Net.DecompressionMethods.All
+                };
+                using var http = new HttpClient(handler);
 
                 // Configure realistic browser-like headers
                 ConfigureHumanLikeHeaders(http);
@@ -439,7 +444,12 @@ CODE:
                 // Simulate human typing/thinking delay
                 await SimulateHumanDelayAsync(200, 600);
 
-                using var http = new HttpClient();
+                // Use handler with automatic decompression
+                using var handler = new HttpClientHandler
+                {
+                    AutomaticDecompression = System.Net.DecompressionMethods.All
+                };
+                using var http = new HttpClient(handler);
                 ConfigureHumanLikeHeaders(http);
                 http.Timeout = TimeSpan.FromSeconds(30);
 
@@ -554,13 +564,39 @@ CODE:
                 // Simulate human-like delay before fetch
                 await SimulateHumanDelayAsync(200, 500);
 
-                using HttpClient http = new HttpClient();
+                // Use handler with automatic decompression for gzip/brotli responses
+                using var handler = new HttpClientHandler
+                {
+                    AutomaticDecompression = System.Net.DecompressionMethods.All
+                };
+                using HttpClient http = new HttpClient(handler);
                 ConfigureHumanLikeHeaders(http);
                 http.Timeout = TimeSpan.FromSeconds(30);
 
                 try
                 {
-                    string content = await http.GetStringAsync(parsedUri);
+                    var response = await http.GetAsync(parsedUri);
+                    response.EnsureSuccessStatusCode();
+
+                    // Read as bytes first, then decode as UTF-8 with fallback
+                    var bytes = await response.Content.ReadAsByteArrayAsync();
+                    string content;
+
+                    try
+                    {
+                        content = System.Text.Encoding.UTF8.GetString(bytes);
+                    }
+                    catch
+                    {
+                        // Fallback to Latin-1 if UTF-8 fails
+                        content = System.Text.Encoding.Latin1.GetString(bytes);
+                    }
+
+                    // Detect if content is still binary (not decompressed properly)
+                    if (IsBinaryContent(content))
+                    {
+                        return "Fetch failed: Response appears to be binary or corrupted. The server may have returned compressed content that couldn't be decoded.";
+                    }
 
                     // Basic HTML to text conversion
                     content = System.Text.RegularExpressions.Regex.Replace(content, @"<script[^>]*>[\s\S]*?</script>", "");
@@ -568,6 +604,9 @@ CODE:
                     content = System.Text.RegularExpressions.Regex.Replace(content, @"<[^>]+>", " ");
                     content = System.Text.RegularExpressions.Regex.Replace(content, @"\s+", " ");
                     content = System.Net.WebUtility.HtmlDecode(content);
+
+                    // Sanitize for embedding - remove non-printable characters
+                    content = SanitizeForStorage(content);
 
                     // Truncate if too long
                     return content.Length > 5000 ? content[..5000] + "..." : content;
@@ -577,6 +616,56 @@ CODE:
                     return $"Fetch failed: {ex.Message}";
                 }
             });
+    }
+
+    /// <summary>
+    /// Detects if content appears to be binary/compressed rather than text.
+    /// </summary>
+    private static bool IsBinaryContent(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return false;
+
+        // Check first 1000 chars for binary indicators
+        int checkLength = Math.Min(content.Length, 1000);
+        int nonPrintable = 0;
+
+        for (int i = 0; i < checkLength; i++)
+        {
+            char c = content[i];
+            // Count non-printable chars (excluding common whitespace)
+            if (c < 32 && c != '\t' && c != '\n' && c != '\r')
+                nonPrintable++;
+            // High rate of replacement chars indicates encoding issues
+            if (c == '\uFFFD')
+                nonPrintable++;
+        }
+
+        // If more than 10% is non-printable, likely binary
+        return nonPrintable > checkLength * 0.1;
+    }
+
+    /// <summary>
+    /// Sanitizes content for safe storage/embedding.
+    /// </summary>
+    private static string SanitizeForStorage(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return content;
+
+        var sb = new System.Text.StringBuilder(content.Length);
+        foreach (char c in content)
+        {
+            // Keep printable ASCII and common Unicode
+            if (c >= 32 && c < 127) // Basic ASCII
+                sb.Append(c);
+            else if (c == '\t' || c == '\n' || c == '\r') // Whitespace
+                sb.Append(c);
+            else if (c >= 160 && c < 0xFFFD) // Extended Unicode (but not replacement char)
+                sb.Append(c);
+            else
+                sb.Append(' '); // Replace problematic chars with space
+        }
+
+        return sb.ToString();
     }
 
     /// <summary>

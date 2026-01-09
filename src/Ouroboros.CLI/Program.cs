@@ -150,6 +150,7 @@ static async Task RunAssistAsync(AssistOptions o)
     if (!o.DslMode)
     {
         // Convert AssistOptions to OuroborosConfig for the unified agent
+        // Note: AssistOptions is deprecated - use 'ouroboros' command for full features including --push
         var config = new OuroborosConfig(
             Persona: o.Persona,
             Model: o.Model,
@@ -161,9 +162,12 @@ static async Task RunAssistAsync(AssistOptions o)
             Voice: o.Voice,
             VoiceOnly: o.VoiceOnly,
             LocalTts: o.LocalTts,
+            VoiceChannel: o.VoiceChannel,
             Debug: o.Debug,
             Temperature: o.Temperature,
-            MaxTokens: o.MaxTokens
+            MaxTokens: o.MaxTokens,
+            InitialGoal: o.Goal,
+            InitialDsl: o.Dsl
         );
 
         await using var agent = new OuroborosAgent(config);

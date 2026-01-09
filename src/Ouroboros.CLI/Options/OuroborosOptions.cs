@@ -34,6 +34,12 @@ public sealed class OuroborosOptions
     [Option("local-tts", Required = false, HelpText = "Prefer local TTS (Windows SAPI) over cloud", Default = true)]
     public bool LocalTts { get; set; } = true;
 
+    [Option("voice-channel", Required = false, HelpText = "Enable parallel voice side channel for persona-specific audio", Default = false)]
+    public bool VoiceChannel { get; set; }
+
+    [Option("listen", Required = false, HelpText = "Enable voice input (speech-to-text) on startup", Default = false)]
+    public bool Listen { get; set; }
+
     [Option("persona", Required = false, HelpText = "Persona: Ouroboros, Aria, Echo, Sage, Atlas", Default = "Ouroboros")]
     public string Persona { get; set; } = "Ouroboros";
 
@@ -96,6 +102,28 @@ public sealed class OuroborosOptions
 
     [Option("no-browser", Required = false, HelpText = "Disable Playwright browser automation", Default = false)]
     public bool NoBrowser { get; set; }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AUTONOMOUS/PUSH MODE (Ouroboros proposes actions for approval)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    [Option("push", Required = false, HelpText = "Enable push mode - Ouroboros proposes actions for your approval (defaults to text-only)", Default = false)]
+    public bool Push { get; set; }
+
+    [Option("push-voice", Required = false, HelpText = "Enable voice in push mode (by default push mode is text-only)", Default = false)]
+    public bool PushVoice { get; set; }
+
+    [Option("yolo", Required = false, HelpText = "YOLO mode - full autonomous operation, auto-approve ALL actions (use with caution!)", Default = false)]
+    public bool Yolo { get; set; }
+
+    [Option("auto-approve", Required = false, HelpText = "Auto-approve intention categories: safe,memory,analysis (comma-separated)", Default = "")]
+    public string AutoApprove { get; set; } = "";
+
+    [Option("intention-interval", Required = false, HelpText = "Seconds between autonomous intention proposals", Default = 45)]
+    public int IntentionInterval { get; set; } = 45;
+
+    [Option("discovery-interval", Required = false, HelpText = "Seconds between autonomous topic discovery", Default = 90)]
+    public int DiscoveryInterval { get; set; } = 90;
 
     // ═══════════════════════════════════════════════════════════════════════════
     // INITIAL TASK (Optional)

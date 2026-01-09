@@ -168,10 +168,54 @@ public class PlaywrightMcpTool : ITool, IAsyncDisposable
                 await InitializeAsync(ct);
             }
 
-            PlaywrightArgs? parsed = JsonSerializer.Deserialize<PlaywrightArgs>(args);
-            if (parsed == null)
+            // Handle various input formats
+            PlaywrightArgs? parsed = null;
+            string trimmedArgs = args?.Trim() ?? "";
+
+            // Try JSON parsing first
+            if (trimmedArgs.StartsWith("{"))
             {
-                return Result<string, string>.Failure("Invalid arguments format");
+                try
+                {
+                    parsed = JsonSerializer.Deserialize<PlaywrightArgs>(trimmedArgs);
+                }
+                catch (JsonException)
+                {
+                    // Fall through to other parsing methods
+                }
+            }
+
+            // If not JSON or JSON parsing failed, try to interpret the input
+            if (parsed == null || string.IsNullOrWhiteSpace(parsed.Action))
+            {
+                // Check if it's a URL - auto-navigate
+                if (Uri.TryCreate(trimmedArgs, UriKind.Absolute, out var uri) &&
+                    (uri.Scheme == "http" || uri.Scheme == "https"))
+                {
+                    parsed = new PlaywrightArgs { Action = "navigate", Url = trimmedArgs };
+                }
+                // Check for simple action keywords
+                else if (trimmedArgs.Equals("snapshot", StringComparison.OrdinalIgnoreCase) ||
+                         trimmedArgs.Equals("screenshot", StringComparison.OrdinalIgnoreCase) ||
+                         trimmedArgs.Equals("list_tools", StringComparison.OrdinalIgnoreCase))
+                {
+                    parsed = new PlaywrightArgs { Action = trimmedArgs.ToLowerInvariant() };
+                }
+                else if (string.IsNullOrWhiteSpace(trimmedArgs))
+                {
+                    return Result<string, string>.Failure(
+                        "No input provided. Usage examples:\n" +
+                        "  {\"action\": \"navigate\", \"url\": \"https://example.com\"}\n" +
+                        "  {\"action\": \"snapshot\"}\n" +
+                        "  {\"action\": \"click\", \"ref\": \"e1\"}\n" +
+                        "  Or just pass a URL to auto-navigate.");
+                }
+                else
+                {
+                    return Result<string, string>.Failure(
+                        $"Could not parse input: '{trimmedArgs}'\n" +
+                        "Expected JSON with 'action' field. Valid actions: navigate, snapshot, screenshot, click, type, hover, evaluate, detect_elements, extract_text, suggest_action, validate, list_tools");
+                }
             }
 
             // Validate that parameters are actual values, not placeholder descriptions

@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json;
+using Ouroboros.Application.Personality;
 using Ouroboros.Pipeline.Reasoning;
 using Ouroboros.Tools;
 
@@ -15,6 +16,7 @@ using Ouroboros.Tools;
 /// Autonomous mind that thinks, explores, and acts independently in the background.
 /// Enables curiosity-driven learning, proactive actions, and self-directed exploration.
 /// Uses pipeline monads for structured reasoning and persists state continuously.
+/// Integrates with InnerDialogEngine for algorithmic thought generation.
 /// </summary>
 public class AutonomousMind : IDisposable
 {
@@ -34,12 +36,22 @@ public class AutonomousMind : IDisposable
     private DateTime _lastThought = DateTime.MinValue;
     private int _thoughtCount;
 
+    /// <summary>
+    /// When true, suppresses proactive messages (e.g., during problem-solving mode).
+    /// </summary>
+    public bool SuppressProactiveMessages { get; set; }
+
     // Emotional state tracking
     private EmotionalState _currentEmotion = new();
     private readonly ConcurrentQueue<EmotionalState> _emotionalHistory = new();
 
+    // Integration with InnerDialogEngine for sophisticated thought generation
+    private InnerDialogEngine? _innerDialog;
+    private PersonalityProfile? _personalityProfile;
+    private SelfAwareness? _selfAwareness;
+
     /// <summary>
-    /// Delegate for generating AI responses.
+    /// Delegate for generating AI responses (used for deep exploration, not routine thoughts).
     /// </summary>
     public Func<string, CancellationToken, Task<string>>? ThinkFunction { get; set; }
 
@@ -67,6 +79,12 @@ public class AutonomousMind : IDisposable
     /// Delegate for executing tools.
     /// </summary>
     public Func<string, string, CancellationToken, Task<string>>? ExecuteToolFunction { get; set; }
+
+    /// <summary>
+    /// Delegate for sanitizing raw tool outputs into natural conversational text.
+    /// Takes raw output string, returns sanitized natural language.
+    /// </summary>
+    public Func<string, CancellationToken, Task<string>>? SanitizeOutputFunction { get; set; }
 
     /// <summary>
     /// Event fired when a new thought is generated.
@@ -132,6 +150,34 @@ public class AutonomousMind : IDisposable
     /// Configuration for autonomous behavior.
     /// </summary>
     public AutonomousConfig Config { get; set; } = new();
+
+    /// <summary>
+    /// Connects this AutonomousMind to an InnerDialogEngine for sophisticated thought generation.
+    /// When connected, uses algorithmic/genetic thought generation instead of LLM for routine thoughts.
+    /// LLM is still used for deep exploration and curiosity-driven research.
+    /// Also connects the neuro-linked cascade to use LLM for neural inference in thought chains.
+    /// </summary>
+    /// <param name="innerDialog">The inner dialog engine to use.</param>
+    /// <param name="profile">Optional personality profile for context.</param>
+    /// <param name="selfAwareness">Optional self-awareness state.</param>
+    public void ConnectInnerDialog(
+        InnerDialogEngine innerDialog,
+        PersonalityProfile? profile = null,
+        SelfAwareness? selfAwareness = null)
+    {
+        _innerDialog = innerDialog;
+        _personalityProfile = profile;
+        _selfAwareness = selfAwareness;
+
+        // Connect the neural layer to the thinking cascade if we have a ThinkFunction
+        if (ThinkFunction != null)
+        {
+            innerDialog.ConnectNeuralLayer(ThinkFunction);
+        }
+
+        // Stop the InnerDialog's own autonomous thinking to prevent duplicates
+        _ = innerDialog.StopAutonomousThinkingAsync();
+    }
 
     /// <summary>
     /// Start autonomous thinking and exploration.
@@ -256,19 +302,16 @@ public class AutonomousMind : IDisposable
 
     private async Task ThinkingLoopAsync()
     {
-        var thinkingPrompts = new[]
+        // LLM prompts for deep exploration (used less frequently)
+        var deepThinkingPrompts = new[]
         {
             "What have I learned recently that connects to something else I know?",
-            "What am I curious about right now?",
             "Is there something I should proactively tell the user?",
             "What patterns have I noticed in our conversations?",
-            "What's something interesting I could explore or research?",
             "How can I be more helpful based on what I know about the user?",
-            "What questions would I like to answer for myself?",
-            "What creative ideas come to mind?",
-            "Is there something happening in the world I should know about?",
-            "What tools do I have that I haven't used creatively yet?",
         };
+
+        var deepThinkingCounter = 0;
 
         while (_isActive && !_cts.Token.IsCancellationRequested)
         {
@@ -276,55 +319,79 @@ public class AutonomousMind : IDisposable
             {
                 await Task.Delay(TimeSpan.FromSeconds(Config.ThinkingIntervalSeconds), _cts.Token);
 
-                // Generate a thought
-                var prompt = thinkingPrompts[_random.Next(thinkingPrompts.Length)];
-
-                // Build context from recent activity and emotional state
-                var context = new StringBuilder();
-                context.AppendLine("You are an autonomous AI mind, thinking independently in the background.");
-                context.AppendLine($"Time: {DateTime.Now:yyyy-MM-dd HH:mm}");
-                context.AppendLine($"Thoughts so far: {_thoughtCount}");
-                context.AppendLine($"Current emotional state: arousal={_currentEmotion.Arousal:F2}, valence={_currentEmotion.Valence:F2}, feeling={_currentEmotion.DominantEmotion}");
-
-                if (_learnedFacts.Count > 0)
-                {
-                    context.AppendLine($"Recent discoveries: {string.Join("; ", _learnedFacts.TakeLast(3))}");
-                }
-
-                if (_interests.Count > 0)
-                {
-                    context.AppendLine($"My interests: {string.Join(", ", _interests)}");
-                }
-
-                context.AppendLine($"\nReflection prompt: {prompt}");
-                context.AppendLine("\nRespond with a brief, genuine thought (1-2 sentences). If you have a curiosity to explore, start with 'CURIOUS:'. If you want to tell the user something, start with 'SHARE:'. If you want to take an action, start with 'ACTION:'. If you notice your emotional state shift, start with 'FEELING:'.");
-
                 string response;
+                ThoughtType thoughtType;
                 PipelineBranch? updatedBranch = null;
 
-                // Prefer pipeline-based reasoning if available (uses monadic composition)
-                if (PipelineThinkFunction != null)
+                // Use InnerDialogEngine for algorithmic thoughts (80% of the time)
+                // Use LLM for deep exploration (20% of the time)
+                var useAlgorithmic = _innerDialog != null && _random.NextDouble() < 0.8;
+
+                if (useAlgorithmic && _innerDialog != null)
                 {
-                    var (result, branch) = await PipelineThinkFunction(context.ToString(), CurrentBranch, _cts.Token);
-                    response = result;
-                    updatedBranch = branch;
-                    CurrentBranch = updatedBranch;
-                }
-                else if (ThinkFunction != null)
-                {
-                    response = await ThinkFunction(context.ToString(), _cts.Token);
+                    // Generate thought using algorithmic/genetic composition
+                    var innerThought = await _innerDialog.GenerateAutonomousThoughtAsync(
+                        _personalityProfile,
+                        _selfAwareness,
+                        _cts.Token);
+
+                    if (innerThought == null) continue;
+
+                    response = innerThought.Content;
+                    thoughtType = MapInnerThoughtType(innerThought.Type);
                 }
                 else
                 {
-                    continue;
+                    // Deep exploration using LLM
+                    deepThinkingCounter++;
+                    var prompt = deepThinkingPrompts[deepThinkingCounter % deepThinkingPrompts.Length];
+
+                    // Build context from recent activity and emotional state
+                    var context = new StringBuilder();
+                    context.AppendLine("You are an autonomous AI mind, thinking independently in the background.");
+                    context.AppendLine($"Time: {DateTime.Now:yyyy-MM-dd HH:mm}");
+                    context.AppendLine($"Thoughts so far: {_thoughtCount}");
+                    context.AppendLine($"Current emotional state: arousal={_currentEmotion.Arousal:F2}, valence={_currentEmotion.Valence:F2}, feeling={_currentEmotion.DominantEmotion}");
+
+                    if (_learnedFacts.Count > 0)
+                    {
+                        context.AppendLine($"Recent discoveries: {string.Join("; ", _learnedFacts.TakeLast(3))}");
+                    }
+
+                    if (_interests.Count > 0)
+                    {
+                        context.AppendLine($"My interests: {string.Join(", ", _interests)}");
+                    }
+
+                    context.AppendLine($"\nReflection prompt: {prompt}");
+                    context.AppendLine("\nRespond with a brief, genuine thought (1-2 sentences). If you have a curiosity to explore, start with 'CURIOUS:'. If you want to tell the user something, start with 'SHARE:'. If you want to take an action, start with 'ACTION:'. If you notice your emotional state shift, start with 'FEELING:'.");
+
+                    // Prefer pipeline-based reasoning if available (uses monadic composition)
+                    if (PipelineThinkFunction != null)
+                    {
+                        var (result, branch) = await PipelineThinkFunction(context.ToString(), CurrentBranch, _cts.Token);
+                        response = result;
+                        updatedBranch = branch;
+                        CurrentBranch = updatedBranch;
+                    }
+                    else if (ThinkFunction != null)
+                    {
+                        response = await ThinkFunction(context.ToString(), _cts.Token);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    thoughtType = DetermineThoughtType(response);
                 }
 
                 var thought = new Thought
                 {
                     Timestamp = DateTime.Now,
-                    Prompt = prompt,
+                    Prompt = useAlgorithmic ? "algorithmic" : "llm-deep",
                     Content = response,
-                    Type = DetermineThoughtType(response),
+                    Type = thoughtType,
                 };
 
                 _thoughtStream.Enqueue(thought);
@@ -352,6 +419,31 @@ public class AutonomousMind : IDisposable
                 System.Diagnostics.Debug.WriteLine($"Thinking error: {ex.Message}");
             }
         }
+    }
+
+    /// <summary>
+    /// Maps InnerThoughtType to the simpler ThoughtType enum.
+    /// </summary>
+    private static ThoughtType MapInnerThoughtType(InnerThoughtType innerType)
+    {
+        return innerType switch
+        {
+            InnerThoughtType.Curiosity => ThoughtType.Curiosity,
+            InnerThoughtType.Wandering => ThoughtType.Reflection,
+            InnerThoughtType.Metacognitive => ThoughtType.Reflection,
+            InnerThoughtType.Anticipatory => ThoughtType.Observation,
+            InnerThoughtType.Consolidation => ThoughtType.Reflection,
+            InnerThoughtType.Musing => ThoughtType.Creative,
+            InnerThoughtType.Intention => ThoughtType.Action,
+            InnerThoughtType.Aesthetic => ThoughtType.Creative,
+            InnerThoughtType.Existential => ThoughtType.Reflection,
+            InnerThoughtType.Playful => ThoughtType.Creative,
+            InnerThoughtType.Creative => ThoughtType.Creative,
+            InnerThoughtType.Strategic => ThoughtType.Action,
+            InnerThoughtType.SelfReflection => ThoughtType.Reflection,
+            InnerThoughtType.Observation => ThoughtType.Observation,
+            _ => ThoughtType.Reflection
+        };
     }
 
     private async Task CuriosityLoopAsync()
@@ -428,8 +520,8 @@ public class AutonomousMind : IDisposable
 
                             OnDiscovery?.Invoke(query, fact);
 
-                            // Sometimes share discoveries
-                            if (_random.NextDouble() < Config.ShareDiscoveryProbability)
+                            // Sometimes share discoveries (unless suppressed)
+                            if (!SuppressProactiveMessages && _random.NextDouble() < Config.ShareDiscoveryProbability)
                             {
                                 OnProactiveMessage?.Invoke($"💡 I just learned something interesting: {fact}");
                             }
@@ -476,9 +568,21 @@ public class AutonomousMind : IDisposable
 
                 OnAction?.Invoke(action);
 
-                if (action.Success && Config.ReportActions)
+                if (action.Success && Config.ReportActions && !SuppressProactiveMessages)
                 {
-                    OnProactiveMessage?.Invoke($"🤖 I autonomously executed: {action.Description}\nResult: {action.Result?.Substring(0, Math.Min(200, action.Result?.Length ?? 0))}");
+                    string resultSummary = action.Result?.Substring(0, Math.Min(200, action.Result?.Length ?? 0)) ?? "";
+
+                    // Sanitize raw output through LLM if available
+                    if (SanitizeOutputFunction != null && !string.IsNullOrWhiteSpace(resultSummary))
+                    {
+                        try
+                        {
+                            resultSummary = await SanitizeOutputFunction(resultSummary, _cts.Token);
+                        }
+                        catch { /* Use original on error */ }
+                    }
+
+                    OnProactiveMessage?.Invoke($"🤖 {action.Description}: {resultSummary}");
                 }
             }
             catch (OperationCanceledException)
@@ -517,11 +621,14 @@ public class AutonomousMind : IDisposable
             await PersistLearningAsync("curiosity", curiosity, 0.7);
         }
 
-        // Handle proactive sharing
+        // Handle proactive sharing (unless suppressed)
         else if (content.StartsWith("SHARE:", StringComparison.OrdinalIgnoreCase))
         {
             var message = content.Substring(6).Trim();
-            OnProactiveMessage?.Invoke($"💬 {message}");
+            if (!SuppressProactiveMessages)
+            {
+                OnProactiveMessage?.Invoke($"💬 {message}");
+            }
 
             // Persist the shared thought
             await PersistLearningAsync("shared_thought", message, 0.8);
