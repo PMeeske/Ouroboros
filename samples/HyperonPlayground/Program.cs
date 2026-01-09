@@ -175,7 +175,7 @@ public static class Program
             from humanMatch in space.Query(Atom.Expr(Atom.Sym("Human"), Atom.Var("x")))
             let person = humanMatch.Bindings.Lookup("x")
             where person.HasValue && person.Value is not null
-            from philoMatch in space.Query(Atom.Expr(Atom.Sym("Philosopher"), person.Value))
+            from philoMatch in space.Query(Atom.Expr(Atom.Sym("Philosopher"), person.Value!))
             select humanMatch.Atom;
 
         var humanPhiloList = humanPhilosophers.Distinct().ToList();
