@@ -24,6 +24,9 @@ public sealed class CognitiveProcessor
         PavlovianConsciousnessEngine consciousness,
         CognitiveProcessorConfig? config = null)
     {
+        ArgumentNullException.ThrowIfNull(globalWorkspace);
+        ArgumentNullException.ThrowIfNull(consciousness);
+        
         _globalWorkspace = globalWorkspace;
         _consciousness = consciousness;
         _config = config ?? CognitiveProcessorConfig.Default();
@@ -35,6 +38,8 @@ public sealed class CognitiveProcessor
     /// </summary>
     public ConsciousnessState ProcessAndBroadcast(string input, string? context = null)
     {
+        ArgumentNullException.ThrowIfNull(input);
+        
         // Process through consciousness engine
         ConsciousnessState state = _consciousness.ProcessInput(input, context);
 
