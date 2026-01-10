@@ -25,6 +25,9 @@ using Ouroboros.Application.Personality; // Personality engine with MeTTa + GA
 using Ouroboros.CLI; // added
 using Ouroboros.CLI.Commands;
 
+// Initialize Ouroboros system on startup (non-blocking)
+var initTask = Ouroboros.CLI.OuroborosCliIntegration.EnsureInitializedAsync(args);
+
 try
 {
     // Optional minimal host
@@ -33,6 +36,13 @@ try
         using IHost onlyHost = await Ouroboros.Interop.Hosting.MinimalHost.BuildAsync(args);
         await onlyHost.RunAsync();
         return;
+    }
+
+    // Wait for Ouroboros initialization (with timeout)
+    var initCompleted = await Task.WhenAny(initTask, Task.Delay(TimeSpan.FromSeconds(5)));
+    if (initCompleted != initTask)
+    {
+        Console.WriteLine("[INFO] Ouroboros system initializing in background...");
     }
 
     await ParseAndRunAsync(args);

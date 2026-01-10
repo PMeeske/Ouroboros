@@ -320,6 +320,11 @@ public static class AskCommands
     /// </summary>
     private static async Task RunAskVoiceModeAsync(AskOptions o)
     {
+        // Integrate with Ouroboros system
+        await OuroborosCliIntegration.BroadcastToConsciousnessAsync(
+            "Starting voice interaction mode",
+            "VoiceMode");
+
         var voiceService = VoiceModeExtensions.CreateVoiceService(
             voice: true,
             persona: o.Persona,
@@ -330,6 +335,16 @@ public static class AskCommands
             endpoint: o.Endpoint ?? "http://localhost:11434");
 
         await voiceService.InitializeAsync();
+
+        // Show Ouroboros integration status
+        var ouroborosCore = OuroborosCliIntegration.GetCore();
+        if (ouroborosCore != null)
+        {
+            Console.WriteLine("[Voice Mode] ✓ Ouroboros system connected");
+            Console.WriteLine($"[Voice Mode] ✓ Episodic memory: {(ouroborosCore.EpisodicMemory != null ? "enabled" : "disabled")}");
+            Console.WriteLine($"[Voice Mode] ✓ Consciousness: {(ouroborosCore.Consciousness != null ? "enabled" : "disabled")}");
+        }
+
         voiceService.PrintHeader("ASK");
 
         // Build the pipeline once
