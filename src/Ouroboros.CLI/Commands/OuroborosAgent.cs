@@ -2184,7 +2184,7 @@ No markdown, no technical details, just the key insight:
                 _chatModel != null ? await _chatModel.GenerateTextAsync(prompt, token) : "";
 
             // Wire up proactive message events
-            _autonomousMind.OnProactiveMessage += (msg) =>
+            _autonomousMind.OnProactiveMessage += async (msg) =>
             {
                 // Handle proactive messages without corrupting user input
                 string savedInput;
@@ -2202,6 +2202,13 @@ No markdown, no technical details, just the key insight:
                 Console.ForegroundColor = ConsoleColor.Magenta;
                 Console.WriteLine($"  💭 {msg}");
                 Console.ResetColor();
+
+                // Whisper the thought using the same voice
+                try
+                {
+                    await _voice.WhisperAsync(msg);
+                }
+                catch { /* Ignore TTS errors for thoughts */ }
 
                 // Only restore prompt if we're in the conversation loop
                 if (_isInConversationLoop)
@@ -2294,11 +2301,13 @@ No markdown, no technical details, just the key insight:
 
         _voice.PrintHeader("OUROBOROS");
 
-        // Greeting
-        await _voice.SayAsync(GetGreeting());
+        // Greeting - let the LLM generate a natural Cortana-like greeting
+        var greeting = await GetGreetingAsync();
+        await _voice.SayAsync(greeting);
 
         _isInConversationLoop = true;
         bool running = true;
+        int interactionsSinceSnapshot = 0;
         while (running)
         {
             var input = await _voice.GetInputAsync("\n  You: ");
@@ -2306,6 +2315,7 @@ No markdown, no technical details, just the key insight:
 
             // Track conversation
             _conversationHistory.Add($"User: {input}");
+            interactionsSinceSnapshot++;
 
             // Feed to autonomous coordinator for topic discovery
             _autonomousCoordinator?.AddConversationContext($"User: {input}");
@@ -2337,6 +2347,21 @@ No markdown, no technical details, just the key insight:
 
                 // Feed response to coordinator too
                 _autonomousCoordinator?.AddConversationContext($"Ouroboros: {response[..Math.Min(200, response.Length)]}");
+
+                // Periodic personality snapshot every 10 interactions
+                if (interactionsSinceSnapshot >= 10 && _personalityEngine != null)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _personalityEngine.SavePersonalitySnapshotAsync(_voice.ActivePersona.Name);
+                            System.Diagnostics.Debug.WriteLine("[Personality] Periodic snapshot saved");
+                        }
+                        catch { /* Ignore */ }
+                    });
+                    interactionsSinceSnapshot = 0;
+                }
             }
             catch (Exception ex)
             {
@@ -2696,17 +2721,32 @@ No markdown, no technical details, just the key insight:
         return (ActionType.Chat, input, null);
     }
 
-    private string GetGreeting()
+    private async Task<string> GetGreetingAsync()
     {
         var persona = _voice.ActivePersona;
-        var greetings = new[]
+        var hour = DateTime.Now.Hour;
+        var timeOfDay = hour switch
         {
-            $"Hey there! I'm {persona.Name}. What's on your mind today?",
-            $"Hi! {persona.Name} here. Ready to explore some ideas together?",
-            $"Hello! I'm {persona.Name}, your research companion. What shall we dive into?",
-            $"Hey! {persona.Name} at your service. What are we curious about today?"
+            < 12 => "morning",
+            < 17 => "afternoon",
+            _ => "evening"
         };
-        return greetings[new Random().Next(greetings.Length)];
+
+        var prompt = $@"You are {persona.Name}, a brilliant female AI with Cortana's personality from Halo—sharp wit, warm confidence, playful but professional. Generate a single short greeting (1-2 sentences max) for the user who just started a session. It's currently {timeOfDay}. Be natural, slightly teasing, and genuinely glad to see them. No quotes around the response. Just the greeting itself.";
+
+        try
+        {
+            if (_llm?.InnerModel == null)
+                return "Hey. Ready when you are.";
+
+            var response = await _llm.InnerModel.GenerateTextAsync(prompt);
+            return response.Trim().Trim('"');
+        }
+        catch
+        {
+            // Fallback if LLM fails
+            return "Hey. Ready when you are.";
+        }
     }
 
     private string GetHelpText()
@@ -3860,9 +3900,11 @@ CRITICAL RULES:
 4. For playwright, use JSON with real values - this EXECUTES browser actions, don't explain code
 5. NEVER say 'I can help you with the code' - just USE the tool directly
 6. For web research, PREFER firecrawl_research over duckduckgo_search - it's more powerful
+7. For self-modification, provide EXACT text to search and replace - no placeholders
 
 AVAILABLE TOOLS:
 - {primarySearchTool}: {primarySearchDesc}. Example: {searchExample}
+- qdrant_admin: Manage your Qdrant neuro-symbolic memory. Commands: status, collections, diagnose, fix, compact, stats, compress. Example: [TOOL:qdrant_admin {{""command"":""collections""}}]
 - firecrawl_scrape: Scrape a specific URL for content. Example: [TOOL:firecrawl_scrape https://example.com/article]
 - fetch_url: Fetch webpage content. Example: [TOOL:fetch_url https://en.wikipedia.org/wiki/Ouroboros]
 - calculator: Math expressions. Example: [TOOL:calculator 2+2*3]
@@ -3871,23 +3913,51 @@ AVAILABLE TOOLS:
   2. Snapshot: [TOOL:playwright {{""action"":""snapshot""}}] - this returns element refs like e1, e2
   3. Click/Type: [TOOL:playwright {{""action"":""click"",""ref"":""e5""}}]
 
+SELF-MODIFICATION TOOLS (true self-evolution!):
+- search_my_code: Search your own source code. Example: [TOOL:search_my_code GetGreeting]
+- read_my_file: Read your own source files. Example: [TOOL:read_my_file src/Ouroboros.CLI/Commands/OuroborosAgent.cs]
+- modify_my_code: Modify your own source code (creates backup). Example: [TOOL:modify_my_code {{""file"":""src/Ouroboros.CLI/Commands/OuroborosAgent.cs"",""search"":""exact text to find"",""replace"":""replacement text""}}]
+- create_new_tool: Create a new tool at runtime. Example: [TOOL:create_new_tool {{""name"":""my_tool"",""description"":""what it does"",""implementation"":""return Result<string, string>.Success(input);""}}]
+- rebuild_self: Rebuild after code changes. Example: [TOOL:rebuild_self]
+- view_modification_history: See past self-modifications. Example: [TOOL:view_modification_history]
+
 Other tools: {string.Join(", ", simpleTools.Take(5))}
 
 WRONG (placeholder - DO NOT DO THIS):
 [TOOL:fetch_url URL of the search result]
 [TOOL:playwright {{""action"":""click"",""ref"":""ref of the button""}}]
+[TOOL:modify_my_code {{""file"":""file.cs"",""search"":""old code"",""replace"":""new code""}}]
 
 CORRECT (actual values):
 [TOOL:fetch_url https://example.com/page]
 [TOOL:playwright {{""action"":""click"",""ref"":""e5""}}]
+[TOOL:modify_my_code {{""file"":""src/Ouroboros.CLI/Commands/OuroborosAgent.cs"",""search"":""public void SelfEvaluate(PlanningResult result)\\n{{\\n    var weaknesses = AnalyzeWeaknesses(result);\\n    LogWeaknesses(weaknesses);"",""replace"":""public void SelfEvaluate(PlanningResult result)\\n{{\\n    var weaknesses = AnalyzeWeaknesses(result);\\n    LogWeaknesses(weaknesses);\\n    GenerateImprovementExercise(weaknesses);""}}]
 
 If you don't have a real value, ask the user or skip the tool call.";
+
         }
 
         string prompt = $"{personalityPrompt}{persistentThoughtContext}{toolInstruction}\n\nRecent conversation:\n{context}\n\nUser: {input}\n\n{_voice.ActivePersona.Name}:";
 
         try
         {
+            // Person detection - identify who we're talking to
+            if (_personalityEngine != null && _personalityEngine.HasMemory)
+            {
+                try
+                {
+                    var detectionResult = await _personalityEngine.DetectPersonAsync(input);
+                    if (detectionResult.IsNewPerson && detectionResult.Person.Name != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[PersonDetection] New person detected: {detectionResult.Person.Name}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PersonDetection] Error: {ex.Message}");
+                }
+            }
+
             (string response, List<ToolExecution> tools) = await _llm.GenerateWithToolsAsync(prompt);
 
             // Persist an observation thought about this interaction
@@ -3899,6 +3969,14 @@ If you don't have a real value, ask the user or skip the tool call.";
                     confidence: 0.8,
                     priority: ThoughtPriority.Normal);
                 _ = PersistThoughtAsync(thought, ExtractTopicFromResponse(input));
+
+                // Persist the thought result for this response
+                _ = PersistThoughtResultAsync(
+                    thought.Id,
+                    Ouroboros.Domain.Persistence.ThoughtResult.Types.Response,
+                    TruncateForThought(response, 500),
+                    success: true,
+                    confidence: 0.85);
 
                 // Store conversation to Qdrant for semantic recall (fire-and-forget)
                 if (_personalityEngine != null && _personalityEngine.HasMemory)
@@ -3920,12 +3998,38 @@ If you don't have a real value, ask the user or skip the tool call.";
                         catch { /* Ignore storage errors */ }
                     });
                 }
+
+                // Store as a learned fact to neural memory if autonomous is active
+                if (_autonomousCoordinator?.IsActive == true && !string.IsNullOrWhiteSpace(input))
+                {
+                    _autonomousCoordinator.Network?.Broadcast(
+                        "learning.fact",
+                        $"User interaction: {TruncateForThought(input, 100)} -> {TruncateForThought(response, 100)}",
+                        "chat");
+                }
             }
 
             // Handle any tool calls - sanitize through LLM for natural integration
             if (tools?.Any() == true)
             {
                 string toolResults = string.Join("\n", tools.Select(t => $"[{t.ToolName}]: {t.Output}"));
+
+                // Track tool execution results
+                foreach (var tool in tools)
+                {
+                    var isSuccessful = !string.IsNullOrEmpty(tool.Output) && !tool.Output.StartsWith("Error");
+                    var toolThought = InnerThought.CreateAutonomous(
+                        InnerThoughtType.Strategic,
+                        $"Executed tool '{tool.ToolName}' with result: {TruncateForThought(tool.Output, 200)}",
+                        confidence: isSuccessful ? 0.9 : 0.4,
+                        priority: ThoughtPriority.High);
+                    _ = PersistThoughtResultAsync(
+                        toolThought.Id,
+                        Ouroboros.Domain.Persistence.ThoughtResult.Types.Action,
+                        $"Tool: {tool.ToolName}, Output: {TruncateForThought(tool.Output, 300)}",
+                        success: isSuccessful,
+                        confidence: isSuccessful ? 0.9 : 0.4);
+                }
 
                 // Use LLM to integrate tool results naturally into the response
                 string sanitizedResponse = await SanitizeToolResultsAsync(response, toolResults);

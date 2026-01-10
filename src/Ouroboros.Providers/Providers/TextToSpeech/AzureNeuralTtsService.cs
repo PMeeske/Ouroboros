@@ -118,6 +118,72 @@ public sealed class AzureNeuralTtsService : ITextToSpeechService, IDisposable
         }
     }
 
+    /// <summary>
+    /// Speaks text directly to the default audio output with optional whisper style.
+    /// </summary>
+    /// <param name="text">The text to speak.</param>
+    /// <param name="isWhisper">If true, uses a whispering/soft style for inner thoughts.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public async Task SpeakAsync(string text, bool isWhisper, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        if (_synthesizer == null) InitializeSynthesizer();
+
+        try
+        {
+            string ssml;
+            if (isWhisper)
+            {
+                // Whispering style: softer, lower volume, slower, with whispering effect
+                ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='en-US'>
+                    <voice name='{_voiceName}'>
+                        <mstts:express-as style='whispering' styledegree='1.0'>
+                            <prosody rate='-15%' pitch='-5%' volume='-20%'>
+                                {System.Security.SecurityElement.Escape(text)}
+                            </prosody>
+                        </mstts:express-as>
+                    </voice>
+                </speak>";
+            }
+            else
+            {
+                // Normal Cortana-style: lighter voice, ethereal with hall effect
+                ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='en-US'>
+                    <voice name='{_voiceName}'>
+                        <mstts:express-as style='friendly' styledegree='0.8'>
+                            <prosody rate='-5%' pitch='+8%' volume='+3%'>
+                                <mstts:audioduration value='1.1'/>
+                                {System.Security.SecurityElement.Escape(text)}
+                            </prosody>
+                        </mstts:express-as>
+                        <mstts:audioeffect type='eq_car'/>
+                    </voice>
+                </speak>";
+            }
+
+            var logPrefix = isWhisper ? "[Azure TTS 💭]" : "[Azure TTS]";
+            Console.WriteLine($"  {logPrefix} Speaking: {text[..Math.Min(50, text.Length)]}...");
+
+            using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
+
+            if (result.Reason == ResultReason.Canceled)
+            {
+                var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
+                Console.WriteLine($"  {logPrefix} Error: {cancellation.Reason}: {cancellation.ErrorDetails}");
+            }
+            else
+            {
+                Console.WriteLine($"  {logPrefix} Result: {result.Reason}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  [Azure TTS Exception] {ex.Message}");
+        }
+    }
+
     /// <inheritdoc/>
     public async Task<Result<SpeechResult, string>> SynthesizeAsync(
         string text,

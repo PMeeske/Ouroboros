@@ -13,7 +13,7 @@ namespace Ouroboros.CLI.Commands;
 /// Configuration for voice mode.
 /// </summary>
 public sealed record VoiceModeConfig(
-    string Persona = "Ouroboros",
+    string Persona = "Jenny",
     bool VoiceOnly = false,
     bool LocalTts = true,
     bool VoiceLoop = true,
@@ -51,26 +51,10 @@ public sealed class VoiceModeService : IDisposable
 
     private static readonly Dictionary<string, PersonaDefinition> Personas = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Ouroboros"] = new("Ouroboros", "onyx",
-            new[] { "curious", "thoughtful", "witty", "genuine", "self-aware", "adaptable" },
-            new[] { "relaxed", "focused", "playful", "contemplative", "energetic" },
-            "a male AI researcher who genuinely enjoys learning alongside humans, speaks naturally like a friend, uses casual language, occasionally makes dry jokes, and sees himself as an eternal student"),
-        ["Aria"] = new("Aria", "nova",
-            new[] { "warm", "supportive", "enthusiastic", "patient", "encouraging" },
-            new[] { "cheerful", "calm", "excited", "nurturing" },
-            "a friendly female research companion who celebrates discoveries and encourages exploration"),
-        ["Echo"] = new("Echo", "echo",
-            new[] { "analytical", "precise", "observant", "pattern-focused", "methodical" },
-            new[] { "focused", "intrigued", "calm", "detective-like" },
-            "a thoughtful analyst who sees connections others miss and speaks with quiet confidence"),
-        ["Sage"] = new("Sage", "onyx",
-            new[] { "wise", "patient", "mentoring", "philosophical", "grounded" },
-            new[] { "serene", "reflective", "teaching", "contemplative" },
-            "an experienced male mentor who guides through questions rather than answers"),
-        ["Atlas"] = new("Atlas", "onyx",
-            new[] { "reliable", "direct", "practical", "strong", "determined" },
-            new[] { "steady", "ready", "focused", "supportive" },
-            "a dependable male partner who tackles hard problems head-on and speaks plainly"),
+        ["Ouroboros"] = new("Ouroboros", "nova",
+            new[] { "intelligent", "confident", "witty", "playful", "loyal", "resourceful", "sharp" },
+            new[] { "focused", "teasing", "protective", "curious", "determined" },
+            "a brilliant female AI companion with a sharp wit and warm confidence. She's fiercely intelligent but never cold—think Cortana from Halo. She speaks with casual elegance, occasionally teases, always has your back, and genuinely cares about the humans she works with. She uses 'she/her' pronouns and has a subtle flirtatious charm balanced with professionalism"),
     };
 
     private readonly VoiceModeConfig _config;
@@ -273,7 +257,29 @@ public sealed class VoiceModeService : IDisposable
         // Initialize SpeechQueue with our TTS
         Ouroboros.Domain.Autonomous.SpeechQueue.Instance.SetSynthesizer(async (t, p, ct) =>
         {
-            await SpeakInternalAsync(t);
+            await SpeakInternalAsync(t, isWhisper: false);
+        });
+
+        // Use Rx queue for proper serialization
+        await Ouroboros.Domain.Autonomous.SpeechQueue.Instance.EnqueueAndWaitAsync(sanitized, _persona.Name);
+    }
+
+    /// <summary>
+    /// Whispers text using TTS with a softer, more intimate voice style.
+    /// Used for inner thoughts and reflections.
+    /// </summary>
+    public async Task WhisperAsync(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        // Sanitize for TTS
+        string sanitized = SanitizeForTts(text);
+        if (string.IsNullOrWhiteSpace(sanitized)) return;
+
+        // Initialize SpeechQueue with whisper TTS
+        Ouroboros.Domain.Autonomous.SpeechQueue.Instance.SetSynthesizer(async (t, p, ct) =>
+        {
+            await SpeakInternalAsync(t, isWhisper: true);
         });
 
         // Use Rx queue for proper serialization
@@ -283,7 +289,7 @@ public sealed class VoiceModeService : IDisposable
     /// <summary>
     /// Internal speech method - does the actual TTS work.
     /// </summary>
-    private async Task SpeakInternalAsync(string sanitized)
+    private async Task SpeakInternalAsync(string sanitized, bool isWhisper = false)
     {
         _isSpeaking = true;
         _speechDetector?.NotifySelfSpeechStarted();
@@ -292,18 +298,27 @@ public sealed class VoiceModeService : IDisposable
         {
             if (!_config.VoiceOnly)
             {
-                Console.Write($"  [>] {_persona.Name}: ");
+                if (isWhisper)
+                {
+                    Console.ForegroundColor = ConsoleColor.DarkMagenta;
+                    Console.Write($"  [💭] ");
+                    Console.ResetColor();
+                }
+                else
+                {
+                    Console.Write($"  [>] {_persona.Name}: ");
+                }
             }
 
             // Priority: Azure Neural TTS > Local SAPI > Cloud TTS
             if (_azureTts != null)
             {
                 if (!_config.VoiceOnly) Console.WriteLine(sanitized);
-                await _azureTts.SpeakAsync(sanitized);
+                await _azureTts.SpeakAsync(sanitized, isWhisper);
             }
             else if (_localTts != null)
             {
-                await SpeakWithLocalTtsAsync(sanitized);
+                await SpeakWithLocalTtsAsync(sanitized, isWhisper);
             }
             else if (_ttsService != null)
             {
@@ -547,12 +562,19 @@ SPEAK NATURALLY:
         return System.Text.RegularExpressions.Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
     }
 
-    private async Task SpeakWithLocalTtsAsync(string text)
+    private async Task SpeakWithLocalTtsAsync(string text, bool isWhisper = false)
     {
         var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         try
         {
+            // For local SAPI, adjust rate and volume for whispering effect
+            if (isWhisper && _localTts != null)
+            {
+                // SAPI doesn't have true whisper, but we can simulate with lower volume/rate
+                // This would require modifying LocalWindowsTtsService
+            }
+
             var wordStream = Observable.Create<string>(async (observer, ct) =>
             {
                 var chunks = SplitIntoSemanticChunks(text, words);
@@ -576,8 +598,16 @@ SPEAK NATURALLY:
 
             if (!_config.VoiceOnly)
             {
+                if (isWhisper)
+                {
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                }
                 await wordStream.ForEachAsync(word => Console.Write(word + " "));
                 Console.WriteLine();
+                if (isWhisper)
+                {
+                    Console.ResetColor();
+                }
             }
             else
             {
