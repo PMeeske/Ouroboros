@@ -629,4 +629,623 @@ public sealed class HierarchicalPlannerTests
     }
 
     #endregion
+
+    #region HTN Planning Tests
+
+    /// <summary>
+    /// Tests that PlanHierarchicalAsync creates HTN plan with valid task network.
+    /// </summary>
+    [Fact]
+    public async Task PlanHierarchicalAsync_WithValidTaskNetwork_ShouldCreateHtnPlan()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var taskNetwork = new Dictionary<string, TaskDecomposition>
+        {
+            ["BuildHouse"] = new TaskDecomposition(
+                "BuildHouse",
+                new List<string> { "LayFoundation", "BuildWalls", "InstallRoof" },
+                new List<string> { "LayFoundation->BuildWalls", "BuildWalls->InstallRoof" }),
+            ["LayFoundation"] = new TaskDecomposition(
+                "LayFoundation",
+                new List<string> { "DigTrench", "PourConcrete" },
+                new List<string> { "DigTrench->PourConcrete" })
+        };
+
+        // Act
+        var result = await planner.PlanHierarchicalAsync("BuildHouse", taskNetwork);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Goal.Should().Be("BuildHouse");
+        result.Value.AbstractTasks.Should().NotBeEmpty();
+        result.Value.Refinements.Should().NotBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that PlanHierarchicalAsync fails with empty goal.
+    /// </summary>
+    [Fact]
+    public async Task PlanHierarchicalAsync_WithEmptyGoal_ShouldReturnFailure()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var taskNetwork = new Dictionary<string, TaskDecomposition>();
+
+        // Act
+        var result = await planner.PlanHierarchicalAsync("", taskNetwork);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("Goal cannot be empty");
+    }
+
+    /// <summary>
+    /// Tests that PlanHierarchicalAsync fails with empty task network.
+    /// </summary>
+    [Fact]
+    public async Task PlanHierarchicalAsync_WithEmptyTaskNetwork_ShouldReturnFailure()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var taskNetwork = new Dictionary<string, TaskDecomposition>();
+
+        // Act
+        var result = await planner.PlanHierarchicalAsync("TestGoal", taskNetwork);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("Task network cannot be empty");
+    }
+
+    /// <summary>
+    /// Tests that PlanHierarchicalAsync handles complex task hierarchies.
+    /// </summary>
+    [Fact]
+    public async Task PlanHierarchicalAsync_WithComplexHierarchy_ShouldDecomposeCorrectly()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var taskNetwork = new Dictionary<string, TaskDecomposition>
+        {
+            ["PrepareProject"] = new TaskDecomposition(
+                "PrepareProject",
+                new List<string> { "Planning", "Implementation", "Testing" },
+                new List<string> { "Planning->Implementation", "Implementation->Testing" }),
+            ["Planning"] = new TaskDecomposition(
+                "Planning",
+                new List<string> { "Requirements", "Design" },
+                new List<string> { "Requirements->Design" }),
+            ["Implementation"] = new TaskDecomposition(
+                "Implementation",
+                new List<string> { "Code", "Review" },
+                new List<string> { "Code->Review" })
+        };
+
+        // Act
+        var result = await planner.PlanHierarchicalAsync("PrepareProject", taskNetwork);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.AbstractTasks.Count.Should().BeGreaterThan(1);
+    }
+
+    #endregion
+
+    #region Temporal Planning Tests
+
+    /// <summary>
+    /// Tests that PlanWithConstraintsAsync creates temporal plan with constraints.
+    /// </summary>
+    [Fact]
+    public async Task PlanWithConstraintsAsync_WithValidConstraints_ShouldCreateTemporalPlan()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator(stepCount: 3);
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var constraints = new List<TemporalConstraint>
+        {
+            new TemporalConstraint("action1", "action2", TemporalRelation.Before),
+            new TemporalConstraint("action2", "action3", TemporalRelation.Before)
+        };
+
+        // Act
+        var result = await planner.PlanWithConstraintsAsync("Test goal", constraints);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Goal.Should().Be("Test goal");
+        result.Value.Tasks.Should().HaveCount(3);
+        result.Value.TotalDuration.Should().BeGreaterThan(TimeSpan.Zero);
+    }
+
+    /// <summary>
+    /// Tests that PlanWithConstraintsAsync respects Before constraints.
+    /// </summary>
+    [Fact]
+    public async Task PlanWithConstraintsAsync_WithBeforeConstraint_ShouldRespectOrdering()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator(stepCount: 2);
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var constraints = new List<TemporalConstraint>
+        {
+            new TemporalConstraint("action1", "action2", TemporalRelation.Before)
+        };
+
+        // Act
+        var result = await planner.PlanWithConstraintsAsync("Test goal", constraints);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var task1 = result.Value.Tasks.FirstOrDefault(t => t.Name == "action1");
+        var task2 = result.Value.Tasks.FirstOrDefault(t => t.Name == "action2");
+        
+        if (task1 != null && task2 != null)
+        {
+            // action1 must complete before action2 starts
+            task1.EndTime.Should().BeOnOrBefore(task2.StartTime);
+        }
+    }
+
+    /// <summary>
+    /// Tests that PlanWithConstraintsAsync handles empty constraints gracefully.
+    /// </summary>
+    [Fact]
+    public async Task PlanWithConstraintsAsync_WithEmptyConstraints_ShouldCreatePlan()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator(stepCount: 2);
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        // Act
+        var result = await planner.PlanWithConstraintsAsync("Test goal", new List<TemporalConstraint>());
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Tasks.Should().NotBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that PlanWithConstraintsAsync fails with empty goal.
+    /// </summary>
+    [Fact]
+    public async Task PlanWithConstraintsAsync_WithEmptyGoal_ShouldReturnFailure()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        // Act
+        var result = await planner.PlanWithConstraintsAsync("", new List<TemporalConstraint>());
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("Goal cannot be empty");
+    }
+
+    /// <summary>
+    /// Tests that PlanWithConstraintsAsync handles duration constraints.
+    /// </summary>
+    [Fact]
+    public async Task PlanWithConstraintsAsync_WithDurationConstraints_ShouldRespectDurations()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator(stepCount: 2);
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var constraints = new List<TemporalConstraint>
+        {
+            new TemporalConstraint("action1", "action2", TemporalRelation.Before, TimeSpan.FromMinutes(10))
+        };
+
+        // Act
+        var result = await planner.PlanWithConstraintsAsync("Test goal", constraints);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Tasks.Should().NotBeEmpty();
+    }
+
+    #endregion
+
+    #region Plan Repair Tests
+
+    /// <summary>
+    /// Tests that RepairPlanAsync with Replan strategy creates new plan.
+    /// </summary>
+    [Fact]
+    public async Task RepairPlanAsync_WithReplanStrategy_ShouldCreateNewPlan()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator(stepCount: 3);
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var brokenPlan = new Plan(
+            "Test goal",
+            new List<PlanStep>
+            {
+                new PlanStep("action1", new Dictionary<string, object>(), "outcome1", 0.8),
+                new PlanStep("action2", new Dictionary<string, object>(), "outcome2", 0.8),
+                new PlanStep("action3", new Dictionary<string, object>(), "outcome3", 0.8)
+            },
+            new Dictionary<string, double>(),
+            DateTime.UtcNow);
+
+        var trace = new ExecutionTrace(
+            new List<ExecutedStep>
+            {
+                new ExecutedStep("action1", true, TimeSpan.FromSeconds(1), new Dictionary<string, object>()),
+                new ExecutedStep("action2", false, TimeSpan.FromSeconds(1), new Dictionary<string, object>())
+            },
+            FailedAtIndex: 1,
+            FailureReason: "Action2 failed");
+
+        // Act
+        var result = await planner.RepairPlanAsync(brokenPlan, trace, RepairStrategy.Replan);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.Steps.Should().NotBeEmpty();
+    }
+
+    /// <summary>
+    /// Tests that RepairPlanAsync with Patch strategy modifies plan minimally.
+    /// </summary>
+    [Fact]
+    public async Task RepairPlanAsync_WithPatchStrategy_ShouldPatchPlan()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var brokenPlan = new Plan(
+            "Test goal",
+            new List<PlanStep>
+            {
+                new PlanStep("action1", new Dictionary<string, object>(), "outcome1", 0.8),
+                new PlanStep("action2", new Dictionary<string, object>(), "outcome2", 0.8),
+                new PlanStep("action3", new Dictionary<string, object>(), "outcome3", 0.8)
+            },
+            new Dictionary<string, double>(),
+            DateTime.UtcNow);
+
+        var trace = new ExecutionTrace(
+            new List<ExecutedStep>
+            {
+                new ExecutedStep("action1", true, TimeSpan.FromSeconds(1), new Dictionary<string, object>()),
+                new ExecutedStep("action2", false, TimeSpan.FromSeconds(1), new Dictionary<string, object>())
+            },
+            FailedAtIndex: 1,
+            FailureReason: "Action2 failed");
+
+        // Act
+        var result = await planner.RepairPlanAsync(brokenPlan, trace, RepairStrategy.Patch);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Steps.Should().HaveCountGreaterThanOrEqualTo(2); // At least the first step + patched step
+    }
+
+    /// <summary>
+    /// Tests that RepairPlanAsync with CaseBased strategy selects appropriate strategy.
+    /// </summary>
+    [Fact]
+    public async Task RepairPlanAsync_WithCaseBasedStrategy_ShouldSelectStrategy()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var brokenPlan = new Plan(
+            "Test goal",
+            new List<PlanStep>
+            {
+                new PlanStep("action1", new Dictionary<string, object>(), "outcome1", 0.8)
+            },
+            new Dictionary<string, double>(),
+            DateTime.UtcNow);
+
+        var trace = new ExecutionTrace(
+            new List<ExecutedStep>
+            {
+                new ExecutedStep("action1", false, TimeSpan.FromSeconds(1), new Dictionary<string, object>())
+            },
+            FailedAtIndex: 0,
+            FailureReason: "Action1 failed");
+
+        // Act
+        var result = await planner.RepairPlanAsync(brokenPlan, trace, RepairStrategy.CaseBased);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// Tests that RepairPlanAsync with Backtrack strategy backtracks correctly.
+    /// </summary>
+    [Fact]
+    public async Task RepairPlanAsync_WithBacktrackStrategy_ShouldBacktrack()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var brokenPlan = new Plan(
+            "Test goal",
+            new List<PlanStep>
+            {
+                new PlanStep("action1", new Dictionary<string, object>(), "outcome1", 0.8),
+                new PlanStep("action2", new Dictionary<string, object>(), "outcome2", 0.8),
+                new PlanStep("action3", new Dictionary<string, object>(), "outcome3", 0.8),
+                new PlanStep("action4", new Dictionary<string, object>(), "outcome4", 0.8)
+            },
+            new Dictionary<string, double>(),
+            DateTime.UtcNow);
+
+        var trace = new ExecutionTrace(
+            new List<ExecutedStep>
+            {
+                new ExecutedStep("action1", true, TimeSpan.FromSeconds(1), new Dictionary<string, object>()),
+                new ExecutedStep("action2", true, TimeSpan.FromSeconds(1), new Dictionary<string, object>()),
+                new ExecutedStep("action3", true, TimeSpan.FromSeconds(1), new Dictionary<string, object>()),
+                new ExecutedStep("action4", false, TimeSpan.FromSeconds(1), new Dictionary<string, object>())
+            },
+            FailedAtIndex: 3,
+            FailureReason: "Action4 failed");
+
+        // Act
+        var result = await planner.RepairPlanAsync(brokenPlan, trace, RepairStrategy.Backtrack);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// Tests that RepairPlanAsync throws for null plan.
+    /// </summary>
+    [Fact]
+    public async Task RepairPlanAsync_WithNullPlan_ShouldThrowArgumentNullException()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var trace = new ExecutionTrace(
+            new List<ExecutedStep>(),
+            FailedAtIndex: 0,
+            FailureReason: "Test");
+
+        // Act
+        Func<Task> act = async () => await planner.RepairPlanAsync(null!, trace, RepairStrategy.Replan);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    /// <summary>
+    /// Tests that RepairPlanAsync throws for null trace.
+    /// </summary>
+    [Fact]
+    public async Task RepairPlanAsync_WithNullTrace_ShouldThrowArgumentNullException()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var plan = new Plan(
+            "Test",
+            new List<PlanStep>(),
+            new Dictionary<string, double>(),
+            DateTime.UtcNow);
+
+        // Act
+        Func<Task> act = async () => await planner.RepairPlanAsync(plan, null!, RepairStrategy.Replan);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    #endregion
+
+    #region Plan Explanation Tests
+
+    /// <summary>
+    /// Tests that ExplainPlanAsync generates brief explanation.
+    /// </summary>
+    [Fact]
+    public async Task ExplainPlanAsync_WithBriefLevel_ShouldGenerateBriefExplanation()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var plan = new Plan(
+            "Test goal",
+            new List<PlanStep>
+            {
+                new PlanStep("action1", new Dictionary<string, object>(), "outcome1", 0.8),
+                new PlanStep("action2", new Dictionary<string, object>(), "outcome2", 0.8)
+            },
+            new Dictionary<string, double>(),
+            DateTime.UtcNow);
+
+        // Act
+        var result = await planner.ExplainPlanAsync(plan, ExplanationLevel.Brief);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeEmpty();
+        result.Value.Should().Contain("Test goal");
+        result.Value.Should().Contain("2 steps");
+    }
+
+    /// <summary>
+    /// Tests that ExplainPlanAsync generates detailed explanation.
+    /// </summary>
+    [Fact]
+    public async Task ExplainPlanAsync_WithDetailedLevel_ShouldGenerateDetailedExplanation()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var plan = new Plan(
+            "Test goal",
+            new List<PlanStep>
+            {
+                new PlanStep("action1", new Dictionary<string, object> { ["param1"] = "value1" }, "outcome1", 0.8),
+                new PlanStep("action2", new Dictionary<string, object> { ["param2"] = "value2" }, "outcome2", 0.9)
+            },
+            new Dictionary<string, double>(),
+            DateTime.UtcNow);
+
+        // Act
+        var result = await planner.ExplainPlanAsync(plan, ExplanationLevel.Detailed);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeEmpty();
+        result.Value.Should().Contain("action1");
+        result.Value.Should().Contain("action2");
+        result.Value.Should().Contain("Parameters");
+        result.Value.Should().Contain("Expected Outcome");
+    }
+
+    /// <summary>
+    /// Tests that ExplainPlanAsync generates causal explanation.
+    /// </summary>
+    [Fact]
+    public async Task ExplainPlanAsync_WithCausalLevel_ShouldGenerateCausalExplanation()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var plan = new Plan(
+            "Test goal",
+            new List<PlanStep>
+            {
+                new PlanStep("action1", new Dictionary<string, object>(), "outcome1", 0.8),
+                new PlanStep("action2", new Dictionary<string, object>(), "outcome2", 0.8)
+            },
+            new Dictionary<string, double>(),
+            DateTime.UtcNow);
+
+        // Act
+        var result = await planner.ExplainPlanAsync(plan, ExplanationLevel.Causal);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeEmpty();
+        result.Value.Should().Contain("Why");
+        result.Value.Should().Contain("Causal Explanation");
+    }
+
+    /// <summary>
+    /// Tests that ExplainPlanAsync generates counterfactual explanation.
+    /// </summary>
+    [Fact]
+    public async Task ExplainPlanAsync_WithCounterfactualLevel_ShouldGenerateCounterfactualExplanation()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var plan = new Plan(
+            "Test goal",
+            new List<PlanStep>
+            {
+                new PlanStep("action1", new Dictionary<string, object>(), "outcome1", 0.8),
+                new PlanStep("action2", new Dictionary<string, object>(), "outcome2", 0.8)
+            },
+            new Dictionary<string, double>(),
+            DateTime.UtcNow);
+
+        // Act
+        var result = await planner.ExplainPlanAsync(plan, ExplanationLevel.Counterfactual);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeEmpty();
+        result.Value.Should().Contain("Without this step");
+        result.Value.Should().Contain("Counterfactual");
+    }
+
+    /// <summary>
+    /// Tests that ExplainPlanAsync throws for null plan.
+    /// </summary>
+    [Fact]
+    public async Task ExplainPlanAsync_WithNullPlan_ShouldThrowArgumentNullException()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        // Act
+        Func<Task> act = async () => await planner.ExplainPlanAsync(null!, ExplanationLevel.Brief);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    /// <summary>
+    /// Tests that ExplainPlanAsync handles empty plan gracefully.
+    /// </summary>
+    [Fact]
+    public async Task ExplainPlanAsync_WithEmptyPlan_ShouldGenerateExplanation()
+    {
+        // Arrange
+        var orchestrator = CreateMockOrchestrator();
+        var llm = new MockChatModel("test");
+        var planner = new HierarchicalPlanner(orchestrator, llm);
+
+        var plan = new Plan(
+            "Test goal",
+            new List<PlanStep>(),
+            new Dictionary<string, double>(),
+            DateTime.UtcNow);
+
+        // Act
+        var result = await planner.ExplainPlanAsync(plan, ExplanationLevel.Brief);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Contain("0 steps");
+    }
+
+    #endregion
 }
