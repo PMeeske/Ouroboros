@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
+
 using Ouroboros.Agent.MetaAI.SelfModel;
 using Ouroboros.Application.Integration;
 using Xunit;
