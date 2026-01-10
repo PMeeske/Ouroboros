@@ -70,7 +70,7 @@ static async Task ParseAndRunAsync(string[] args)
         typeof(ExplainOptions), typeof(TestOptions), typeof(OrchestratorOptions), typeof(MeTTaOptions),
         typeof(AssistOptions), typeof(SkillsOptions), typeof(NetworkOptions), typeof(DagOptions),
         typeof(EnvironmentOptions), typeof(AffectOptions), typeof(PolicyOptions), typeof(MaintenanceOptions),
-        typeof(BenchmarkOptions)
+        typeof(BenchmarkOptions), typeof(DreamOptions)
     };
 
     var parseResult = Parser.Default.ParseArguments(args, optionTypes);
@@ -129,6 +129,9 @@ static async Task ParseAndRunAsync(string[] args)
                 break;
             case BenchmarkOptions o:
                 await RunBenchmarkAsync(o);
+                break;
+            case DreamOptions o:
+                await DreamCommands.RunDreamAsync(o);
                 break;
         }
     });
