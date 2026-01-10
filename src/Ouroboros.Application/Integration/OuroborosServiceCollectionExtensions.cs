@@ -6,6 +6,7 @@ namespace Ouroboros.Application.Integration;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Agent.MetaAI.SelfModel;
 using Ouroboros.Agent.MetaAI.WorldModel;
@@ -252,6 +253,87 @@ public static class OuroborosFeatureExtensions
 
         // Register cognitive loop
         services.TryAddSingleton<ICognitiveLoop, CognitiveLoop>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds health checks for all Ouroboros subsystems.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddOuroborosHealthChecks(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddHealthChecks()
+            .AddCheck<OuroborosHealthCheck>(
+                "ouroboros_system",
+                tags: new[] { "ouroboros", "system" })
+            .AddCheck<EpisodicMemoryHealthCheck>(
+                "ouroboros_episodic_memory",
+                tags: new[] { "ouroboros", "memory" })
+            .AddCheck<ConsciousnessHealthCheck>(
+                "ouroboros_consciousness",
+                tags: new[] { "ouroboros", "consciousness" })
+            .AddCheck<CognitiveLoopHealthCheck>(
+                "ouroboros_cognitive_loop",
+                tags: new[] { "ouroboros", "loop" });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds OpenTelemetry instrumentation for Ouroboros operations.
+    /// Includes metrics, tracing, and activity tracking.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddOuroborosTelemetry(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        // Register telemetry as singleton
+        services.TryAddSingleton<OuroborosTelemetry>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds full Ouroboros system with health checks and telemetry enabled.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configureHealthChecks">Optional health check configuration.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddOuroborosFullWithMonitoring(
+        this IServiceCollection services,
+        Action<IHealthChecksBuilder>? configureHealthChecks = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        // Add full Ouroboros system
+        services.AddOuroborosFull();
+
+        // Add health checks
+        var healthChecksBuilder = services.AddHealthChecks()
+            .AddCheck<OuroborosHealthCheck>(
+                "ouroboros_system",
+                tags: new[] { "ouroboros", "system", "ready" })
+            .AddCheck<EpisodicMemoryHealthCheck>(
+                "ouroboros_episodic_memory",
+                tags: new[] { "ouroboros", "memory" })
+            .AddCheck<ConsciousnessHealthCheck>(
+                "ouroboros_consciousness",
+                tags: new[] { "ouroboros", "consciousness" })
+            .AddCheck<CognitiveLoopHealthCheck>(
+                "ouroboros_cognitive_loop",
+                tags: new[] { "ouroboros", "loop" });
+
+        // Allow custom health check configuration
+        configureHealthChecks?.Invoke(healthChecksBuilder);
+
+        // Add telemetry
+        services.TryAddSingleton<OuroborosTelemetry>();
 
         return services;
     }
