@@ -294,7 +294,9 @@ public sealed class AutonomousCoordinator : IDisposable
     /// <summary>
     /// Event fired when speech is recognized from the user.
     /// </summary>
+#pragma warning disable CS0067 // Event is never used - public API for external subscribers
     public event Action<string>? OnSpeechRecognized;
+#pragma warning restore CS0067
 
     /// <summary>
     /// Set of available tool names for priority resolution.

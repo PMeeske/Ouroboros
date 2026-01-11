@@ -183,13 +183,16 @@ public sealed class ImmersivePersona : IAsyncDisposable
                 if (contentOption.HasValue)
                 {
                     var content = contentOption.Value;
-                    var thoughtContent = content.ToSExpr();
-                    // Create a meta-cognition atom
-                    hyperonEngine.AddAtom(Atom.Expr(
-                        Atom.Sym("meta-cognition"),
-                        Atom.Sym(Identity.Name),
-                        content,
-                        Atom.Sym(DateTime.UtcNow.Ticks.ToString())));
+                    if (content is not null)
+                    {
+                        var thoughtContent = content.ToSExpr();
+                        // Create a meta-cognition atom
+                        hyperonEngine.AddAtom(Atom.Expr(
+                            Atom.Sym("meta-cognition"),
+                            Atom.Sym(Identity.Name),
+                            content,
+                            Atom.Sym(DateTime.UtcNow.Ticks.ToString())));
+                    }
                 }
             });
 
@@ -203,9 +206,13 @@ public sealed class ImmersivePersona : IAsyncDisposable
                 var intensityOption = match.Bindings.Lookup("intensity");
                 if (emotionOption.HasValue && intensityOption.HasValue)
                 {
-                    // Update consciousness state based on emotion
-                    var emotionName = emotionOption.Value.ToSExpr();
-                    // Emotion atoms inform the personality engine
+                    var emotionName = emotionOption.Value;
+                    if (emotionName is not null)
+                    {
+                        // Update consciousness state based on emotion
+                        var emotionStr = emotionName.ToSExpr();
+                        // Emotion atoms inform the personality engine
+                    }
                 }
             });
 

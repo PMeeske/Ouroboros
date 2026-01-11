@@ -32,7 +32,7 @@ public sealed class ProviderLoadBalancerTests
         lb1.Strategy.Name.Should().Be("RoundRobin");
         lb1.ProviderCount.Should().Be(0);
         lb1.HealthyProviderCount.Should().Be(0);
-        
+
         lb2.Strategy.Name.Should().Be("WeightedRandom");
         lb3.Strategy.Name.Should().Be("LeastLatency");
         lb4.Strategy.Name.Should().Be("AdaptiveHealth");
@@ -198,7 +198,7 @@ public sealed class ProviderLoadBalancerTests
         loadBalancer.RecordExecution("unreliable", 100, false);
         loadBalancer.RecordExecution("unreliable", 100, true);
         loadBalancer.RecordExecution("unreliable", 100, false);
-        
+
         // Record metrics - reliable is consistent
         loadBalancer.RecordExecution("reliable", 200, true);
         loadBalancer.RecordExecution("reliable", 200, true);
@@ -231,10 +231,7 @@ public sealed class ProviderLoadBalancerTests
         var health = loadBalancer.GetHealthStatus();
         health["provider-1"].IsInCooldown.Should().BeTrue();
         health["provider-1"].CooldownUntil.Should().NotBeNull();
-        if (health["provider-1"].CooldownUntil.HasValue)
-        {
-            health["provider-1"].CooldownUntil.Value.Should().BeAfter(DateTime.UtcNow);
-        }
+        health["provider-1"].CooldownUntil!.Value.Should().BeAfter(DateTime.UtcNow);
     }
 
     /// <summary>

@@ -26,7 +26,9 @@ public sealed class ParallelMeTTaThoughtStreams : IAsyncDisposable
     private readonly int _maxParallelism;
 
     private Func<string, CancellationToken, Task<string>>? _ollamaInferenceFunc;
+#pragma warning disable CS0414 // Field is assigned but never used - reserved for state management
     private bool _isRunning;
+#pragma warning restore CS0414
 
     /// <summary>
     /// Event fired when a new thought atom is produced by any stream.
