@@ -33,6 +33,7 @@ using Ouroboros.Application.Services;
 using Ouroboros.Application.Tools;
 using static Ouroboros.Application.Tools.AutonomousTools;
 using IEmbeddingModel = Ouroboros.Domain.IEmbeddingModel;
+using Unit = Ouroboros.Tools.MeTTa.Unit;
 
 namespace Ouroboros.CLI.Commands;
 

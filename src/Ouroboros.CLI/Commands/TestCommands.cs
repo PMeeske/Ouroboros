@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ouroboros.Options;
 using Ouroboros.Tools.MeTTa;
+using MeTTaUnit = Ouroboros.Tools.MeTTa.Unit;
+using CoreUnit = Ouroboros.Core.Monads.Unit;
 
 namespace Ouroboros.CLI.Commands;
 
@@ -96,7 +98,7 @@ public static class TestCommands
         // 2. Motto Initialization
         Console.WriteLine("\n=== Test: Motto Initialization ===");
         var initStep = new MottoSteps.MottoInitializeStep(engine);
-        var initResult = await initStep.ExecuteAsync(Unit.Value, CancellationToken.None);
+        var initResult = await initStep.ExecuteAsync(CoreUnit.Value, CancellationToken.None);
         initResult.Match(
             success => Console.WriteLine("✓ Motto Initialized"),
             error => Console.WriteLine($"✗ Motto Initialization failed: {error}")

@@ -8,6 +8,7 @@ using Ouroboros.Pipeline.Verification;
 using Ouroboros.Pipeline.Extraction;
 using Ouroboros.Pipeline.Retrieval;
 using Ouroboros.Pipeline.Planning;
+using Unit = Ouroboros.Tools.MeTTa.Unit;
 
 /// <summary>
 /// Unit tests for MeTTa Neuro-Symbolic Integration components.

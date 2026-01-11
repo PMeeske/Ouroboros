@@ -8,9 +8,9 @@ The Episodic Memory System is a foundational AGI component for Ouroboros that pr
 
 ### Core Components
 
-1. **EpisodicMemoryEngine** - Main engine implementing memory storage, retrieval, and consolidation
-2. **EpisodicMemoryExtensions** - Kleisli composition extensions for pipeline integration
-3. **EpisodicVectorCompatibility** - Compatibility layer for vector store integration
+1. **EpisodicMemoryEngine** - Main engine implementing memory storage, retrieval, and consolidation (in `Ouroboros.Pipeline`)
+2. **EpisodicMemoryExtensions** - Kleisli composition extensions for pipeline integration (in `Ouroboros.Pipeline`)
+3. **IEpisodicMemoryEngine** - Core interface abstraction (in `Ouroboros.Core`)
 
 ### Key Interfaces
 

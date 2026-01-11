@@ -16,6 +16,7 @@ using Ouroboros.Pipeline.Verification;
 using Ouroboros.Application.Tools;
 using Ouroboros.Tools.MeTTa;
 using Xunit;
+using Unit = Ouroboros.Tools.MeTTa.Unit;
 
 // Alias to disambiguate PlanStep from Ouroboros.Pipeline.Verification.Plan
 using MetaAIPlanStep = Ouroboros.Agent.MetaAI.PlanStep;

@@ -24,3 +24,5 @@ global using Ouroboros.Pipeline.Reasoning;
 global using Ouroboros.Providers;
 // Tools and providers
 global using Ouroboros.Tools;
+// Resolve Unit type ambiguity - use Core.Monads.Unit as the default
+global using Unit = Ouroboros.Core.Monads.Unit;
