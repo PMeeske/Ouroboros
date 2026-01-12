@@ -46,8 +46,9 @@ public sealed class FileSystemDistinctionWeightStorage : IDistinctionWeightStora
             var filePath = Path.Combine(_config.StoragePath, $"{id}.weights");
             await File.WriteAllBytesAsync(filePath, weights, ct);
 
-            // Update metadata
-            await UpdateMetadataAsync(metadata, ct);
+            // Update metadata with actual file path
+            var updatedMetadata = metadata with { Path = filePath };
+            await UpdateMetadataAsync(updatedMetadata, ct);
 
             _logger?.LogDebug("Stored weights {Id} at {Path}", id, filePath);
             return Result<string, string>.Success(filePath);
