@@ -117,7 +117,7 @@ public sealed class DistinctionLearner : IDistinctionLearner
             var weights = listResult.Value;
             var toDissolve = strategy switch
             {
-                DissolutionStrategy.FitnessThreshold => weights.Where(w => !w.IsDissolved && w.Fitness < 0.3).ToList(),
+                DissolutionStrategy.FitnessThreshold => weights.Where(w => !w.IsDissolved && w.Fitness < DistinctionLearningConstants.DefaultFitnessThreshold).ToList(),
                 DissolutionStrategy.OldestFirst => weights.Where(w => !w.IsDissolved).OrderBy(w => w.CreatedAt).Take(10).ToList(),
                 DissolutionStrategy.LeastRecentlyUsed => weights.Where(w => !w.IsDissolved).OrderBy(w => w.CreatedAt).Take(10).ToList(),
                 DissolutionStrategy.All => weights.Where(w => !w.IsDissolved).ToList(),

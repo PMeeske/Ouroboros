@@ -3359,7 +3359,7 @@ User: goodbye
             }
 
             // Periodic dissolution (every 10 cycles)
-            if (_currentDistinctionState.CycleCount % 10 == 0)
+            if (_currentDistinctionState.CycleCount % DistinctionLearningConstants.DissolutionCycleInterval == 0)
             {
                 await _distinctionLearner.DissolveAsync(
                     _currentDistinctionState,
@@ -3369,6 +3369,7 @@ User: goodbye
         }
         catch (Exception ex)
         {
+            // Log the error but don't disrupt the interaction
             Console.ForegroundColor = ConsoleColor.DarkRed;
             Console.WriteLine($"  [!] Distinction learning error: {ex.Message}");
             Console.ResetColor();

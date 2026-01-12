@@ -81,7 +81,7 @@ public sealed class DistinctionConsolidationService : BackgroundService
 
         // 2. Dissolve low-fitness distinctions
         var lowFitness = weights
-            .Where(w => !w.IsDissolved && w.Fitness < 0.3)
+            .Where(w => !w.IsDissolved && w.Fitness < DistinctionLearningConstants.DefaultFitnessThreshold)
             .ToList();
 
         foreach (var w in lowFitness)
