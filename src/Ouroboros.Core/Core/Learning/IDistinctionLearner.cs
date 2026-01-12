@@ -4,70 +4,52 @@
 
 namespace Ouroboros.Core.Learning;
 
-using Ouroboros.Core.LawsOfForm;
+using Ouroboros.Core.Monads;
 
 /// <summary>
-/// Interface for distinction-based learning following Laws of Form.
-/// Learning = Making distinctions (∅ → ⌐)
-/// Understanding = Recognition (i = ⌐, the subject IS the distinction)
-/// Unlearning = Dissolution (principled forgetting, ⌐ → ∅)
-/// Uncertainty = Imaginary state (Form.Imaginary for epistemic uncertainty)
+/// Interface for the Distinction Learning system.
+/// Orchestrates the learning process based on observations and dream stages.
 /// </summary>
 public interface IDistinctionLearner
 {
     /// <summary>
-    /// Updates the learning state from a new observation at a given dream stage.
-    /// Advances through the consciousness cycle, making and refining distinctions.
+    /// Updates the distinction state based on a new observation.
+    /// Trains PEFT weights and updates the state accordingly.
     /// </summary>
-    /// <param name="currentState">Current distinction learning state.</param>
-    /// <param name="observation">New observation to learn from.</param>
-    /// <param name="stage">Dream stage to process at.</param>
+    /// <param name="currentState">The current distinction state.</param>
+    /// <param name="observation">The new observation to learn from.</param>
+    /// <param name="stage">The current dream stage.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Updated distinction state or error message.</returns>
-    Task<Result<DistinctionState>> UpdateFromDistinctionAsync(
+    /// <returns>Result containing updated state or error message.</returns>
+    Task<Result<DistinctionState, string>> UpdateFromDistinctionAsync(
         DistinctionState currentState,
         Observation observation,
         DreamStage stage,
         CancellationToken ct = default);
 
     /// <summary>
-    /// Evaluates how well a distinction fits the observed data.
-    /// Higher fitness means the distinction successfully predicts/explains observations.
+    /// Performs recognition merge - subject becomes the distinction (i = ⌐).
+    /// This is the key operation in the Recognition stage.
     /// </summary>
-    /// <param name="distinction">The distinction to evaluate.</param>
-    /// <param name="observations">Historical observations to evaluate against.</param>
+    /// <param name="state">The current distinction state.</param>
+    /// <param name="circumstance">The circumstance triggering recognition.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Fitness score (0.0 to 1.0) or error message.</returns>
-    Task<Result<double>> EvaluateDistinctionFitnessAsync(
-        string distinction,
-        List<Observation> observations,
-        CancellationToken ct = default);
-
-    /// <summary>
-    /// Dissolves (forgets) distinctions according to a strategy.
-    /// Principled forgetting: returning distinctions to void (⌐ → ∅).
-    /// Prevents catastrophic forgetting by selective dissolution.
-    /// </summary>
-    /// <param name="state">Current distinction state.</param>
-    /// <param name="strategy">Dissolution strategy to apply.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>State with dissolved distinctions or error message.</returns>
-    Task<Result<DistinctionState>> DissolveAsync(
-        DistinctionState state,
-        DissolutionStrategy strategy,
-        CancellationToken ct = default);
-
-    /// <summary>
-    /// Recognition stage: realizes "I am the distinction" (i = ⌐).
-    /// Transforms understanding by merging self with observation.
-    /// This is the moment of insight where the subject recognizes itself as the process.
-    /// </summary>
-    /// <param name="state">Current distinction state.</param>
-    /// <param name="circumstance">The circumstance being recognized.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>State after recognition or error message.</returns>
-    Task<Result<DistinctionState>> RecognizeAsync(
+    /// <returns>Result containing updated state or error message.</returns>
+    Task<Result<DistinctionState, string>> RecognizeAsync(
         DistinctionState state,
         string circumstance,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Performs dissolution - removes low-fitness distinctions.
+    /// Used during the Dissolution stage.
+    /// </summary>
+    /// <param name="state">The current distinction state.</param>
+    /// <param name="fitnessThreshold">Fitness threshold for dissolution. Default: 0.3.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Result containing updated state or error message.</returns>
+    Task<Result<DistinctionState, string>> DissolveAsync(
+        DistinctionState state,
+        double fitnessThreshold = 0.3,
         CancellationToken ct = default);
 }

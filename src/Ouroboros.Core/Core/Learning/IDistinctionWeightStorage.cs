@@ -2,73 +2,71 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using Ouroboros.Core.Monads;
-
 namespace Ouroboros.Core.Learning;
 
+using Ouroboros.Core.Monads;
+
 /// <summary>
-/// Storage interface for distinction embeddings/weights.
-/// Handles persistence of learned distinctions to file system with metadata in Qdrant.
+/// Interface for storing and retrieving distinction weights.
+/// This abstracts the persistence layer for distinction learning.
 /// </summary>
 public interface IDistinctionWeightStorage
 {
     /// <summary>
-    /// Stores distinction embedding weights after learning.
+    /// Stores distinction weights and associates them with an ID.
     /// </summary>
-    /// <param name="id">The distinction identifier.</param>
+    /// <param name="id">Unique identifier for the distinction.</param>
     /// <param name="weights">The distinction weights to store.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Result containing the storage path or an error message.</returns>
-    Task<Result<string, string>> StoreDistinctionWeightsAsync(
+    /// <returns>Result indicating success or error message.</returns>
+    Task<Result<Unit, string>> StoreDistinctionWeightsAsync(
         DistinctionId id,
         DistinctionWeights weights,
         CancellationToken ct = default);
 
     /// <summary>
-    /// Retrieves distinction weights for inference.
+    /// Retrieves distinction weights by ID.
     /// </summary>
-    /// <param name="path">The path to the stored weights.</param>
+    /// <param name="id">The distinction ID to retrieve.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Result containing the distinction weights or an error message.</returns>
+    /// <returns>Result containing the weights or error message.</returns>
     Task<Result<DistinctionWeights, string>> GetDistinctionWeightsAsync(
-        string path,
+        DistinctionId id,
         CancellationToken ct = default);
 
     /// <summary>
-    /// Applies dissolution - archives/removes a distinction's weights.
+    /// Retrieves distinctions similar to a given embedding.
+    /// Uses vector similarity search.
     /// </summary>
-    /// <param name="path">The path to the weights to dissolve.</param>
+    /// <param name="embedding">The query embedding.</param>
+    /// <param name="topK">Number of results to return. Default: 10.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Result containing Unit on success or an error message.</returns>
-    Task<Result<Unit, string>> DissolveWeightsAsync(
-        string path,
+    /// <returns>Result containing list of similar distinctions or error message.</returns>
+    Task<Result<IReadOnlyList<DistinctionWeights>, string>> FindSimilarDistinctionsAsync(
+        float[] embedding,
+        int topK = 10,
         CancellationToken ct = default);
 
     /// <summary>
-    /// Merges multiple distinction weights after Recognition stage (i = ⌐).
+    /// Deletes distinction weights by ID.
+    /// Used during dissolution.
     /// </summary>
-    /// <param name="weights">The weights to merge.</param>
-    /// <param name="context">The recognition context.</param>
+    /// <param name="id">The distinction ID to delete.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Result containing the merged weights or an error message.</returns>
-    Task<Result<DistinctionWeights, string>> MergeOnRecognitionAsync(
-        IReadOnlyList<DistinctionWeights> weights,
-        RecognitionContext context,
+    /// <returns>Result indicating success or error message.</returns>
+    Task<Result<Unit, string>> DeleteDistinctionWeightsAsync(
+        DistinctionId id,
         CancellationToken ct = default);
 
     /// <summary>
-    /// Lists all stored distinction weights.
+    /// Updates the fitness score for a distinction.
     /// </summary>
+    /// <param name="id">The distinction ID to update.</param>
+    /// <param name="newFitness">The new fitness score.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Result containing the list of weight info or an error message.</returns>
-    Task<Result<IReadOnlyList<DistinctionWeightInfo>, string>> ListWeightsAsync(
-        CancellationToken ct = default);
-
-    /// <summary>
-    /// Gets total storage size used by distinctions.
-    /// </summary>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>Result containing the total size in bytes or an error message.</returns>
-    Task<Result<long, string>> GetTotalStorageSizeAsync(
+    /// <returns>Result indicating success or error message.</returns>
+    Task<Result<Unit, string>> UpdateFitnessAsync(
+        DistinctionId id,
+        double newFitness,
         CancellationToken ct = default);
 }

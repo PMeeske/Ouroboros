@@ -212,4 +212,152 @@ public sealed class MockPeftIntegration : IPeftIntegration
             return Task.FromResult(Result<long, string>.Failure($"Validation failed: {ex.Message}"));
         }
     }
+
+    /// <inheritdoc/>
+    public async Task<Result<byte[], string>> TrainOnDistinctionAsync(
+        string baseModelName,
+        byte[] currentWeights,
+        DistinctionTrainingExample example,
+        DistinctionTrainingConfig config,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            _logger?.LogInformation(
+                "Training mock adapter on distinction '{Distinction}' at stage {Stage}",
+                example.DistinctionMade,
+                example.Stage);
+
+            // Simulate training delay based on stage
+            var delayMs = example.Stage switch
+            {
+                DreamStage.Distinction => 50,
+                DreamStage.SubjectEmerges => 100,
+                DreamStage.WorldCrystallizes => 150,
+                DreamStage.Recognition => 200,
+                _ => 75
+            };
+            await Task.Delay(delayMs, ct);
+
+            // Modify weights based on distinction
+            var newWeights = new byte[currentWeights.Length];
+            Array.Copy(currentWeights, newWeights, currentWeights.Length);
+
+            // Simulate weight modification using distinction hash
+            var hash = example.Circumstance.GetHashCode();
+            for (int i = 0; i < Math.Min(100, newWeights.Length); i++)
+            {
+                newWeights[i] = (byte)((newWeights[i] + (hash >> (i % 32))) % 256);
+            }
+
+            return Result<byte[], string>.Success(newWeights);
+        }
+        catch (OperationCanceledException)
+        {
+            return Result<byte[], string>.Failure("Operation cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error training mock adapter on distinction");
+            return Result<byte[], string>.Failure($"Distinction training failed: {ex.Message}");
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<byte[], string>> ApplyDissolutionAsync(
+        string baseModelName,
+        byte[] currentWeights,
+        float[] dissolutionMask,
+        double dissolutionStrength,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            _logger?.LogInformation(
+                "Applying mock dissolution with strength {Strength}",
+                dissolutionStrength);
+
+            // Simulate dissolution delay
+            await Task.Delay(100, ct);
+
+            var newWeights = new byte[currentWeights.Length];
+            Array.Copy(currentWeights, newWeights, currentWeights.Length);
+
+            // Apply dissolution mask
+            var maskLength = Math.Min(dissolutionMask.Length, newWeights.Length);
+            for (int i = 0; i < maskLength; i++)
+            {
+                // Reduce weights proportionally to mask and strength
+                var reduction = dissolutionMask[i] * dissolutionStrength;
+                newWeights[i] = (byte)(newWeights[i] * (1.0 - reduction));
+            }
+
+            return Result<byte[], string>.Success(newWeights);
+        }
+        catch (OperationCanceledException)
+        {
+            return Result<byte[], string>.Failure("Operation cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error applying mock dissolution");
+            return Result<byte[], string>.Failure($"Dissolution failed: {ex.Message}");
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<byte[], string>> MergeOnRecognitionAsync(
+        string baseModelName,
+        IReadOnlyList<byte[]> weights,
+        float[] selfEmbedding,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            _logger?.LogInformation(
+                "Performing mock recognition merge on {Count} adapters",
+                weights.Count);
+
+            // Simulate merge delay
+            await Task.Delay(300, ct);
+
+            if (weights.Count == 0)
+            {
+                return Result<byte[], string>.Failure("No weights to merge");
+            }
+
+            // Use geometric mean for recognition (subject-object unity)
+            var size = weights[0].Length;
+            var merged = new byte[size];
+
+            for (int i = 0; i < size; i++)
+            {
+                double product = 1.0;
+                int count = 0;
+
+                foreach (var w in weights)
+                {
+                    if (i < w.Length && w[i] > 0)
+                    {
+                        product *= w[i];
+                        count++;
+                    }
+                }
+
+                // Geometric mean: nth root of product
+                merged[i] = count > 0 ? (byte)Math.Pow(product, 1.0 / count) : (byte)0;
+            }
+
+            return Result<byte[], string>.Success(merged);
+        }
+        catch (OperationCanceledException)
+        {
+            return Result<byte[], string>.Failure("Operation cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error performing mock recognition merge");
+            return Result<byte[], string>.Failure($"Recognition merge failed: {ex.Message}");
+        }
+    }
 }
