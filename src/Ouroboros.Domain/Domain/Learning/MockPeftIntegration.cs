@@ -6,6 +6,7 @@ namespace Ouroboros.Domain.Learning;
 
 using System.Text;
 using Microsoft.Extensions.Logging;
+using Ouroboros.Core.LawsOfForm;
 using Ouroboros.Core.Learning;
 using Ouroboros.Core.Monads;
 

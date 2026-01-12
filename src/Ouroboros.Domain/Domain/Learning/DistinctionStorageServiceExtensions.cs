@@ -3,7 +3,8 @@
 // </copyright>
 
 using Microsoft.Extensions.DependencyInjection;
-using Ouroboros.Core.Learning;
+using Ouroboros.Core.DistinctionLearning;
+using Ouroboros.Domain.DistinctionLearning;
 
 namespace Ouroboros.Domain.Learning;
 
@@ -25,7 +26,7 @@ public static class DistinctionStorageServiceExtensions
         config ??= DistinctionStorageConfig.Default;
 
         services.AddSingleton(config);
-        services.AddSingleton<IDistinctionWeightStorage, FileSystemDistinctionStorage>();
+        services.AddSingleton<IDistinctionWeightStorage, FileSystemDistinctionWeightStorage>();
         services.AddSingleton<QdrantDistinctionMetadataStorage>();
 
         return services;

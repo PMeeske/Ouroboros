@@ -6,6 +6,7 @@ namespace Ouroboros.Tests.Learning;
 
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Ouroboros.Core.LawsOfForm;
 using Ouroboros.Core.Learning;
 using Ouroboros.Domain.Learning;
 using Xunit;
@@ -121,7 +122,7 @@ public class QdrantDistinctionMetadataTests
             Embedding: new float[] { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f },
             DissolutionMask: new float[] { 0.01f, 0.02f, 0.03f, 0.04f, 0.05f },
             RecognitionTransform: new float[] { 1.1f, 1.2f, 1.3f, 1.4f, 1.5f },
-            LearnedAtStage: 1, // Distinction stage
+            LearnedAtStage: DreamStage.Distinction,
             Fitness: 0.85,
             Circumstance: "test_circumstance",
             CreatedAt: DateTime.UtcNow,
