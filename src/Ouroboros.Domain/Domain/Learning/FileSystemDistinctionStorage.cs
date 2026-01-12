@@ -258,11 +258,15 @@ public sealed class FileSystemDistinctionStorage : IDistinctionWeightStorage
                 var fileInfo = new FileInfo(file);
                 var isDissolved = file.EndsWith(".dissolved.bin");
 
-                // Parse ID from filename
-                var filename = Path.GetFileNameWithoutExtension(fileInfo.Name);
+                // Parse ID from filename - remove both extensions
+                var filename = Path.GetFileName(file);
                 if (isDissolved)
                 {
-                    filename = filename.Replace(".dissolved", string.Empty);
+                    filename = filename.Replace(".dissolved.bin", string.Empty);
+                }
+                else
+                {
+                    filename = filename.Replace(".distinction.bin", string.Empty);
                 }
 
                 if (Guid.TryParse(filename, out var guid))
