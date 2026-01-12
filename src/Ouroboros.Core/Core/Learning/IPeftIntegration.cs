@@ -4,6 +4,7 @@
 
 namespace Ouroboros.Core.Learning;
 
+using Ouroboros.Core.LawsOfForm;
 using Ouroboros.Core.Monads;
 
 /// <summary>

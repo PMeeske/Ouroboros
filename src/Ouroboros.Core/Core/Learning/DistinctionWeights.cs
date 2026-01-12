@@ -4,6 +4,8 @@
 
 namespace Ouroboros.Core.Learning;
 
+using Ouroboros.Core.LawsOfForm;
+
 /// <summary>
 /// Represents the learned weights and metadata for a distinction.
 /// This combines PEFT adapter weights with distinction-specific information.
