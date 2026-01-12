@@ -35,6 +35,13 @@ public sealed class CliPipelineState
     // Network State Tracking (optional, for reifying Steps into MerkleDag)
     public NetworkStateTracker? NetworkTracker { get; set; }
 
+    // Convolution and Higher-Dimensional Thought State
+    /// <summary>Named vector slots for convolution operations (e.g. "thought_A", "result").</summary>
+    public Dictionary<string, float[]> Vectors { get; } = [];
+
+    /// <summary>The most recently computed convolution/meta-thought result.</summary>
+    public float[]? LastConvolutionResult { get; set; }
+
     public CliPipelineState WithBranch(PipelineBranch branch)
     {
         this.Branch = branch;

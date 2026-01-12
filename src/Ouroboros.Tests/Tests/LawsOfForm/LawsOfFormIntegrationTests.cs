@@ -199,11 +199,12 @@ public class LawsOfFormIntegrationTests
     public void LawsOfForm_Properties_DoubleNegation()
     {
         // Demonstrate fundamental Laws of Form property
+        // In classical logic and Laws of Form: Not(Not(x)) = x (involution)
         var form = Form.Mark;
         var doubleNegated = form.Not().Not();
 
-        // ⌐⌐ = void (double negation cancels)
-        doubleNegated.IsVoid().Should().BeTrue();
+        // Double negation returns to the original state (involution property)
+        doubleNegated.IsMark().Should().BeTrue();
     }
 
     [Fact]
@@ -236,7 +237,7 @@ public class LawsOfFormIntegrationTests
 
     private static ExecutionContext CreateTestContext(bool hasAdminPermission = false)
     {
-        var permissions = new HashSet<string> { "execute_tools" };
+        var permissions = new HashSet<string> { "execute_tools", "safe_tool" };
         if (hasAdminPermission)
         {
             permissions.Add("admin");

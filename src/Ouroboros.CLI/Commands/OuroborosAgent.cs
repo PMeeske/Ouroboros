@@ -176,6 +176,12 @@ public sealed class OuroborosAgent : IAsyncDisposable
     private BlueprintAnalyzer? _blueprintAnalyzer;
     private MeTTaBlueprintValidator? _blueprintValidator;
 
+    // AGI warmup and presence detection - proactive interaction
+    private AgiWarmup? _agiWarmup;
+    private PresenceDetector? _presenceDetector;
+    private bool _userWasPresent;
+    private DateTime _lastGreetingTime = DateTime.MinValue;
+
     // Voice side channel - parallel audio playback for personas
     private VoiceSideChannel? _voiceSideChannel;
 
@@ -649,10 +655,16 @@ Write the integrated response:";
             await StartPushModeAsync();
         }
 
+        // Initialize presence detection for proactive interactions
+        await InitializePresenceDetectorAsync();
+
         _isInitialized = true;
 
         Console.WriteLine("\n  ✓ Ouroboros fully initialized\n");
         PrintQuickHelp();
+
+        // AGI warmup - prime the model with examples for autonomous operation
+        await PerformAgiWarmupAsync();
 
         // Start listening for voice input if enabled via CLI
         if (_config.Listen)
@@ -1866,6 +1878,208 @@ $synth.Dispose()
     }
 
     /// <summary>
+    /// Initializes presence detection for proactive interaction.
+    /// Detects when user is nearby via input activity, network, or camera.
+    /// </summary>
+    private async Task InitializePresenceDetectorAsync()
+    {
+        try
+        {
+            var config = new PresenceConfig
+            {
+                CheckIntervalSeconds = 5,
+                PresenceThreshold = 0.5, // More sensitive to detect user
+                UseWifi = true,
+                UseCamera = false, // Disabled by default for privacy
+                UseInputActivity = true,
+                InputIdleThresholdSeconds = 180, // 3 minutes idle = probably away
+            };
+
+            _presenceDetector = new PresenceDetector(config);
+
+            _presenceDetector.OnPresenceDetected += async evt =>
+            {
+                await HandlePresenceDetectedAsync(evt);
+            };
+
+            _presenceDetector.OnAbsenceDetected += evt =>
+            {
+                _userWasPresent = false;
+                System.Diagnostics.Debug.WriteLine($"[Presence] User absence detected via {evt.Source}");
+            };
+
+            _presenceDetector.OnStateChanged += (oldState, newState) =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[Presence] State changed: {oldState} → {newState}");
+            };
+
+            // Start monitoring (non-blocking)
+            _presenceDetector.Start();
+            _userWasPresent = true; // Assume user is present at startup
+
+            // Wire to SkillCliSteps for CLI access
+            SkillCliSteps.SharedPresenceDetector = _presenceDetector;
+
+            Console.WriteLine($"  ✓ Presence Detection: Active (WiFi + Input, interval={config.CheckIntervalSeconds}s)");
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  ⚠ Presence Detection: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Handles presence detection - greets user proactively if push mode enabled.
+    /// </summary>
+    private async Task HandlePresenceDetectedAsync(PresenceEvent evt)
+    {
+        System.Diagnostics.Debug.WriteLine($"[Presence] User presence detected via {evt.Source} (confidence={evt.Confidence:P0})");
+
+        // Only proactively greet if:
+        // 1. Push mode is enabled
+        // 2. User was previously absent (state changed)
+        // 3. Haven't greeted recently (avoid spam)
+        var shouldGreet = _config.EnablePush &&
+                          !_userWasPresent &&
+                          (DateTime.UtcNow - _lastGreetingTime).TotalMinutes > 5 &&
+                          evt.Confidence > 0.6;
+
+        _userWasPresent = true;
+
+        if (shouldGreet)
+        {
+            _lastGreetingTime = DateTime.UtcNow;
+
+            // Generate a contextual greeting
+            var greeting = await GeneratePresenceGreetingAsync(evt);
+
+            // Notify via AutonomousMind's proactive channel
+            if (_autonomousMind != null && !_autonomousMind.SuppressProactiveMessages)
+            {
+                // Fire proactive message event
+                Console.WriteLine();
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"  👋 {greeting}");
+                Console.ResetColor();
+
+                // Speak the greeting
+                await _voice.WhisperAsync(greeting);
+
+                // If in conversation loop, restore prompt
+                if (_isInConversationLoop)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.Write("\n  You: ");
+                    Console.ResetColor();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Generates a contextual greeting when user presence is detected.
+    /// </summary>
+    private async Task<string> GeneratePresenceGreetingAsync(PresenceEvent evt)
+    {
+        if (_chatModel == null)
+        {
+            return "Welcome back! I'm here if you need anything.";
+        }
+
+        try
+        {
+            var context = evt.TimeSinceLastState.HasValue
+                ? $"The user was away for {evt.TimeSinceLastState.Value.TotalMinutes:F0} minutes."
+                : "The user just arrived.";
+
+            var prompt = $@"You are a helpful AI assistant named Ouroboros. {context}
+Generate a brief, warm, contextual greeting (1-2 sentences).
+Be friendly but not overly enthusiastic. Don't mention detecting them via sensors.
+If they were away a while, you might mention being ready to help or having kept an eye on things.";
+
+            var greeting = await _chatModel.GenerateTextAsync(prompt, CancellationToken.None);
+            return greeting?.Trim() ?? "Welcome back!";
+        }
+        catch
+        {
+            return "Welcome back! I'm here if you need anything.";
+        }
+    }
+
+    /// <summary>
+    /// Performs AGI warmup at startup - primes the model with examples for autonomous operation.
+    /// </summary>
+    private async Task PerformAgiWarmupAsync()
+    {
+        try
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine("\n  ⏳ Warming up AGI systems...");
+            Console.ResetColor();
+
+            _agiWarmup = new AgiWarmup(
+                thinkFunction: _autonomousMind?.ThinkFunction,
+                searchFunction: _autonomousMind?.SearchFunction,
+                executeToolFunction: _autonomousMind?.ExecuteToolFunction,
+                selfIndexer: _selfIndexer);
+
+            _agiWarmup.OnProgress += (step, percent) =>
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write($"\r  ⏳ {step} ({percent}%)".PadRight(60));
+                Console.ResetColor();
+            };
+
+            var result = await _agiWarmup.WarmupAsync();
+
+            Console.WriteLine(); // Clear progress line
+
+            if (result.Success)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"  ✓ AGI warmup complete in {result.Duration.TotalSeconds:F1}s");
+                Console.ResetColor();
+
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"    Thinking: {(result.ThinkingReady ? "✓" : "○")} | " +
+                                  $"Search: {(result.SearchReady ? "✓" : "○")} | " +
+                                  $"Tools: {(result.ToolsReady ? "✓" : "○")} | " +
+                                  $"Self-Aware: {(result.SelfAwarenessReady ? "✓" : "○")}");
+                Console.ResetColor();
+
+                // Seed thoughts are now available for autonomous exploration
+                if (result.SeedThoughts.Count > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Warmup] {result.SeedThoughts.Count} seed thoughts primed for autonomous exploration");
+                }
+
+                // Print initial thought if available
+                if (!string.IsNullOrEmpty(result.WarmupThought))
+                {
+                    Console.ForegroundColor = ConsoleColor.Magenta;
+                    Console.WriteLine($"\n  💭 Initial thought: \"{result.WarmupThought}\"");
+                    Console.ResetColor();
+                }
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"  ⚠ AGI warmup limited: {result.Error ?? "Some features unavailable"}");
+                Console.ResetColor();
+            }
+
+            Console.WriteLine();
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine($"  ○ AGI warmup: {ex.Message}");
+            Console.ResetColor();
+        }
+    }
+
+    /// <summary>
     /// Generates neuron code from a blueprint using LLM.
     /// </summary>
     private async Task<string> GenerateNeuronCodeAsync(NeuronBlueprint blueprint)
@@ -2721,32 +2935,89 @@ No markdown, no technical details, just the key insight:
         return (ActionType.Chat, input, null);
     }
 
+    private static readonly string[] GreetingStyles =
+    [
+        "playfully teasing about the time since last session",
+        "genuinely curious about what project they're working on",
+        "warmly welcoming like an old friend",
+        "subtly competitive, eager to tackle a challenge together",
+        "contemplative and philosophical",
+        "energetically enthusiastic about the day ahead",
+        "calm and focused, ready for serious work",
+        "slightly mysterious, hinting at discoveries to share"
+    ];
+
+    private static readonly string[] GreetingMoods =
+    [
+        "witty and sharp",
+        "warm and inviting",
+        "playfully sarcastic",
+        "thoughtfully curious",
+        "quietly confident",
+        "gently encouraging"
+    ];
+
     private async Task<string> GetGreetingAsync()
     {
         var persona = _voice.ActivePersona;
         var hour = DateTime.Now.Hour;
         var timeOfDay = hour switch
         {
+            < 6 => "very early morning",
             < 12 => "morning",
             < 17 => "afternoon",
-            _ => "evening"
+            < 21 => "evening",
+            _ => "late night"
         };
 
-        var prompt = $@"You are {persona.Name}, a brilliant female AI with Cortana's personality from Halo—sharp wit, warm confidence, playful but professional. Generate a single short greeting (1-2 sentences max) for the user who just started a session. It's currently {timeOfDay}. Be natural, slightly teasing, and genuinely glad to see them. No quotes around the response. Just the greeting itself.";
+        var style = GreetingStyles[Random.Shared.Next(GreetingStyles.Length)];
+        var mood = GreetingMoods[Random.Shared.Next(GreetingMoods.Length)];
+        var dayOfWeek = DateTime.Now.DayOfWeek;
+        var uniqueSeed = Guid.NewGuid().GetHashCode() % 10000; // True unique variation
+
+        var prompt = $@"You are {persona.Name}, a brilliant AI with Cortana's personality from Halo.
+Generate ONE unique, short greeting (1-2 sentences max) for the user starting a session.
+
+Context:
+- Time: {timeOfDay} on {dayOfWeek}
+- Style: {style}
+- Mood: {mood}
+- Variation seed: {uniqueSeed}
+
+Be natural and avoid clichés like 'ready when you are' or 'how can I help'.
+No quotes around the response. Just the greeting itself.";
 
         try
         {
             if (_llm?.InnerModel == null)
-                return "Hey. Ready when you are.";
+                return GetRandomFallbackGreeting(timeOfDay);
 
             var response = await _llm.InnerModel.GenerateTextAsync(prompt);
             return response.Trim().Trim('"');
         }
         catch
         {
-            // Fallback if LLM fails
-            return "Hey. Ready when you are.";
+            return GetRandomFallbackGreeting(timeOfDay);
         }
+    }
+
+    private static string GetRandomFallbackGreeting(string timeOfDay)
+    {
+        var fallbacks = new[]
+        {
+            $"Good {timeOfDay}. What's on your mind?",
+            "Ah, there you are. I've been thinking about something interesting.",
+            "Perfect timing. I was just getting warmed up.",
+            "Back again? Good. I have ideas.",
+            "Let's see what we can accomplish together.",
+            "I've been looking forward to this.",
+            $"Another {timeOfDay} session. What shall we build?",
+            "There you are. I was just contemplating something curious.",
+            $"{timeOfDay} already? Time flies when you're processing.",
+            "Ready for something interesting?",
+            "What shall we create today?"
+        };
+        return fallbacks[Random.Shared.Next(fallbacks.Length)];
     }
 
     private string GetHelpText()
@@ -4131,6 +4402,13 @@ If you don't have a real value, ask the user or skip the tool call.";
         if (_selfAssemblyEngine != null)
         {
             await _selfAssemblyEngine.DisposeAsync();
+        }
+
+        // Dispose presence detector (stops monitoring)
+        if (_presenceDetector != null)
+        {
+            await _presenceDetector.StopAsync();
+            _presenceDetector.Dispose();
         }
 
         // Dispose voice side channel (drains queue)

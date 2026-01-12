@@ -89,7 +89,7 @@ public static class CausalMeTTaIntegration
     /// <returns>A MeTTa atom string.</returns>
     public static string EdgeToMeTTaAtom(CausalEdge edge)
     {
-        return $"(causes {edge.Cause} {edge.Effect} {edge.Strength} {edge.Type.ToString().ToLower()})";
+        return $"(causes {edge.Cause} {edge.Effect} {edge.Strength.ToString(System.Globalization.CultureInfo.InvariantCulture)} {edge.Type.ToString().ToLower()})";
     }
 
     /// <summary>
