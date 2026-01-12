@@ -15,6 +15,7 @@ namespace Ouroboros.Domain.Learning;
 /// </summary>
 public sealed class FileSystemDistinctionStorage : IDistinctionWeightStorage
 {
+    private const double GeometricMeanEpsilon = 1e-10; // Small value to avoid zero in geometric mean
     private readonly DistinctionStorageConfig _config;
     private readonly ILogger<FileSystemDistinctionStorage> _logger;
     private readonly SemaphoreSlim _fileLock = new(1, 1);
@@ -200,9 +201,9 @@ public sealed class FileSystemDistinctionStorage : IDistinctionWeightStorage
 
                 foreach (var weight in weights)
                 {
-                    embeddingProduct *= Math.Abs(weight.Embedding[i]) + 1e-10; // Avoid zero
-                    dissolutionProduct *= Math.Abs(weight.DissolutionMask[i]) + 1e-10;
-                    recognitionProduct *= Math.Abs(weight.RecognitionTransform[i]) + 1e-10;
+                    embeddingProduct *= Math.Abs(weight.Embedding[i]) + GeometricMeanEpsilon;
+                    dissolutionProduct *= Math.Abs(weight.DissolutionMask[i]) + GeometricMeanEpsilon;
+                    recognitionProduct *= Math.Abs(weight.RecognitionTransform[i]) + GeometricMeanEpsilon;
                 }
 
                 mergedEmbedding[i] = (float)Math.Pow(embeddingProduct, 1.0 / weights.Count);

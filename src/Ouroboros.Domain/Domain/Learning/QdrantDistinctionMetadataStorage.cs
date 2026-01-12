@@ -38,7 +38,7 @@ public sealed class QdrantDistinctionMetadataStorage
         // Parse connection string
         var uri = new Uri(connectionString);
         var host = uri.Host;
-        var port = uri.Port > 0 ? uri.Port : 6334;
+        var port = uri.Port > 0 ? uri.Port : 6333; // Default Qdrant port
         var useHttps = uri.Scheme == "https";
 
         _client = new QdrantClient(host, port, useHttps);

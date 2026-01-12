@@ -123,7 +123,7 @@ public class DistinctionPersistenceIntegrationTests : IDisposable
             DistinctionId.NewId()
         };
 
-        var weights = ids.Select(id => CreateTestWeights(id, fitness: 0.7 + (Random.Shared.NextDouble() * 0.2)))
+        var weights = ids.Select((id, index) => CreateTestWeights(id, fitness: 0.7 + (index * 0.05)))
             .ToList();
 
         foreach (var (id, weight) in ids.Zip(weights))
