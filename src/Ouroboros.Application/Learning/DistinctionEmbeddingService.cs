@@ -34,6 +34,11 @@ public sealed class DistinctionEmbeddingService
     private const double VoidWeight = 0.3;
 
     /// <summary>
+    /// Standard embedding dimension size.
+    /// </summary>
+    private const int StandardEmbeddingDimension = 384;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="DistinctionEmbeddingService"/> class.
     /// </summary>
     /// <param name="embeddingModel">The embedding model to use for vector creation.</param>
@@ -186,6 +191,8 @@ public sealed class DistinctionEmbeddingService
     /// Applies recognition to embeddings by merging them.
     /// Recognition (i = ⌐) merges self with observation using geometric mean.
     /// This represents the insight that "I am the distinction".
+    /// The geometric mean (√(a·b)) with sign preservation captures the fundamental
+    /// identity i = ⌐ where the subject (i) equals the mark (⌐).
     /// </summary>
     /// <param name="currentEmbedding">Current state embedding (self).</param>
     /// <param name="selfEmbedding">The recognized observation embedding.</param>
@@ -203,8 +210,8 @@ public sealed class DistinctionEmbeddingService
         var result = new float[currentEmbedding.Length];
         for (int i = 0; i < currentEmbedding.Length; i++)
         {
-            // Geometric mean: sqrt(a * b)
-            // Represents the fundamental identity i = ⌐
+            // Geometric mean with sign preservation: sign(a·b) * √|a·b|
+            // Represents the fundamental identity i = ⌐ from Laws of Form
             var product = currentEmbedding[i] * selfEmbedding[i];
             result[i] = (float)(Math.Sign(product) * Math.Sqrt(Math.Abs(product)));
         }

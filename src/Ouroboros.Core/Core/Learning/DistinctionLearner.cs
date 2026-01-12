@@ -16,6 +16,7 @@ public sealed class DistinctionLearner : IDistinctionLearner
     private const double DefaultFitnessThreshold = 0.3;
     private const double FitnessDecayRate = 0.1;
     private const int TemporalDecayDays = 30;
+    private const int MaxRetainedDistinctionsOnDecay = 10;
 
     /// <summary>
     /// Updates the learning state from a new observation at a given dream stage.
@@ -348,7 +349,7 @@ public sealed class DistinctionLearner : IDistinctionLearner
     {
         // In a full implementation, would track timestamps per distinction
         // For now, dissolve oldest (first added) distinctions beyond a threshold
-        var toKeep = Math.Min(10, state.ActiveDistinctions.Count);
+        var toKeep = Math.Min(MaxRetainedDistinctionsOnDecay, state.ActiveDistinctions.Count);
         var toDissolve = state.ActiveDistinctions.Skip(toKeep).ToList();
         
         return state.DissolveDistinctions(toDissolve);

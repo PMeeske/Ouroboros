@@ -407,6 +407,7 @@ public class DistinctionLearningBenchmark
 /// </summary>
 internal class MockEmbeddingModel : IEmbeddingModel
 {
+    private const int StandardEmbeddingDimension = 384;
     private readonly Random random = new(42);
 
     public Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
@@ -415,7 +416,7 @@ internal class MockEmbeddingModel : IEmbeddingModel
         var hash = input.GetHashCode();
         var localRandom = new Random(hash);
         
-        var embedding = new float[384]; // Common embedding size
+        var embedding = new float[StandardEmbeddingDimension];
         for (int i = 0; i < embedding.Length; i++)
         {
             embedding[i] = (float)(localRandom.NextDouble() * 2 - 1); // [-1, 1]

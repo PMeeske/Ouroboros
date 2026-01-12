@@ -305,13 +305,15 @@ public sealed class DistinctionEmbeddingServiceTests
 /// </summary>
 internal class MockEmbeddingModel : IEmbeddingModel
 {
+    private const int StandardEmbeddingDimension = 384;
+
     public Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
     {
         // Create deterministic embeddings based on input hash
         var hash = input.GetHashCode();
         var random = new Random(hash);
         
-        var embedding = new float[384]; // Standard embedding size
+        var embedding = new float[StandardEmbeddingDimension];
         for (int i = 0; i < embedding.Length; i++)
         {
             embedding[i] = (float)(random.NextDouble() * 2 - 1);
