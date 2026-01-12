@@ -70,7 +70,9 @@ static async Task ParseAndRunAsync(string[] args)
         typeof(ExplainOptions), typeof(TestOptions), typeof(OrchestratorOptions), typeof(MeTTaOptions),
         typeof(AssistOptions), typeof(SkillsOptions), typeof(NetworkOptions), typeof(DagOptions),
         typeof(EnvironmentOptions), typeof(AffectOptions), typeof(PolicyOptions), typeof(MaintenanceOptions),
-        typeof(BenchmarkOptions), typeof(DreamOptions)
+        typeof(BenchmarkOptions), typeof(DreamOptions), typeof(DistinctionStatusOptions), typeof(DistinctionListOptions),
+        typeof(DistinctionDissolveOptions), typeof(DistinctionLearnOptions), typeof(DistinctionExportOptions),
+        typeof(DistinctionClearOptions)
     };
 
     var parseResult = Parser.Default.ParseArguments(args, optionTypes);
@@ -132,6 +134,24 @@ static async Task ParseAndRunAsync(string[] args)
                 break;
             case DreamOptions o:
                 await DreamCommands.RunDreamAsync(o);
+                break;
+            case DistinctionStatusOptions o:
+                await DistinctionCommands.RunStatusAsync(o);
+                break;
+            case DistinctionListOptions o:
+                await DistinctionCommands.RunListAsync(o);
+                break;
+            case DistinctionDissolveOptions o:
+                await DistinctionCommands.RunDissolveAsync(o);
+                break;
+            case DistinctionLearnOptions o:
+                await DistinctionCommands.RunLearnAsync(o);
+                break;
+            case DistinctionExportOptions o:
+                await DistinctionCommands.RunExportAsync(o);
+                break;
+            case DistinctionClearOptions o:
+                await DistinctionCommands.RunClearAsync(o);
                 break;
         }
     });
