@@ -243,13 +243,10 @@ public class ArrowTests
     public async Task TryLiftAsync_ReturnsFailureOnException()
     {
         // Arrange
-        var triedArrow = Arrow.TryLiftAsync<int, int>(async x =>
+        var triedArrow = Arrow.TryLiftAsync<int, int>(async _ =>
         {
             await Task.Delay(1);
             throw new InvalidOperationException("Async failure");
-#pragma warning disable CS0162 // Unreachable code
-            return x;
-#pragma warning restore CS0162
         });
 
         // Act
