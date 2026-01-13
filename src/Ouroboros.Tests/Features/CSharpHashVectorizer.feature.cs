@@ -26,9 +26,8 @@ namespace Ouroboros.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "CSharp Hash Vectorizer", "    As a developer\r\n    I want to vectorize C# code using hash-based feature extr" +
-                "action\r\n    So that I can perform semantic search and similarity analysis on cod" +
-                "e", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "CSharp Hash Vectorizer", "    As a developer\n    I want to vectorize C# code using hash-based feature extra" +
+                "ction\n    So that I can perform semantic search and similarity analysis on code", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         
