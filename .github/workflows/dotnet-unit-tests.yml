@@ -60,7 +60,9 @@ jobs:
 
     - name: Build
       run: |
-        # Build all projects except tests (tests have TreatWarningsAsErrors=true which fails on NuGet vulnerability warnings)
+        # Build main projects separately from tests
+        # Tests have TreatWarningsAsErrors=true which fails on NuGet vulnerability warnings (NU1903)
+        # Tests will be built during the test step when dotnet test runs
         for project in \
           src/Ouroboros.Agent/Ouroboros.Agent.csproj \
           src/Ouroboros.CLI/Ouroboros.CLI.csproj \
