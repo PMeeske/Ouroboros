@@ -7,55 +7,15 @@ namespace Ouroboros.Tests;
 using Ouroboros.Providers;
 
 /// <summary>
-/// End-to-end integration tests for GitHub Models API support.
+/// Integration tests for GitHub Models API support.
 /// Tests the GitHubModelsChatModel with various model endpoints.
-/// These tests require MODEL_TOKEN, GITHUB_TOKEN, or GITHUB_MODELS_TOKEN environment variable to be set.
+/// These tests require MODEL_TOKEN, GITHUB_TOKEN, or GITHUB_MODELS_TOKEN environment variable to be set for live API tests.
 /// </summary>
 [Trait("Category", "Integration")]
-public static class GitHubModelsIntegrationTests
+public class GitHubModelsIntegrationTests
 {
-    /// <summary>
-    /// Runs all GitHub Models integration tests.
-    /// </summary>
-    /// <returns>A task representing the async operation.</returns>
-    public static async Task RunAllTests()
-    {
-        Console.WriteLine("=== Running GitHub Models Integration Tests ===");
-
-        // Test configuration and token resolution
-        TestChatConfigAutoDetection();
-        TestChatConfigGitHubModelsOverride();
-        TestEnvironmentTokenResolution();
-
-        // Test chat model adapters
-        await TestGitHubModelsChatModelFallback();
-
-        // Test model selection
-        TestChatEndpointTypeDetection();
-
-        // Test end-to-end scenarios if token is available
-        if (IsTokenAvailable())
-        {
-            await TestEndToEndGitHubModelsScenario();
-        }
-        else
-        {
-            Console.WriteLine("  ⚠ Skipping live API tests - no token available");
-            Console.WriteLine("  Set MODEL_TOKEN, GITHUB_TOKEN, or GITHUB_MODELS_TOKEN to enable live tests");
-        }
-
-        Console.WriteLine("✓ All GitHub Models integration tests passed!");
-    }
-
-    private static bool IsTokenAvailable()
-    {
-        string? token = Environment.GetEnvironmentVariable("MODEL_TOKEN")
-                       ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN")
-                       ?? Environment.GetEnvironmentVariable("GITHUB_MODELS_TOKEN");
-        return !string.IsNullOrWhiteSpace(token);
-    }
-
-    private static void TestChatConfigAutoDetection()
+    [Fact]
+    public void ChatConfig_AutoDetection_ShouldIdentifyGitHubModelsEndpoints()
     {
         Console.WriteLine("Testing ChatConfig auto-detection for GitHub Models...");
 
@@ -80,7 +40,8 @@ public static class GitHubModelsIntegrationTests
         Console.WriteLine("  ✓ Auto-detection works correctly for GitHub Models endpoints");
     }
 
-    private static void TestChatConfigGitHubModelsOverride()
+    [Fact]
+    public void ChatConfig_ManualOverride_ShouldRespectGitHubModelsType()
     {
         Console.WriteLine("Testing ChatConfig manual override for GitHub Models...");
 
@@ -105,7 +66,8 @@ public static class GitHubModelsIntegrationTests
         Console.WriteLine("  ✓ Manual override works correctly for GitHub Models");
     }
 
-    private static void TestEnvironmentTokenResolution()
+    [Fact]
+    public void EnvironmentToken_Resolution_ShouldPrioritizeCorrectly()
     {
         Console.WriteLine("Testing environment token resolution for GitHub Models...");
 
@@ -166,7 +128,8 @@ public static class GitHubModelsIntegrationTests
         }
     }
 
-    private static async Task TestGitHubModelsChatModelFallback()
+    [Fact]
+    public async Task GitHubModelsChatModel_Fallback_ShouldReturnFallbackMessage()
     {
         Console.WriteLine("Testing GitHubModelsChatModel fallback behavior...");
 
@@ -186,7 +149,8 @@ public static class GitHubModelsIntegrationTests
         Console.WriteLine("  ✓ GitHubModelsChatModel fallback works correctly");
     }
 
-    private static void TestChatEndpointTypeDetection()
+    [Fact]
+    public void ChatEndpointType_Detection_ShouldIdentifyGitHubModelsUrls()
     {
         Console.WriteLine("Testing ChatEndpointType detection for GitHub Models...");
 
@@ -211,7 +175,8 @@ public static class GitHubModelsIntegrationTests
         Console.WriteLine("  ✓ ChatEndpointType detection works correctly");
     }
 
-    private static async Task TestEndToEndGitHubModelsScenario()
+    [Fact]
+    public async Task EndToEnd_GitHubModelsScenario_ShouldWorkWithLiveApi()
     {
         Console.WriteLine("Testing end-to-end GitHub Models scenario with live API...");
 
@@ -249,5 +214,49 @@ public static class GitHubModelsIntegrationTests
         {
             Console.WriteLine($"  ⚠ Live API test error (may be expected): {ex.Message}");
         }
+    }
+
+    private static bool IsTokenAvailable()
+    {
+        string? token = Environment.GetEnvironmentVariable("MODEL_TOKEN")
+                       ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN")
+                       ?? Environment.GetEnvironmentVariable("GITHUB_MODELS_TOKEN");
+        return !string.IsNullOrWhiteSpace(token);
+    }
+
+    /// <summary>
+    /// Runs all GitHub Models integration tests.
+    /// Kept for backward compatibility - wraps individual test methods.
+    /// </summary>
+    /// <returns>A task representing the async operation.</returns>
+    public static async Task RunAllTests()
+    {
+        Console.WriteLine("=== Running GitHub Models Integration Tests ===");
+
+        var instance = new GitHubModelsIntegrationTests();
+
+        // Test configuration and token resolution
+        instance.ChatConfig_AutoDetection_ShouldIdentifyGitHubModelsEndpoints();
+        instance.ChatConfig_ManualOverride_ShouldRespectGitHubModelsType();
+        instance.EnvironmentToken_Resolution_ShouldPrioritizeCorrectly();
+
+        // Test chat model adapters
+        await instance.GitHubModelsChatModel_Fallback_ShouldReturnFallbackMessage();
+
+        // Test model selection
+        instance.ChatEndpointType_Detection_ShouldIdentifyGitHubModelsUrls();
+
+        // Test end-to-end scenarios if token is available
+        if (IsTokenAvailable())
+        {
+            await instance.EndToEnd_GitHubModelsScenario_ShouldWorkWithLiveApi();
+        }
+        else
+        {
+            Console.WriteLine("  ⚠ Skipping live API tests - no token available");
+            Console.WriteLine("  Set MODEL_TOKEN, GITHUB_TOKEN, or GITHUB_MODELS_TOKEN to enable live tests");
+        }
+
+        Console.WriteLine("✓ All GitHub Models integration tests passed!");
     }
 }

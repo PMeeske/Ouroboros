@@ -10,16 +10,18 @@ using Ouroboros.Application;
 using Ouroboros.Application.Tools;
 
 /// <summary>
-/// Tests for meta-AI capabilities where the pipeline can reason about and modify its own execution.
+/// Unit tests for meta-AI capabilities where the pipeline can reason about and modify its own execution.
 /// Demonstrates the LLM using pipeline step tools to build upon itself.
+/// Uses mock models for testing - no external LLM service required.
 /// </summary>
 [Trait("Category", "Unit")]
-public static class MetaAiTests
+public class MetaAiTests
 {
     /// <summary>
     /// Demonstrates that pipeline steps are registered as tools and can be listed.
     /// </summary>
-    public static void TestPipelineStepsRegisteredAsTools()
+    [Fact]
+    public void PipelineSteps_AsTools_ShouldRegisterSuccessfully()
     {
         Console.WriteLine("=== Testing Pipeline Steps as Tools ===");
 
@@ -78,7 +80,8 @@ public static class MetaAiTests
     /// <summary>
     /// Demonstrates selective registration of pipeline steps as tools.
     /// </summary>
-    public static void TestSelectivePipelineStepRegistration()
+    [Fact]
+    public void PipelineSteps_SelectiveRegistration_ShouldRegisterOnlySelected()
     {
         Console.WriteLine("\n=== Testing Selective Pipeline Step Registration ===");
 
@@ -124,7 +127,8 @@ public static class MetaAiTests
     /// <summary>
     /// Demonstrates tool schema export includes pipeline steps.
     /// </summary>
-    public static void TestPipelineStepToolSchemas()
+    [Fact]
+    public void PipelineStepTools_SchemaExport_ShouldIncludePipelineSteps()
     {
         Console.WriteLine("\n=== Testing Pipeline Step Tool Schemas ===");
 
@@ -172,7 +176,8 @@ public static class MetaAiTests
     /// Integration test showing how pipeline steps as tools enable meta-AI reasoning.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestMetaAiIntegration()
+    [Fact]
+    public async Task MetaAi_Integration_ShouldUsePipelineTools()
     {
         Console.WriteLine("\n=== Testing Meta-AI Integration ===");
         Console.WriteLine("This test demonstrates how the LLM can use pipeline step tools to build upon itself.");
@@ -260,6 +265,7 @@ Think step by step about which pipeline tools you could invoke to enhance your r
 
     /// <summary>
     /// Runs all meta-AI tests.
+    /// Kept for backward compatibility - wraps individual test methods.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllTests()
@@ -268,10 +274,11 @@ Think step by step about which pipeline tools you could invoke to enhance your r
         Console.WriteLine("META-AI LAYER TESTS");
         Console.WriteLine(new string('=', 60) + "\n");
 
-        TestPipelineStepsRegisteredAsTools();
-        TestSelectivePipelineStepRegistration();
-        TestPipelineStepToolSchemas();
-        await TestMetaAiIntegration();
+        var instance = new MetaAiTests();
+        instance.PipelineSteps_AsTools_ShouldRegisterSuccessfully();
+        instance.PipelineSteps_SelectiveRegistration_ShouldRegisterOnlySelected();
+        instance.PipelineStepTools_SchemaExport_ShouldIncludePipelineSteps();
+        await instance.MetaAi_Integration_ShouldUsePipelineTools();
 
         Console.WriteLine("\n" + new string('=', 60));
         Console.WriteLine("✓ ALL META-AI TESTS PASSED!");
