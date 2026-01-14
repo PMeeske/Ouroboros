@@ -5,13 +5,35 @@ This document describes how to test the GitHub Actions workflows in this reposit
 ## Overview
 
 The Ouroboros repository contains several GitHub Actions workflows for:
-- **dotnet-coverage.yml**: .NET test coverage analysis
+- **dotnet-unit-tests.yml**: .NET unit tests only (Category=Unit)
+- **dotnet-integration-tests.yml**: .NET integration tests only (Category=Integration)
+- **dotnet-coverage.yml**: .NET unit test coverage analysis
 - **mutation-testing.yml**: Mutation testing with Stryker
-- **ollama-integration-test.yml**: Integration tests with Ollama LLM
+- **ollama-integration-test.yml**: End-to-end integration tests with Ollama LLM
+- **github-models-integration-test.yml**: End-to-end integration tests with GitHub Models
 - **android-build.yml**: Android MAUI app building
 - **terraform-infrastructure.yml**: Terraform infrastructure management
 - **terraform-tests.yml**: Terraform configuration validation
 - **ionos-deploy.yml**: Deployment to IONOS Cloud
+
+## Test Separation Strategy
+
+Tests are separated into two categories using xUnit traits:
+- **Unit Tests** (`[Trait("Category", "Unit")]`): Run in isolation without external dependencies
+- **Integration Tests** (`[Trait("Category", "Integration")]`): May require external services (Ollama, GitHub Models, etc.)
+
+### Running Tests Locally
+
+```bash
+# Run only unit tests
+dotnet test --filter "Category=Unit"
+
+# Run only integration tests
+dotnet test --filter "Category=Integration"
+
+# Run all tests
+dotnet test
+```
 
 ## Prerequisites for Testing
 

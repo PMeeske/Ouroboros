@@ -84,7 +84,48 @@ See [IONOS Deployment Guide](../../docs/IONOS_DEPLOYMENT_GUIDE.md) for detailed 
 
 ---
 
-### .NET Test Coverage (`dotnet-coverage.yml`)
+### .NET Unit Tests (`dotnet-unit-tests.yml`)
+
+**Status**: ✅ Active
+
+Runs unit tests only (filtered by `Category=Unit` trait).
+
+**Triggers**:
+- Push to `main` or `develop` branches (when source files change)
+- Pull requests to `main` or `develop` (when source files change)
+- Manual trigger via GitHub Actions UI
+
+**Features**:
+- Runs unit tests in isolation (mocked, no external dependencies)
+- Fast feedback loop (typically completes in < 5 minutes)
+- Publishes test results as GitHub check
+
+---
+
+### .NET Integration Tests (`dotnet-integration-tests.yml`)
+
+**Status**: ✅ Active
+
+Runs integration tests only (filtered by `Category=Integration` trait).
+
+**Triggers**:
+- Push to `main` branch (when source files change)
+- Pull requests to `main` (when source files change)
+- Manual trigger via GitHub Actions UI
+
+**Features**:
+- Runs tests that may require external services
+- Some tests may skip if required services are unavailable
+- Longer timeout (30 minutes) for complex test scenarios
+
+**Notes**:
+For full end-to-end LLM integration testing, see:
+- **Ollama Integration Tests** workflow
+- **GitHub Models Integration Tests** workflow
+
+---
+
+### .NET Unit Test Coverage (`dotnet-coverage.yml`)
 
 **Status**: ✅ Active
 
@@ -96,9 +137,10 @@ Runs unit tests with code coverage reporting.
 - Manual trigger via GitHub Actions UI
 
 **Features**:
-- Runs 224 unit tests (mocked, without Ollama)
+- Runs unit tests only (Category=Unit) for coverage analysis
 - Generates code coverage reports
 - Publishes test results and coverage to PRs
+- Uploads coverage to Codecov (optional)
 
 ---
 

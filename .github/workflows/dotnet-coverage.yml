@@ -1,20 +1,18 @@
-name: .NET Test Coverage
+name: .NET Unit Test Coverage
 
 on:
   push:
     branches: [ main, develop ]
     paths:
       - 'src/**'
-      - 'tests/**'
       - '**.csproj'
       - '.github/workflows/dotnet-coverage.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'src/**'
-      - 'tests/**'
       - '**.csproj'
-      - '.github/workflows/dotnet-coverage.yml'  # Add this to trigger on workflow changes in PRs too
+      - '.github/workflows/dotnet-coverage.yml'
   workflow_dispatch:
 
 permissions:
@@ -29,7 +27,7 @@ concurrency:
 
 jobs:
   test-coverage:
-    name: Test Coverage Report
+    name: Unit Test Coverage Report
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -80,28 +78,30 @@ jobs:
         done
       timeout-minutes: 15
 
-    - name: Run tests with coverage
+    - name: Run unit tests with coverage
       uses: nick-fields/retry@v3
       with:
         timeout_minutes: 20
         max_attempts: 2
         retry_wait_seconds: 10
         command: |
-          # Run tests with coverage - dotnet test will build the test project
+          # Run unit tests with coverage - dotnet test will build the test project
           # Note: Test project has a NuGet vulnerability warning (NU1903) that's treated as error
           # This is a known issue with Microsoft.Build.Tasks.Core 17.7.2 transitive dependency
           # We allow the step to continue on error but still upload results for analysis
+          # Filter to only run unit tests (Category=Unit) for coverage reporting
           dotnet test \
             --configuration Release \
             --verbosity normal \
+            --filter "Category=Unit" \
             --collect:"XPlat Code Coverage" \
             --results-directory ./TestResults \
-            --logger "trx;LogFileName=test-results.trx" \
+            --logger "trx;LogFileName=unit-test-results.trx" \
             src/Ouroboros.Tests/Ouroboros.Tests.csproj
           EXIT_CODE=$?
           
           if [ $EXIT_CODE -ne 0 ]; then
-            echo "::warning::Tests failed with exit code $EXIT_CODE - may be due to NU1903 vulnerability warning"
+            echo "::warning::Unit tests failed with exit code $EXIT_CODE - may be due to NU1903 vulnerability warning"
             echo "Check test results and coverage reports for details"
           fi
       continue-on-error: true
@@ -148,7 +148,7 @@ jobs:
       if: always()
       continue-on-error: true
       with:
-        name: test-results
+        name: unit-test-results-coverage
         path: TestResults/*.trx
         retention-days: 30
 
@@ -158,7 +158,7 @@ jobs:
       continue-on-error: true
       with:
         files: TestResults/**/*.trx
-        check_name: Test Results
+        check_name: Unit Test Results (Coverage)
         comment_mode: off
 
     - name: Code Coverage Summary Report
