@@ -7,16 +7,18 @@ namespace Ouroboros.Tests;
 using Ouroboros.Agent;
 
 /// <summary>
-/// Tests for AI orchestrator capabilities including model selection,
+/// Unit tests for AI orchestrator capabilities including model selection,
 /// use case classification, and performance tracking.
+/// Uses mock models for testing - no external LLM service required.
 /// </summary>
 [Trait("Category", "Unit")]
-public static class OrchestratorTests
+public class OrchestratorTests
 {
     /// <summary>
     /// Tests basic orchestrator creation and configuration.
     /// </summary>
-    public static void TestOrchestratorCreation()
+    [Fact]
+    public void Orchestrator_Creation_ShouldRegisterModels()
     {
         Console.WriteLine("=== Test: Orchestrator Creation ===");
 
@@ -50,7 +52,8 @@ public static class OrchestratorTests
     /// <summary>
     /// Tests use case classification for different prompt types.
     /// </summary>
-    public static void TestUseCaseClassification()
+    [Fact]
+    public void UseCase_Classification_ShouldIdentifyPromptTypes()
     {
         Console.WriteLine("=== Test: Use Case Classification ===");
 
@@ -114,7 +117,8 @@ public static class OrchestratorTests
     /// Tests model selection based on use case.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestModelSelection()
+    [Fact]
+    public async Task Model_Selection_ShouldChooseAppropriateModel()
     {
         Console.WriteLine("=== Test: Model Selection ===");
 
@@ -206,7 +210,8 @@ public static class OrchestratorTests
     /// <summary>
     /// Tests performance metric tracking.
     /// </summary>
-    public static void TestPerformanceTracking()
+    [Fact]
+    public void Performance_Tracking_ShouldRecordMetrics()
     {
         Console.WriteLine("=== Test: Performance Tracking ===");
 
@@ -259,7 +264,8 @@ public static class OrchestratorTests
     /// <summary>
     /// Tests orchestrator builder pattern.
     /// </summary>
-    public static void TestOrchestratorBuilder()
+    [Fact]
+    public void OrchestratorBuilder_Pattern_ShouldBuildCorrectly()
     {
         Console.WriteLine("=== Test: Orchestrator Builder ===");
 
@@ -308,7 +314,8 @@ public static class OrchestratorTests
     /// Tests composable tool extensions.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestComposableTools()
+    [Fact]
+    public async Task ComposableTools_Extensions_ShouldWrapCorrectly()
     {
         Console.WriteLine("=== Test: Composable Tools ===");
 
@@ -370,6 +377,7 @@ public static class OrchestratorTests
 
     /// <summary>
     /// Runs all orchestrator tests.
+    /// Kept for backward compatibility - wraps individual test methods.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllTests()
@@ -378,12 +386,13 @@ public static class OrchestratorTests
         Console.WriteLine("AI ORCHESTRATOR TESTS");
         Console.WriteLine(new string('=', 60) + "\n");
 
-        TestOrchestratorCreation();
-        TestUseCaseClassification();
-        await TestModelSelection();
-        TestPerformanceTracking();
-        TestOrchestratorBuilder();
-        await TestComposableTools();
+        var instance = new OrchestratorTests();
+        instance.Orchestrator_Creation_ShouldRegisterModels();
+        instance.UseCase_Classification_ShouldIdentifyPromptTypes();
+        await instance.Model_Selection_ShouldChooseAppropriateModel();
+        instance.Performance_Tracking_ShouldRecordMetrics();
+        instance.OrchestratorBuilder_Pattern_ShouldBuildCorrectly();
+        await instance.ComposableTools_Extensions_ShouldWrapCorrectly();
 
         Console.WriteLine(new string('=', 60));
         Console.WriteLine("✓ ALL ORCHESTRATOR TESTS PASSED!");
