@@ -52,7 +52,7 @@ public record EasyPipelineResult(
         if (!Success)
             return $"Pipeline failed: {Error}";
 
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         sb.AppendLine("Pipeline executed successfully");
         sb.AppendLine($"Steps executed: {Branch.Events.Count}");
         sb.AppendLine($"Output: {Output}");

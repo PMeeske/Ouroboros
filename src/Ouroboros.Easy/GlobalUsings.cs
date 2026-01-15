@@ -3,6 +3,7 @@
 // </copyright>
 
 global using LangChain.DocumentLoaders;
+global using System.Text;
 global using Ouroboros.Core.Kleisli;
 global using Ouroboros.Core.Steps;
 global using Ouroboros.Core.Monads;

@@ -4,10 +4,8 @@
 
 namespace Ouroboros.Tests.Easy;
 
-using FluentAssertions;
 using Moq;
 using Ouroboros.Easy;
-using Xunit;
 
 /// <summary>
 /// Unit tests for the Easy API pipeline builder.

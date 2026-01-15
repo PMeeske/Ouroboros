@@ -234,7 +234,7 @@ public sealed class EasyPipeline
     /// <returns>A string representation of the pipeline in DSL format.</returns>
     public string ToDSL()
     {
-        var dslBuilder = new System.Text.StringBuilder();
+        var dslBuilder = new StringBuilder();
         dslBuilder.AppendLine($"Pipeline.About(\"{_topic}\")");
         
         foreach (PipelineOperation op in _operations)
