@@ -27,9 +27,37 @@ concurrency:
 
 jobs:
   unit-tests:
-    name: Unit Tests
+    name: Unit Tests (${{ matrix.category }})
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Core & Foundational tests (Ouroboros.Tests.Core, Ouroboros.Tests.Domain, Ouroboros.Tests.Steps)
+          - category: Core
+            filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Core.|FullyQualifiedName~Ouroboros.Tests.Domain.|FullyQualifiedName~Ouroboros.Tests.Steps.)"
+          # Pipeline & Memory tests (Ouroboros.Tests.Pipeline, Ouroboros.Tests.Memory, Ouroboros.Tests.GraphRAG)
+          - category: Pipeline
+            filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Pipeline.|FullyQualifiedName~Ouroboros.Tests.Memory.|FullyQualifiedName~Ouroboros.Tests.GraphRAG.)"
+          # AI & Learning tests
+          - category: AI-Learning
+            filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Learning.|FullyQualifiedName~Ouroboros.Tests.Reasoning.|FullyQualifiedName~Ouroboros.Tests.MetaLearning.|FullyQualifiedName~Ouroboros.Tests.MetaAI.|FullyQualifiedName~Ouroboros.Tests.Council.|FullyQualifiedName~Ouroboros.Tests.Affect.)"
+          # Tools & Providers tests
+          - category: Tools-Providers
+            filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Tools.|FullyQualifiedName~Ouroboros.Tests.Providers.|FullyQualifiedName~Ouroboros.Tests.Hyperon.|FullyQualifiedName~Ouroboros.Tests.Genetic.|FullyQualifiedName~Ouroboros.Tests.Synthesis.)"
+          # Governance & Security tests
+          - category: Governance
+            filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Governance.|FullyQualifiedName~Ouroboros.Tests.LawsOfForm.|FullyQualifiedName~Ouroboros.Tests.SelfModel.|FullyQualifiedName~Ouroboros.Tests.Reflection.|FullyQualifiedName~Ouroboros.Tests.Agent.)"
+          # General tests (top-level Ouroboros.Tests.Tests namespace) - Part 1: A-M
+          - category: General-Part1
+            filter: "Category=Unit&FullyQualifiedName~Ouroboros.Tests.Tests.&(FullyQualifiedName~Ouroboros.Tests.Tests.A|FullyQualifiedName~Ouroboros.Tests.Tests.B|FullyQualifiedName~Ouroboros.Tests.Tests.C|FullyQualifiedName~Ouroboros.Tests.Tests.D|FullyQualifiedName~Ouroboros.Tests.Tests.E|FullyQualifiedName~Ouroboros.Tests.Tests.F|FullyQualifiedName~Ouroboros.Tests.Tests.G|FullyQualifiedName~Ouroboros.Tests.Tests.H|FullyQualifiedName~Ouroboros.Tests.Tests.I|FullyQualifiedName~Ouroboros.Tests.Tests.J|FullyQualifiedName~Ouroboros.Tests.Tests.K|FullyQualifiedName~Ouroboros.Tests.Tests.L|FullyQualifiedName~Ouroboros.Tests.Tests.M)"
+          # General tests (top-level Ouroboros.Tests.Tests namespace) - Part 2: N-Z
+          - category: General-Part2
+            filter: "Category=Unit&FullyQualifiedName~Ouroboros.Tests.Tests.&(FullyQualifiedName~Ouroboros.Tests.Tests.N|FullyQualifiedName~Ouroboros.Tests.Tests.O|FullyQualifiedName~Ouroboros.Tests.Tests.P|FullyQualifiedName~Ouroboros.Tests.Tests.Q|FullyQualifiedName~Ouroboros.Tests.Tests.R|FullyQualifiedName~Ouroboros.Tests.Tests.S|FullyQualifiedName~Ouroboros.Tests.Tests.T|FullyQualifiedName~Ouroboros.Tests.Tests.U|FullyQualifiedName~Ouroboros.Tests.Tests.V|FullyQualifiedName~Ouroboros.Tests.Tests.W|FullyQualifiedName~Ouroboros.Tests.Tests.X|FullyQualifiedName~Ouroboros.Tests.Tests.Y|FullyQualifiedName~Ouroboros.Tests.Tests.Z)"
+          # Remaining tests not covered by other categories (Android, MultiAgent, etc.)
+          - category: Other
+            filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Android.|FullyQualifiedName~Ouroboros.Tests.MultiAgent.)"
 
     steps:
     - name: Checkout code
@@ -78,25 +106,25 @@ jobs:
         done
       timeout-minutes: 15
 
-    - name: Run Unit Tests
+    - name: Run Unit Tests (${{ matrix.category }})
       uses: nick-fields/retry@v3
       with:
-        timeout_minutes: 15
+        timeout_minutes: 10
         max_attempts: 2
         retry_wait_seconds: 10
         command: |
-          # Run only unit tests (filter by Category=Unit trait)
+          # Run unit tests for this category
           dotnet test \
             --configuration Release \
             --verbosity normal \
-            --filter "Category=Unit" \
+            --filter "${{ matrix.filter }}" \
             --results-directory ./TestResults \
-            --logger "trx;LogFileName=unit-test-results.trx" \
+            --logger "trx;LogFileName=${{ matrix.category }}-test-results.trx" \
             src/Ouroboros.Tests/Ouroboros.Tests.csproj
           EXIT_CODE=$?
           
           if [ $EXIT_CODE -ne 0 ]; then
-            echo "::warning::Unit tests failed with exit code $EXIT_CODE"
+            echo "::warning::Unit tests (${{ matrix.category }}) failed with exit code $EXIT_CODE"
             echo "Check test results for details"
           fi
       continue-on-error: true
@@ -106,7 +134,7 @@ jobs:
       if: always()
       continue-on-error: true
       with:
-        name: unit-test-results
+        name: unit-test-results-${{ matrix.category }}
         path: TestResults/*.trx
         retention-days: 30
 
@@ -116,17 +144,48 @@ jobs:
       continue-on-error: true
       with:
         files: TestResults/**/*.trx
-        check_name: Unit Test Results
+        check_name: Unit Tests (${{ matrix.category }})
         comment_mode: off
 
     - name: Generate Test Summary
       if: always()
       run: |
-        echo "## 🧪 Unit Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "## 🧪 Unit Test Results (${{ matrix.category }})" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Environment" >> $GITHUB_STEP_SUMMARY
         echo "- **Runner**: ubuntu-latest" >> $GITHUB_STEP_SUMMARY
         echo "- **.NET Version**: 10.0.x" >> $GITHUB_STEP_SUMMARY
-        echo "- **Filter**: Category=Unit" >> $GITHUB_STEP_SUMMARY
+        echo "- **Category**: ${{ matrix.category }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "Unit tests run in isolation without external dependencies." >> $GITHUB_STEP_SUMMARY
+
+  # Summary job that runs after all matrix jobs complete
+  unit-tests-summary:
+    name: Unit Tests Summary
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: always()
+    steps:
+    - name: Download all test results
+      uses: actions/download-artifact@v4.1.8
+      continue-on-error: true
+      with:
+        pattern: unit-test-results-*
+        path: TestResults
+        merge-multiple: true
+
+    - name: Generate Summary
+      run: |
+        echo "## 🧪 Unit Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "All unit test categories have completed." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Categories Tested" >> $GITHUB_STEP_SUMMARY
+        echo "- Core (Core, Domain, Steps)" >> $GITHUB_STEP_SUMMARY
+        echo "- Pipeline (Pipeline, Memory, GraphRAG)" >> $GITHUB_STEP_SUMMARY
+        echo "- AI-Learning (Learning, Reasoning, MetaLearning, MetaAI, Council, Affect)" >> $GITHUB_STEP_SUMMARY
+        echo "- Tools-Providers (Tools, Providers, Hyperon, Genetic, Synthesis)" >> $GITHUB_STEP_SUMMARY
+        echo "- Governance (Governance, LawsOfForm, SelfModel, Reflection, Agent)" >> $GITHUB_STEP_SUMMARY
+        echo "- General-Part1 (Top-level tests A-M)" >> $GITHUB_STEP_SUMMARY
+        echo "- General-Part2 (Top-level tests N-Z)" >> $GITHUB_STEP_SUMMARY
+        echo "- Other (Android, MultiAgent)" >> $GITHUB_STEP_SUMMARY
