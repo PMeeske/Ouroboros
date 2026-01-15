@@ -1,13 +1,6 @@
 name: Update Coverage Badges
 
 on:
-  # Trigger on push to main branch
-  push:
-    branches: [ main ]
-    paths:
-      - 'src/**'
-      - '**.csproj'
-  
   # Trigger after test/coverage workflows complete
   workflow_run:
     workflows: [".NET Test Grid", ".NET Integration Tests"]
@@ -30,10 +23,9 @@ jobs:
   update-badges:
     name: Update README Badges
     runs-on: ubuntu-latest
-    # Only run on main branch and when tests succeed or on manual dispatch
+    # Only run when test workflows succeed or on manual dispatch
     if: |
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       github.event_name == 'workflow_dispatch'
     
     steps:
@@ -43,45 +35,26 @@ jobs:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '10.0.x'
-
-    - name: Restore dependencies
-      run: dotnet restore
-
-    - name: Run tests with coverage
-      run: |
-        # Run all unit tests with coverage collection
-        dotnet test \
-          --configuration Release \
-          --filter "Category=Unit" \
-          --collect:"XPlat Code Coverage" \
-          --results-directory ./TestResults \
-          --logger "trx;LogFileName=test-results.trx" \
-          src/Ouroboros.Tests/Ouroboros.Tests.csproj
+    - name: Download test results from completed workflow
+      if: github.event_name == 'workflow_run'
+      uses: actions/download-artifact@v4.1.8
       continue-on-error: true
+      with:
+        pattern: unit-test-results-*
+        path: TestResults
+        merge-multiple: true
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        run-id: ${{ github.event.workflow_run.id }}
 
-    - name: Install ReportGenerator
-      run: dotnet tool install -g dotnet-reportgenerator-globaltool
-
-    - name: Generate coverage report
-      run: |
-        # Add the tool to PATH
-        export PATH="$PATH:$HOME/.dotnet/tools"
-        
-        # Generate coverage report with badges
-        # Note: ReportGenerator accepts both -reporttypes and -reportTypes
-        reportgenerator \
-          -reports:"TestResults/*/coverage.cobertura.xml" \
-          -targetdir:"CoverageReport" \
-          -reporttypes:"Html;MarkdownSummaryGithub;Cobertura;Badges" \
-          -assemblyfilters:"+Ouroboros.*;+LangChainPipeline.*" || {
-            echo "::warning::Coverage report generation failed, continuing..."
-            mkdir -p CoverageReport
-            echo "No coverage data available" > CoverageReport/SummaryGithub.md
-          }
+    - name: Download coverage report from completed workflow
+      if: github.event_name == 'workflow_run'
+      uses: actions/download-artifact@v4.1.8
+      continue-on-error: true
+      with:
+        name: coverage-report
+        path: CoverageReport
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        run-id: ${{ github.event.workflow_run.id }}
 
     - name: Parse test results
       id: test-results

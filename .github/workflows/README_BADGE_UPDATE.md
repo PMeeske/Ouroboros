@@ -12,21 +12,22 @@ The repository has two workflows that update test and coverage badges in `README
 ## Standalone Workflow: update-coverage-badges.yml
 
 ### Purpose
-A dedicated workflow that runs tests, generates coverage reports, and updates README badges in a single run.
+A lightweight workflow that downloads test results from completed test workflows and updates README badges WITHOUT re-running tests.
 
 ### Triggers
-1. **Push to main** - When code changes are pushed to main branch (specifically `src/**` or `**.csproj` files)
-2. **After test workflows** - Automatically runs after `.NET Test Grid` or `.NET Integration Tests` complete successfully
-3. **Manual dispatch** - Can be manually triggered from GitHub Actions UI
+1. **After test workflows** - Automatically runs after `.NET Test Grid` or `.NET Integration Tests` complete successfully
+2. **Manual dispatch** - Can be manually triggered from GitHub Actions UI
 
 ### What It Does
-1. Runs all unit tests with coverage collection
-2. Generates coverage report using ReportGenerator
+1. Downloads test results (TRX files) from the completed workflow via artifacts
+2. Downloads coverage report from the completed workflow via artifacts
 3. Parses test results from TRX files
 4. Extracts line coverage percentage from reports
 5. Updates README.md badges with correct URLs and colors
 6. Commits changes only if badges actually changed
 7. Uses `[skip ci]` to prevent infinite loops
+
+**Note**: This workflow does NOT run tests - it only downloads results from the workflow that just completed, eliminating duplicate test execution.
 
 ### Badge Color Logic
 
@@ -55,7 +56,7 @@ To manually update badges:
 4. Select branch (usually `main`)
 5. Click "Run workflow" button
 
-The workflow will run tests, update badges, and commit if needed.
+**Note**: When triggered manually, the workflow will attempt to download artifacts from the most recent test run. If no artifacts are available, the badges may not update correctly. It's recommended to let the workflow run automatically after test completion.
 
 ## Integrated Workflow: dotnet-test-grid.yml
 
