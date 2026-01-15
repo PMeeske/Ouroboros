@@ -106,6 +106,8 @@ jobs:
             echo "Processing: $TRX_FILE"
             
             # Try Perl-compatible regex if available
+            # Note: These patterns use advanced features (\K) that only work with Perl regex
+            # They only run if grep -P test passed, otherwise sed fallback is used
             if [ "$GREP_P_SUPPORTED" = true ]; then
               PASSED=$(grep -oP 'Counters[^>]*passed="\K[0-9]+' "$TRX_FILE" 2>/dev/null | head -1 || echo "0")
               FAILED=$(grep -oP 'Counters[^>]*failed="\K[0-9]+' "$TRX_FILE" 2>/dev/null | head -1 || echo "0")
@@ -143,6 +145,8 @@ jobs:
           fi
           
           # Try Perl-compatible regex if available
+          # Note: These patterns use advanced Perl regex features (?:...), \K, (?=)
+          # They only run if grep -P test passed, otherwise sed fallbacks are used
           if [ "$GREP_P_SUPPORTED" = true ]; then
             COVERAGE=$(grep -oP '(?:Line coverage:|Lines:)\s*\K[0-9.]+(?=%)?' CoverageReport/SummaryGithub.md 2>/dev/null | head -1 || echo "0")
             

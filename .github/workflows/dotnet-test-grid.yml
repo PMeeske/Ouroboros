@@ -370,6 +370,8 @@ jobs:
     - name: Get coverage percentage
       id: coverage
       run: |
+        COVERAGE="0"
+        
         echo "Looking for coverage report..."
         ls -la CoverageReport/ || echo "No CoverageReport directory"
         
@@ -377,10 +379,36 @@ jobs:
           echo "Found SummaryGithub.md, extracting coverage..."
           cat CoverageReport/SummaryGithub.md
           
-          COVERAGE=$(grep -oP '(?:Line coverage:|Lines:)\s*\K[0-9.]+(?=%)?' CoverageReport/SummaryGithub.md | head -1 || echo "0")
+          # Check if grep supports Perl regex
+          GREP_P_SUPPORTED=false
+          if echo "test" | grep -P "test" &> /dev/null; then
+            GREP_P_SUPPORTED=true
+            echo "Using grep -P for parsing"
+          else
+            echo "Using sed for parsing (grep -P not available)"
+          fi
+          
+          # Try Perl-compatible regex if available
+          # Note: These patterns use advanced Perl features that only work with grep -P
+          if [ "$GREP_P_SUPPORTED" = true ]; then
+            COVERAGE=$(grep -oP '(?:Line coverage:|Lines:)\s*\K[0-9.]+(?=%)?' CoverageReport/SummaryGithub.md 2>/dev/null | head -1 || echo "0")
+            
+            if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
+              COVERAGE=$(grep -oP '\| Lines\s+\|\s+\K[0-9.]+' CoverageReport/SummaryGithub.md 2>/dev/null | head -1 || echo "0")
+            fi
+          fi
+          
+          # Fallback using sed (more portable) - try even if grep -P worked but returned 0
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
+            COVERAGE=$(sed -n 's/.*Line coverage:.*\([0-9][0-9]*\.[0-9][0-9]*\)%.*/\1/p' CoverageReport/SummaryGithub.md | head -1 || echo "0")
+          fi
           
           if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
-            COVERAGE=$(grep -oP '\| Lines\s+\|\s+\K[0-9.]+' CoverageReport/SummaryGithub.md | head -1 || echo "0")
+            COVERAGE=$(sed -n 's/^| Lines.*| \([0-9][0-9]*\.[0-9][0-9]*\)%.*/\1/p' CoverageReport/SummaryGithub.md | head -1 || echo "0")
+          fi
+          
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
+            COVERAGE=$(sed -n 's/.*Lines\?.*\([0-9][0-9]*\.[0-9][0-9]*\)%.*/\1/p' CoverageReport/SummaryGithub.md | head -1 || echo "0")
           fi
           
           echo "Extracted coverage: ${COVERAGE}%"
