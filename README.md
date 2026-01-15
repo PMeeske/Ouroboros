@@ -9,7 +9,7 @@
   <a href="https://dotnet.microsoft.com/download/dotnet/10.0"><img src="https://img.shields.io/badge/.NET-10.0-blue" alt=".NET Version"></a>
   <a href="https://www.nuget.org/packages/LangChain/"><img src="https://img.shields.io/badge/LangChain-0.17.0-purple" alt="LangChain"></a>
   <a href="TEST_COVERAGE_REPORT.md"><img src="https://img.shields.io/badge/coverage-1.3%25-red" alt="Coverage"></a>
-  <a href="src/Ouroboros.Tests"><img src="https://img.shields.io/badge/tests-1656%20passing%2C%208%20failing-red" alt="Tests"></a>
+  <a href="src/Ouroboros.Tests"><img src="https://img.shields.io/badge/tests-1655%20passing%2C%209%20failing-red" alt="Tests"></a>
   <a href="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml"><img src="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml/badge.svg" alt="Mutation Testing"></a>
 </p>
 
