@@ -91,13 +91,22 @@ jobs:
         
         echo "Parsing test results from TRX files..."
         
+        # Check if grep supports Perl regex
+        GREP_P_SUPPORTED=false
+        if echo "test" | grep -P "test" &> /dev/null; then
+          GREP_P_SUPPORTED=true
+          echo "Using grep -P for parsing"
+        else
+          echo "Using sed for parsing (grep -P not available)"
+        fi
+        
         # Parse all TRX files
         for TRX_FILE in TestResults/*.trx; do
           if [ -f "$TRX_FILE" ]; then
             echo "Processing: $TRX_FILE"
             
-            # Try Perl-compatible regex first
-            if command -v grep -P &> /dev/null; then
+            # Try Perl-compatible regex if available
+            if [ "$GREP_P_SUPPORTED" = true ]; then
               PASSED=$(grep -oP 'Counters[^>]*passed="\K[0-9]+' "$TRX_FILE" 2>/dev/null | head -1 || echo "0")
               FAILED=$(grep -oP 'Counters[^>]*failed="\K[0-9]+' "$TRX_FILE" 2>/dev/null | head -1 || echo "0")
             else
@@ -124,9 +133,17 @@ jobs:
         if [ -f "CoverageReport/SummaryGithub.md" ]; then
           echo "Extracting coverage from SummaryGithub.md..."
           
-          # Try multiple patterns to extract line coverage percentage
-          # Pattern 1: Using Perl-compatible regex (works on most Linux systems)
-          if command -v grep -P &> /dev/null; then
+          # Check if grep supports Perl regex
+          GREP_P_SUPPORTED=false
+          if echo "test" | grep -P "test" &> /dev/null; then
+            GREP_P_SUPPORTED=true
+            echo "Using grep -P for parsing"
+          else
+            echo "Using sed for parsing (grep -P not available)"
+          fi
+          
+          # Try Perl-compatible regex if available
+          if [ "$GREP_P_SUPPORTED" = true ]; then
             COVERAGE=$(grep -oP '(?:Line coverage:|Lines:)\s*\K[0-9.]+(?=%)?' CoverageReport/SummaryGithub.md 2>/dev/null | head -1 || echo "0")
             
             if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
@@ -134,14 +151,20 @@ jobs:
             fi
           fi
           
-          # Pattern 2: Fallback using sed (more portable)
+          # Fallback using sed (more portable) - try even if grep -P worked but returned 0
           if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
-            COVERAGE=$(sed -n 's/.*Line coverage:.*\([0-9][0-9]*\.[0-9]*\)%.*/\1/p' CoverageReport/SummaryGithub.md | head -1 || echo "0")
+            # Try to match "Line coverage: XX.X%" format
+            COVERAGE=$(sed -n 's/.*Line coverage:.*\([0-9][0-9]*\.[0-9][0-9]*\)%.*/\1/p' CoverageReport/SummaryGithub.md | head -1 || echo "0")
           fi
           
-          # Pattern 3: Another sed fallback for table format
+          # Another sed fallback for table format "| Lines | XX.X% |"
           if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
-            COVERAGE=$(sed -n 's/^| Lines.*| \([0-9][0-9]*\.[0-9]*\)%.*/\1/p' CoverageReport/SummaryGithub.md | head -1 || echo "0")
+            COVERAGE=$(sed -n 's/^| Lines.*| \([0-9][0-9]*\.[0-9][0-9]*\)%.*/\1/p' CoverageReport/SummaryGithub.md | head -1 || echo "0")
+          fi
+          
+          # Final fallback: just extract any percentage-like number after "Line" or "Lines"
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
+            COVERAGE=$(sed -n 's/.*Lines\?.*\([0-9][0-9]*\.[0-9][0-9]*\)%.*/\1/p' CoverageReport/SummaryGithub.md | head -1 || echo "0")
           fi
           
           echo "coverage=${COVERAGE:-0}" >> $GITHUB_OUTPUT
