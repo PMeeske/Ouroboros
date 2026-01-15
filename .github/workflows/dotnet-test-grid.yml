@@ -341,11 +341,16 @@ jobs:
         TOTAL_PASSED=0
         TOTAL_FAILED=0
         
+        echo "Looking for TRX files in TestResults/"
+        ls -la TestResults/ || echo "No TestResults directory"
+        
         # Parse all TRX files
         for TRX_FILE in TestResults/*.trx; do
           if [ -f "$TRX_FILE" ]; then
+            echo "Processing: $TRX_FILE"
             PASSED=$(grep -oP 'Counters[^>]*passed="\K[0-9]+' "$TRX_FILE" | head -1 || echo "0")
             FAILED=$(grep -oP 'Counters[^>]*failed="\K[0-9]+' "$TRX_FILE" | head -1 || echo "0")
+            echo "  Passed: $PASSED, Failed: $FAILED"
             TOTAL_PASSED=$((TOTAL_PASSED + ${PASSED:-0}))
             TOTAL_FAILED=$((TOTAL_FAILED + ${FAILED:-0}))
           fi
@@ -365,15 +370,23 @@ jobs:
     - name: Get coverage percentage
       id: coverage
       run: |
+        echo "Looking for coverage report..."
+        ls -la CoverageReport/ || echo "No CoverageReport directory"
+        
         if [ -f "CoverageReport/SummaryGithub.md" ]; then
+          echo "Found SummaryGithub.md, extracting coverage..."
+          cat CoverageReport/SummaryGithub.md
+          
           COVERAGE=$(grep -oP '(?:Line coverage:|Lines:)\s*\K[0-9.]+(?=%)?' CoverageReport/SummaryGithub.md | head -1 || echo "0")
           
           if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
             COVERAGE=$(grep -oP '\| Lines\s+\|\s+\K[0-9.]+' CoverageReport/SummaryGithub.md | head -1 || echo "0")
           fi
           
+          echo "Extracted coverage: ${COVERAGE}%"
           echo "coverage=${COVERAGE:-0}" >> $GITHUB_OUTPUT
         else
+          echo "No coverage report found, defaulting to 0"
           echo "coverage=0" >> $GITHUB_OUTPUT
         fi
 
@@ -383,34 +396,50 @@ jobs:
         FAILED="${{ steps.totals.outputs.total_failed }}"
         COVERAGE="${{ steps.coverage.outputs.coverage }}"
         
-        # Determine test badge color
+        echo "Badge update inputs:"
+        echo "  Tests Passed: $PASSED"
+        echo "  Tests Failed: $FAILED"
+        echo "  Coverage: $COVERAGE%"
+        
+        # Determine test badge color per requirements:
+        # green (all pass), red (any failures)
         if [ "$FAILED" = "0" ] && [ "$PASSED" -gt "0" ]; then
-          TEST_COLOR="brightgreen"
+          TEST_COLOR="green"
           TEST_STATUS="${PASSED}%20passing"
         elif [ "$FAILED" -gt "0" ]; then
           TEST_COLOR="red"
           TEST_STATUS="${PASSED}%20passing%2C%20${FAILED}%20failing"
         else
-          TEST_COLOR="yellow"
-          TEST_STATUS="unknown"
+          TEST_COLOR="lightgrey"
+          TEST_STATUS="no%20tests"
         fi
         
-        # Determine coverage badge color
+        # Determine coverage badge color per requirements:
+        # green (≥80%), yellow (≥50%), orange (≥20%), red (<20%)
         if [ -n "$COVERAGE" ] && [ "$COVERAGE" != "0" ]; then
           COVERAGE_INT=$(echo "$COVERAGE" | cut -d. -f1)
-          if [ "$COVERAGE_INT" -ge 70 ]; then
-            COV_COLOR="brightgreen"
-          elif [ "$COVERAGE_INT" -ge 50 ]; then
+          if [ "$COVERAGE_INT" -ge 80 ]; then
             COV_COLOR="green"
-          elif [ "$COVERAGE_INT" -ge 30 ]; then
+          elif [ "$COVERAGE_INT" -ge 50 ]; then
             COV_COLOR="yellow"
+          elif [ "$COVERAGE_INT" -ge 20 ]; then
+            COV_COLOR="orange"
           else
             COV_COLOR="red"
           fi
         else
-          COV_COLOR="yellow"
+          COV_COLOR="red"
           COVERAGE="0"
         fi
+        
+        echo "Badge colors:"
+        echo "  Test badge: ${TEST_STATUS} (${TEST_COLOR})"
+        echo "  Coverage badge: ${COVERAGE}% (${COV_COLOR})"
+        
+        # Show current badge URLs
+        echo "Current badges in README.md:"
+        grep "img.shields.io/badge/tests-" README.md || echo "  No test badge found"
+        grep "img.shields.io/badge/coverage-" README.md || echo "  No coverage badge found"
         
         # Update the tests badge
         sed -i "s|https://img.shields.io/badge/tests-[^\"]*|https://img.shields.io/badge/tests-${TEST_STATUS}-${TEST_COLOR}|g" README.md
@@ -419,7 +448,11 @@ jobs:
         COVERAGE_ENCODED=$(echo "$COVERAGE" | sed 's/%/%25/g')
         sed -i "s|https://img.shields.io/badge/coverage-[^\"]*|https://img.shields.io/badge/coverage-${COVERAGE_ENCODED}%25-${COV_COLOR}|g" README.md
         
-        echo "Updated badges: Tests=${TEST_STATUS}, Coverage=${COVERAGE}%"
+        echo "Updated badges in README.md:"
+        grep "img.shields.io/badge/tests-" README.md || echo "  No test badge found"
+        grep "img.shields.io/badge/coverage-" README.md || echo "  No coverage badge found"
+        
+        echo "Badge update complete: Tests=${TEST_STATUS}, Coverage=${COVERAGE}%"
 
     - name: Check for changes
       id: git-check
