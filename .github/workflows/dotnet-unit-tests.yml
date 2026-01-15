@@ -167,7 +167,7 @@ jobs:
     if: always()
     steps:
     - name: Download all test results
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v4.1.8
       continue-on-error: true
       with:
         pattern: unit-test-results-*
