@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Ouroboros.Tests.Bdd</RootNamespace>
+    <AssemblyName>Ouroboros.Tests.Bdd</AssemblyName>
+    <Product>Ouroboros BDD Tests</Product>
+    <Description>BDD feature tests for Ouroboros using ReqnRoll</Description>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;SA0001</NoWarn>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ouroboros.Core\Ouroboros.Core.csproj" />
+    <ProjectReference Include="..\Ouroboros.Domain\Ouroboros.Domain.csproj" />
+    <ProjectReference Include="..\Ouroboros.Pipeline\Ouroboros.Pipeline.csproj" />
+    <ProjectReference Include="..\Ouroboros.Tools\Ouroboros.Tools.csproj" />
+    <ProjectReference Include="..\Ouroboros.Providers\Ouroboros.Providers.csproj" />
+    <ProjectReference Include="..\Ouroboros.Agent\Ouroboros.Agent.csproj" />
+    <ProjectReference Include="..\Ouroboros.Application\Ouroboros.Application.csproj" />
+    <ProjectReference Include="..\Ouroboros.Genetic\Ouroboros.Genetic.csproj" />
+    <ProjectReference Include="..\Ouroboros.Network\Ouroboros.Network.csproj" />
+    <ProjectReference Include="..\Ouroboros.Examples\Ouroboros.Examples.csproj" />
+    <ProjectReference Include="..\Ouroboros.Easy\Ouroboros.Easy.csproj" />
+    <ProjectReference Include="..\Ouroboros.Tests.Shared\Ouroboros.Tests.Shared.csproj" />
+  </ItemGroup>
+
+  <!-- Exclude legacy xUnit tests in Tests folder now covered by SpecFlow -->
+  <ItemGroup>
+    <Compile Remove="Steps\DslAssistantSimulationSteps.cs" />
+    <Compile Remove="Features\DslAssistantSimulation.feature.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Override vulnerable transitive dependencies from SpecFlow -->
+    <PackageReference Include="Microsoft.Build.Tasks.Core" Version="17.14.28" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.14.28" />
+
+    <PackageReference Include="coverlet.collector" Version="6.0.4" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="8.7.1" />
+    <PackageReference Include="ReqnRoll" Version="2.3.0" />
+    <PackageReference Include="ReqnRoll.xUnit" Version="2.3.0" />
+    <PackageReference Include="ReqnRoll.Tools.MsBuild.Generation" Version="2.3.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="9.16.0.82469" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>
