@@ -114,7 +114,7 @@ public class ProgramSynthesisBenchmarks
             this.simpleExamples,
             this.dsl);
         var program = CreateSampleProgram();
-        var pairs = new List<(SynthesisTask, Program)> { (task, program) };
+        var pairs = new List<(SynthesisTask Task, Ouroboros.Core.Synthesis.Program Solution)> { (task, program) };
 
         await this.smallBeamEngine.TrainRecognitionModelAsync(pairs);
     }
@@ -138,7 +138,7 @@ public class ProgramSynthesisBenchmarks
     [Benchmark]
     public void MeTTaConversion()
     {
-        var program = CreateSampleProgram();
+        var program = this.CreateSampleProgram();
         MeTTaDSLBridge.ProgramToMeTTa(program);
     }
 
@@ -160,16 +160,16 @@ public class ProgramSynthesisBenchmarks
         return new DomainSpecificLanguage("Arithmetic", primitives, typeRules, new List<RewriteRule>());
     }
 
-    private Program CreateSampleProgram()
+    private Ouroboros.Core.Synthesis.Program CreateSampleProgram()
     {
         var node = new ASTNode("Primitive", "double", new List<ASTNode>());
         var ast = new AbstractSyntaxTree(node, 1, 1);
-        return new Program("double", ast, this.dsl, -1.0);
+        return new Ouroboros.Core.Synthesis.Program("double", ast, this.dsl, -1.0, null);
     }
 
-    private async Task<List<Program>> CreateSamplePrograms()
+    private async Task<List<Ouroboros.Core.Synthesis.Program>> CreateSamplePrograms()
     {
-        var programs = new List<Program>
+        var programs = new List<Ouroboros.Core.Synthesis.Program>
         {
             this.CreateSampleProgram(),
             this.CreateSampleProgram(),
@@ -187,13 +187,13 @@ public class ProgramSynthesisBenchmarks
 public class SynthesisAlgorithmBenchmarks
 {
     private ProgramSynthesisEngine engine = null!;
-    private List<Program> programs = null!;
+    private List<Ouroboros.Core.Synthesis.Program> programs = null!;
 
     [GlobalSetup]
     public void Setup()
     {
         this.engine = new ProgramSynthesisEngine();
-        this.programs = new List<Program>
+        this.programs = new List<Ouroboros.Core.Synthesis.Program>
         {
             CreateProgram("prog1"),
             CreateProgram("prog2"),
@@ -225,11 +225,11 @@ public class SynthesisAlgorithmBenchmarks
             CompressionStrategy.FragmentGrammar);
     }
 
-    private static Program CreateProgram(string name)
+    private static Ouroboros.Core.Synthesis.Program CreateProgram(string name)
     {
         var node = new ASTNode("Primitive", name, new List<ASTNode>());
         var ast = new AbstractSyntaxTree(node, 1, 1);
         var dsl = new DomainSpecificLanguage("Test", new List<Primitive>(), new List<TypeRule>(), new List<RewriteRule>());
-        return new Program(name, ast, dsl, -1.0);
+        return new Ouroboros.Core.Synthesis.Program(name, ast, dsl, -1.0, null);
     }
 }
