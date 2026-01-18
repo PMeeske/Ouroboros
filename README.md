@@ -8,8 +8,8 @@
   <a href="https://github.com/PMeeske/Ouroboros"><img src="https://img.shields.io/badge/build-passing-brightgreen" alt="Build Status"></a>
   <a href="https://dotnet.microsoft.com/download/dotnet/10.0"><img src="https://img.shields.io/badge/.NET-10.0-blue" alt=".NET Version"></a>
   <a href="https://www.nuget.org/packages/LangChain/"><img src="https://img.shields.io/badge/LangChain-0.17.0-purple" alt="LangChain"></a>
-  <a href="TEST_COVERAGE_REPORT.md"><img src="https://img.shields.io/badge/coverage-8.4%25-yellow" alt="Coverage"></a>
-  <a href="src/Ouroboros.Tests"><img src="https://img.shields.io/badge/tests-304%20passing-brightgreen" alt="Tests"></a>
+  <a href="TEST_COVERAGE_REPORT.md"><img src="https://img.shields.io/badge/coverage-1.3%25-red" alt="Coverage"></a>
+  <a href="src/Ouroboros.Tests"><img src="https://img.shields.io/badge/tests-1656%20passing%2C%208%20failing-red" alt="Tests"></a>
   <a href="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml"><img src="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml/badge.svg" alt="Mutation Testing"></a>
 </p>
 
@@ -17,6 +17,11 @@ A **sophisticated functional programming-based AI pipeline system** (YET EXPERIM
 
 ## 🚀 Key Features
 
+- **🎯 Ouroboros.Easy API (NEW)**: Simplified fluent API for beginners and rapid prototyping
+  - **Fluent Builder**: `Pipeline.Create("topic").Draft().Critique().Improve().RunAsync()`
+  - **Pre-configured Patterns**: BasicReasoning, FullReasoning, IterativeReasoning, Summarize
+  - **Learning Progression**: Easy → DSL → Core for gradual mastery
+  - **Full Power Access**: Extract DSL or Kleisli arrows when needed
 - **🧮 Monadic Composition**: Type-safe pipeline operations using `Result<T>` and `Option<T>` monads
 - **🔗 Kleisli Arrows**: Mathematical composition of computations in monadic contexts
 - **🤖 LangChain Integration**: Native integration with LangChain providers and tools
@@ -160,6 +165,68 @@ Iteration N:  Critique(FinalSpec_{N-1}) → Improve → FinalSpec_N
    ```
 
 ### Quick Start
+
+#### Easy API (Recommended for Beginners)
+
+**Ouroboros.Easy** provides a simplified, fluent API that makes it easy to get started with AI pipelines without understanding the underlying monadic architecture. Perfect for beginners and rapid prototyping!
+
+```csharp
+using Ouroboros.Easy;
+
+// Create a simple reasoning pipeline in just a few lines
+var result = await Pipeline.Create("quantum computing")
+    .Draft()
+    .Critique()
+    .Improve()
+    .WithChatModel(chatModel)
+    .WithEmbeddingModel(embeddingModel)
+    .RunAsync();
+
+Console.WriteLine(result.Output);
+```
+
+**Pre-configured Patterns:**
+
+```csharp
+// Basic reasoning: Draft → Critique → Improve
+var result = await Pipeline.BasicReasoning("AI safety")
+    .WithChatModel(chatModel)
+    .WithEmbeddingModel(embeddingModel)
+    .RunAsync();
+
+// Full reasoning with thinking: Think → Draft → Critique → Improve
+var result = await Pipeline.FullReasoning("neural networks")
+    .WithChatModel(chatModel)
+    .WithEmbeddingModel(embeddingModel)
+    .RunAsync();
+
+// Iterative refinement with multiple cycles
+var result = await Pipeline.IterativeReasoning("complex topic", iterations: 3)
+    .WithChatModel(chatModel)
+    .WithEmbeddingModel(embeddingModel)
+    .RunAsync();
+```
+
+**Learning Progression:**
+
+The Easy API is designed to help you learn progressively:
+
+1. **Easy API (Level 1)**: Simple fluent interface - get results quickly
+2. **DSL Representation (Level 2)**: Use `ToDSL()` to understand pipeline structure
+3. **Core Architecture (Level 3)**: Use `ToCore()` to access Kleisli arrows for advanced composition
+
+```csharp
+var pipeline = Pipeline.Create("topic").Draft().Critique().Improve();
+
+// View DSL representation
+string dsl = pipeline.ToDSL();
+
+// Extract Kleisli arrow for advanced composition
+Step<PipelineBranch, PipelineBranch> arrow = pipeline.ToCore();
+var composedArrow = arrow.Then(customArrow).Map(transform);
+```
+
+📘 **[See Full Easy API Documentation](src/Ouroboros.Easy/README.md)** for quickstart guides, examples, and best practices.
 
 #### Command Line Interface
 

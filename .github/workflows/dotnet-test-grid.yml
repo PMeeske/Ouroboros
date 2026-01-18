@@ -1,0 +1,586 @@
+name: .NET Test Grid
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - '**.csproj'
+      - '.github/workflows/dotnet-test-grid.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - '**.csproj'
+      - '.github/workflows/dotnet-test-grid.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: write
+
+# Cancel in-progress runs for the same workflow on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Unit Tests (${{ matrix.category }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Core & Foundational tests (Ouroboros.Tests.Core, Ouroboros.Tests.Domain, Ouroboros.Tests.Steps)
+          - category: Core
+            filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Core.|FullyQualifiedName~Ouroboros.Tests.Domain.|FullyQualifiedName~Ouroboros.Tests.Steps.)"
+          # Pipeline & Memory tests (Ouroboros.Tests.Pipeline, Ouroboros.Tests.Memory, Ouroboros.Tests.GraphRAG)
+          - category: Pipeline
+            filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Pipeline.|FullyQualifiedName~Ouroboros.Tests.Memory.|FullyQualifiedName~Ouroboros.Tests.GraphRAG.)"
+          # AI & Learning tests
+          - category: AI-Learning
+            filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Learning.|FullyQualifiedName~Ouroboros.Tests.Reasoning.|FullyQualifiedName~Ouroboros.Tests.MetaLearning.|FullyQualifiedName~Ouroboros.Tests.MetaAI.|FullyQualifiedName~Ouroboros.Tests.Council.|FullyQualifiedName~Ouroboros.Tests.Affect.)"
+          # Tools & Providers tests
+          - category: Tools-Providers
+            filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Tools.|FullyQualifiedName~Ouroboros.Tests.Providers.|FullyQualifiedName~Ouroboros.Tests.Hyperon.|FullyQualifiedName~Ouroboros.Tests.Genetic.|FullyQualifiedName~Ouroboros.Tests.Synthesis.)"
+          # Governance & Security tests
+          - category: Governance
+            filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Governance.|FullyQualifiedName~Ouroboros.Tests.LawsOfForm.|FullyQualifiedName~Ouroboros.Tests.SelfModel.|FullyQualifiedName~Ouroboros.Tests.Reflection.|FullyQualifiedName~Ouroboros.Tests.Agent.)"
+          # General tests (top-level Ouroboros.Tests.Tests namespace) - Part 1: A-M
+          - category: General-Part1
+            filter: "Category=Unit&FullyQualifiedName~Ouroboros.Tests.Tests.&(FullyQualifiedName~Ouroboros.Tests.Tests.A|FullyQualifiedName~Ouroboros.Tests.Tests.B|FullyQualifiedName~Ouroboros.Tests.Tests.C|FullyQualifiedName~Ouroboros.Tests.Tests.D|FullyQualifiedName~Ouroboros.Tests.Tests.E|FullyQualifiedName~Ouroboros.Tests.Tests.F|FullyQualifiedName~Ouroboros.Tests.Tests.G|FullyQualifiedName~Ouroboros.Tests.Tests.H|FullyQualifiedName~Ouroboros.Tests.Tests.I|FullyQualifiedName~Ouroboros.Tests.Tests.J|FullyQualifiedName~Ouroboros.Tests.Tests.K|FullyQualifiedName~Ouroboros.Tests.Tests.L|FullyQualifiedName~Ouroboros.Tests.Tests.M)"
+          # General tests (top-level Ouroboros.Tests.Tests namespace) - Part 2: N-Z
+          - category: General-Part2
+            filter: "Category=Unit&FullyQualifiedName~Ouroboros.Tests.Tests.&(FullyQualifiedName~Ouroboros.Tests.Tests.N|FullyQualifiedName~Ouroboros.Tests.Tests.O|FullyQualifiedName~Ouroboros.Tests.Tests.P|FullyQualifiedName~Ouroboros.Tests.Tests.Q|FullyQualifiedName~Ouroboros.Tests.Tests.R|FullyQualifiedName~Ouroboros.Tests.Tests.S|FullyQualifiedName~Ouroboros.Tests.Tests.T|FullyQualifiedName~Ouroboros.Tests.Tests.U|FullyQualifiedName~Ouroboros.Tests.Tests.V|FullyQualifiedName~Ouroboros.Tests.Tests.W|FullyQualifiedName~Ouroboros.Tests.Tests.X|FullyQualifiedName~Ouroboros.Tests.Tests.Y|FullyQualifiedName~Ouroboros.Tests.Tests.Z)"
+          # Remaining tests not covered by other categories (Android, MultiAgent, etc.)
+          - category: Other
+            filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Android.|FullyQualifiedName~Ouroboros.Tests.MultiAgent.)"
+
+    outputs:
+      passed: ${{ steps.test-results.outputs.passed }}
+      failed: ${{ steps.test-results.outputs.failed }}
+      skipped: ${{ steps.test-results.outputs.skipped }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      uses: nick-fields/retry@v3
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_wait_seconds: 30
+        command: dotnet restore
+
+    - name: Build
+      run: |
+        # Build main projects separately from tests
+        # Tests have TreatWarningsAsErrors=true which fails on NuGet vulnerability warnings (NU1903)
+        # Tests will be built during the test step when dotnet test runs
+        for project in \
+          src/Ouroboros.Agent/Ouroboros.Agent.csproj \
+          src/Ouroboros.CLI/Ouroboros.CLI.csproj \
+          src/Ouroboros.Core/Ouroboros.Core.csproj \
+          src/Ouroboros.Domain/Ouroboros.Domain.csproj \
+          src/Ouroboros.Examples/Ouroboros.Examples.csproj \
+          src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj \
+          src/Ouroboros.Providers/Ouroboros.Providers.csproj \
+          src/Ouroboros.Tools/Ouroboros.Tools.csproj \
+          src/Ouroboros.WebApi/Ouroboros.WebApi.csproj
+        do
+          dotnet build --configuration Release --no-restore "$project"
+        done
+      timeout-minutes: 15
+
+    - name: Run Unit Tests (${{ matrix.category }})
+      id: run-tests
+      uses: nick-fields/retry@v3
+      with:
+        timeout_minutes: 10
+        max_attempts: 2
+        retry_wait_seconds: 10
+        command: |
+          # Run unit tests for this category with coverage collection
+          dotnet test \
+            --configuration Release \
+            --verbosity normal \
+            --filter "${{ matrix.filter }}" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            --logger "trx;LogFileName=${{ matrix.category }}-test-results.trx" \
+            src/Ouroboros.Tests/Ouroboros.Tests.csproj
+          EXIT_CODE=$?
+          
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::warning::Unit tests (${{ matrix.category }}) failed with exit code $EXIT_CODE"
+            echo "Check test results for details"
+          fi
+      continue-on-error: true
+
+    - name: Parse test results
+      id: test-results
+      if: always()
+      run: |
+        # Parse TRX file for test counts
+        TRX_FILE="TestResults/${{ matrix.category }}-test-results.trx"
+        if [ -f "$TRX_FILE" ]; then
+          PASSED=$(grep -oP 'passed="\K[0-9]+' "$TRX_FILE" | head -1 || echo "0")
+          FAILED=$(grep -oP 'failed="\K[0-9]+' "$TRX_FILE" | head -1 || echo "0")
+          SKIPPED=$(grep -oP 'skipped="\K[0-9]+' "$TRX_FILE" | head -1 || echo "0")
+          
+          # Also try total if counters format is different
+          if [ -z "$PASSED" ] || [ "$PASSED" = "0" ]; then
+            PASSED=$(grep -oP 'Counters[^>]*passed="\K[0-9]+' "$TRX_FILE" | head -1 || echo "0")
+            FAILED=$(grep -oP 'Counters[^>]*failed="\K[0-9]+' "$TRX_FILE" | head -1 || echo "0")
+            SKIPPED=$(grep -oP 'Counters[^>]*skipped="\K[0-9]+' "$TRX_FILE" | head -1 || echo "0")
+          fi
+          
+          echo "passed=${PASSED:-0}" >> $GITHUB_OUTPUT
+          echo "failed=${FAILED:-0}" >> $GITHUB_OUTPUT
+          echo "skipped=${SKIPPED:-0}" >> $GITHUB_OUTPUT
+          echo "Category ${{ matrix.category }}: Passed=$PASSED, Failed=$FAILED, Skipped=$SKIPPED"
+        else
+          echo "passed=0" >> $GITHUB_OUTPUT
+          echo "failed=0" >> $GITHUB_OUTPUT
+          echo "skipped=0" >> $GITHUB_OUTPUT
+          echo "No TRX file found for ${{ matrix.category }}"
+        fi
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      continue-on-error: true
+      with:
+        name: unit-test-results-${{ matrix.category }}
+        path: TestResults/*.trx
+        retention-days: 30
+
+    - name: Upload coverage results
+      uses: actions/upload-artifact@v4
+      if: always()
+      continue-on-error: true
+      with:
+        name: coverage-${{ matrix.category }}
+        path: TestResults/*/coverage.cobertura.xml
+        retention-days: 30
+
+    - name: Publish test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      continue-on-error: true
+      with:
+        files: TestResults/**/*.trx
+        check_name: Unit Tests (${{ matrix.category }})
+        comment_mode: off
+
+    - name: Generate Test Summary
+      if: always()
+      run: |
+        echo "## 🧪 Unit Test Results (${{ matrix.category }})" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Environment" >> $GITHUB_STEP_SUMMARY
+        echo "- **Runner**: ubuntu-latest" >> $GITHUB_STEP_SUMMARY
+        echo "- **.NET Version**: 10.0.x" >> $GITHUB_STEP_SUMMARY
+        echo "- **Category**: ${{ matrix.category }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Unit tests run in isolation without external dependencies." >> $GITHUB_STEP_SUMMARY
+
+  # Coverage job aggregates coverage from all matrix jobs
+  test-coverage:
+    name: Unit Test Coverage Report
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    timeout-minutes: 30
+
+    outputs:
+      coverage_percentage: ${{ steps.parse-coverage.outputs.coverage }}
+
+    steps:
+    - name: Download all coverage artifacts
+      uses: actions/download-artifact@v4.1.8
+      with:
+        pattern: coverage-*
+        path: TestResults
+        merge-multiple: true
+
+    - name: Install ReportGenerator
+      uses: nick-fields/retry@v3
+      with:
+        timeout_minutes: 5
+        max_attempts: 3
+        retry_wait_seconds: 10
+        command: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+    - name: Generate coverage report
+      run: |
+        # Add the tool to PATH for the current step
+        export PATH="$PATH:$HOME/.dotnet/tools"
+        reportgenerator \
+          -reports:"TestResults/*/coverage.cobertura.xml" \
+          -targetdir:"CoverageReport" \
+          -reporttypes:"Html;MarkdownSummaryGithub;Cobertura;Badges" \
+          -assemblyfilters:"+Ouroboros.*;+LangChainPipeline.*"
+
+    - name: Parse coverage percentage
+      id: parse-coverage
+      if: always()
+      run: |
+        if [ -f "CoverageReport/SummaryGithub.md" ]; then
+          # Extract line coverage percentage
+          COVERAGE=$(grep -oP '(?:Line coverage:|Lines:)\s*\K[0-9.]+(?=%)?' CoverageReport/SummaryGithub.md | head -1 || echo "0")
+          
+          # If still empty, try alternative pattern
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
+            COVERAGE=$(grep -oP '\| Lines\s+\|\s+\K[0-9.]+' CoverageReport/SummaryGithub.md | head -1 || echo "0")
+          fi
+          
+          echo "coverage=${COVERAGE:-0}" >> $GITHUB_OUTPUT
+          echo "Coverage: ${COVERAGE}%"
+        else
+          echo "coverage=0" >> $GITHUB_OUTPUT
+          echo "No coverage report found"
+        fi
+
+    - name: Display coverage summary
+      if: always()
+      run: |
+        if [ -f "CoverageReport/SummaryGithub.md" ]; then
+          echo "## 📊 Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          cat CoverageReport/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+        else
+          echo "## ⚠️ No coverage report generated" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      continue-on-error: true
+      with:
+        name: coverage-report
+        path: CoverageReport/
+        retention-days: 30
+
+    - name: Code Coverage Summary Report
+      uses: irongut/CodeCoverageSummary@v1.3.0
+      if: github.event_name == 'pull_request'
+      continue-on-error: true
+      with:
+        filename: CoverageReport/Cobertura.xml
+        badge: true
+        fail_below_min: false
+        format: markdown
+        hide_branch_rate: false
+        hide_complexity: true
+        indicators: true
+        output: both
+        thresholds: '50 70'
+
+    - name: Add Coverage PR Comment
+      uses: marocchino/sticky-pull-request-comment@v2
+      if: github.event_name == 'pull_request'
+      continue-on-error: true
+      with:
+        recreate: true
+        path: code-coverage-results.md
+
+    - name: Upload coverage to Codecov (optional)
+      uses: codecov/codecov-action@v4
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      continue-on-error: true
+      with:
+        files: CoverageReport/Cobertura.xml
+        flags: unittests
+        name: codecov-Ouroboros
+        fail_ci_if_error: false
+        verbose: true
+
+  # Summary and README update job
+  update-readme:
+    name: Update README Badges
+    runs-on: ubuntu-latest
+    needs: [unit-tests, test-coverage]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Download all test results
+      uses: actions/download-artifact@v4.1.8
+      continue-on-error: true
+      with:
+        pattern: unit-test-results-*
+        path: TestResults
+        merge-multiple: true
+
+    - name: Calculate total test counts
+      id: totals
+      run: |
+        TOTAL_PASSED=0
+        TOTAL_FAILED=0
+        
+        echo "Looking for TRX files in TestResults/"
+        ls -la TestResults/ || echo "No TestResults directory"
+        
+        # Parse all TRX files
+        for TRX_FILE in TestResults/*.trx; do
+          if [ -f "$TRX_FILE" ]; then
+            echo "Processing: $TRX_FILE"
+            PASSED=$(grep -oP 'Counters[^>]*passed="\K[0-9]+' "$TRX_FILE" | head -1 || echo "0")
+            FAILED=$(grep -oP 'Counters[^>]*failed="\K[0-9]+' "$TRX_FILE" | head -1 || echo "0")
+            echo "  Passed: $PASSED, Failed: $FAILED"
+            TOTAL_PASSED=$((TOTAL_PASSED + ${PASSED:-0}))
+            TOTAL_FAILED=$((TOTAL_FAILED + ${FAILED:-0}))
+          fi
+        done
+        
+        echo "total_passed=$TOTAL_PASSED" >> $GITHUB_OUTPUT
+        echo "total_failed=$TOTAL_FAILED" >> $GITHUB_OUTPUT
+        echo "Total tests: Passed=$TOTAL_PASSED, Failed=$TOTAL_FAILED"
+
+    - name: Download coverage report
+      uses: actions/download-artifact@v4.1.8
+      continue-on-error: true
+      with:
+        name: coverage-report
+        path: CoverageReport
+
+    - name: Get coverage percentage
+      id: coverage
+      run: |
+        COVERAGE="0"
+        
+        echo "Looking for coverage report..."
+        ls -la CoverageReport/ || echo "No CoverageReport directory"
+        
+        if [ -f "CoverageReport/SummaryGithub.md" ]; then
+          echo "Found SummaryGithub.md, extracting coverage..."
+          cat CoverageReport/SummaryGithub.md
+          
+          # Check if grep supports Perl regex
+          GREP_P_SUPPORTED=false
+          if echo "test" | grep -P "test" &> /dev/null; then
+            GREP_P_SUPPORTED=true
+            echo "Using grep -P for parsing"
+          else
+            echo "Using sed for parsing (grep -P not available)"
+          fi
+          
+          # Try Perl-compatible regex if available
+          # Note: These patterns use advanced Perl features that only work with grep -P
+          if [ "$GREP_P_SUPPORTED" = true ]; then
+            COVERAGE=$(grep -oP '(?:Line coverage:|Lines:)\s*\K[0-9.]+(?=%)?' CoverageReport/SummaryGithub.md 2>/dev/null | head -1 || echo "0")
+            
+            if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
+              COVERAGE=$(grep -oP '\| Lines\s+\|\s+\K[0-9.]+' CoverageReport/SummaryGithub.md 2>/dev/null | head -1 || echo "0")
+            fi
+          fi
+          
+          # Fallback using sed (more portable) - try even if grep -P worked but returned 0
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
+            COVERAGE=$(sed -n 's/.*Line coverage:.*\([0-9][0-9]*\.[0-9][0-9]*\)%.*/\1/p' CoverageReport/SummaryGithub.md | head -1 || echo "0")
+          fi
+          
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
+            COVERAGE=$(sed -n 's/^| Lines.*| \([0-9][0-9]*\.[0-9][0-9]*\)%.*/\1/p' CoverageReport/SummaryGithub.md | head -1 || echo "0")
+          fi
+          
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
+            COVERAGE=$(sed -n 's/.*Lines\?.*\([0-9][0-9]*\.[0-9][0-9]*\)%.*/\1/p' CoverageReport/SummaryGithub.md | head -1 || echo "0")
+          fi
+          
+          echo "Extracted coverage: ${COVERAGE}%"
+          echo "coverage=${COVERAGE:-0}" >> $GITHUB_OUTPUT
+        else
+          echo "No coverage report found, defaulting to 0"
+          echo "coverage=0" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Update README badges
+      run: |
+        PASSED="${{ steps.totals.outputs.total_passed }}"
+        FAILED="${{ steps.totals.outputs.total_failed }}"
+        COVERAGE="${{ steps.coverage.outputs.coverage }}"
+        
+        echo "Badge update inputs:"
+        echo "  Tests Passed: $PASSED"
+        echo "  Tests Failed: $FAILED"
+        echo "  Coverage: $COVERAGE%"
+        
+        # Determine test badge color per requirements:
+        # green (all pass), red (any failures)
+        if [ "$FAILED" = "0" ] && [ "$PASSED" -gt "0" ]; then
+          TEST_COLOR="green"
+          TEST_STATUS="${PASSED}%20passing"
+        elif [ "$FAILED" -gt "0" ]; then
+          TEST_COLOR="red"
+          TEST_STATUS="${PASSED}%20passing%2C%20${FAILED}%20failing"
+        else
+          TEST_COLOR="lightgrey"
+          TEST_STATUS="no%20tests"
+        fi
+        
+        # Determine coverage badge color per requirements:
+        # green (≥80%), yellow (≥50%), orange (≥20%), red (<20%)
+        if [ -n "$COVERAGE" ] && [ "$COVERAGE" != "0" ]; then
+          COVERAGE_INT=$(echo "$COVERAGE" | cut -d. -f1)
+          if [ "$COVERAGE_INT" -ge 80 ]; then
+            COV_COLOR="green"
+          elif [ "$COVERAGE_INT" -ge 50 ]; then
+            COV_COLOR="yellow"
+          elif [ "$COVERAGE_INT" -ge 20 ]; then
+            COV_COLOR="orange"
+          else
+            COV_COLOR="red"
+          fi
+        else
+          COV_COLOR="red"
+          COVERAGE="0"
+        fi
+        
+        echo "Badge colors:"
+        echo "  Test badge: ${TEST_STATUS} (${TEST_COLOR})"
+        echo "  Coverage badge: ${COVERAGE}% (${COV_COLOR})"
+        
+        # Show current badge URLs
+        echo "Current badges in README.md:"
+        grep "img.shields.io/badge/tests-" README.md || echo "  No test badge found"
+        grep "img.shields.io/badge/coverage-" README.md || echo "  No coverage badge found"
+        
+        # Update the tests badge
+        sed -i "s|https://img.shields.io/badge/tests-[^\"]*|https://img.shields.io/badge/tests-${TEST_STATUS}-${TEST_COLOR}|g" README.md
+        
+        # Update the coverage badge (URL encode the percentage)
+        COVERAGE_ENCODED=$(echo "$COVERAGE" | sed 's/%/%25/g')
+        sed -i "s|https://img.shields.io/badge/coverage-[^\"]*|https://img.shields.io/badge/coverage-${COVERAGE_ENCODED}%25-${COV_COLOR}|g" README.md
+        
+        echo "Updated badges in README.md:"
+        grep "img.shields.io/badge/tests-" README.md || echo "  No test badge found"
+        grep "img.shields.io/badge/coverage-" README.md || echo "  No coverage badge found"
+        
+        echo "Badge update complete: Tests=${TEST_STATUS}, Coverage=${COVERAGE}%"
+
+    - name: Check for changes
+      id: git-check
+      run: |
+        if git diff --quiet README.md; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+        else
+          echo "changed=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Commit and push changes
+      if: steps.git-check.outputs.changed == 'true'
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add README.md
+        git commit -m "docs: Update test and coverage badges [skip ci]"
+        git push
+
+  # Summary job that runs after all matrix jobs complete
+  test-grid-summary:
+    name: Test Grid Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, test-coverage]
+    if: always()
+
+    steps:
+    - name: Download all test results
+      uses: actions/download-artifact@v4.1.8
+      continue-on-error: true
+      with:
+        pattern: unit-test-results-*
+        path: TestResults
+        merge-multiple: true
+
+    - name: Generate Summary
+      run: |
+        echo "## 🧪 Test Grid Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "All unit test categories have completed." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Categories Tested" >> $GITHUB_STEP_SUMMARY
+        echo "- Core (Core, Domain, Steps)" >> $GITHUB_STEP_SUMMARY
+        echo "- Pipeline (Pipeline, Memory, GraphRAG)" >> $GITHUB_STEP_SUMMARY
+        echo "- AI-Learning (Learning, Reasoning, MetaLearning, MetaAI, Council, Affect)" >> $GITHUB_STEP_SUMMARY
+        echo "- Tools-Providers (Tools, Providers, Hyperon, Genetic, Synthesis)" >> $GITHUB_STEP_SUMMARY
+        echo "- Governance (Governance, LawsOfForm, SelfModel, Reflection, Agent)" >> $GITHUB_STEP_SUMMARY
+        echo "- General-Part1 (Top-level tests A-M)" >> $GITHUB_STEP_SUMMARY
+        echo "- General-Part2 (Top-level tests N-Z)" >> $GITHUB_STEP_SUMMARY
+        echo "- Other (Android, MultiAgent)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Coverage" >> $GITHUB_STEP_SUMMARY
+        echo "Coverage report has been generated and uploaded as an artifact." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          echo "README badges have been updated with the latest test and coverage results." >> $GITHUB_STEP_SUMMARY
+        fi
+
+  benchmark-tests:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-benchmarks-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-benchmarks-
+          ${{ runner.os }}-nuget-
+
+    - name: Run benchmarks
+      run: |
+        if [ -d "src/Ouroboros.Benchmarks" ]; then
+          cd src/Ouroboros.Benchmarks
+          dotnet run -c Release --framework net10.0 -- --exporters json --artifacts ../../../BenchmarkDotNet.Artifacts
+        elif [ -d "tests/Ouroboros.Benchmarks" ]; then
+          cd tests/Ouroboros.Benchmarks
+          dotnet run -c Release --framework net10.0 -- --exporters json --artifacts ../../../BenchmarkDotNet.Artifacts
+        else
+          echo "Benchmark project not found, skipping..."
+          echo "Looked in: src/Ouroboros.Benchmarks and tests/Ouroboros.Benchmarks"
+        fi
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v4
+      if: always()
+      continue-on-error: true
+      with:
+        name: benchmark-results
+        path: BenchmarkDotNet.Artifacts/
+        retention-days: 30

@@ -8,16 +8,18 @@ using LangChain.Providers.Ollama;
 using Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Tests for the Meta-AI convenience layer.
+/// Unit tests for the Meta-AI convenience layer.
+/// Tests simplified API for creating and using orchestrators - no external LLM service required for most tests.
 /// </summary>
 [Trait("Category", "Unit")]
-public static class MetaAIConvenienceTests
+public class MetaAIConvenienceTests
 {
     /// <summary>
     /// Tests simple orchestrator creation.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestSimpleOrchestratorCreation()
+    [Fact]
+    public async Task SimpleOrchestrator_Creation_ShouldSucceed()
     {
         Console.WriteLine("=== Test: Simple Orchestrator Creation ===");
 
@@ -57,7 +59,8 @@ public static class MetaAIConvenienceTests
     /// Tests standard orchestrator creation.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestStandardOrchestratorCreation()
+    [Fact]
+    public async Task StandardOrchestrator_Creation_ShouldSucceed()
     {
         Console.WriteLine("=== Test: Standard Orchestrator Creation ===");
 
@@ -99,7 +102,8 @@ public static class MetaAIConvenienceTests
     /// Tests AskQuestion convenience method.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestAskQuestion()
+    [Fact]
+    public async Task AskQuestion_ConvenienceMethod_ShouldReturnAnswer()
     {
         Console.WriteLine("=== Test: AskQuestion Convenience Method ===");
 
@@ -146,7 +150,8 @@ public static class MetaAIConvenienceTests
     /// Tests preset orchestrators.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestPresetOrchestrators()
+    [Fact]
+    public async Task PresetOrchestrators_Creation_ShouldCreateSpecializedTypes()
     {
         Console.WriteLine("=== Test: Preset Orchestrators ===");
 
@@ -196,7 +201,8 @@ public static class MetaAIConvenienceTests
     /// Tests CompleteWorkflow convenience method.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestCompleteWorkflow()
+    [Fact]
+    public async Task CompleteWorkflow_ConvenienceMethod_ShouldExecuteEndToEnd()
     {
         Console.WriteLine("=== Test: CompleteWorkflow Convenience Method ===");
 
@@ -245,6 +251,7 @@ public static class MetaAIConvenienceTests
 
     /// <summary>
     /// Runs all convenience layer tests.
+    /// Kept for backward compatibility - wraps individual test methods.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAll()
@@ -253,11 +260,12 @@ public static class MetaAIConvenienceTests
         Console.WriteLine("       META-AI CONVENIENCE LAYER TESTS");
         Console.WriteLine(new string('=', 60) + "\n");
 
-        await TestSimpleOrchestratorCreation();
-        await TestStandardOrchestratorCreation();
-        await TestAskQuestion();
-        await TestPresetOrchestrators();
-        await TestCompleteWorkflow();
+        var instance = new MetaAIConvenienceTests();
+        await instance.SimpleOrchestrator_Creation_ShouldSucceed();
+        await instance.StandardOrchestrator_Creation_ShouldSucceed();
+        await instance.AskQuestion_ConvenienceMethod_ShouldReturnAnswer();
+        await instance.PresetOrchestrators_Creation_ShouldCreateSpecializedTypes();
+        await instance.CompleteWorkflow_ConvenienceMethod_ShouldExecuteEndToEnd();
 
         Console.WriteLine(new string('=', 60));
         Console.WriteLine("       ALL CONVENIENCE LAYER TESTS COMPLETED");

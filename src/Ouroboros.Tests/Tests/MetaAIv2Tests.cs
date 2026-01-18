@@ -9,15 +9,17 @@ using Ouroboros.Agent;
 using Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Tests for Meta-AI v2 planner/executor/verifier orchestrator.
+/// Unit tests for Meta-AI v2 planner/executor/verifier orchestrator.
+/// Uses mock models for testing - no external LLM service required.
 /// </summary>
 [Trait("Category", "Unit")]
-public static class MetaAIv2Tests
+public class MetaAIv2Tests
 {
     /// <summary>
     /// Tests basic orchestrator creation and configuration.
     /// </summary>
-    public static void TestOrchestratorCreation()
+    [Fact]
+    public void Orchestrator_Creation_ShouldInitializeSuccessfully()
     {
         Console.WriteLine("=== Test: Meta-AI v2 Orchestrator Creation ===");
 
@@ -48,7 +50,8 @@ public static class MetaAIv2Tests
     /// Tests plan generation.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestPlanGeneration()
+    [Fact]
+    public async Task Plan_Generation_ShouldCreateValidPlan()
     {
         Console.WriteLine("=== Test: Plan Generation ===");
 
@@ -103,7 +106,8 @@ public static class MetaAIv2Tests
     /// Tests skill registry functionality.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestSkillRegistry()
+    [Fact]
+    public async Task SkillRegistry_Operations_ShouldWorkCorrectly()
     {
         Console.WriteLine("=== Test: Skill Registry ===");
 
@@ -158,7 +162,8 @@ public static class MetaAIv2Tests
     /// Tests uncertainty router.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestUncertaintyRouter()
+    [Fact]
+    public async Task UncertaintyRouter_Routing_ShouldMakeCorrectDecisions()
     {
         Console.WriteLine("=== Test: Uncertainty Router ===");
 
@@ -194,7 +199,8 @@ public static class MetaAIv2Tests
     /// <summary>
     /// Tests safety guard.
     /// </summary>
-    public static void TestSafetyGuard()
+    [Fact]
+    public void SafetyGuard_Checks_ShouldEnforceSafety()
     {
         Console.WriteLine("=== Test: Safety Guard ===");
 
@@ -258,7 +264,8 @@ public static class MetaAIv2Tests
     /// Tests memory store.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestMemoryStore()
+    [Fact]
+    public async Task MemoryStore_Operations_ShouldStoreAndRetrieveExperiences()
     {
         Console.WriteLine("=== Test: Memory Store ===");
 
@@ -317,7 +324,8 @@ public static class MetaAIv2Tests
     /// Tests evaluation harness.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestEvaluationHarness()
+    [Fact]
+    public async Task EvaluationHarness_Evaluation_ShouldMeasurePerformance()
     {
         Console.WriteLine("=== Test: Evaluation Harness ===");
 
@@ -364,6 +372,7 @@ public static class MetaAIv2Tests
 
     /// <summary>
     /// Runs all Meta-AI v2 tests.
+    /// Kept for backward compatibility - wraps individual test methods.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllTests()
@@ -372,13 +381,14 @@ public static class MetaAIv2Tests
         Console.WriteLine("META-AI LAYER V2 TESTS");
         Console.WriteLine(new string('=', 60) + "\n");
 
-        TestOrchestratorCreation();
-        await TestPlanGeneration();
-        await TestSkillRegistry();
-        await TestUncertaintyRouter();
-        TestSafetyGuard();
-        await TestMemoryStore();
-        await TestEvaluationHarness();
+        var instance = new MetaAIv2Tests();
+        instance.Orchestrator_Creation_ShouldInitializeSuccessfully();
+        await instance.Plan_Generation_ShouldCreateValidPlan();
+        await instance.SkillRegistry_Operations_ShouldWorkCorrectly();
+        await instance.UncertaintyRouter_Routing_ShouldMakeCorrectDecisions();
+        instance.SafetyGuard_Checks_ShouldEnforceSafety();
+        await instance.MemoryStore_Operations_ShouldStoreAndRetrieveExperiences();
+        await instance.EvaluationHarness_Evaluation_ShouldMeasurePerformance();
 
         Console.WriteLine(new string('=', 60));
         Console.WriteLine("✓ ALL META-AI V2 TESTS PASSED!");

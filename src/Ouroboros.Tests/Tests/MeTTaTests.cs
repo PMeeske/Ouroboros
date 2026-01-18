@@ -7,16 +7,18 @@ namespace Ouroboros.Tests;
 using Ouroboros.Tools.MeTTa;
 
 /// <summary>
-/// Tests for MeTTa symbolic reasoning integration.
+/// Unit tests for MeTTa symbolic reasoning integration.
+/// Uses MockMeTTaEngine for isolation - no external MeTTa runtime required.
 /// </summary>
 [Trait("Category", "Unit")]
-public static class MeTTaTests
+public class MeTTaTests
 {
     /// <summary>
     /// Tests basic MeTTa query tool functionality.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestMeTTaQueryTool()
+    [Fact]
+    public async Task MeTTaQueryTool_Execute_ShouldSucceed()
     {
         Console.WriteLine("=== Test: MeTTa Query Tool ===");
 
@@ -41,7 +43,8 @@ public static class MeTTaTests
     /// Tests MeTTa rule application.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestMeTTaRuleTool()
+    [Fact]
+    public async Task MeTTaRuleTool_ApplyRule_ShouldSucceed()
     {
         Console.WriteLine("=== Test: MeTTa Rule Tool ===");
 
@@ -63,7 +66,8 @@ public static class MeTTaTests
     /// Tests MeTTa plan verification.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestMeTTaPlanVerifier()
+    [Fact]
+    public async Task MeTTaPlanVerifier_VerifyPlan_ShouldSucceed()
     {
         Console.WriteLine("=== Test: MeTTa Plan Verifier ===");
 
@@ -85,7 +89,8 @@ public static class MeTTaTests
     /// Tests adding facts to MeTTa.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestMeTTaFactTool()
+    [Fact]
+    public async Task MeTTaFactTool_AddFact_ShouldSucceed()
     {
         Console.WriteLine("=== Test: MeTTa Fact Tool ===");
 
@@ -104,7 +109,8 @@ public static class MeTTaTests
     /// <summary>
     /// Tests ToolRegistry integration with MeTTa.
     /// </summary>
-    public static void TestMeTTaToolRegistryIntegration()
+    [Fact]
+    public void MeTTaToolRegistry_Integration_ShouldRegisterTools()
     {
         Console.WriteLine("=== Test: MeTTa ToolRegistry Integration ===");
 
@@ -132,7 +138,8 @@ public static class MeTTaTests
     /// Tests HTTP MeTTa engine (without actual HTTP server).
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestHttpMeTTaEngine()
+    [Fact]
+    public async Task HttpMeTTaEngine_ConnectionFailure_ShouldHandleGracefully()
     {
         Console.WriteLine("=== Test: HTTP MeTTa Engine ===");
 
@@ -153,7 +160,8 @@ public static class MeTTaTests
     /// Tests subprocess MeTTa engine (will warn if metta not installed).
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestSubprocessMeTTaEngine()
+    [Fact]
+    public async Task SubprocessMeTTaEngine_Execute_ShouldHandleMissingInstallation()
     {
         Console.WriteLine("=== Test: Subprocess MeTTa Engine ===");
 
@@ -171,6 +179,7 @@ public static class MeTTaTests
 
     /// <summary>
     /// Runs all MeTTa tests.
+    /// Kept for backward compatibility - wraps individual test methods.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllTests()
@@ -181,13 +190,14 @@ public static class MeTTaTests
 
         try
         {
-            await TestMeTTaQueryTool();
-            await TestMeTTaRuleTool();
-            await TestMeTTaPlanVerifier();
-            await TestMeTTaFactTool();
-            TestMeTTaToolRegistryIntegration();
-            await TestHttpMeTTaEngine();
-            await TestSubprocessMeTTaEngine();
+            var instance = new MeTTaTests();
+            await instance.MeTTaQueryTool_Execute_ShouldSucceed();
+            await instance.MeTTaRuleTool_ApplyRule_ShouldSucceed();
+            await instance.MeTTaPlanVerifier_VerifyPlan_ShouldSucceed();
+            await instance.MeTTaFactTool_AddFact_ShouldSucceed();
+            instance.MeTTaToolRegistry_Integration_ShouldRegisterTools();
+            await instance.HttpMeTTaEngine_ConnectionFailure_ShouldHandleGracefully();
+            await instance.SubprocessMeTTaEngine_Execute_ShouldHandleMissingInstallation();
 
             Console.WriteLine("╔════════════════════════════════════════════╗");
             Console.WriteLine("║   All MeTTa tests completed successfully   ║");

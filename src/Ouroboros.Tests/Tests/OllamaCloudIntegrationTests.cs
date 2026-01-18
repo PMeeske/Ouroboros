@@ -9,44 +9,15 @@ using LangChain.Providers.Ollama;
 using Ouroboros.Providers;
 
 /// <summary>
-/// End-to-end integration tests for Ollama Cloud endpoint support.
+/// Integration tests for Ollama Cloud endpoint support.
 /// Tests both remote Ollama Cloud endpoints and local Ollama to ensure nothing is broken.
+/// Requires Ollama service for full testing, but includes fallback testing for when service is unavailable.
 /// </summary>
 [Trait("Category", "Integration")]
-public static class OllamaCloudIntegrationTests
+public class OllamaCloudIntegrationTests
 {
-    public static async Task RunAllTests()
-    {
-        Console.WriteLine("=== Running Ollama Cloud Integration Tests ===");
-
-        // Test local Ollama first (ensure it's not broken)
-        await TestLocalOllamaChatModel();
-        await TestLocalOllamaEmbeddingModel();
-
-        // Test remote endpoint configuration
-        TestChatConfigAutoDetection();
-        TestChatConfigManualOverride();
-        TestChatConfigEnvironmentVariables();
-
-        // Test chat model adapters
-        await TestOllamaCloudChatModelFallback();
-        await TestHttpOpenAiCompatibleChatModelFallback();
-
-        // Test embedding model adapters
-        await TestOllamaCloudEmbeddingModelFallback();
-
-        // Test endpoint type selection
-        TestCreateRemoteChatModelSelection();
-        TestCreateEmbeddingModelSelection();
-
-        // Test end-to-end scenarios
-        await TestEndToEndLocalOllamaScenario();
-        await TestEndToEndRemoteOllamaCloudScenario();
-
-        Console.WriteLine("✓ All Ollama Cloud integration tests passed!");
-    }
-
-    private static async Task TestLocalOllamaChatModel()
+    [Fact]
+    public async Task LocalOllama_ChatModel_ShouldHandleConnectionErrors()
     {
         Console.WriteLine("Testing local Ollama chat model...");
 
@@ -75,7 +46,8 @@ public static class OllamaCloudIntegrationTests
         }
     }
 
-    private static async Task TestLocalOllamaEmbeddingModel()
+    [Fact]
+    public async Task LocalOllama_EmbeddingModel_ShouldReturnFallbackEmbeddings()
     {
         Console.WriteLine("Testing local Ollama embedding model...");
 
@@ -101,7 +73,8 @@ public static class OllamaCloudIntegrationTests
         }
     }
 
-    private static void TestChatConfigAutoDetection()
+    [Fact]
+    public void ChatConfig_AutoDetection_ShouldIdentifyEndpointTypes()
     {
         Console.WriteLine("Testing ChatConfig auto-detection...");
 
@@ -135,7 +108,8 @@ public static class OllamaCloudIntegrationTests
         Console.WriteLine("  ✓ Auto-detection works correctly for all URL patterns");
     }
 
-    private static void TestChatConfigManualOverride()
+    [Fact]
+    public void ChatConfig_ManualOverride_ShouldRespectExplicitType()
     {
         Console.WriteLine("Testing ChatConfig manual override...");
 
@@ -169,7 +143,8 @@ public static class OllamaCloudIntegrationTests
         Console.WriteLine("  ✓ Manual override works correctly");
     }
 
-    private static void TestChatConfigEnvironmentVariables()
+    [Fact]
+    public void ChatConfig_EnvironmentVariables_ShouldResolveCorrectly()
     {
         Console.WriteLine("Testing ChatConfig environment variable handling...");
 
@@ -222,7 +197,8 @@ public static class OllamaCloudIntegrationTests
         }
     }
 
-    private static async Task TestOllamaCloudChatModelFallback()
+    [Fact]
+    public async Task OllamaCloudChatModel_Fallback_ShouldReturnFallbackMessage()
     {
         Console.WriteLine("Testing OllamaCloudChatModel fallback behavior...");
 
@@ -244,7 +220,8 @@ public static class OllamaCloudIntegrationTests
         Console.WriteLine("  ✓ OllamaCloudChatModel fallback works correctly");
     }
 
-    private static async Task TestHttpOpenAiCompatibleChatModelFallback()
+    [Fact]
+    public async Task HttpOpenAiCompatibleChatModel_Fallback_ShouldReturnFallbackMessage()
     {
         Console.WriteLine("Testing HttpOpenAiCompatibleChatModel fallback behavior...");
 
@@ -266,7 +243,8 @@ public static class OllamaCloudIntegrationTests
         Console.WriteLine("  ✓ HttpOpenAiCompatibleChatModel fallback works correctly");
     }
 
-    private static async Task TestOllamaCloudEmbeddingModelFallback()
+    [Fact]
+    public async Task OllamaCloudEmbeddingModel_Fallback_ShouldReturnDeterministicEmbeddings()
     {
         Console.WriteLine("Testing OllamaCloudEmbeddingModel fallback behavior...");
 
@@ -299,7 +277,8 @@ public static class OllamaCloudIntegrationTests
         Console.WriteLine($"  ✓ OllamaCloudEmbeddingModel fallback works ({embedding.Length} dimensions)");
     }
 
-    private static void TestCreateRemoteChatModelSelection()
+    [Fact]
+    public void CreateRemoteChatModel_Selection_ShouldSelectCorrectModelType()
     {
         Console.WriteLine("Testing CreateRemoteChatModel selection logic...");
 
@@ -323,7 +302,8 @@ public static class OllamaCloudIntegrationTests
         Console.WriteLine("  ✓ Remote chat model selection works correctly");
     }
 
-    private static void TestCreateEmbeddingModelSelection()
+    [Fact]
+    public void CreateEmbeddingModel_Selection_ShouldSelectCorrectModelType()
     {
         Console.WriteLine("Testing CreateEmbeddingModel selection logic...");
 
@@ -346,7 +326,8 @@ public static class OllamaCloudIntegrationTests
         Console.WriteLine("  ✓ Embedding model selection works correctly");
     }
 
-    private static async Task TestEndToEndLocalOllamaScenario()
+    [Fact]
+    public async Task EndToEnd_LocalOllamaScenario_ShouldWorkCorrectly()
     {
         Console.WriteLine("Testing end-to-end local Ollama scenario...");
 
@@ -390,7 +371,8 @@ public static class OllamaCloudIntegrationTests
         Console.WriteLine("  ✓ End-to-end local Ollama scenario works correctly");
     }
 
-    private static async Task TestEndToEndRemoteOllamaCloudScenario()
+    [Fact]
+    public async Task EndToEnd_RemoteOllamaCloudScenario_ShouldWorkWithFallback()
     {
         Console.WriteLine("Testing end-to-end remote Ollama Cloud scenario...");
 
@@ -431,5 +413,43 @@ public static class OllamaCloudIntegrationTests
         }
 
         Console.WriteLine("  ✓ End-to-end remote Ollama Cloud scenario works correctly");
+    }
+
+    /// <summary>
+    /// Runs all Ollama Cloud integration tests.
+    /// Kept for backward compatibility - wraps individual test methods.
+    /// </summary>
+    /// <returns>A task representing the async operation.</returns>
+    public static async Task RunAllTests()
+    {
+        Console.WriteLine("=== Running Ollama Cloud Integration Tests ===");
+
+        var instance = new OllamaCloudIntegrationTests();
+        
+        // Test local Ollama first (ensure it's not broken)
+        await instance.LocalOllama_ChatModel_ShouldHandleConnectionErrors();
+        await instance.LocalOllama_EmbeddingModel_ShouldReturnFallbackEmbeddings();
+
+        // Test remote endpoint configuration
+        instance.ChatConfig_AutoDetection_ShouldIdentifyEndpointTypes();
+        instance.ChatConfig_ManualOverride_ShouldRespectExplicitType();
+        instance.ChatConfig_EnvironmentVariables_ShouldResolveCorrectly();
+
+        // Test chat model adapters
+        await instance.OllamaCloudChatModel_Fallback_ShouldReturnFallbackMessage();
+        await instance.HttpOpenAiCompatibleChatModel_Fallback_ShouldReturnFallbackMessage();
+
+        // Test embedding model adapters
+        await instance.OllamaCloudEmbeddingModel_Fallback_ShouldReturnDeterministicEmbeddings();
+
+        // Test endpoint type selection
+        instance.CreateRemoteChatModel_Selection_ShouldSelectCorrectModelType();
+        instance.CreateEmbeddingModel_Selection_ShouldSelectCorrectModelType();
+
+        // Test end-to-end scenarios
+        await instance.EndToEnd_LocalOllamaScenario_ShouldWorkCorrectly();
+        await instance.EndToEnd_RemoteOllamaCloudScenario_ShouldWorkWithFallback();
+
+        Console.WriteLine("✓ All Ollama Cloud integration tests passed!");
     }
 }

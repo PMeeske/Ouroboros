@@ -15,8 +15,9 @@ using Ouroboros.Tests.Mocks;
 using Ouroboros.Providers;
 
 /// <summary>
-/// Tests for AI orchestrator capabilities including model selection,
+/// Unit tests for AI orchestrator capabilities including model selection,
 /// use case classification, and performance tracking.
+/// Uses mock models for testing - no external LLM service required.
 /// </summary>
 [Trait("Category", "Unit")]
 public class OrchestratorTests
@@ -25,7 +26,7 @@ public class OrchestratorTests
     /// Tests basic orchestrator creation and configuration.
     /// </summary>
     [Fact]
-    public void TestOrchestratorCreation()
+    public void Orchestrator_Creation_ShouldRegisterModels()
     {
         var tools = ToolRegistry.CreateDefault();
         var orchestrator = new SmartModelOrchestrator(tools, "default");
@@ -49,7 +50,7 @@ public class OrchestratorTests
     /// Tests use case classification for different prompt types.
     /// </summary>
     [Fact]
-    public void TestUseCaseClassification()
+    public void UseCase_Classification_ShouldIdentifyPromptTypes()
     {
         var tools = ToolRegistry.CreateDefault();
         var orchestrator = new SmartModelOrchestrator(tools, "default");
@@ -83,8 +84,9 @@ public class OrchestratorTests
     /// <summary>
     /// Tests model selection based on use case.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     [Fact]
-    public async Task TestModelSelection()
+    public async Task Model_Selection_ShouldChooseAppropriateModel()
     {
         var tools = ToolRegistry.CreateDefault();
         var orchestrator = new SmartModelOrchestrator(tools, "general");
@@ -162,7 +164,7 @@ public class OrchestratorTests
     /// Tests performance metric tracking.
     /// </summary>
     [Fact]
-    public void TestPerformanceTracking()
+    public void Performance_Tracking_ShouldRecordMetrics()
     {
         var tools = ToolRegistry.CreateDefault();
         var orchestrator = new SmartModelOrchestrator(tools, "default");
@@ -196,7 +198,7 @@ public class OrchestratorTests
     /// Tests orchestrator builder pattern.
     /// </summary>
     [Fact]
-    public void TestOrchestratorBuilder()
+    public void OrchestratorBuilder_Pattern_ShouldBuildCorrectly()
     {
         var tools = ToolRegistry.CreateDefault();
         var mockModel = new MockChatModel("test-response");
@@ -226,8 +228,9 @@ public class OrchestratorTests
     /// <summary>
     /// Tests composable tool extensions.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     [Fact]
-    public async Task TestComposableTools()
+    public async Task ComposableTools_Extensions_ShouldWrapCorrectly()
     {
         var tools = ToolRegistry.CreateDefault();
         var mathTool = tools.Get("math");
@@ -267,6 +270,55 @@ public class OrchestratorTests
             "Chains multiple operations",
             mathTool);
         var result5 = await chainedTool.InvokeAsync("10/2");
-        result5.IsSuccess.Should().BeTrue("Chained tool should succeed");
+        if (!result5.IsSuccess)
+        {
+            throw new Exception("Chained tool should succeed!");
+        }
+
+        Console.WriteLine("✓ Tool chaining works");
+
+        Console.WriteLine("✓ All composable tool features work!\n");
+    }
+
+    /// <summary>
+    /// Runs all orchestrator tests.
+    /// Kept for backward compatibility - wraps individual test methods.
+    /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
+    public static async Task RunAllTests()
+    {
+        Console.WriteLine("\n" + new string('=', 60));
+        Console.WriteLine("AI ORCHESTRATOR TESTS");
+        Console.WriteLine(new string('=', 60) + "\n");
+
+        var instance = new OrchestratorTests();
+        instance.Orchestrator_Creation_ShouldRegisterModels();
+        instance.UseCase_Classification_ShouldIdentifyPromptTypes();
+        await instance.Model_Selection_ShouldChooseAppropriateModel();
+        instance.Performance_Tracking_ShouldRecordMetrics();
+        instance.OrchestratorBuilder_Pattern_ShouldBuildCorrectly();
+        await instance.ComposableTools_Extensions_ShouldWrapCorrectly();
+
+        Console.WriteLine(new string('=', 60));
+        Console.WriteLine("✓ ALL ORCHESTRATOR TESTS PASSED!");
+        Console.WriteLine(new string('=', 60) + "\n");
+    }
+}
+
+/// <summary>
+/// Mock chat model for testing.
+/// </summary>
+internal sealed class MockChatModel : IChatCompletionModel
+{
+    private readonly string response;
+
+    public MockChatModel(string response)
+    {
+        this.response = response;
+    }
+
+    public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
+    {
+        return Task.FromResult(this.response);
     }
 }

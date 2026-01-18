@@ -4,10 +4,12 @@
 
 using BenchmarkDotNet.Attributes;
 using Ouroboros.Application.Learning;
+using Ouroboros.Core.DistinctionLearning;
 using Ouroboros.Core.Learning;
 using Ouroboros.Core.LawsOfForm;
 using Ouroboros.Core.Monads;
 using Ouroboros.Domain;
+using Ouroboros.Domain.DistinctionLearning;
 
 namespace Ouroboros.Benchmarks.Benchmarks;
 
