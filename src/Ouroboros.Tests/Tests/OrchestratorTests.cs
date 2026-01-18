@@ -2,24 +2,31 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-namespace Ouroboros.Tests;
+namespace Ouroboros.Tests.Tests;
 
+using System;
+using System.Threading.Tasks;
+using System.Threading;
+using FluentAssertions;
+using Xunit;
 using Ouroboros.Agent;
+using Ouroboros.Tools;
+using Ouroboros.Tests.Mocks;
+using Ouroboros.Providers;
 
 /// <summary>
 /// Tests for AI orchestrator capabilities including model selection,
 /// use case classification, and performance tracking.
 /// </summary>
 [Trait("Category", "Unit")]
-public static class OrchestratorTests
+public class OrchestratorTests
 {
     /// <summary>
     /// Tests basic orchestrator creation and configuration.
     /// </summary>
-    public static void TestOrchestratorCreation()
+    [Fact]
+    public void TestOrchestratorCreation()
     {
-        Console.WriteLine("=== Test: Orchestrator Creation ===");
-
         var tools = ToolRegistry.CreateDefault();
         var orchestrator = new SmartModelOrchestrator(tools, "default");
 
@@ -34,90 +41,51 @@ public static class OrchestratorTests
 
         orchestrator.RegisterModel(capability);
 
-        Console.WriteLine("✓ Orchestrator created successfully");
-        Console.WriteLine("✓ Model capability registered");
-
         var metrics = orchestrator.GetMetrics();
-        if (!metrics.ContainsKey("test-model"))
-        {
-            throw new Exception("Model should be in metrics after registration!");
-        }
-
-        Console.WriteLine($"✓ Metrics initialized for model: {metrics["test-model"].ResourceName}");
-        Console.WriteLine("✓ Test passed!\n");
+        metrics.Should().ContainKey("test-model", "Model should be in metrics after registration");
     }
 
     /// <summary>
     /// Tests use case classification for different prompt types.
     /// </summary>
-    public static void TestUseCaseClassification()
+    [Fact]
+    public void TestUseCaseClassification()
     {
-        Console.WriteLine("=== Test: Use Case Classification ===");
-
         var tools = ToolRegistry.CreateDefault();
         var orchestrator = new SmartModelOrchestrator(tools, "default");
 
         // Test code generation classification
         var codePrompt = "Write a function to calculate fibonacci numbers";
         var codeCase = orchestrator.ClassifyUseCase(codePrompt);
-        if (codeCase.Type != UseCaseType.CodeGeneration)
-        {
-            throw new Exception($"Expected CodeGeneration, got {codeCase.Type}");
-        }
-
-        Console.WriteLine("✓ Code generation prompt classified correctly");
+        codeCase.Type.Should().Be(UseCaseType.CodeGeneration);
 
         // Test reasoning classification
         var reasoningPrompt = "Analyze why functional programming uses immutability";
         var reasoningCase = orchestrator.ClassifyUseCase(reasoningPrompt);
-        if (reasoningCase.Type != UseCaseType.Reasoning)
-        {
-            throw new Exception($"Expected Reasoning, got {reasoningCase.Type}");
-        }
-
-        Console.WriteLine("✓ Reasoning prompt classified correctly");
+        reasoningCase.Type.Should().Be(UseCaseType.Reasoning);
 
         // Test creative classification
         var creativePrompt = "Create a short story about AI";
         var creativeCase = orchestrator.ClassifyUseCase(creativePrompt);
-        if (creativeCase.Type != UseCaseType.Creative)
-        {
-            throw new Exception($"Expected Creative, got {creativeCase.Type}");
-        }
-
-        Console.WriteLine("✓ Creative prompt classified correctly");
+        creativeCase.Type.Should().Be(UseCaseType.Creative);
 
         // Test summarization classification
         var summaryPrompt = "Summarize this long document about machine learning";
         var summaryCase = orchestrator.ClassifyUseCase(summaryPrompt);
-        if (summaryCase.Type != UseCaseType.Summarization)
-        {
-            throw new Exception($"Expected Summarization, got {summaryCase.Type}");
-        }
-
-        Console.WriteLine("✓ Summarization prompt classified correctly");
+        summaryCase.Type.Should().Be(UseCaseType.Summarization);
 
         // Test tool use classification
         var toolPrompt = "Use the search tool to find information";
         var toolCase = orchestrator.ClassifyUseCase(toolPrompt);
-        if (toolCase.Type != UseCaseType.ToolUse)
-        {
-            throw new Exception($"Expected ToolUse, got {toolCase.Type}");
-        }
-
-        Console.WriteLine("✓ Tool use prompt classified correctly");
-
-        Console.WriteLine("✓ All use cases classified correctly!\n");
+        toolCase.Type.Should().Be(UseCaseType.ToolUse);
     }
 
     /// <summary>
     /// Tests model selection based on use case.
     /// </summary>
-    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestModelSelection()
+    [Fact]
+    public async Task TestModelSelection()
     {
-        Console.WriteLine("=== Test: Model Selection ===");
-
         var tools = ToolRegistry.CreateDefault();
         var orchestrator = new SmartModelOrchestrator(tools, "general");
 
@@ -152,68 +120,55 @@ public static class OrchestratorTests
         var codePrompt = "Write a function to reverse a string";
         var codeDecision = await orchestrator.SelectModelAsync(codePrompt);
 
+        codeDecision.IsSuccess.Should().BeTrue();
         codeDecision.Match(
             decision =>
             {
-                if (decision.ModelName != "coder")
-                {
-                    throw new Exception($"Expected 'coder' model, got '{decision.ModelName}'");
-                }
-
-                Console.WriteLine($"✓ Code prompt selected '{decision.ModelName}' model");
-                Console.WriteLine($"  Reason: {decision.Reason}");
+                decision.ModelName.Should().Be("coder", "Code prompt should select 'coder' model");
             },
-            error => throw new Exception($"Selection failed: {error}"));
+            error => Assert.Fail($"Selection failed: {error}"));
 
         // Test reasoning prompt selects reasoning model
         var reasoningPrompt = "Explain the principle of monadic composition";
         var reasoningDecision = await orchestrator.SelectModelAsync(reasoningPrompt);
 
+        reasoningDecision.IsSuccess.Should().BeTrue();
         reasoningDecision.Match(
             decision =>
             {
-                if (decision.ModelName != "reasoner")
-                {
-                    throw new Exception($"Expected 'reasoner' model, got '{decision.ModelName}'");
-                }
-
-                Console.WriteLine($"✓ Reasoning prompt selected '{decision.ModelName}' model");
-                Console.WriteLine($"  Reason: {decision.Reason}");
+                decision.ModelName.Should().Be("reasoner", "Reasoning prompt should select 'reasoner' model");
             },
-            error => throw new Exception($"Selection failed: {error}"));
+            error => Assert.Fail($"Selection failed: {error}"));
 
         // Test general prompt selects general model
         var generalPrompt = "Tell me a joke";
         var generalDecision = await orchestrator.SelectModelAsync(generalPrompt);
 
+        generalDecision.IsSuccess.Should().BeTrue();
         generalDecision.Match(
             decision =>
             {
-                // Accept either general or creative model for a joke prompt
-                if (decision.ModelName != "general" && decision.ModelName != "reasoner")
-                {
-                    throw new Exception($"Expected 'general' or 'reasoner' model, got '{decision.ModelName}'");
-                }
-
-                Console.WriteLine($"✓ General prompt selected '{decision.ModelName}' model");
-                Console.WriteLine($"  Reason: {decision.Reason}");
+                // Accept either general or creative model for a joke prompt (logic might choose either depending on scoring)
+                // In the original test it allowed "reasoner" too, but "general" seems most appropriate for "joke".
+                // However, let's stick to the original logic loosely or fix it if it was flaky.
+                // Original: if (decision.ModelName != "general" && decision.ModelName != "reasoner")
+                var allowed = new[] { "general", "reasoner" };
+                allowed.Should().Contain(decision.ModelName, "General prompt should select 'general' or 'reasoner' model");
             },
-            error => throw new Exception($"Selection failed: {error}"));
-
-        Console.WriteLine("✓ All model selections correct!\n");
+            error => Assert.Fail($"Selection failed: {error}"));
     }
 
     /// <summary>
     /// Tests performance metric tracking.
     /// </summary>
-    public static void TestPerformanceTracking()
+    [Fact]
+    public void TestPerformanceTracking()
     {
-        Console.WriteLine("=== Test: Performance Tracking ===");
-
         var tools = ToolRegistry.CreateDefault();
         var orchestrator = new SmartModelOrchestrator(tools, "default");
 
-        // Register a model
+        // Register a model (without provider is fine for just registering capability?)
+        // The original test didn't provide a provider for this one, just capability.
         orchestrator.RegisterModel(new ModelCapability(
             "test-model",
             new[] { "test" },
@@ -225,47 +180,29 @@ public static class OrchestratorTests
         orchestrator.RecordMetric("test-model", 500, false);
 
         var metrics = orchestrator.GetMetrics();
-        if (!metrics.TryGetValue("test-model", out var modelMetrics))
-        {
-            throw new Exception("Metrics not found for test-model!");
-        }
+        metrics.Should().ContainKey("test-model");
+        var modelMetrics = metrics["test-model"];
 
-        if (modelMetrics.ExecutionCount != 3)
-        {
-            throw new Exception($"Expected 3 executions, got {modelMetrics.ExecutionCount}");
-        }
-
-        Console.WriteLine($"✓ Execution count tracked correctly: {modelMetrics.ExecutionCount}");
+        modelMetrics.ExecutionCount.Should().Be(3);
 
         var expectedAvgLatency = (450 + 550 + 500) / 3.0;
-        if (Math.Abs(modelMetrics.AverageLatencyMs - expectedAvgLatency) > 0.01)
-        {
-            throw new Exception($"Expected avg latency {expectedAvgLatency}, got {modelMetrics.AverageLatencyMs}");
-        }
-
-        Console.WriteLine($"✓ Average latency calculated correctly: {modelMetrics.AverageLatencyMs:F1}ms");
+        modelMetrics.AverageLatencyMs.Should().BeApproximately(expectedAvgLatency, 0.01);
 
         var expectedSuccessRate = 2.0 / 3.0; // 2 successes out of 3
-        if (Math.Abs(modelMetrics.SuccessRate - expectedSuccessRate) > 0.01)
-        {
-            throw new Exception($"Expected success rate {expectedSuccessRate}, got {modelMetrics.SuccessRate}");
-        }
-
-        Console.WriteLine($"✓ Success rate calculated correctly: {modelMetrics.SuccessRate:P0}");
-
-        Console.WriteLine("✓ All metrics tracked correctly!\n");
+        modelMetrics.SuccessRate.Should().BeApproximately(expectedSuccessRate, 0.01);
     }
 
     /// <summary>
     /// Tests orchestrator builder pattern.
     /// </summary>
-    public static void TestOrchestratorBuilder()
+    [Fact]
+    public void TestOrchestratorBuilder()
     {
-        Console.WriteLine("=== Test: Orchestrator Builder ===");
-
         var tools = ToolRegistry.CreateDefault();
         var mockModel = new MockChatModel("test-response");
 
+        // Note: OrchestratorBuilder usage might have changed or internal.
+        // Assuming OrchestratorBuilder is available in Ouroboros.Agent
         var builder = new OrchestratorBuilder(tools, "default")
             .WithModel(
                 "test",
@@ -277,80 +214,52 @@ public static class OrchestratorTests
             .WithMetricTracking(true);
 
         var orchestratedModel = builder.Build();
-
-        if (orchestratedModel == null)
-        {
-            throw new Exception("Failed to build orchestrated model!");
-        }
-
-        Console.WriteLine("✓ Orchestrator built successfully");
+        orchestratedModel.Should().NotBeNull();
 
         var underlyingOrchestrator = builder.GetOrchestrator();
-        if (underlyingOrchestrator == null)
-        {
-            throw new Exception("Failed to get underlying orchestrator!");
-        }
+        underlyingOrchestrator.Should().NotBeNull();
 
-        Console.WriteLine("✓ Can access underlying orchestrator");
-
-        var metrics = underlyingOrchestrator.GetMetrics();
-        if (!metrics.ContainsKey("test"))
-        {
-            throw new Exception("Test model not found in metrics!");
-        }
-
-        Console.WriteLine("✓ Model registered in orchestrator");
-
-        Console.WriteLine("✓ Builder pattern works correctly!\n");
+        var metrics = underlyingOrchestrator!.GetMetrics();
+        metrics.Should().ContainKey("test");
     }
 
     /// <summary>
     /// Tests composable tool extensions.
     /// </summary>
-    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task TestComposableTools()
+    [Fact]
+    public async Task TestComposableTools()
     {
-        Console.WriteLine("=== Test: Composable Tools ===");
-
         var tools = ToolRegistry.CreateDefault();
         var mathTool = tools.Get("math");
 
+        // Create a mock tool if 'math' doesn't exist, to ensure test stability
         if (mathTool == null)
         {
-            Console.WriteLine("⚠ Math tool not available, skipping composable tools test");
-            return;
+            mathTool = new MockTool("math", "Calculates math",
+                async (input) => {
+                     // Very simple mock behavior
+                     return await Task.FromResult(new ToolExecution("math", input, "4"));
+                });
         }
+
+        mathTool.Should().NotBeNull("Math tool or mock tool should be available");
 
         // Test retry wrapper
         var reliableMath = mathTool.WithRetry(maxRetries: 2);
         var result1 = await reliableMath.InvokeAsync("2+2");
-        if (!result1.IsSuccess)
-        {
-            throw new Exception("Retry tool should succeed!");
-        }
-
-        Console.WriteLine("✓ Retry wrapper works");
+        result1.IsSuccess.Should().BeTrue("Retry tool should succeed");
 
         // Test caching wrapper
         var cachedMath = mathTool.WithCaching(TimeSpan.FromMinutes(1));
         var result2 = await cachedMath.InvokeAsync("3+3");
         var result3 = await cachedMath.InvokeAsync("3+3"); // Should be cached
-        if (!result2.IsSuccess || !result3.IsSuccess)
-        {
-            throw new Exception("Cached tool should succeed!");
-        }
-
-        Console.WriteLine("✓ Caching wrapper works");
+        result2.IsSuccess.Should().BeTrue();
+        result3.IsSuccess.Should().BeTrue();
 
         // Test timeout wrapper
         var timedMath = mathTool.WithTimeout(TimeSpan.FromSeconds(5));
         var result4 = await timedMath.InvokeAsync("5*5");
-        if (!result4.IsSuccess)
-        {
-            throw new Exception("Timeout tool should succeed for fast operations!");
-        }
-
-        Console.WriteLine("✓ Timeout wrapper works");
+        result4.IsSuccess.Should().BeTrue("Timeout tool should succeed for fast operations");
 
         // Test tool chaining
         var chainedTool = ToolBuilder.Chain(
@@ -358,53 +267,6 @@ public static class OrchestratorTests
             "Chains multiple operations",
             mathTool);
         var result5 = await chainedTool.InvokeAsync("10/2");
-        if (!result5.IsSuccess)
-        {
-            throw new Exception("Chained tool should succeed!");
-        }
-
-        Console.WriteLine("✓ Tool chaining works");
-
-        Console.WriteLine("✓ All composable tool features work!\n");
-    }
-
-    /// <summary>
-    /// Runs all orchestrator tests.
-    /// </summary>
-    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    public static async Task RunAllTests()
-    {
-        Console.WriteLine("\n" + new string('=', 60));
-        Console.WriteLine("AI ORCHESTRATOR TESTS");
-        Console.WriteLine(new string('=', 60) + "\n");
-
-        TestOrchestratorCreation();
-        TestUseCaseClassification();
-        await TestModelSelection();
-        TestPerformanceTracking();
-        TestOrchestratorBuilder();
-        await TestComposableTools();
-
-        Console.WriteLine(new string('=', 60));
-        Console.WriteLine("✓ ALL ORCHESTRATOR TESTS PASSED!");
-        Console.WriteLine(new string('=', 60) + "\n");
-    }
-}
-
-/// <summary>
-/// Mock chat model for testing.
-/// </summary>
-internal sealed class MockChatModel : IChatCompletionModel
-{
-    private readonly string response;
-
-    public MockChatModel(string response)
-    {
-        this.response = response;
-    }
-
-    public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
-    {
-        return Task.FromResult(this.response);
+        result5.IsSuccess.Should().BeTrue("Chained tool should succeed");
     }
 }
