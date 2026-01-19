@@ -31,8 +31,20 @@ public sealed class OuroborosOptions
     [Option("voice-only", Required = false, HelpText = "Voice-only mode (no text output)", Default = false)]
     public bool VoiceOnly { get; set; }
 
-    [Option("local-tts", Required = false, HelpText = "Prefer local TTS (Windows SAPI) over cloud", Default = true)]
-    public bool LocalTts { get; set; } = true;
+    [Option("local-tts", Required = false, HelpText = "Prefer local TTS (Windows SAPI) over Azure", Default = false)]
+    public bool LocalTts { get; set; }
+
+    [Option("azure-tts", Required = false, HelpText = "Use Azure Text-to-Speech (default when available)", Default = true)]
+    public bool AzureTts { get; set; } = true;
+
+    [Option("azure-speech-key", Required = false, HelpText = "Azure Speech API key (or set AZURE_SPEECH_KEY env var)")]
+    public string? AzureSpeechKey { get; set; }
+
+    [Option("azure-speech-region", Required = false, HelpText = "Azure Speech region (default: eastus)", Default = "eastus")]
+    public string AzureSpeechRegion { get; set; } = "eastus";
+
+    [Option("tts-voice", Required = false, HelpText = "Azure TTS voice name (e.g. en-US-AvaMultilingualNeural)", Default = "en-US-AvaMultilingualNeural")]
+    public string TtsVoice { get; set; } = "en-US-AvaMultilingualNeural";
 
     [Option("voice-channel", Required = false, HelpText = "Enable parallel voice side channel for persona-specific audio", Default = false)]
     public bool VoiceChannel { get; set; }
@@ -49,6 +61,9 @@ public sealed class OuroborosOptions
 
     [Option('m', "model", Required = false, HelpText = "LLM model name", Default = "deepseek-v3.1:671b-cloud")]
     public string Model { get; set; } = "deepseek-v3.1:671b-cloud";
+
+    [Option('c', "culture", Required = false, HelpText = "Target culture for the response (e.g. en-US, fr-FR, es).")]
+    public string? Culture { get; set; }
 
     [Option("endpoint", Required = false, HelpText = "LLM endpoint URL", Default = "http://localhost:11434")]
     public string Endpoint { get; set; } = "http://localhost:11434";
@@ -124,6 +139,19 @@ public sealed class OuroborosOptions
 
     [Option("discovery-interval", Required = false, HelpText = "Seconds between autonomous topic discovery", Default = 90)]
     public int DiscoveryInterval { get; set; } = 90;
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GOVERNANCE & SELF-MODIFICATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    [Option("enable-self-mod", Required = false, HelpText = "Enable self-modification for agent autonomy", Default = false)]
+    public bool EnableSelfModification { get; set; }
+
+    [Option("risk-level", Required = false, HelpText = "Minimum risk level for approval: Low|Medium|High|Critical", Default = "Medium")]
+    public string RiskLevel { get; set; } = "Medium";
+
+    [Option("auto-approve-low", Required = false, HelpText = "Auto-approve low-risk modifications", Default = true)]
+    public bool AutoApproveLow { get; set; } = true;
 
     // ═══════════════════════════════════════════════════════════════════════════
     // INITIAL TASK (Optional)

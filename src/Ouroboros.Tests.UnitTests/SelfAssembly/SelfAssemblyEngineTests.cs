@@ -5,7 +5,7 @@ using Xunit;
 #pragma warning disable SA1600 // Elements should be documented
 #pragma warning disable CA1707 // Identifiers should not contain underscores
 
-namespace Ouroboros.Tests.UnitTests.SelfAssembly;
+namespace Ouroboros.Tests.SelfAssembly;
 
 /// <summary>
 /// Unit tests for the SelfAssemblyEngine.

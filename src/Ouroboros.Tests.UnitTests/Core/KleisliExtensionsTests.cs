@@ -91,7 +91,7 @@ public class KleisliExtensionsTests
     {
         // Arrange
         Step<int, double> stepArrow = x => Task.FromResult(x / 2.0);
-        Kleisli<double, string> kleisliArrow = d => Task.FromResult($"Result: {d:F2}");
+        Kleisli<double, string> kleisliArrow = d => Task.FromResult($"Result: {d.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}");
 
         // Act
         var composed = stepArrow.Then(kleisliArrow);

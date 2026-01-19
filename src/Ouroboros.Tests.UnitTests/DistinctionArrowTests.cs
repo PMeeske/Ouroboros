@@ -342,7 +342,7 @@ public class DistinctionArrowTests
         // Arrange
         var gate = DistinctionArrow.Gate<string>(s => (s.Length > 10).ToForm());
         var branch = DistinctionArrow.Branch<string?, string>(
-            predicate: s => true.ToForm(),
+            predicate: s => (s is not null).ToForm(),
             onMarked: s => s!.ToUpper(),
             onVoid: s => "fallback");
 

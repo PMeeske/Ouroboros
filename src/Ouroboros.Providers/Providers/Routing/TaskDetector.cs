@@ -119,12 +119,6 @@ public static class TaskDetector
     /// </summary>
     private static TaskType DetectUsingRules(string prompt)
     {
-        // Simple queries (short and straightforward)
-        if (prompt.Length < 100 && !prompt.Contains('\n'))
-        {
-            return TaskType.Simple;
-        }
-
         // Code detection (presence of code blocks or programming syntax)
         if (prompt.Contains("```") || HasProgrammingSyntax(prompt))
         {
@@ -142,6 +136,12 @@ public static class TaskDetector
             ContainsPhrase(prompt, "explain", "analyze", "reason"))
         {
             return TaskType.Reasoning;
+        }
+
+        // Simple queries (short and straightforward)
+        if (prompt.Length < 100 && !prompt.Contains('\n'))
+        {
+            return TaskType.Simple;
         }
 
         // Default to unknown for complex prompts

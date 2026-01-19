@@ -26,9 +26,9 @@ namespace Ouroboros.Tests.Bdd.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Tool Registry", "    As a developer\n    I want to register and retrieve tools in an immutable regi" +
-                "stry\n    So that I can manage tool collections safely in a functional programmin" +
-                "g style", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Tool Registry", "    As a developer\r\n    I want to register and retrieve tools in an immutable reg" +
+                "istry\r\n    So that I can manage tool collections safely in a functional programm" +
+                "ing style", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         

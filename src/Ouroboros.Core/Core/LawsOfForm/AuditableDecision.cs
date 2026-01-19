@@ -101,6 +101,11 @@ public sealed record AuditableDecision<T>
         IReadOnlyDictionary<string, string>? metadata = null,
         double? confidencePhase = null)
     {
+        if (confidencePhase.HasValue && (confidencePhase.Value < 0.0 || confidencePhase.Value > 1.0))
+        {
+            throw new ArgumentOutOfRangeException(nameof(confidencePhase), confidencePhase.Value, "Confidence phase must be between 0.0 and 1.0");
+        }
+
         this.Result = result;
         this.Certainty = certainty;
         this.Reasoning = reasoning;

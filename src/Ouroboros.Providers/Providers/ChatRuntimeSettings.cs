@@ -13,4 +13,5 @@ public sealed record ChatRuntimeSettings(
     double Temperature = 0.7,
     int MaxTokens = 512,
     int TimeoutSeconds = 60,
-    bool Stream = false);
+    bool Stream = false,
+    string? Culture = null);

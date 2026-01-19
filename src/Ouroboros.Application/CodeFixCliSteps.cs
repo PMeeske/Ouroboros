@@ -11,7 +11,7 @@ public static class CodeFixCliSteps
             string raw = CliSteps.ParseString(args);
             string? code = null;
             string? id = null;
-            
+
             if (!string.IsNullOrWhiteSpace(raw))
             {
                 foreach (string part in raw.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -24,7 +24,7 @@ public static class CodeFixCliSteps
             // Fallback to context or prompt if code not provided
             code ??= s.Context;
             if (string.IsNullOrWhiteSpace(code)) code = s.Prompt;
-            
+
             if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(id))
             {
                 Console.WriteLine("[universal-fix] Missing code or diagnostic ID");
@@ -33,9 +33,9 @@ public static class CodeFixCliSteps
 
             try
             {
-                var tool = new RoslynCodeTool();
+                var tool = new Ouroboros.Application.CodeGeneration.RoslynCodeTool();
                 var result = await tool.ApplyUniversalFixAsync(code, id);
-                
+
                 if (result.IsSuccess)
                 {
                     s.Output = result.Value;
@@ -53,7 +53,7 @@ public static class CodeFixCliSteps
             {
                 s.Branch = s.Branch.WithIngestEvent($"fix:exception:{ex.GetType().Name}:{ex.Message.Replace('|', ':')}", Array.Empty<string>());
             }
-            
+
             return s;
         };
 }

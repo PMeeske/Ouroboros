@@ -25,6 +25,9 @@ public sealed class OrchestratorOptions : IVoiceOptions
     [Option('g', "goal", Required = true, HelpText = "Goal or task for the orchestrator to accomplish.")]
     public string Goal { get; set; } = string.Empty;
 
+    [Option('c', "culture", Required = false, HelpText = "Target culture for the response.")]
+    public string? Culture { get; set; }
+
     [Option("model", Required = false, HelpText = "Primary LLM model name", Default = "ministral-3:latest")]
     public string Model { get; set; } = "ministral-3:latest";
 

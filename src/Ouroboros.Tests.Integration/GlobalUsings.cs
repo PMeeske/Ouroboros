@@ -28,4 +28,5 @@ global using Ouroboros.Providers;
 global using Ouroboros.Tools;
 global using Ouroboros.Tools.MeTTa;
 // Shared test infrastructure
+global using Ouroboros.Tests.Shared;
 global using Ouroboros.Tests.Shared.Mocks;

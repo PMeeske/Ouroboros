@@ -30,7 +30,7 @@ public static class PipelineCommands
 
         if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase)) Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
         if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
-        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
+        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream, o.Culture);
         await RunPipelineDslAsync(o.Dsl, o.Model, o.Embed, o.Source, o.K, o.Trace, settings, o);
     }
 
@@ -89,7 +89,7 @@ public static class PipelineCommands
                     }
                 }
                 catch { /* non-fatal: fall back to provider defaults */ }
-                return new OllamaChatAdapter(m);
+                return new OllamaChatAdapter(m, settings?.Culture);
             }
             string general = pipelineOpts.GeneralModel ?? modelName;
             modelMap["general"] = MakeLocal(general, "general");
@@ -108,13 +108,13 @@ public static class PipelineCommands
             {
                 Console.WriteLine($"[WARN] Remote model '{modelName}' invalid. Falling back to local 'llama3'. Use --strict-model to disable fallback.");
                 OllamaChatModel local = new OllamaChatModel(provider, "llama3");
-                chatModel = new OllamaChatAdapter(local);
+                chatModel = new OllamaChatAdapter(local, settings?.Culture);
             }
             catch (Exception ex) when (pipelineOpts is not null && !pipelineOpts.StrictModel)
             {
                 Console.WriteLine($"[WARN] Remote model '{modelName}' unavailable ({ex.GetType().Name}). Falling back to local 'llama3'. Use --strict-model to disable fallback.");
                 OllamaChatModel local = new OllamaChatModel(provider, "llama3");
-                chatModel = new OllamaChatAdapter(local);
+                chatModel = new OllamaChatAdapter(local, settings?.Culture);
             }
         }
         else
@@ -132,7 +132,7 @@ public static class PipelineCommands
                 else if (n.StartsWith("phi3") || n.Contains("phi-3")) chat.Settings = OllamaPresets.Phi3MiniGeneral;
             }
             catch { /* ignore and use defaults */ }
-            chatModel = new OllamaChatAdapter(chat); // adapter added below
+            chatModel = new OllamaChatAdapter(chat, settings?.Culture); // adapter added below
         }
         IEmbeddingModel embed = ServiceFactory.CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);
 

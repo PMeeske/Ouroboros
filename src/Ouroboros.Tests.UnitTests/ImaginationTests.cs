@@ -131,7 +131,7 @@ public class ImaginationTests
         var imag = Form.Imaginary;
         var real = Form.Mark;
 
-        var combined = imag.Call(real).Eval();
+        var combined = imag.And(real).Eval();
 
         // Imaginary dominates
         combined.IsImaginary().Should().BeTrue();

@@ -112,7 +112,7 @@ public sealed class EasyPipeline
     {
         if (temperature < 0.0 || temperature > 1.0)
             throw new ArgumentOutOfRangeException(nameof(temperature), "Temperature must be between 0.0 and 1.0");
-        
+
         _temperature = temperature;
         return this;
     }
@@ -126,7 +126,7 @@ public sealed class EasyPipeline
     {
         if (count < 1)
             throw new ArgumentOutOfRangeException(nameof(count), "Context document count must be at least 1");
-        
+
         _contextDocuments = count;
         return this;
     }
@@ -210,7 +210,7 @@ public sealed class EasyPipeline
 
             // Extract final reasoning state
             ReasoningState? finalState = GetFinalReasoningState(branch);
-            
+
             return new EasyPipelineResult(
                 Success: true,
                 Output: finalState?.Text ?? string.Empty,
@@ -236,17 +236,17 @@ public sealed class EasyPipeline
     {
         var dslBuilder = new StringBuilder();
         dslBuilder.AppendLine($"Pipeline.About(\"{_topic}\")");
-        
+
         foreach (PipelineOperation op in _operations)
         {
             dslBuilder.AppendLine($"  .{op}()");
         }
-        
+
         dslBuilder.AppendLine($"  .WithModel(\"{_modelName}\")");
-        dslBuilder.AppendLine($"  .WithTemperature({_temperature})");
+        dslBuilder.AppendLine($"  .WithTemperature({_temperature.ToString(System.Globalization.CultureInfo.InvariantCulture)})");
         dslBuilder.AppendLine($"  .WithContextDocuments({_contextDocuments})");
         dslBuilder.AppendLine("  .RunAsync()");
-        
+
         return dslBuilder.ToString();
     }
 
@@ -290,13 +290,13 @@ public sealed class EasyPipeline
         _vectorStore ??= new TrackedVectorStore();
         _dataSource ??= DataSource.FromPath(".");
         _toolRegistry ??= new ToolRegistry();
-        
+
         if (_embeddingModel is null)
         {
             throw new InvalidOperationException(
                 "Embedding model is required. Use WithEmbeddingModel() to configure it.");
         }
-        
+
         if (_chatModel is null)
         {
             throw new InvalidOperationException(
@@ -335,7 +335,7 @@ public sealed class EasyPipeline
 
             string prompt = $"Summarize the following in a concise manner:\n\n{finalState.Text}";
             (string text, List<ToolExecution> toolCalls) = await _chatModel!.GenerateWithToolsAsync(prompt);
-            
+
             return branch.WithReasoning(new FinalSpec(text), prompt, toolCalls);
         };
     }

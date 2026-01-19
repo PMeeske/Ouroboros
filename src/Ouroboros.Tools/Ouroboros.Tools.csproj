@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <PackageReference Include="LangChain" Version="0.17.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
     <PackageReference Include="Octokit" Version="13.0.1" />
   </ItemGroup>
 

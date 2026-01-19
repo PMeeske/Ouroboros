@@ -26,8 +26,8 @@ namespace Ouroboros.Tests.Bdd.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Metrics Collector", "    As a developer\n    I want to collect application metrics\n    So that I can mo" +
-                "nitor performance and usage patterns", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Metrics Collector", "    As a developer\r\n    I want to collect application metrics\r\n    So that I can " +
+                "monitor performance and usage patterns", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         
