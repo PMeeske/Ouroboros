@@ -86,8 +86,8 @@ jobs:
       continue-on-error: true
       timeout-minutes: 90
       env:
-        Ollama__ApiKey: ${{ secrets.OLLAMA_DEEPSEEK_API_KEY }}
-        Ollama__DeepSeekCloudEndpoint: "https://api.deepseek.com/v1"
+        Ollama__ApiKey: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+        Ollama__CloudEndpoint: "https://api.ollama.com"
       run: |
         # Set mutation level from input or use default
         ML="${{ github.event.inputs.mutation_level || 'Standard' }}"

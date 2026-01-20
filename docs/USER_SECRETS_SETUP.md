@@ -1,6 +1,6 @@
 # User Secrets Setup for Ouroboros Test Projects
 
-This guide explains how to configure user secrets for accessing the Ollama DeepSeek cloud endpoint API in both local development and CI/CD environments.
+This guide explains how to configure user secrets for accessing the Ollama cloud endpoint API in both local development and CI/CD environments.
 
 ## Table of Contents
 
@@ -53,7 +53,7 @@ dotnet user-secrets init --project src/Ouroboros.Android.Tests/Ouroboros.Android
 
 ### Step 2: Set API Key
 
-Set the Ollama DeepSeek API key for each project:
+Set the Ollama cloud API key for each project:
 
 ```bash
 # For Ouroboros.Tests.Shared
@@ -93,11 +93,11 @@ Ollama:ApiKey = your-api-key-here
 You can also override other settings:
 
 ```bash
-# Override the endpoint (if using a different DeepSeek instance)
-dotnet user-secrets set "Ollama:DeepSeekCloudEndpoint" "https://custom-api.deepseek.com/v1" --project src/Ouroboros.Tests.Shared/Ouroboros.Tests.Shared.csproj
+# Override the endpoint (if using a different Ollama cloud instance)
+dotnet user-secrets set "Ollama:CloudEndpoint" "https://custom-api.ollama.com" --project src/Ouroboros.Tests.Shared/Ouroboros.Tests.Shared.csproj
 
 # Override the default chat model
-dotnet user-secrets set "Pipeline:LlmProvider:DefaultChatModel" "deepseek-v3:custom" --project src/Ouroboros.Tests.Shared/Ouroboros.Tests.Shared.csproj
+dotnet user-secrets set "Pipeline:LlmProvider:DefaultChatModel" "llama3:70b" --project src/Ouroboros.Tests.Shared/Ouroboros.Tests.Shared.csproj
 ```
 
 ## CI/CD Configuration
@@ -108,8 +108,8 @@ dotnet user-secrets set "Pipeline:LlmProvider:DefaultChatModel" "deepseek-v3:cus
 2. Go to **Settings** → **Secrets and variables** → **Actions**
 3. Click **New repository secret**
 4. Add the following secret:
-   - **Name**: `OLLAMA_DEEPSEEK_API_KEY`
-   - **Value**: Your DeepSeek API key
+   - **Name**: `OLLAMA_CLOUD_API_KEY`
+   - **Value**: Your Ollama cloud API key
 
 ### GitHub Actions Workflow Configuration
 
@@ -131,8 +131,8 @@ jobs:
     env:
       # Map GitHub secret to environment variable
       # The double underscore (__) syntax is used for nested configuration keys
-      Ollama__ApiKey: ${{ secrets.OLLAMA_DEEPSEEK_API_KEY }}
-      Ollama__DeepSeekCloudEndpoint: "https://api.deepseek.com/v1"
+      Ollama__ApiKey: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+      Ollama__CloudEndpoint: "https://api.ollama.com"
     
     steps:
       - uses: actions/checkout@v4
@@ -163,7 +163,7 @@ jobs:
 .NET Configuration uses the **double underscore (`__`)** syntax to represent nested configuration keys:
 
 - `Ollama:ApiKey` → `Ollama__ApiKey`
-- `Ollama:DeepSeekCloudEndpoint` → `Ollama__DeepSeekCloudEndpoint`
+- `Ollama:CloudEndpoint` → `Ollama__CloudEndpoint`
 - `Pipeline:LlmProvider:DefaultChatModel` → `Pipeline__LlmProvider__DefaultChatModel`
 
 ## Configuration Structure
@@ -175,14 +175,14 @@ Located at the repository root (`/home/runner/work/Ouroboros/Ouroboros/appsettin
 ```json
 {
   "Ollama": {
-    "DeepSeekCloudEndpoint": "https://api.deepseek.com/v1",
+    "CloudEndpoint": "https://api.ollama.com",
     "ApiKey": ""
   },
   "Pipeline": {
     "LlmProvider": {
       "DefaultProvider": "Ollama",
-      "OllamaEndpoint": "https://api.deepseek.com/v1",
-      "DefaultChatModel": "deepseek-v3.1:671b-cloud"
+      "OllamaEndpoint": "https://api.ollama.com",
+      "DefaultChatModel": "llama3:8b"
     }
   }
 }
@@ -194,11 +194,11 @@ Located at the repository root (`/home/runner/work/Ouroboros/Ouroboros/appsettin
 
 | Key | Description | Default Value |
 |-----|-------------|---------------|
-| `Ollama:ApiKey` | DeepSeek API key (secret) | `""` |
-| `Ollama:DeepSeekCloudEndpoint` | API endpoint URL | `https://api.deepseek.com/v1` |
+| `Ollama:ApiKey` | Ollama cloud API key (secret) | `""` |
+| `Ollama:CloudEndpoint` | API endpoint URL | `https://api.ollama.com` |
 | `Pipeline:LlmProvider:DefaultProvider` | LLM provider name | `Ollama` |
-| `Pipeline:LlmProvider:OllamaEndpoint` | Ollama endpoint URL | `https://api.deepseek.com/v1` |
-| `Pipeline:LlmProvider:DefaultChatModel` | Default chat model | `deepseek-v3.1:671b-cloud` |
+| `Pipeline:LlmProvider:OllamaEndpoint` | Ollama endpoint URL | `https://api.ollama.com` |
+| `Pipeline:LlmProvider:DefaultChatModel` | Default chat model | `llama3:8b` |
 
 ## Test Projects
 
@@ -243,7 +243,7 @@ public class MyIntegrationTest
     {
         // Retrieve configuration values
         var apiKey = _configuration["Ollama:ApiKey"];
-        var endpoint = _configuration["Ollama:DeepSeekCloudEndpoint"];
+        var endpoint = _configuration["Ollama:CloudEndpoint"];
         var model = _configuration["Pipeline:LlmProvider:DefaultChatModel"];
 
         // Use in your test
@@ -300,7 +300,7 @@ var apiKey = configuration["Ollama:ApiKey"];
    ```
 
 2. **CI/CD**:
-   - Verify the GitHub Actions secret `OLLAMA_DEEPSEEK_API_KEY` is set in repository settings
+   - Verify the GitHub Actions secret `OLLAMA_CLOUD_API_KEY` is set in repository settings
    - Check that the workflow file maps the secret to `Ollama__ApiKey` environment variable
    - Review workflow logs for configuration loading errors
 
@@ -369,7 +369,7 @@ dotnet user-secrets remove "Ollama:ApiKey" --project src/Ouroboros.Tests.Shared/
 - [.NET User Secrets Documentation](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets)
 - [GitHub Actions Secrets Documentation](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
 - [Microsoft.Extensions.Configuration Documentation](https://learn.microsoft.com/en-us/dotnet/core/extensions/configuration)
-- [DeepSeek API Documentation](https://platform.deepseek.com/docs)
+- [Ollama Cloud API Documentation](https://ollama.com/docs)
 
 ## Support
 

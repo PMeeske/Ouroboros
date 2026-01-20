@@ -67,7 +67,7 @@ public class TestConfigurationTests
 
         // Act - Retrieve configuration values
         var apiKey = configuration["Ollama:ApiKey"];
-        var endpoint = configuration["Ollama:DeepSeekCloudEndpoint"];
+        var endpoint = configuration["Ollama:CloudEndpoint"];
         var defaultModel = configuration["Pipeline:LlmProvider:DefaultChatModel"];
 
         // Assert - Configuration system should work (values may be null/empty if not configured)
