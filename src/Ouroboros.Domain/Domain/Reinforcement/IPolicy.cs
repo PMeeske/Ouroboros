@@ -33,7 +33,7 @@ public interface IPolicy
     /// <param name="observation">The observation received</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Result indicating success or failure</returns>
-    ValueTask<Result<Unit>> UpdateAsync(
+    ValueTask<Result<Ouroboros.Core.Monads.Unit>> UpdateAsync(
         EnvironmentState state,
         EnvironmentAction action,
         Observation observation,

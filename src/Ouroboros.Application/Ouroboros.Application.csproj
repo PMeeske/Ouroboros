@@ -3,10 +3,21 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
+    <LangVersion>14.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
     <RootNamespace>Ouroboros.Application</RootNamespace>
     <AssemblyName>Ouroboros.Application</AssemblyName>
     <Product>Ouroboros Application</Product>
     <Description>Shared pipeline runtime and application logic</Description>
+    <Copyright>Copyright © 2025</Copyright>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS1591;CS1570;CS1572;CS1573;CS1574</WarningsNotAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <RunAnalyzersDuringLiveAnalysis>false</RunAnalyzersDuringLiveAnalysis>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
@@ -33,18 +44,19 @@
 
     <PackageReference Include="LangChain" Version="0.17.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.1" />
     <PackageReference Include="System.Reactive" Version="6.1.0" />
     <PackageReference Include="System.Reactive.Linq" Version="6.1.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.11.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.11.0" />
-
+    
     <!-- For cross-platform System.Drawing support -->
     <PackageReference Include="System.Drawing.Common" Version="8.0.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
+    <PackageReference Include="Roslynator.Analyzers" Version="4.7.0" PrivateAssets="all" />
     <PackageReference Include="SonarAnalyzer.CSharp" Version="9.16.0.82469" PrivateAssets="all" />
   </ItemGroup>
 

@@ -87,7 +87,7 @@ public static class PolicyCommands
 
             var json = File.ReadAllText(options.FilePath);
             var loadedPolicy = JsonSerializer.Deserialize<Policy>(json);
-
+            
             if (loadedPolicy == null)
             {
                 PrintError("Failed to deserialize policy from file");
@@ -202,35 +202,12 @@ public static class PolicyCommands
     {
         Console.WriteLine("=== Enforcing Policies ===\n");
 
-        // Skip enforcement if self-modification is not enabled
-        if (!options.EnableSelfModification)
-        {
-            Console.WriteLine("Self-modification is DISABLED.");
-            Console.WriteLine("Enable with: --enable-self-mod");
-            Console.WriteLine("\nEnforcement skipped. Use --enable-self-mod to allow policy enforcement.");
-            return;
-        }
-
-        // Log culture and self-modification settings if provided
-        if (!string.IsNullOrWhiteSpace(options.Culture))
-        {
-            Console.WriteLine($"Culture: {options.Culture}");
-        }
-
-        Console.WriteLine($"Self-Modification: ENABLED");
-        Console.WriteLine($"  Risk Level Threshold: {options.RiskLevel}");
-        Console.WriteLine($"  Auto-Approve Low Risk: {options.AutoApproveLow}");
-        Console.WriteLine();
-
         // Create a test context
         var context = new
         {
             timestamp = DateTime.UtcNow,
             user = "cli_user",
-            operation = "enforce_test",
-            culture = options.Culture,
-            selfModificationEnabled = options.EnableSelfModification,
-            riskLevel = options.RiskLevel
+            operation = "enforce_test"
         };
 
         var result = await _policyEngine.EnforcePoliciesAsync(context);
@@ -243,13 +220,6 @@ public static class PolicyCommands
             Console.WriteLine($"Blocked: {enforcement.IsBlocked}");
             Console.WriteLine($"Actions Required: {enforcement.ActionsRequired.Count}");
             Console.WriteLine($"Approvals Required: {enforcement.ApprovalsRequired.Count}");
-
-            // Apply self-modifications based on violations
-            if (enforcement.Evaluations.Count > 0)
-            {
-                Console.WriteLine("\n=== Applying Self-Modifications ===\n");
-                await ApplySelfModificationsAsync(enforcement, options);
-            }
 
             if (enforcement.ActionsRequired.Count > 0)
             {
@@ -325,7 +295,7 @@ public static class PolicyCommands
         {
             // List pending approvals
             var pending = _policyEngine.GetPendingApprovals();
-
+            
             if (pending.Count == 0)
             {
                 Console.WriteLine("No pending approval requests.");
@@ -392,7 +362,7 @@ public static class PolicyCommands
             Console.WriteLine($"  Request ID: {updated.Id}");
             Console.WriteLine($"  New Status: {updated.Status}");
             Console.WriteLine($"  Total Approvals: {updated.Approvals.Count}");
-
+            
             if (updated.IsApproved)
             {
                 Console.WriteLine($"  ✓ Request is now APPROVED");
@@ -409,7 +379,7 @@ public static class PolicyCommands
     private static void PrintPoliciesTable(IReadOnlyList<Policy> policies, bool verbose)
     {
         Console.WriteLine($"Total Policies: {policies.Count}\n");
-
+        
         foreach (var policy in policies)
         {
             string status = policy.IsActive ? "✓ ACTIVE" : "  INACTIVE";
@@ -418,7 +388,7 @@ public static class PolicyCommands
             Console.WriteLine($"  Description: {policy.Description}");
             Console.WriteLine($"  Rules: {policy.Rules.Count}, Quotas: {policy.Quotas.Count}, Thresholds: {policy.Thresholds.Count}, Gates: {policy.ApprovalGates.Count}");
             Console.WriteLine($"  Created: {policy.CreatedAt:yyyy-MM-dd HH:mm:ss} UTC");
-
+            
             if (verbose)
             {
                 if (policy.Rules.Count > 0)
@@ -439,7 +409,7 @@ public static class PolicyCommands
                     }
                 }
             }
-
+            
             Console.WriteLine();
         }
     }
@@ -462,7 +432,7 @@ public static class PolicyCommands
         {
             Console.WriteLine($"[{entry.Timestamp:yyyy-MM-dd HH:mm:ss}] {entry.Action} by {entry.Actor}");
             Console.WriteLine($"  Policy: {entry.Policy.Name}");
-
+            
             if (entry.EvaluationResult != null)
             {
                 Console.WriteLine($"  Compliant: {entry.EvaluationResult.IsCompliant}");
@@ -492,91 +462,6 @@ public static class PolicyCommands
         Console.ForegroundColor = ConsoleColor.Red;
         Console.Error.WriteLine($"✗ {message}");
         Console.ResetColor();
-    }
-
-    /// <summary>
-    /// Applies self-modifications to fix policy violations.
-    /// </summary>
-    private static async Task ApplySelfModificationsAsync(PolicyEnforcementResult enforcement, PolicyOptions options)
-    {
-        var riskThreshold = ParseRiskLevel(options.RiskLevel);
-        var modificationCount = 0;
-        var approvalCount = 0;
-
-        foreach (var evaluation in enforcement.Evaluations)
-        {
-            foreach (var violation in evaluation.Violations)
-            {
-                var violationRisk = AssessViolationRisk(violation.Severity);
-
-                // Determine if modification requires approval
-                bool requiresApproval = violationRisk > riskThreshold ||
-                    (violationRisk == RiskLevel.Low && !options.AutoApproveLow);
-
-                if (requiresApproval)
-                {
-                    Console.WriteLine($"[PENDING APPROVAL] {violation.Message}");
-                    Console.WriteLine($"  Risk: {violationRisk}");
-                    Console.WriteLine($"  Recommended: {violation.RecommendedAction}");
-                    approvalCount++;
-                }
-                else
-                {
-                    // Auto-apply low-risk modifications
-                    Console.WriteLine($"[AUTO-APPLIED] {violation.Message}");
-                    Console.WriteLine($"  Risk: {violationRisk}");
-                    Console.WriteLine($"  Action: {violation.RecommendedAction}");
-                    modificationCount++;
-                    await Task.Delay(100); // Simulate modification work
-                }
-            }
-        }
-
-        Console.WriteLine($"\n=== Modification Summary ===");
-        Console.WriteLine($"Auto-Applied: {modificationCount}");
-        Console.WriteLine($"Pending Approval: {approvalCount}");
-    }
-
-    /// <summary>
-    /// Assesses the risk level of a policy violation based on severity.
-    /// </summary>
-    private static RiskLevel AssessViolationRisk(ViolationSeverity severity)
-    {
-        // Map violation severity to risk level
-        return severity switch
-        {
-            ViolationSeverity.Low => RiskLevel.Low,
-            ViolationSeverity.Medium => RiskLevel.Medium,
-            ViolationSeverity.High => RiskLevel.High,
-            ViolationSeverity.Critical => RiskLevel.Critical,
-            _ => RiskLevel.Medium
-        };
-    }
-
-    /// <summary>
-    /// Parses risk level string to enum.
-    /// </summary>
-    private static RiskLevel ParseRiskLevel(string level)
-    {
-        return level.ToLowerInvariant() switch
-        {
-            "low" => RiskLevel.Low,
-            "medium" => RiskLevel.Medium,
-            "high" => RiskLevel.High,
-            "critical" => RiskLevel.Critical,
-            _ => RiskLevel.Medium
-        };
-    }
-
-    /// <summary>
-    /// Risk levels for policy modifications.
-    /// </summary>
-    private enum RiskLevel
-    {
-        Low = 1,
-        Medium = 2,
-        High = 3,
-        Critical = 4
     }
 
     private static Task PrintErrorAsync(string message)

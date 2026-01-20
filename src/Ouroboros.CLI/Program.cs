@@ -26,7 +26,7 @@ using Ouroboros.CLI; // added
 using Ouroboros.CLI.Commands;
 
 // Initialize Ouroboros system on startup (non-blocking)
-Task initTask = Ouroboros.CLI.OuroborosCliIntegration.EnsureInitializedAsync(args);
+var initTask = Ouroboros.CLI.OuroborosCliIntegration.EnsureInitializedAsync(args);
 
 try
 {
@@ -39,7 +39,7 @@ try
     }
 
     // Wait for Ouroboros initialization (with timeout)
-    Task initCompleted = await Task.WhenAny(initTask, Task.Delay(TimeSpan.FromSeconds(5)));
+    var initCompleted = await Task.WhenAny(initTask, Task.Delay(TimeSpan.FromSeconds(5)));
     if (initCompleted != initTask)
     {
         Console.WriteLine("[INFO] Ouroboros system initializing in background...");
@@ -64,7 +64,7 @@ static async Task ParseAndRunAsync(string[] args)
 {
     // CommandLineParser verbs - OuroborosOptions is the default (isDefault: true)
     // Using Type[] array because we exceed the 16-parameter generic overload limit
-    Type[] optionTypes = new[]
+    var optionTypes = new[]
     {
         typeof(OuroborosOptions), typeof(AskOptions), typeof(PipelineOptions), typeof(ListTokensOptions),
         typeof(ExplainOptions), typeof(TestOptions), typeof(OrchestratorOptions), typeof(MeTTaOptions),
@@ -75,7 +75,7 @@ static async Task ParseAndRunAsync(string[] args)
         typeof(DistinctionClearOptions)
     };
 
-    ParserResult<object> parseResult = Parser.Default.ParseArguments(args, optionTypes);
+    var parseResult = Parser.Default.ParseArguments(args, optionTypes);
 
     await parseResult.WithParsedAsync(async parsed =>
     {
@@ -234,7 +234,7 @@ static async Task RunAssistAsync(AssistOptions o)
     {
         // Convert AssistOptions to OuroborosConfig for the unified agent
         // Note: AssistOptions is deprecated - use 'ouroboros' command for full features including --push
-        OuroborosConfig config = new OuroborosConfig(
+        var config = new OuroborosConfig(
             Persona: o.Persona,
             Model: o.Model,
             Endpoint: o.Endpoint ?? "http://localhost:11434",
@@ -254,7 +254,7 @@ static async Task RunAssistAsync(AssistOptions o)
             InitialDsl: o.Dsl
         );
 
-        await using OuroborosAgent agent = new OuroborosAgent(config);
+        await using var agent = new OuroborosAgent(config);
         await agent.InitializeAsync();
         await agent.RunAsync();
         return;
@@ -290,7 +290,7 @@ static async Task RunAssistAsync(AssistOptions o)
 
         ToolRegistry tools = ToolRegistry.CreateDefault();
         ToolAwareChatModel llm = new ToolAwareChatModel(chatModel, tools);
-        Ouroboros.Application.DslAssistant assistant = new Ouroboros.Application.DslAssistant(llm, tools);
+        DslAssistant assistant = new DslAssistant(llm, tools);
 
         Console.WriteLine($"[OK] Assistant initialized\n");
 
@@ -404,13 +404,13 @@ static async Task RunSkillsAsync(SkillsOptions o)
     {
         // Fallback: Use JSON file storage
         string skillsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ouroboros", "skills.json");
-        PersistentSkillConfig persistentConfig = new PersistentSkillConfig(StoragePath: skillsPath, AutoSave: true);
-        PersistentSkillRegistry jsonRegistry = new PersistentSkillRegistry(config: persistentConfig);
+        var persistentConfig = new PersistentSkillConfig(StoragePath: skillsPath, AutoSave: true);
+        var jsonRegistry = new PersistentSkillRegistry(config: persistentConfig);
         await jsonRegistry.InitializeAsync();
         registry = jsonRegistry;
         disposableRegistry = jsonRegistry;
 
-        SkillRegistryStats stats = jsonRegistry.GetStats();
+        var stats = jsonRegistry.GetStats();
         if (stats.IsPersisted)
         {
             Console.WriteLine($"  [+] Loaded {stats.TotalSkills} skills from {stats.StoragePath} (JSON)");
@@ -430,16 +430,16 @@ static async Task RunSkillsAsync(SkillsOptions o)
             OllamaEmbeddingModel embeddingModel = new OllamaEmbeddingModel(embedProvider, o.EmbedModel);
             IEmbeddingModel embedding = new OllamaEmbeddingAdapter(embeddingModel);
 
-            QdrantSkillConfig qdrantConfig = new QdrantSkillConfig(
+            var qdrantConfig = new QdrantSkillConfig(
                 ConnectionString: o.QdrantEndpoint,
                 CollectionName: o.QdrantCollection,
                 AutoSave: true);
-            QdrantSkillRegistry qdrantRegistry = new QdrantSkillRegistry(embedding, qdrantConfig);
+            var qdrantRegistry = new QdrantSkillRegistry(embedding, qdrantConfig);
             await qdrantRegistry.InitializeAsync();
             registry = qdrantRegistry;
             disposableRegistry = qdrantRegistry;
 
-            QdrantSkillRegistryStats stats = qdrantRegistry.GetStats();
+            var stats = qdrantRegistry.GetStats();
             Console.WriteLine($"  [+] Loaded {stats.TotalSkills} skills from Qdrant ({o.QdrantEndpoint}/{o.QdrantCollection})");
         }
         catch (Exception ex)
@@ -449,13 +449,13 @@ static async Task RunSkillsAsync(SkillsOptions o)
 
             // Fallback to JSON
             string skillsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ouroboros", "skills.json");
-            PersistentSkillConfig persistentConfig = new PersistentSkillConfig(StoragePath: skillsPath, AutoSave: true);
-            PersistentSkillRegistry jsonRegistry = new PersistentSkillRegistry(config: persistentConfig);
+            var persistentConfig = new PersistentSkillConfig(StoragePath: skillsPath, AutoSave: true);
+            var jsonRegistry = new PersistentSkillRegistry(config: persistentConfig);
             await jsonRegistry.InitializeAsync();
             registry = jsonRegistry;
             disposableRegistry = jsonRegistry;
 
-            SkillRegistryStats stats = jsonRegistry.GetStats();
+            var stats = jsonRegistry.GetStats();
             Console.WriteLine($"  [+] Loaded {stats.TotalSkills} skills from {stats.StoragePath} (JSON fallback)");
         }
     }
@@ -466,7 +466,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
     // Register predefined research skills (only if not already loaded)
     if (registry.GetAllSkills().Count == 0)
     {
-        Skill[] predefinedSkills = new[]
+        var predefinedSkills = new[]
         {
             new Skill("LiteratureReview", "Synthesize research papers into coherent review",
                 new List<string> { "research-context" },
@@ -501,7 +501,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
         };
 
         // Use async registration to ensure skills are persisted to Qdrant
-        foreach (Skill skill in predefinedSkills)
+        foreach (var skill in predefinedSkills)
             await registry.RegisterSkillAsync(skill);
 
         Console.WriteLine($"  [OK] Registered {predefinedSkills.Length} predefined skills");
@@ -524,7 +524,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
     if (o.List)
     {
         Console.WriteLine("[i] REGISTERED SKILLS:\n");
-        foreach (Skill skill in registry.GetAllSkills())
+        foreach (var skill in registry.GetAllSkills())
         {
             Console.WriteLine($"  [*] {skill.Name,-30} ({skill.SuccessRate:P0})");
             Console.WriteLine($"     {skill.Description}");
@@ -538,7 +538,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
         Console.WriteLine("[#] AUTO-GENERATED DSL TOKENS:\n");
         Console.WriteLine("  Built-in: SetPrompt, UseDraft, UseCritique, UseRevise, UseOutput\n");
         Console.WriteLine("  Skill-based (from research patterns):");
-        foreach (Skill skill in registry.GetAllSkills())
+        foreach (var skill in registry.GetAllSkills())
         {
             Console.WriteLine($"    - UseSkill_{skill.Name}");
         }
@@ -548,17 +548,17 @@ static async Task RunSkillsAsync(SkillsOptions o)
     if (!string.IsNullOrEmpty(o.Fetch))
     {
         Console.WriteLine($"[>] Fetching research on: \"{o.Fetch}\"...\n");
-        using HttpClient httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         string url = $"http://export.arxiv.org/api/query?search_query=all:{Uri.EscapeDataString(o.Fetch)}&start=0&max_results=5";
         try
         {
             string xml = await httpClient.GetStringAsync(url);
-            System.Xml.Linq.XDocument doc = System.Xml.Linq.XDocument.Parse(xml);
+            var doc = System.Xml.Linq.XDocument.Parse(xml);
             System.Xml.Linq.XNamespace atom = "http://www.w3.org/2005/Atom";
-            List<System.Xml.Linq.XElement> entries = doc.Descendants(atom + "entry").Take(5).ToList();
+            var entries = doc.Descendants(atom + "entry").Take(5).ToList();
 
             Console.WriteLine($"[i] Found {entries.Count} papers:");
-            foreach (System.Xml.Linq.XElement entry in entries)
+            foreach (var entry in entries)
             {
                 string title = entry.Element(atom + "title")?.Value?.Trim() ?? "Untitled";
                 if (title.Length > 60) title = title[..57] + "...";
@@ -568,7 +568,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
             // Extract skill from query pattern
             string skillName = string.Join("", o.Fetch.Split(' ').Select(w =>
                 w.Length > 0 ? char.ToUpperInvariant(w[0]) + (w.Length > 1 ? w[1..].ToLowerInvariant() : "") : "")) + "Analysis";
-            Skill newSkill = new Skill(
+            var newSkill = new Skill(
                 skillName,
                 $"Analysis methodology derived from '{o.Fetch}' research",
                 new List<string> { "research-context" },
@@ -592,7 +592,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
     if (!string.IsNullOrEmpty(o.Suggest))
     {
         Console.WriteLine($"[?] Skill suggestions for: \"{o.Suggest}\"\n");
-        List<Skill> matches = registry.GetAllSkills()
+        var matches = registry.GetAllSkills()
             .Where(s => s.Name.Contains(o.Suggest, StringComparison.OrdinalIgnoreCase) ||
                         s.Description.Contains(o.Suggest, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(s => s.SuccessRate)
@@ -601,7 +601,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
 
         if (matches.Count > 0)
         {
-            foreach (Skill skill in matches)
+            foreach (var skill in matches)
             {
                 Console.WriteLine($"  [>] UseSkill_{skill.Name} ({skill.SuccessRate:P0})");
                 Console.WriteLine($"     {skill.Description}\n");
@@ -617,18 +617,18 @@ static async Task RunSkillsAsync(SkillsOptions o)
     if (!string.IsNullOrEmpty(o.Run))
     {
         Console.WriteLine($"[>] Executing: {o.Run}\n");
-        List<string> tokens = o.Run.Split('|').Select(t => t.Trim()).ToList();
-        foreach (string token in tokens)
+        var tokens = o.Run.Split('|').Select(t => t.Trim()).ToList();
+        foreach (var token in tokens)
         {
             Console.WriteLine($"  [*] {token}");
             if (token.StartsWith("UseSkill_", StringComparison.OrdinalIgnoreCase))
             {
                 string skillName = token[9..];
-                Skill? skill = registry.GetAllSkills().FirstOrDefault(s => s.Name.Equals(skillName, StringComparison.OrdinalIgnoreCase));
+                var skill = registry.GetAllSkills().FirstOrDefault(s => s.Name.Equals(skillName, StringComparison.OrdinalIgnoreCase));
                 if (skill != null)
                 {
                     Console.WriteLine($"     [>] Executing: {skill.Name}");
-                    foreach (PlanStep step in skill.Steps)
+                    foreach (var step in skill.Steps)
                     {
                         Console.WriteLine($"        -> {step.Action}");
                         await Task.Delay(100); // Simulate execution
@@ -648,7 +648,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
         if (o.Voice)
         {
             // Convert SkillsOptions to OuroborosConfig for unified experience
-            OuroborosConfig ouroborosConfig = new OuroborosConfig(
+            var ouroborosConfig = new OuroborosConfig(
                 Persona: o.Persona ?? "Ouroboros",
                 Model: o.Model ?? "deepseek-v3.1:671b-cloud",
                 Endpoint: o.Endpoint ?? "http://localhost:11434",
@@ -663,7 +663,7 @@ static async Task RunSkillsAsync(SkillsOptions o)
                 EnableMind: true,
                 EnableConsciousness: true);
 
-            await using OuroborosAgent ouroborosAgent = new OuroborosAgent(ouroborosConfig);
+            await using var ouroborosAgent = new OuroborosAgent(ouroborosConfig);
             await ouroborosAgent.InitializeAsync();
             await ouroborosAgent.RunAsync();
         }
@@ -701,7 +701,7 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
     Console.WriteLine("|    exit / quit        - Exit interactive mode                          |");
     Console.WriteLine("+------------------------------------------------------------------------+\n");
 
-    using HttpClient httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+    using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
 
     // Initialize orchestration if models are available
     OrchestratedChatModel? orchestratedModel = null;
@@ -711,13 +711,13 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
     try
     {
         // Check for orchestration configuration via environment variables
-        string endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT") ?? "http://localhost:11434";
-        string? apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
-        string model = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "llama3";
-        string? coderModel = Environment.GetEnvironmentVariable("SKILLS_CODER_MODEL");
-        string? reasonModel = Environment.GetEnvironmentVariable("SKILLS_REASON_MODEL");
+        var endpoint = Environment.GetEnvironmentVariable("CHAT_ENDPOINT") ?? "http://localhost:11434";
+        var apiKey = Environment.GetEnvironmentVariable("CHAT_API_KEY");
+        var model = Environment.GetEnvironmentVariable("CHAT_MODEL") ?? "llama3";
+        var coderModel = Environment.GetEnvironmentVariable("SKILLS_CODER_MODEL");
+        var reasonModel = Environment.GetEnvironmentVariable("SKILLS_REASON_MODEL");
 
-        ChatRuntimeSettings settings = new ChatRuntimeSettings(0.7, 1024, 60, false);
+        var settings = new ChatRuntimeSettings(0.7, 1024, 60, false);
         bool isLocal = endpoint.Contains("localhost") || endpoint.Contains("127.0.0.1");
 
         // Create base model
@@ -728,8 +728,8 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
         // Set up orchestration if specialized models are configured
         if (!string.IsNullOrEmpty(coderModel) || !string.IsNullOrEmpty(reasonModel))
         {
-            ToolRegistry tools = ToolRegistry.CreateDefault();
-            OrchestratorBuilder builder = new OrchestratorBuilder(tools, "general")
+            var tools = ToolRegistry.CreateDefault();
+            var builder = new OrchestratorBuilder(tools, "general")
                 .WithModel("general", baseModel, ModelType.General,
                     new[] { "general", "conversation", "skills" }, 1024, 1000);
 
@@ -755,7 +755,7 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
             orchestratedModel = builder.Build();
 
             // Initialize divide-and-conquer
-            DivideAndConquerConfig dcConfig = new DivideAndConquerConfig(
+            var dcConfig = new DivideAndConquerConfig(
                 MaxParallelism: Math.Max(2, Environment.ProcessorCount / 2),
                 ChunkSize: 800,
                 MergeResults: true);
@@ -805,7 +805,7 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
             case "list":
             case "ls":
                 Console.WriteLine("\n  [i] Skills:");
-                foreach (Skill skill in registry.GetAllSkills())
+                foreach (var skill in registry.GetAllSkills())
                 {
                     Console.WriteLine($"     - {skill.Name,-28} ({skill.SuccessRate:P0}) - {skill.Description}");
                 }
@@ -817,7 +817,7 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
                 Console.WriteLine("\n  [#] DSL Tokens:");
                 Console.WriteLine("     Built-in: SetPrompt, UseDraft, UseCritique, UseRevise, UseOutput");
                 Console.WriteLine("     Skills:");
-                foreach (Skill skill in registry.GetAllSkills())
+                foreach (var skill in registry.GetAllSkills())
                 {
                     Console.WriteLine($"       - UseSkill_{skill.Name}");
                 }
@@ -836,16 +836,16 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
                 {
                     string url = $"http://export.arxiv.org/api/query?search_query=all:{Uri.EscapeDataString(arg)}&start=0&max_results=5";
                     string xml = await httpClient.GetStringAsync(url);
-                    System.Xml.Linq.XDocument doc = System.Xml.Linq.XDocument.Parse(xml);
+                    var doc = System.Xml.Linq.XDocument.Parse(xml);
                     System.Xml.Linq.XNamespace atom = "http://www.w3.org/2005/Atom";
-                    List<System.Xml.Linq.XElement> entries = doc.Descendants(atom + "entry").Take(5).ToList();
+                    var entries = doc.Descendants(atom + "entry").Take(5).ToList();
 
                     Console.WriteLine($"  [i] Found {entries.Count} papers");
 
                     string skillName = string.Join("", arg.Split(' ').Select(w =>
                         w.Length > 0 ? char.ToUpperInvariant(w[0]) + (w.Length > 1 ? w[1..].ToLowerInvariant() : "") : "")) + "Analysis";
 
-                    Skill newSkill = new Skill(
+                    var newSkill = new Skill(
                         skillName,
                         $"Analysis methodology from '{arg}' research",
                         new List<string> { "research-context" },
@@ -873,7 +873,7 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
                     Console.WriteLine("  [!] Usage: suggest <goal>\n");
                     break;
                 }
-                List<Skill> matches = registry.GetAllSkills()
+                var matches = registry.GetAllSkills()
                     .Where(s => s.Name.Contains(arg, StringComparison.OrdinalIgnoreCase) ||
                                 s.Description.Contains(arg, StringComparison.OrdinalIgnoreCase))
                     .OrderByDescending(s => s.SuccessRate)
@@ -883,7 +883,7 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
                 if (matches.Count > 0)
                 {
                     Console.WriteLine($"\n  [+] Matching skills for \"{arg}\":");
-                    foreach (Skill skill in matches)
+                    foreach (var skill in matches)
                     {
                         Console.WriteLine($"     [>] UseSkill_{skill.Name} ({skill.SuccessRate:P0})");
                     }
@@ -902,13 +902,13 @@ static async Task RunInteractiveSkillsMode(ISkillRegistry registry, Func<string,
                     Console.WriteLine("  [!] Usage: run <skill_name>\n");
                     break;
                 }
-                Skill? skillToRun = registry.GetAllSkills()
+                var skillToRun = registry.GetAllSkills()
                     .FirstOrDefault(s => s.Name.Equals(arg, StringComparison.OrdinalIgnoreCase) ||
                                          s.Name.Equals(arg.Replace("UseSkill_", ""), StringComparison.OrdinalIgnoreCase));
                 if (skillToRun != null)
                 {
                     Console.WriteLine($"\n  [>] Executing: {skillToRun.Name}");
-                    foreach (PlanStep step in skillToRun.Steps)
+                    foreach (var step in skillToRun.Steps)
                     {
                         Console.Write($"     -> {step.Action}...");
                         await Task.Delay(200);
@@ -1025,7 +1025,6 @@ static async Task<bool> TryRunVoiceModeAsync(IVoiceOptions voiceOptions)
         Voice: true,
         VoiceOnly: voiceOptions.VoiceOnly,
         LocalTts: voiceOptions.LocalTts,
-        Culture: voiceOptions.Culture ?? "en-US",  // Default to English voice
         EnableSkills: true,
         EnableMeTTa: true,
         EnableTools: true,

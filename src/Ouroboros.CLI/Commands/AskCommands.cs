@@ -24,7 +24,7 @@ public static class AskCommands
         }
         if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase)) Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
         if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
-        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream, o.Culture);
+        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
         ValidateSecrets(o);
         LogBackendSelection(o.Model, settings, o);
         Stopwatch sw = Stopwatch.StartNew();
@@ -43,12 +43,12 @@ public static class AskCommands
                 catch (Exception ex) when (!o.StrictModel && ex.Message.Contains("Invalid model", StringComparison.OrdinalIgnoreCase))
                 {
                     Console.WriteLine($"[WARN] Remote model '{o.Model}' invalid. Falling back to local 'llama3'. Use --strict-model to disable fallback.");
-                    chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"), o.Culture);
+                    chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
                 }
             }
             else
             {
-                chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model), o.Culture);
+                chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
             }
 
             ToolRegistry tools = new ToolRegistry();
@@ -170,7 +170,7 @@ public static class AskCommands
                         // Best-effort preset mapping only. If parsing the model name fails,
                         // we intentionally keep provider defaults to avoid hard failures.
                     }
-                    return new OllamaChatAdapter(m, settings?.Culture);
+                    return new OllamaChatAdapter(m);
                 }
                 string general = askOpts.GeneralModel ?? modelName;
                 modelMap["general"] = MakeLocal(general, "general");
@@ -189,13 +189,13 @@ public static class AskCommands
                 {
                     Console.WriteLine($"[WARN] Remote model '{modelName}' invalid. Falling back to local 'llama3'. Use --strict-model to disable fallback.");
                     OllamaChatModel local = new OllamaChatModel(provider, "llama3");
-                    chatModel = new OllamaChatAdapter(local, settings?.Culture);
+                    chatModel = new OllamaChatAdapter(local);
                 }
                 catch (Exception ex) when (askOpts is not null && !askOpts.StrictModel)
                 {
                     Console.WriteLine($"[WARN] Remote model '{modelName}' unavailable ({ex.GetType().Name}). Falling back to local 'llama3'. Use --strict-model to disable fallback.");
                     OllamaChatModel local = new OllamaChatModel(provider, "llama3");
-                    chatModel = new OllamaChatAdapter(local, settings?.Culture);
+                    chatModel = new OllamaChatAdapter(local);
                 }
             }
             else
@@ -216,7 +216,7 @@ public static class AskCommands
                 {
                     // Non-fatal: preset mapping is best-effort. Defaults are fine if detection fails.
                 }
-                chatModel = new OllamaChatAdapter(chat, settings?.Culture);
+                chatModel = new OllamaChatAdapter(chat);
             }
             IEmbeddingModel embed = ServiceFactory.CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);
 
@@ -320,11 +320,6 @@ public static class AskCommands
     /// </summary>
     private static async Task RunAskVoiceModeAsync(AskOptions o)
     {
-        // Integrate with Ouroboros system
-        await OuroborosCliIntegration.BroadcastToConsciousnessAsync(
-            "Starting voice interaction mode",
-            "VoiceMode");
-
         var voiceService = VoiceModeExtensions.CreateVoiceService(
             voice: true,
             persona: o.Persona,
@@ -335,16 +330,6 @@ public static class AskCommands
             endpoint: o.Endpoint ?? "http://localhost:11434");
 
         await voiceService.InitializeAsync();
-
-        // Show Ouroboros integration status
-        var ouroborosCore = OuroborosCliIntegration.GetCore();
-        if (ouroborosCore != null)
-        {
-            Console.WriteLine("[Voice Mode] ✓ Ouroboros system connected");
-            Console.WriteLine($"[Voice Mode] ✓ Episodic memory: {(ouroborosCore.EpisodicMemory != null ? "enabled" : "disabled")}");
-            Console.WriteLine($"[Voice Mode] ✓ Consciousness: {(ouroborosCore.Consciousness != null ? "enabled" : "disabled")}");
-        }
-
         voiceService.PrintHeader("ASK");
 
         // Build the pipeline once

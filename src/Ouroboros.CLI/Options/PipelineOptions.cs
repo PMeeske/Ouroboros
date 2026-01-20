@@ -25,9 +25,6 @@ public sealed class PipelineOptions : IVoiceOptions
     [Option('d', "dsl", Required = true, HelpText = "Pipeline DSL string.")]
     public string Dsl { get; set; } = string.Empty;
 
-    [Option('c', "culture", Required = false, HelpText = "Target culture for the response.")]
-    public string? Culture { get; set; }
-
     [Option("model", Required = false, HelpText = "LLM model name", Default = "ministral-3:latest")]
     public string Model { get; set; } = "ministral-3:latest";
 

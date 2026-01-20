@@ -31,12 +31,10 @@ public interface IStreamingChatModel : IChatCompletionModel
 public sealed class OllamaChatAdapter : IStreamingChatModel
 {
     private readonly OllamaChatModel _model;
-    private readonly string? _culture;
 
-    public OllamaChatAdapter(OllamaChatModel model, string? culture = null)
+    public OllamaChatAdapter(OllamaChatModel model)
     {
         _model = model ?? throw new ArgumentNullException(nameof(model));
-        _culture = culture;
     }
 
     /// <inheritdoc/>
@@ -44,8 +42,7 @@ public sealed class OllamaChatAdapter : IStreamingChatModel
     {
         try
         {
-            string finalPrompt = _culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
-            IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(finalPrompt, cancellationToken: ct);
+            IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(prompt, cancellationToken: ct);
             StringBuilder builder = new StringBuilder();
 
             await foreach (LangChain.Providers.ChatResponse? chunk in stream.WithCancellation(ct).ConfigureAwait(false))
@@ -78,8 +75,7 @@ public sealed class OllamaChatAdapter : IStreamingChatModel
         {
             try
             {
-                string finalPrompt = _culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
-                IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(finalPrompt, cancellationToken: token);
+                IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(prompt, cancellationToken: token);
                 await foreach (LangChain.Providers.ChatResponse? chunk in stream.WithCancellation(token).ConfigureAwait(false))
                 {
                     string text = ExtractResponseText(chunk);
@@ -196,7 +192,7 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
                 model = _model,
                 temperature = _settings.Temperature,
                 max_output_tokens = _settings.MaxTokens,
-                input = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt
+                input = prompt
             });
 
             HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
@@ -243,8 +239,7 @@ public sealed class OllamaCloudChatModel : IStreamingChatModel
 
         _client = new HttpClient
         {
-            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute),
-            Timeout = TimeSpan.FromMinutes(10) // Large cloud models can take minutes to respond
+            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute)
         };
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;
@@ -273,7 +268,7 @@ public sealed class OllamaCloudChatModel : IStreamingChatModel
             var payloadObject = new
             {
                 model = _model,
-                prompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt,
+                prompt = prompt,
                 stream = false,
                 options = new
                 {
@@ -323,7 +318,7 @@ public sealed class OllamaCloudChatModel : IStreamingChatModel
                 using JsonContent payload = JsonContent.Create(new
                 {
                     model = _model,
-                    prompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt,
+                    prompt = prompt,
                     stream = true,
                     options = new
                     {
@@ -438,7 +433,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingChatModel
                 model = _model,
                 messages = new[]
                 {
-                    new { role = "user", content = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt }
+                    new { role = "user", content = prompt }
                 },
                 temperature = _settings.Temperature,
                 max_tokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null
@@ -501,7 +496,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingChatModel
                     model = _model,
                     messages = new[]
                     {
-                        new { role = "user", content = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt }
+                        new { role = "user", content = prompt }
                     },
                     temperature = _settings.Temperature,
                     max_tokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null,

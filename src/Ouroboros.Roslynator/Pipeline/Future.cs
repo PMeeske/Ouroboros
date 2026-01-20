@@ -27,7 +27,7 @@ public readonly struct Future<T>
     // Operator overloads for the common FixState pipeline pattern (same input/output type)
 
     /// <summary>
-    /// Compose a Future with an async step (Func of T to Task of T).
+    /// Compose a Future with an async step (Func<T, Task<T>>).
     /// Builds a new Future that will run left then right when executed.
     /// </summary>
     public static Future<T> operator |(Future<T> left, Func<T, Task<T>> asyncStep)
@@ -42,7 +42,7 @@ public readonly struct Future<T>
     }
 
     /// <summary>
-    /// Compose a Future with a pure step (Func of T to T).
+    /// Compose a Future with a pure step (Func<T, T>).
     /// </summary>
     public static Future<T> operator |(Future<T> left, Func<T, T> pureStep)
     {

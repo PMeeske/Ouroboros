@@ -9,12 +9,12 @@
     <RootNamespace>Ouroboros.Benchmarks</RootNamespace>
     <Product>Ouroboros Benchmarks</Product>
     <Description>Performance benchmarks for Ouroboros</Description>
-    <Copyright>Copyright ï¿½ 2025</Copyright>
+    <Copyright>Copyright © 2025</Copyright>
     <Version>1.0.0</Version>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <WarningsNotAsErrors>CS1591;CS1570;RCS1163;SA1600;SA1101;CA2007</WarningsNotAsErrors>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS1591;CS1570</WarningsNotAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,8 +25,6 @@
     <ProjectReference Include="..\Ouroboros.Core\Ouroboros.Core.csproj" />
     <ProjectReference Include="..\Ouroboros.Tools\Ouroboros.Tools.csproj" />
     <ProjectReference Include="..\Ouroboros.Domain\Ouroboros.Domain.csproj" />
-    <ProjectReference Include="..\Ouroboros.Agent\Ouroboros.Agent.csproj" />
-    <ProjectReference Include="..\Ouroboros.Application\Ouroboros.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

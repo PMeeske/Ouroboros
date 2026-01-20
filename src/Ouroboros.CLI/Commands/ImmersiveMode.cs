@@ -19,11 +19,8 @@ using Ouroboros.Providers.TextToSpeech;
 using Ouroboros.Speech;
 using Ouroboros.Application;
 using Ouroboros.Application.Personality;
-using Ouroboros.Application.Personality.Consciousness;
 using Ouroboros.Application.Services;
 using Ouroboros.Application.Tools;
-using Ouroboros.Core.DistinctionLearning;
-using Ouroboros.Domain.DistinctionLearning;
 using Ouroboros.Tools.MeTTa;
 using static Ouroboros.Application.Tools.AutonomousTools;
 
@@ -182,11 +179,6 @@ public static class ImmersiveMode
     private static string? _lastPipelineContext; // Track recent pipeline interactions
     private static (string Topic, string Description)? _pendingToolRequest; // Track pending tool creation context
 
-    // Distinction learning
-    private static IDistinctionLearner? _distinctionLearner;
-    private static ConsciousnessDream? _dream;
-    private static DistinctionState _currentDistinctionState = DistinctionState.Initial();
-
     // Multi-model orchestration and divide-and-conquer
     private static OrchestratedChatModel? _orchestratedModel;
     private static DivideAndConquerOrchestrator? _divideAndConquer;
@@ -304,24 +296,6 @@ public static class ImmersiveMode
             {
                 Console.WriteLine($"  [!] Network state persistence unavailable: {ex.Message}");
             }
-        }
-
-        // Initialize distinction learning
-        try
-        {
-            Console.WriteLine("  [~] Initializing distinction learning...");
-            var storageConfig = DistinctionStorageConfig.Default;
-            var storage = new FileSystemDistinctionWeightStorage(storageConfig);
-            _distinctionLearner = new DistinctionLearner(storage);
-            _dream = new ConsciousnessDream();
-            _currentDistinctionState = DistinctionState.Initial();
-            Console.ForegroundColor = ConsoleColor.DarkCyan;
-            Console.WriteLine($"  [DistinctionLearning] Ready to learn from consciousness cycles");
-            Console.ResetColor();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"  [!] Distinction learning unavailable: {ex.Message}");
         }
 
         // Initialize self-persistence for mind state storage in Qdrant
@@ -638,9 +612,6 @@ public static class ImmersiveMode
                 {
                     await RecordInteractionLearningsAsync(input, response, persona, ct);
                 }
-
-                // Learn from distinction consciousness cycle (async, don't block)
-                _ = LearnFromInteractionAsync(input, response, ct);
 
                 // Add assistant response to persistent memory
                 conversationHistory.Add(("assistant", response));
@@ -3301,78 +3272,6 @@ User: goodbye
             Console.WriteLine($"  [!] Error: {innerEx.Message}");
             Console.ResetColor();
             return $"Error executing {tokenName}: {innerEx.Message}";
-        }
-    }
-
-    /// <summary>
-    /// Learns from an interaction through the consciousness dream cycle.
-    /// </summary>
-    private static async Task LearnFromInteractionAsync(
-        string userInput,
-        string response,
-        CancellationToken ct)
-    {
-        if (_distinctionLearner == null || _dream == null)
-        {
-            return;
-        }
-
-        try
-        {
-            // Learn through dream cycle
-            await foreach (var moment in _dream.WalkTheDream(userInput, ct))
-            {
-                var observation = new Observation(
-                    Content: userInput,
-                    Timestamp: DateTime.UtcNow,
-                    PriorCertainty: _currentDistinctionState.EpistemicCertainty,
-                    Context: new Dictionary<string, object>
-                    {
-                        ["response_length"] = response.Length,
-                        ["stage"] = moment.Stage.ToString()
-                    });
-
-                var result = await _distinctionLearner.UpdateFromDistinctionAsync(
-                    _currentDistinctionState,
-                    observation,
-                    moment.Stage.ToString(),
-                    ct);
-
-                if (result.IsSuccess)
-                {
-                    _currentDistinctionState = result.Value;
-                }
-
-                // At Recognition stage, apply self-insight
-                if (moment.Stage == DreamStage.Recognition)
-                {
-                    var recognizeResult = await _distinctionLearner.RecognizeAsync(
-                        _currentDistinctionState,
-                        userInput,
-                        ct);
-
-                    if (recognizeResult.IsSuccess)
-                    {
-                        _currentDistinctionState = recognizeResult.Value;
-                    }
-                }
-            }
-
-            // Periodic dissolution (every 10 cycles)
-            if (_currentDistinctionState.CycleCount % DistinctionLearningConstants.DissolutionCycleInterval == 0)
-            {
-                await _distinctionLearner.DissolveAsync(
-                    _currentDistinctionState,
-                    DissolutionStrategy.FitnessThreshold,
-                    ct);
-            }
-        }
-        catch (Exception ex)
-        {
-            // Log the error but don't disrupt the interaction
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine($"  [!] Distinction learning error: {ex.Message}");
-            Console.ResetColor();
         }
     }
 }

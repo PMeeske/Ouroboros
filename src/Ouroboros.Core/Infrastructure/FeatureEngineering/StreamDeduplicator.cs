@@ -122,7 +122,6 @@ public sealed class StreamDeduplicator
     {
         await foreach (float[]? vector in vectors.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
-            cancellationToken.ThrowIfCancellationRequested();
             if (!this.IsDuplicate(vector))
             {
                 yield return vector;

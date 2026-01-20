@@ -2,10 +2,22 @@
 
   <PropertyGroup>
     <TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
+    <LangVersion>14.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
     <RootNamespace>Ouroboros</RootNamespace>
     <AssemblyName>Ouroboros.Examples</AssemblyName>
     <Product>Ouroboros Examples</Product>
     <Description>Example applications and demonstrations for Ouroboros</Description>
+    <Copyright>Copyright © 2025</Copyright>
+    <Version>1.0.0</Version>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS1591;CS1570</WarningsNotAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <RunAnalyzersDuringLiveAnalysis>false</RunAnalyzersDuringLiveAnalysis>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
@@ -22,7 +34,6 @@
     <ProjectReference Include="..\Ouroboros.Application\Ouroboros.Application.csproj" />
     <ProjectReference Include="..\Ouroboros.Genetic\Ouroboros.Genetic.csproj" />
     <ProjectReference Include="..\Ouroboros.Network\Ouroboros.Network.csproj" />
-    <ProjectReference Include="..\Ouroboros.Easy\Ouroboros.Easy.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -40,6 +51,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
+    <PackageReference Include="Roslynator.Analyzers" Version="4.7.0" PrivateAssets="all" />
     <PackageReference Include="SonarAnalyzer.CSharp" Version="9.16.0.82469" PrivateAssets="all" />
   </ItemGroup>
 

@@ -17,7 +17,6 @@ public class AgiWarmup
     private readonly Func<string, CancellationToken, Task<string>>? _searchFunction;
     private readonly Func<string, string, CancellationToken, Task<string>>? _executeToolFunction;
     private readonly QdrantSelfIndexer? _selfIndexer;
-    private readonly ToolRegistry? _toolRegistry;
 
     /// <summary>
     /// Event fired when warmup progress updates.
@@ -41,14 +40,12 @@ public class AgiWarmup
         Func<string, CancellationToken, Task<string>>? thinkFunction = null,
         Func<string, CancellationToken, Task<string>>? searchFunction = null,
         Func<string, string, CancellationToken, Task<string>>? executeToolFunction = null,
-        QdrantSelfIndexer? selfIndexer = null,
-        ToolRegistry? toolRegistry = null)
+        QdrantSelfIndexer? selfIndexer = null)
     {
         _thinkFunction = thinkFunction;
         _searchFunction = searchFunction;
         _executeToolFunction = executeToolFunction;
         _selfIndexer = selfIndexer;
-        _toolRegistry = toolRegistry;
     }
 
     /// <summary>
@@ -76,13 +73,6 @@ public class AgiWarmup
                 {
                     steps.Add($"⚠ Self-indexer: {ex.Message}");
                 }
-            }
-
-            // Step 1b: Comprehensive self-index warmup
-            OnProgress?.Invoke("Warming up self-index...", 15);
-            if (_selfIndexer != null)
-            {
-                await WarmupSelfIndexAsync(result, steps, ct);
             }
 
             // Step 2: Thinking capability warmup
@@ -137,13 +127,6 @@ Keep it to 1-2 sentences.";
                 {
                     steps.Add($"⚠ Tool system: {ex.Message}");
                 }
-            }
-
-            // Step 4b: Comprehensive tool warmup - test all registered tools
-            OnProgress?.Invoke("Testing all registered tools...", 60);
-            if (_toolRegistry != null)
-            {
-                await WarmupAllToolsAsync(result, steps, ct);
             }
 
             // Step 5: Generate autonomous operation seed thoughts
@@ -216,201 +199,6 @@ Keep it to 1-2 sentences.";
         OnComplete?.Invoke(result);
 
         return result;
-    }
-
-    /// <summary>
-    /// Warms up the self-index by testing search, stats, and reorganization features.
-    /// </summary>
-    private async Task WarmupSelfIndexAsync(WarmupResult result, List<string> steps, CancellationToken ct)
-    {
-        if (_selfIndexer == null) return;
-
-        try
-        {
-            // 1. Get index stats
-            var stats = await _selfIndexer.GetStatsAsync(ct);
-            result.SelfIndexStats = new SelfIndexWarmupStats
-            {
-                TotalVectors = stats.TotalVectors,
-                IndexedFiles = stats.IndexedFiles,
-                CollectionName = stats.CollectionName
-            };
-
-            // 2. Test various search queries to warm up the vector index
-            var searchQueries = new[]
-            {
-                "error handling exception",
-                "async await Task",
-                "configuration settings",
-                "tool registration",
-                "LLM model inference"
-            };
-
-            int successfulSearches = 0;
-            foreach (var query in searchQueries)
-            {
-                try
-                {
-                    using var searchCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    searchCts.CancelAfter(TimeSpan.FromSeconds(5));
-
-                    var searchResults = await _selfIndexer.SearchAsync(query, 2, 0.4f, searchCts.Token);
-                    if (searchResults.Count > 0)
-                    {
-                        successfulSearches++;
-                        // Record access to train the reorganization system
-                        _selfIndexer.RecordAccess(searchResults);
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    // Search timed out, continue with next
-                }
-                catch
-                {
-                    // Individual search failed, continue
-                }
-            }
-
-            result.SelfIndexStats.SearchQueriesTested = searchQueries.Length;
-            result.SelfIndexStats.SearchQueriesSucceeded = successfulSearches;
-
-            // 3. Get reorganization stats
-            var reorgStats = _selfIndexer.GetReorganizationStats();
-            result.SelfIndexStats.TrackedPatterns = reorgStats.TrackedPatterns;
-            result.SelfIndexStats.HotContentCount = reorgStats.HotContentCount;
-            result.SelfIndexStats.CoAccessClusters = reorgStats.CoAccessClusters;
-
-            // 4. Trigger quick reorganization if there's enough access data
-            if (reorgStats.TrackedPatterns > 10)
-            {
-                try
-                {
-                    using var reorgCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    reorgCts.CancelAfter(TimeSpan.FromSeconds(10));
-
-                    var reorgCount = await _selfIndexer.QuickReorganizeAsync(reorgCts.Token);
-                    result.SelfIndexStats.ReorganizedChunks = reorgCount;
-                    if (reorgCount > 0)
-                    {
-                        steps.Add($"  ↻ Reorganized {reorgCount} knowledge chunks for faster access");
-                    }
-                }
-                catch
-                {
-                    // Reorganization failed or timed out
-                }
-            }
-
-            result.SelfIndexReady = stats.TotalVectors > 0 && successfulSearches > 0;
-            steps.Add($"✓ Self-index: {stats.IndexedFiles} files, {stats.TotalVectors} vectors, {successfulSearches}/{searchQueries.Length} searches OK");
-
-            if (reorgStats.TrackedPatterns > 0)
-            {
-                steps.Add($"  📊 Knowledge patterns: {reorgStats.TrackedPatterns} tracked, {reorgStats.HotContentCount} hot, {reorgStats.CoAccessClusters} clusters");
-            }
-        }
-        catch (Exception ex)
-        {
-            steps.Add($"⚠ Self-index warmup: {ex.Message}");
-            result.SelfIndexReady = false;
-        }
-    }
-
-    /// <summary>
-    /// Warms up all registered tools by testing them with safe inputs.
-    /// </summary>
-    private async Task WarmupAllToolsAsync(WarmupResult result, List<string> steps, CancellationToken ct)
-    {
-        if (_toolRegistry == null) return;
-
-        var toolTests = new Dictionary<string, string>
-        {
-            // Roslyn tools - test with simple C# code
-            ["analyze_csharp_code"] = """{"code":"public class Test { public void Hello() { } }"}""",
-            ["get_code_structure"] = """{"code":"namespace Foo { public class Bar { public int X { get; set; } } }"}""",
-            ["format_csharp_code"] = """{"code":"public class Test{public void Hello(){}}"}""",
-            ["create_csharp_class"] = """{"className":"WarmupTest","namespaceName":"Ouroboros.Warmup"}""",
-
-            // System tools - safe operations
-            ["system_info"] = "{}",
-            ["environment"] = """{"action":"get","name":"PATH"}""",
-            ["disk_info"] = "{}",
-            ["network_info"] = "{}",
-
-            // File tools - read-only operations
-            ["file_system"] = """{"action":"exists","path":"."}""",
-            ["directory_list"] = """{"path":".","pattern":"*.cs","maxDepth":1}""",
-
-            // Calculator - simple math
-            ["calculator"] = """{"expression":"2+2"}""",
-
-            // Self-introspection - search only
-            ["search_my_code"] = """{"query":"warmup","maxResults":1}""",
-        };
-
-        int testedCount = 0;
-        int successCount = 0;
-        var failedTools = new List<string>();
-
-        foreach (var (toolName, testInput) in toolTests)
-        {
-            var toolOption = _toolRegistry.GetTool(toolName);
-            if (!toolOption.HasValue) continue;
-
-            try
-            {
-                var tool = toolOption.GetValueOrDefault(null!);
-                if (tool == null) continue;
-
-                testedCount++;
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                cts.CancelAfter(TimeSpan.FromSeconds(10)); // Timeout per tool
-
-                var toolResult = await tool.InvokeAsync(testInput, cts.Token);
-                if (toolResult.IsSuccess)
-                {
-                    successCount++;
-                    result.ToolWarmupResults[toolName] = true;
-                }
-                else
-                {
-                    failedTools.Add($"{toolName}: {toolResult.Error}");
-                    result.ToolWarmupResults[toolName] = false;
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                failedTools.Add($"{toolName}: timeout");
-                result.ToolWarmupResults[toolName] = false;
-            }
-            catch (Exception ex)
-            {
-                failedTools.Add($"{toolName}: {ex.Message}");
-                result.ToolWarmupResults[toolName] = false;
-            }
-        }
-
-        // Also count tools not explicitly tested
-        result.TotalToolsRegistered = _toolRegistry.Count;
-
-        if (testedCount > 0)
-        {
-            var percentage = (successCount * 100) / testedCount;
-            steps.Add($"✓ Tool warmup: {successCount}/{testedCount} tools tested OK ({percentage}%)");
-
-            if (failedTools.Count > 0 && failedTools.Count <= 3)
-            {
-                steps.Add($"  ⚠ Failed: {string.Join(", ", failedTools.Take(3))}");
-            }
-            else if (failedTools.Count > 3)
-            {
-                steps.Add($"  ⚠ {failedTools.Count} tools had issues");
-            }
-
-            result.ToolsTestedCount = testedCount;
-            result.ToolsSuccessCount = successCount;
-        }
     }
 
     /// <summary>
@@ -523,75 +311,9 @@ public record WarmupResult
     public ReorganizationStats? KnowledgeStats { get; set; }
 
     /// <summary>
-    /// Total number of tools registered in the system.
-    /// </summary>
-    public int TotalToolsRegistered { get; set; }
-
-    /// <summary>
-    /// Number of tools that were tested during warmup.
-    /// </summary>
-    public int ToolsTestedCount { get; set; }
-
-    /// <summary>
-    /// Number of tools that passed warmup testing.
-    /// </summary>
-    public int ToolsSuccessCount { get; set; }
-
-    /// <summary>
-    /// Per-tool warmup results (tool name -> success).
-    /// </summary>
-    public Dictionary<string, bool> ToolWarmupResults { get; set; } = [];
-
-    /// <summary>
-    /// Whether self-index is warmed up and ready.
-    /// </summary>
-    public bool SelfIndexReady { get; set; }
-
-    /// <summary>
-    /// Self-index warmup statistics.
-    /// </summary>
-    public SelfIndexWarmupStats? SelfIndexStats { get; set; }
-
-    /// <summary>
     /// Summary of warmup readiness.
     /// </summary>
     public string Summary => Success
-        ? $"AGI warmup complete in {Duration.TotalSeconds:F1}s: Thinking={ThinkingReady}, Search={SearchReady}, Tools={ToolsSuccessCount}/{ToolsTestedCount}, Self-Index={SelfIndexReady}, Self-Aware={SelfAwarenessReady}"
+        ? $"AGI warmup complete in {Duration.TotalSeconds:F1}s: Thinking={ThinkingReady}, Search={SearchReady}, Tools={ToolsReady}, Self-Aware={SelfAwarenessReady}"
         : $"AGI warmup failed: {Error}";
-}
-
-/// <summary>
-/// Statistics from self-index warmup.
-/// </summary>
-public record SelfIndexWarmupStats
-{
-    /// <summary>Total vectors in the index.</summary>
-    public long TotalVectors { get; set; }
-
-    /// <summary>Number of indexed files.</summary>
-    public int IndexedFiles { get; set; }
-
-    /// <summary>Collection name in Qdrant.</summary>
-    public string? CollectionName { get; set; }
-
-    /// <summary>Number of search queries tested.</summary>
-    public int SearchQueriesTested { get; set; }
-
-    /// <summary>Number of successful search queries.</summary>
-    public int SearchQueriesSucceeded { get; set; }
-
-    /// <summary>Number of tracked access patterns.</summary>
-    public int TrackedPatterns { get; set; }
-
-    /// <summary>Number of hot (frequently accessed) content items.</summary>
-    public int HotContentCount { get; set; }
-
-    /// <summary>Number of co-access clusters identified.</summary>
-    public int CoAccessClusters { get; set; }
-
-    /// <summary>Whether reorganization was triggered.</summary>
-    public bool ReorganizationTriggered { get; set; }
-
-    /// <summary>Number of chunks reorganized during warmup.</summary>
-    public int ReorganizedChunks { get; set; }
 }
