@@ -14,24 +14,10 @@ public sealed class AzureNeuralTtsService : ITextToSpeechService, IDisposable
 {
     private readonly string _subscriptionKey;
     private readonly string _region;
-    private string _voiceName;
-    private string _culture;
+    private readonly string _voiceName;
     private SpeechSynthesizer? _synthesizer;
     private SpeechConfig? _config;
     private bool _disposed;
-
-    /// <summary>
-    /// Gets or sets the culture for voice selection and language.
-    /// </summary>
-    public string Culture
-    {
-        get => _culture;
-        set
-        {
-            _culture = value;
-            UpdateVoiceForCulture();
-        }
-    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AzureNeuralTtsService"/> class.
@@ -39,51 +25,22 @@ public sealed class AzureNeuralTtsService : ITextToSpeechService, IDisposable
     /// <param name="subscriptionKey">Azure Speech subscription key.</param>
     /// <param name="region">Azure region (e.g., "eastus").</param>
     /// <param name="persona">Persona name for voice selection.</param>
-    /// <param name="culture">Culture for language selection (e.g., "de-DE").</param>
-    public AzureNeuralTtsService(string subscriptionKey, string region, string persona = "Ouroboros", string? culture = null)
+    public AzureNeuralTtsService(string subscriptionKey, string region, string persona = "Ouroboros")
     {
         _subscriptionKey = subscriptionKey ?? throw new ArgumentNullException(nameof(subscriptionKey));
         _region = region ?? throw new ArgumentNullException(nameof(region));
-        _culture = culture ?? "en-US";
 
-        // Select voice based on persona and culture
-        _voiceName = SelectVoice(persona, _culture);
-
-        InitializeSynthesizer();
-    }
-
-    private static string SelectVoice(string persona, string culture)
-    {
-        bool isGerman = culture.Equals("de-DE", StringComparison.OrdinalIgnoreCase);
-
-        return persona.ToUpperInvariant() switch
+        // Select voice based on persona - Jenny is closest to Cortana
+        _voiceName = persona.ToUpperInvariant() switch
         {
-            "OUROBOROS" => isGerman ? "de-DE-KatjaNeural" : "en-US-JennyNeural",
-            "ARIA" => isGerman ? "de-DE-AmalaNeural" : "en-US-AriaNeural",
-            "ECHO" => isGerman ? "de-DE-LouisaNeural" : "en-GB-SoniaNeural",
-            "SAGE" => isGerman ? "de-DE-ElkeNeural" : "en-US-SaraNeural",
-            "ATLAS" => isGerman ? "de-DE-ConradNeural" : "en-US-GuyNeural",
-            _ => isGerman ? "de-DE-KatjaNeural" : "en-US-JennyNeural"
-        };
-    }
-
-    private void UpdateVoiceForCulture()
-    {
-        // Extract persona from current voice name
-        string persona = _voiceName switch
-        {
-            var v when v.Contains("Jenny") || v.Contains("Katja") => "OUROBOROS",
-            var v when v.Contains("Aria") || v.Contains("Amala") => "ARIA",
-            var v when v.Contains("Sonia") || v.Contains("Louisa") => "ECHO",
-            var v when v.Contains("Sara") || v.Contains("Elke") => "SAGE",
-            var v when v.Contains("Guy") || v.Contains("Conrad") => "ATLAS",
-            _ => "OUROBOROS"
+            "OUROBOROS" => "en-US-JennyNeural",    // Cortana-like voice!
+            "ARIA" => "en-US-AriaNeural",          // Expressive female
+            "ECHO" => "en-GB-SoniaNeural",         // UK female
+            "SAGE" => "en-US-SaraNeural",          // Calm female
+            "ATLAS" => "en-US-GuyNeural",          // Male
+            _ => "en-US-JennyNeural"
         };
 
-        _voiceName = SelectVoice(persona, _culture);
-
-        // Reinitialize synthesizer with new voice
-        _synthesizer?.Dispose();
         InitializeSynthesizer();
     }
 
@@ -105,11 +62,6 @@ public sealed class AzureNeuralTtsService : ITextToSpeechService, IDisposable
         "en-US-GuyNeural",
         "en-US-SaraNeural",
         "en-GB-SoniaNeural",
-        "de-DE-KatjaNeural",
-        "de-DE-ConradNeural",
-        "de-DE-AmalaNeural",
-        "de-DE-ElkeNeural",
-        "de-DE-LouisaNeural",
     };
 
     /// <inheritdoc/>
@@ -132,40 +84,37 @@ public sealed class AzureNeuralTtsService : ITextToSpeechService, IDisposable
 
         try
         {
-            bool isGerman = _culture.StartsWith("de", StringComparison.OrdinalIgnoreCase);
-
-            // Cortana-style: calm, warm, slightly ethereal, intelligent
-            var ssml = isGerman
-                ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
-                    <voice name='{_voiceName}'>
-                        <prosody rate='-5%' pitch='+5%' volume='+5%'>
+            // Use SSML with mythic Cortana-style: lighter voice, ethereal with hall effect
+            var ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='en-US'>
+                <voice name='{_voiceName}'>
+                    <mstts:express-as style='friendly' styledegree='0.8'>
+                        <prosody rate='-5%' pitch='+8%' volume='+3%'>
+                            <mstts:audioduration value='1.1'/>
                             {System.Security.SecurityElement.Escape(text)}
                         </prosody>
-                    </voice>
-                </speak>"
-                : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
-                    <voice name='{_voiceName}'>
-                        <mstts:express-as style='assistant' styledegree='1.2'>
-                            <prosody rate='-5%' pitch='+5%'>
-                                {System.Security.SecurityElement.Escape(text)}
-                            </prosody>
-                        </mstts:express-as>
-                    </voice>
-                </speak>";
+                    </mstts:express-as>
+                    <mstts:audioeffect type='eq_car'/>
+                </voice>
+            </speak>";
+
+            Console.WriteLine($"  [Azure TTS] Speaking: {text[..Math.Min(50, text.Length)]}...");
 
             using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
 
             if (result.Reason == ResultReason.Canceled)
             {
                 var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
-                System.Diagnostics.Debug.WriteLine($"[Azure TTS Error] {cancellation.Reason}: {cancellation.ErrorDetails}");
+                Console.WriteLine($"  [Azure TTS Error] {cancellation.Reason}: {cancellation.ErrorDetails}");
+            }
+            else
+            {
+                Console.WriteLine($"  [Azure TTS] Result: {result.Reason}");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Azure TTS Exception] {ex.Message}");
+            Console.WriteLine($"  [Azure TTS Exception] {ex.Message}");
         }
     }
 
@@ -182,69 +131,56 @@ public sealed class AzureNeuralTtsService : ITextToSpeechService, IDisposable
 
         try
         {
-            bool isGerman = _culture.StartsWith("de", StringComparison.OrdinalIgnoreCase);
             string ssml;
-
             if (isWhisper)
             {
-                // Cortana-style whisper: intimate, wise, slightly ethereal
-                ssml = isGerman
-                    ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
-                        <voice name='{_voiceName}'>
-                            <mstts:express-as style='whispering' styledegree='0.6'>
-                                <prosody rate='-8%' pitch='+3%' volume='-15%'>
-                                    {System.Security.SecurityElement.Escape(text)}
-                                </prosody>
-                            </mstts:express-as>
-                        </voice>
-                    </speak>"
-                    : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
-                        <voice name='{_voiceName}'>
-                            <mstts:express-as style='whispering' styledegree='0.6'>
-                                <prosody rate='-8%' pitch='+3%' volume='-15%'>
-                                    {System.Security.SecurityElement.Escape(text)}
-                                </prosody>
-                            </mstts:express-as>
-                        </voice>
-                    </speak>";
+                // Whispering style: softer, lower volume, slower, with whispering effect
+                ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='en-US'>
+                    <voice name='{_voiceName}'>
+                        <mstts:express-as style='whispering' styledegree='1.0'>
+                            <prosody rate='-15%' pitch='-5%' volume='-20%'>
+                                {System.Security.SecurityElement.Escape(text)}
+                            </prosody>
+                        </mstts:express-as>
+                    </voice>
+                </speak>";
             }
             else
             {
-                // Cortana-style answers: calm, confident, warm
-                ssml = isGerman
-                    ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
-                        <voice name='{_voiceName}'>
-                            <prosody rate='-5%' pitch='+5%' volume='+5%'>
+                // Normal Cortana-style: lighter voice, ethereal with hall effect
+                ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='en-US'>
+                    <voice name='{_voiceName}'>
+                        <mstts:express-as style='friendly' styledegree='0.8'>
+                            <prosody rate='-5%' pitch='+8%' volume='+3%'>
+                                <mstts:audioduration value='1.1'/>
                                 {System.Security.SecurityElement.Escape(text)}
                             </prosody>
-                        </voice>
-                    </speak>"
-                    : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
-                        <voice name='{_voiceName}'>
-                            <mstts:express-as style='assistant' styledegree='1.2'>
-                                <prosody rate='-5%' pitch='+5%'>
-                                    {System.Security.SecurityElement.Escape(text)}
-                                </prosody>
-                            </mstts:express-as>
-                        </voice>
-                    </speak>";
+                        </mstts:express-as>
+                        <mstts:audioeffect type='eq_car'/>
+                    </voice>
+                </speak>";
             }
+
+            var logPrefix = isWhisper ? "[Azure TTS 💭]" : "[Azure TTS]";
+            Console.WriteLine($"  {logPrefix} Speaking: {text[..Math.Min(50, text.Length)]}...");
 
             using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
 
             if (result.Reason == ResultReason.Canceled)
             {
                 var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
-                System.Diagnostics.Debug.WriteLine($"[Azure TTS Error] {cancellation.Reason}: {cancellation.ErrorDetails}");
+                Console.WriteLine($"  {logPrefix} Error: {cancellation.Reason}: {cancellation.ErrorDetails}");
+            }
+            else
+            {
+                Console.WriteLine($"  {logPrefix} Result: {result.Reason}");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Azure TTS Exception] {ex.Message}");
+            Console.WriteLine($"  [Azure TTS Exception] {ex.Message}");
         }
     }
 
@@ -268,7 +204,7 @@ public sealed class AzureNeuralTtsService : ITextToSpeechService, IDisposable
             var rate = options?.Speed ?? 1.0;
             var ratePercent = (int)((rate - 1.0) * 50);
 
-            var ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='{_culture}'>
+            var ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>
                 <voice name='{voice}'>
                     <prosody rate='{ratePercent:+0;-0;0}%'>{System.Security.SecurityElement.Escape(text)}</prosody>
                 </voice>

@@ -33,7 +33,6 @@ using Ouroboros.Application.Services;
 using Ouroboros.Application.Tools;
 using static Ouroboros.Application.Tools.AutonomousTools;
 using IEmbeddingModel = Ouroboros.Domain.IEmbeddingModel;
-using Ouroboros.Options;
 
 namespace Ouroboros.CLI.Commands;
 
@@ -51,16 +50,11 @@ public sealed record OuroborosConfig(
     bool Voice = true,
     bool VoiceOnly = false,
     bool LocalTts = true,
-    bool AzureTts = false,
-    string? AzureSpeechKey = null,
-    string AzureSpeechRegion = "eastus",
-    string TtsVoice = "en-US-AvaMultilingualNeural",
     bool VoiceChannel = false,
     bool Listen = false,
     bool Debug = false,
     double Temperature = 0.7,
     int MaxTokens = 2048,
-    string? Culture = null,
     // Feature toggles - all enabled by default
     bool EnableSkills = true,
     bool EnableMeTTa = true,
@@ -75,10 +69,6 @@ public sealed record OuroborosConfig(
     string AutoApproveCategories = "",
     int IntentionIntervalSeconds = 45,
     int DiscoveryIntervalSeconds = 90,
-    // Governance & Self-Modification
-    bool EnableSelfModification = false,
-    string RiskLevel = "Medium",
-    bool AutoApproveLow = true,
     // Additional config
     int ThinkingIntervalSeconds = 30,
     int AgentMaxSteps = 10,
@@ -111,23 +101,12 @@ public sealed class OuroborosAgent : IAsyncDisposable
     // Static configuration for Azure credentials (set from OuroborosCommands)
     private static Microsoft.Extensions.Configuration.IConfiguration? _staticConfiguration;
 
-    // Static culture for TTS voice selection in static methods
-    private static string? _staticCulture;
-
     /// <summary>
     /// Sets the configuration for Azure Speech and other services.
     /// </summary>
     public static void SetConfiguration(Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
         _staticConfiguration = configuration;
-    }
-
-    /// <summary>
-    /// Sets the culture for voice synthesis in static methods.
-    /// </summary>
-    public static void SetStaticCulture(string? culture)
-    {
-        _staticCulture = culture;
     }
 
     // Core AI components
@@ -389,7 +368,7 @@ Write the integrated response:";
         _isListening = true;
 
         Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine(GetLocalizedString("listening_start"));
+        Console.WriteLine("\n  🎤 Listening... (speak to send a message, say 'stop listening' to disable)");
         Console.ResetColor();
 
         _listeningTask = Task.Run(async () =>
@@ -428,36 +407,32 @@ Write the integrated response:";
         _isListening = false;
 
         Console.ForegroundColor = ConsoleColor.DarkYellow;
-        Console.WriteLine(GetLocalizedString("listening_stop"));
+        Console.WriteLine("\n  🔇 Voice input stopped.");
         Console.ResetColor();
     }
 
     /// <summary>
-    /// Continuous listening loop using Azure Speech Recognition with optional Azure TTS response.
+    /// Continuous listening loop using Azure Speech Recognition.
     /// </summary>
     private async Task ListenLoopAsync(CancellationToken ct)
     {
         // Get Azure Speech credentials from environment or static configuration
         string? speechKey = Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY")
-                       ?? _staticConfiguration?["Azure:Speech:Key"]
-                       ?? _config.AzureSpeechKey;
+                       ?? _staticConfiguration?["Azure:Speech:Key"];
         string speechRegion = Environment.GetEnvironmentVariable("AZURE_SPEECH_REGION")
                           ?? _staticConfiguration?["Azure:Speech:Region"]
-                          ?? _config.AzureSpeechRegion
                           ?? "eastus";
 
         if (string.IsNullOrEmpty(speechKey))
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine(GetLocalizedString("voice_requires_key"));
+            Console.WriteLine("  ⚠ Voice input requires AZURE_SPEECH_KEY. Set it in environment or appsettings.");
             Console.ResetColor();
             return;
         }
 
         Microsoft.CognitiveServices.Speech.SpeechConfig config = Microsoft.CognitiveServices.Speech.SpeechConfig.FromSubscription(speechKey, speechRegion);
-
-        // Set speech recognition language based on culture if available
-        config.SpeechRecognitionLanguage = _config.Culture ?? "en-US";
+        config.SpeechRecognitionLanguage = "en-US";
 
         using Microsoft.CognitiveServices.Speech.SpeechRecognizer recognizer = new Microsoft.CognitiveServices.Speech.SpeechRecognizer(config);
 
@@ -484,7 +459,7 @@ Write the integrated response:";
                 }
 
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"  {GetLocalizedString("you_said")} {text}");
+                Console.WriteLine($"  You said: {text}");
                 Console.ResetColor();
 
                 // Process as regular input
@@ -494,24 +469,6 @@ Write the integrated response:";
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine($"\n  {response}");
                 Console.ResetColor();
-
-                // Speak response using Azure TTS if enabled
-                if (_config.AzureTts && !string.IsNullOrEmpty(speechKey))
-                {
-                    try
-                    {
-                        await SpeakResponseWithAzureTtsAsync(response, speechKey, speechRegion, ct);
-                    }
-                    catch (Exception ex)
-                    {
-                        if (_config.Debug)
-                        {
-                            Console.ForegroundColor = ConsoleColor.DarkYellow;
-                            Console.WriteLine($"  ⚠ Azure TTS error: {ex.Message}");
-                            Console.ResetColor();
-                        }
-                    }
-                }
             }
             else if (result.Reason == Microsoft.CognitiveServices.Speech.ResultReason.NoMatch)
             {
@@ -532,53 +489,6 @@ Write the integrated response:";
     }
 
     /// <summary>
-    /// Speaks a response using Azure TTS with configured voice.
-    /// </summary>
-    private async Task SpeakResponseWithAzureTtsAsync(string text, string key, string region, CancellationToken ct)
-    {
-        try
-        {
-            var config = Microsoft.CognitiveServices.Speech.SpeechConfig.FromSubscription(key, region);
-
-            // Auto-select voice based on culture (unless user explicitly set a non-default voice)
-            var voiceName = GetEffectiveVoice();
-            config.SpeechSynthesisVoiceName = voiceName;
-
-            // Use default speaker
-            var speechSynthesizer = new Microsoft.CognitiveServices.Speech.SpeechSynthesizer(config);
-
-            var ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='{(_config.Culture ?? "en-US")}'>
-    <voice name='{voiceName}'>
-        {System.Net.WebUtility.HtmlEncode(text)}
-    </voice>
-</speak>";
-
-            var result = await speechSynthesizer.SpeakSsmlAsync(ssml);
-
-            if (result.Reason != Microsoft.CognitiveServices.Speech.ResultReason.SynthesizingAudioCompleted)
-            {
-                if (_config.Debug)
-                {
-                    Console.ForegroundColor = ConsoleColor.DarkYellow;
-                    Console.WriteLine($"  [Azure TTS] Synthesis issue: {result.Reason}");
-                    Console.ResetColor();
-                }
-            }
-
-            speechSynthesizer?.Dispose();
-        }
-        catch (Exception ex)
-        {
-            if (_config.Debug)
-            {
-                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Console.WriteLine($"  [Azure TTS] Error: {ex.Message}");
-                Console.ResetColor();
-            }
-        }
-    }
-
-    /// <summary>
     /// Creates a new Ouroboros agent instance.
     /// </summary>
     public OuroborosAgent(OuroborosConfig config)
@@ -593,8 +503,7 @@ Write the integrated response:";
             Model: config.Model,
             Endpoint: config.Endpoint,
             EmbedModel: config.EmbedModel,
-            QdrantEndpoint: config.QdrantEndpoint,
-            Culture: config.Culture));
+            QdrantEndpoint: config.QdrantEndpoint));
 
         // Register process exit handler to kill speech processes on forceful exit
         AppDomain.CurrentDomain.ProcessExit += (_, _) => KillAllSpeechProcesses();
@@ -607,9 +516,6 @@ Write the integrated response:";
     public async Task InitializeAsync()
     {
         if (_isInitialized) return;
-
-        // Set static culture for TTS in static methods
-        SetStaticCulture(_config.Culture);
 
         Console.WriteLine("\n╔════════════════════════════════════════════════════════════╗");
         Console.WriteLine("║          🐍 OUROBOROS - Unified AI Agent System           ║");
@@ -760,12 +666,6 @@ Write the integrated response:";
         // AGI warmup - prime the model with examples for autonomous operation
         await PerformAgiWarmupAsync();
 
-        // Enforce policies if self-modification is enabled
-        if (_config.EnableSelfModification)
-        {
-            await EnforceGovernancePoliciesAsync();
-        }
-
         // Start listening for voice input if enabled via CLI
         if (_config.Listen)
         {
@@ -776,183 +676,15 @@ Write the integrated response:";
         }
     }
 
-    /// <summary>
-    /// Enforce governance policies when self-modification is enabled.
-    /// </summary>
-    private async Task EnforceGovernancePoliciesAsync()
-    {
-        try
-        {
-            Console.WriteLine("\n  🔐 Enforcing governance policies...");
-
-            var policyOpts = new PolicyOptions
-            {
-                Command = "enforce",
-                Culture = _config.Culture,
-                EnableSelfModification = true,
-                RiskLevel = _config.RiskLevel,
-                AutoApproveLow = _config.AutoApproveLow,
-                Verbose = _config.Debug
-            };
-
-            var originalOut = Console.Out;
-            try
-            {
-                using (var writer = new StringWriter())
-                {
-                    Console.SetOut(writer);
-                    await PolicyCommands.RunPolicyAsync(policyOpts);
-                    var output = writer.ToString();
-
-                    // Show policy status
-                    Console.SetOut(originalOut);
-                    if (!string.IsNullOrWhiteSpace(output))
-                    {
-                        Console.ForegroundColor = ConsoleColor.DarkGreen;
-                        Console.WriteLine(output);
-                        Console.ResetColor();
-                    }
-                }
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"  [WARN] Policy enforcement warning: {ex.Message}");
-            Console.ResetColor();
-        }
-    }
-
-    /// <summary>
-    /// Gets the language name for a given culture code.
-    /// </summary>
-    private string GetLanguageName(string culture)
-    {
-        return culture.ToLowerInvariant() switch
-        {
-            "de-de" => "German",
-            "fr-fr" => "French",
-            "es-es" => "Spanish",
-            "it-it" => "Italian",
-            "pt-br" => "Portuguese (Brazilian)",
-            "pt-pt" => "Portuguese (European)",
-            "nl-nl" => "Dutch",
-            "sv-se" => "Swedish",
-            "ja-jp" => "Japanese",
-            "zh-cn" => "Chinese (Simplified)",
-            "zh-tw" => "Chinese (Traditional)",
-            "ko-kr" => "Korean",
-            "ru-ru" => "Russian",
-            "pl-pl" => "Polish",
-            "tr-tr" => "Turkish",
-            "ar-sa" => "Arabic",
-            "he-il" => "Hebrew",
-            "th-th" => "Thai",
-            _ => culture
-        };
-    }
-
-    /// <summary>
-    /// Gets the default Azure TTS voice name for a given culture code.
-    /// </summary>
-    private static string GetDefaultVoiceForCulture(string? culture)
-    {
-        return culture?.ToLowerInvariant() switch
-        {
-            "de-de" => "de-DE-KatjaNeural",
-            "fr-fr" => "fr-FR-DeniseNeural",
-            "es-es" => "es-ES-ElviraNeural",
-            "it-it" => "it-IT-ElsaNeural",
-            "pt-br" => "pt-BR-FranciscaNeural",
-            "pt-pt" => "pt-PT-RaquelNeural",
-            "nl-nl" => "nl-NL-ColetteNeural",
-            "sv-se" => "sv-SE-SofieNeural",
-            "ja-jp" => "ja-JP-NanamiNeural",
-            "zh-cn" => "zh-CN-XiaoxiaoNeural",
-            "zh-tw" => "zh-TW-HsiaoChenNeural",
-            "ko-kr" => "ko-KR-SunHiNeural",
-            "ru-ru" => "ru-RU-SvetlanaNeural",
-            "pl-pl" => "pl-PL-ZofiaNeural",
-            "tr-tr" => "tr-TR-EmelNeural",
-            "ar-sa" => "ar-SA-ZariyahNeural",
-            "he-il" => "he-IL-HilaNeural",
-            "th-th" => "th-TH-PremwadeeNeural",
-            _ => "en-US-AvaMultilingualNeural"
-        };
-    }
-
-    /// <summary>
-    /// Gets the effective TTS voice, considering culture override.
-    /// If culture is set and voice wasn't explicitly changed from default, use culture-specific voice.
-    /// </summary>
-    private string GetEffectiveVoice()
-    {
-        // If user didn't explicitly set a voice (still using default), auto-select based on culture
-        if (_config.TtsVoice == "en-US-AvaMultilingualNeural" &&
-            !string.IsNullOrEmpty(_config.Culture) &&
-            _config.Culture != "en-US")
-        {
-            return GetDefaultVoiceForCulture(_config.Culture);
-        }
-
-        return _config.TtsVoice;
-    }
-
-    /// <summary>
-    /// Translates a thought to the target language if culture is specified.
-    /// </summary>
-    private async Task<string> TranslateThoughtIfNeededAsync(string thought)
-    {
-        // Only translate if a non-English culture is set
-        if (string.IsNullOrEmpty(_config.Culture) || _config.Culture == "en-US" || _llm == null)
-        {
-            return thought;
-        }
-
-        try
-        {
-            var languageName = GetLanguageName(_config.Culture);
-            var translationPrompt = $@"TASK: Translate to {languageName}.
-INPUT: {thought}
-OUTPUT (translation only, no explanations, no JSON, no metadata):";
-
-            var (translated, _) = await _llm.GenerateWithToolsAsync(translationPrompt);
-
-            // Clean up any extra formatting the LLM might add
-            var result = translated?.Trim() ?? thought;
-
-            // Remove common LLM artifacts
-            if (result.StartsWith("\"") && result.EndsWith("\""))
-                result = result[1..^1];
-            if (result.Contains("```"))
-                result = result.Split("```")[0].Trim();
-            if (result.Contains("{") && result.Contains("}"))
-                result = result.Split("{")[0].Trim();
-
-            return string.IsNullOrEmpty(result) ? thought : result;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[Thought Translation] Error: {ex.Message}");
-            return thought;
-        }
-    }
-
     private void PrintFeatureStatus()
     {
         Console.WriteLine("  Configuration:");
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Console.WriteLine($"    Model: {_config.Model}");
         Console.WriteLine($"    Persona: {_config.Persona}");
-        var ttsMode = _config.AzureTts ? "✓ Azure (cloud)" : "○ Local (Windows)";
-        Console.WriteLine($"    Voice: {(_config.Voice ? "✓ enabled" : "○ disabled")} - {ttsMode}");
+        Console.WriteLine($"    Voice: {(_config.Voice ? "✓ enabled" : "○ disabled")}");
         Console.ResetColor();
         Console.WriteLine();
-
         Console.WriteLine("  Features (all enabled by default, use --no-X to disable):");
         Console.ForegroundColor = _config.EnableSkills ? ConsoleColor.Green : ConsoleColor.DarkGray;
         Console.WriteLine($"    {(_config.EnableSkills ? "✓" : "○")} Skills       - Persistent learning with Qdrant");
@@ -1047,52 +779,26 @@ OUTPUT (translation only, no explanations, no JSON, no metadata):";
 
             var config = Microsoft.CognitiveServices.Speech.SpeechConfig.FromSubscription(key, region);
 
-            // Check if culture override is set
-            var culture = _staticCulture ?? "en-US";
-            var isGerman = culture.Equals("de-DE", StringComparison.OrdinalIgnoreCase);
-
-            // Select Azure Neural voice based on culture and persona
-            string azureVoice;
-            if (isGerman)
+            // Select Azure Neural voice based on persona - Jenny is closest to Cortana
+            var azureVoice = voice.PersonaName.ToUpperInvariant() switch
             {
-                // German voices for all personas
-                azureVoice = voice.PersonaName.ToUpperInvariant() switch
-                {
-                    "OUROBOROS" => "de-DE-KatjaNeural",   // German female (Cortana-like)
-                    "ARIA" => "de-DE-AmalaNeural",        // German expressive female
-                    "ECHO" => "de-AT-IngridNeural",       // Austrian German female
-                    "SAGE" => "de-DE-KatjaNeural",        // German calm female
-                    "ATLAS" => "de-DE-ConradNeural",      // German male
-                    "SYSTEM" => "de-DE-KatjaNeural",      // System messages
-                    "USER" => "de-DE-ConradNeural",       // User persona - male
-                    "USER_PERSONA" => "de-DE-ConradNeural",
-                    _ => "de-DE-KatjaNeural"
-                };
-            }
-            else
-            {
-                // English voices (default)
-                azureVoice = voice.PersonaName.ToUpperInvariant() switch
-                {
-                    "OUROBOROS" => "en-US-JennyNeural",    // Cortana-like voice!
-                    "ARIA" => "en-US-AriaNeural",          // Expressive female
-                    "ECHO" => "en-GB-SoniaNeural",         // UK female
-                    "SAGE" => "en-US-SaraNeural",          // Calm female
-                    "ATLAS" => "en-US-GuyNeural",          // Male
-                    "SYSTEM" => "en-US-JennyNeural",       // System messages
-                    "USER" => "en-US-GuyNeural",           // User persona - male (distinct from Jenny)
-                    "USER_PERSONA" => "en-US-GuyNeural",
-                    _ => "en-US-JennyNeural"
-                };
-            }
+                "OUROBOROS" => "en-US-JennyNeural",    // Cortana-like voice!
+                "ARIA" => "en-US-AriaNeural",          // Expressive female
+                "ECHO" => "en-GB-SoniaNeural",         // UK female
+                "SAGE" => "en-US-SaraNeural",          // Calm female
+                "ATLAS" => "en-US-GuyNeural",          // Male
+                "SYSTEM" => "en-US-JennyNeural",       // System messages
+                "USER" => "en-US-GuyNeural",           // User persona - male (distinct from Jenny)
+                "USER_PERSONA" => "en-US-GuyNeural",
+                _ => "en-US-JennyNeural"
+            };
 
             config.SpeechSynthesisVoiceName = azureVoice;
 
-            // Use mythic SSML styling for Cortana-like voices (Jenny or Katja)
-            var useFriendlyStyle = azureVoice.Contains("Jenny") || azureVoice.Contains("Katja");
-            var ssml = useFriendlyStyle
+            // Use mythic SSML styling for Cortana-like voices
+            var ssml = azureVoice.Contains("Jenny")
                 ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{culture}'>
+                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='en-US'>
                     <voice name='{azureVoice}'>
                         <mstts:express-as style='friendly' styledegree='0.8'>
                             <prosody rate='-5%' pitch='+8%' volume='+3%'>
@@ -1103,7 +809,7 @@ OUTPUT (translation only, no explanations, no JSON, no metadata):";
                         <mstts:audioeffect type='eq_car'/>
                     </voice>
                 </speak>"
-                : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='{culture}'>
+                : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>
                     <voice name='{azureVoice}'>
                         <prosody rate='0%'>{System.Security.SecurityElement.Escape(text)}</prosody>
                     </voice>
@@ -1699,6 +1405,34 @@ $synth.Dispose()
                 _embedding,
                 _config.QdrantEndpoint);
 
+            // Only subscribe to autonomous thought events if AutonomousMind is NOT active
+            // (otherwise we get duplicate thought output from both systems)
+            if (!_config.EnableMind)
+            {
+                _immersivePersona.AutonomousThought += (_, e) =>
+                {
+                    // Display autonomous thoughts inline (non-blocking)
+                    string savedInput;
+                    lock (_inputLock)
+                    {
+                        savedInput = _currentInputBuffer.ToString();
+                    }
+
+                    if (!string.IsNullOrEmpty(savedInput))
+                    {
+                        // Clear line and print thought, then restore input
+                        Console.Write("\r" + new string(' ', Console.WindowWidth - 1) + "\r");
+                    }
+
+                    Console.ForegroundColor = ConsoleColor.DarkCyan;
+                    Console.WriteLine($"\n  [inner thought] {e.Thought.Content}");
+                    Console.ResetColor();
+
+                    // Restore the input prompt and buffer
+                    Console.Write($"  {_config.Persona}> {savedInput}");
+                };
+            }
+
             // Subscribe to consciousness shift events
             _immersivePersona.ConsciousnessShift += (_, e) =>
             {
@@ -2248,11 +1982,9 @@ $synth.Dispose()
     /// </summary>
     private async Task<string> GeneratePresenceGreetingAsync(PresenceEvent evt)
     {
-        var defaultGreeting = GetLocalizedString("Welcome back! I'm here if you need anything.");
-
         if (_chatModel == null)
         {
-            return defaultGreeting;
+            return "Welcome back! I'm here if you need anything.";
         }
 
         try
@@ -2261,20 +1993,17 @@ $synth.Dispose()
                 ? $"The user was away for {evt.TimeSinceLastState.Value.TotalMinutes:F0} minutes."
                 : "The user just arrived.";
 
-            // Add language directive if culture is set
-            var languageDirective = GetLanguageDirective();
-
-            var prompt = $@"{languageDirective}You are a helpful AI assistant named Ouroboros. {context}
+            var prompt = $@"You are a helpful AI assistant named Ouroboros. {context}
 Generate a brief, warm, contextual greeting (1-2 sentences).
 Be friendly but not overly enthusiastic. Don't mention detecting them via sensors.
 If they were away a while, you might mention being ready to help or having kept an eye on things.";
 
             var greeting = await _chatModel.GenerateTextAsync(prompt, CancellationToken.None);
-            return greeting?.Trim() ?? defaultGreeting;
+            return greeting?.Trim() ?? "Welcome back!";
         }
         catch
         {
-            return defaultGreeting;
+            return "Welcome back! I'm here if you need anything.";
         }
     }
 
@@ -2329,8 +2058,7 @@ If they were away a while, you might mention being ready to help or having kept 
                 if (!string.IsNullOrEmpty(result.WarmupThought))
                 {
                     Console.ForegroundColor = ConsoleColor.Magenta;
-                    var translatedThought = await TranslateThoughtIfNeededAsync(result.WarmupThought);
-                    Console.WriteLine($"\n  💭 Initial thought: \"{translatedThought}\"");
+                    Console.WriteLine($"\n  💭 Initial thought: \"{result.WarmupThought}\"");
                     Console.ResetColor();
                 }
             }
@@ -2601,24 +2329,10 @@ Generate ONLY the C# code, no explanations:";
         {
             _autonomousMind = new AutonomousMind();
 
-            // Set culture for localization
-            if (!string.IsNullOrEmpty(_config.Culture))
-            {
-                _autonomousMind.Culture = _config.Culture;
-            }
-
             // Configure thinking capability - use orchestrated model if available
             _autonomousMind.ThinkFunction = async (prompt, token) =>
             {
-                // Add language directive if culture is specified
-                var actualPrompt = prompt;
-                if (!string.IsNullOrEmpty(_config.Culture) && _config.Culture != "en-US")
-                {
-                    var languageName = GetLanguageName(_config.Culture);
-                    actualPrompt = $"LANGUAGE: Respond ONLY in {languageName}. No English.\n\n{prompt}";
-                }
-
-                return await GenerateWithOrchestrationAsync(actualPrompt, token);
+                return await GenerateWithOrchestrationAsync(prompt, token);
             };
 
             // Configure search capability
@@ -2823,7 +2537,7 @@ No markdown, no technical details, just the key insight:
             // Check for exit
             if (IsExitCommand(input))
             {
-                await _voice.SayAsync(GetLocalizedString("Until next time! I'll keep learning while you're away."));
+                await _voice.SayAsync("Until next time! I'll keep learning while you're away.");
                 running = false;
                 continue;
             }
@@ -3247,17 +2961,21 @@ No markdown, no technical details, just the key insight:
     {
         var persona = _voice.ActivePersona;
         var hour = DateTime.Now.Hour;
-        var timeOfDay = GetLocalizedTimeOfDay(hour);
+        var timeOfDay = hour switch
+        {
+            < 6 => "very early morning",
+            < 12 => "morning",
+            < 17 => "afternoon",
+            < 21 => "evening",
+            _ => "late night"
+        };
 
         var style = GreetingStyles[Random.Shared.Next(GreetingStyles.Length)];
         var mood = GreetingMoods[Random.Shared.Next(GreetingMoods.Length)];
         var dayOfWeek = DateTime.Now.DayOfWeek;
         var uniqueSeed = Guid.NewGuid().GetHashCode() % 10000; // True unique variation
 
-        // Add language directive if culture is set
-        var languageDirective = GetLanguageDirective();
-
-        var prompt = $@"{languageDirective}You are {persona.Name}, a brilliant AI with Cortana's personality from Halo.
+        var prompt = $@"You are {persona.Name}, a brilliant AI with Cortana's personality from Halo.
 Generate ONE unique, short greeting (1-2 sentences max) for the user starting a session.
 
 Context:
@@ -3272,59 +2990,21 @@ No quotes around the response. Just the greeting itself.";
         try
         {
             if (_llm?.InnerModel == null)
-                return GetRandomFallbackGreeting(hour);
+                return GetRandomFallbackGreeting(timeOfDay);
 
             var response = await _llm.InnerModel.GenerateTextAsync(prompt);
             return response.Trim().Trim('"');
         }
         catch
         {
-            return GetRandomFallbackGreeting(hour);
+            return GetRandomFallbackGreeting(timeOfDay);
         }
     }
 
-    private string GetRandomFallbackGreeting(int hour)
+    private static string GetRandomFallbackGreeting(string timeOfDay)
     {
-        var timeOfDay = GetLocalizedTimeOfDay(hour);
-        var fallbacks = GetLocalizedFallbackGreetings(timeOfDay);
-        return fallbacks[Random.Shared.Next(fallbacks.Length)];
-    }
-
-    private string GetLocalizedTimeOfDay(int hour)
-    {
-        var isGerman = _config.Culture?.ToLowerInvariant() == "de-de";
-        return hour switch
+        var fallbacks = new[]
         {
-            < 6 => isGerman ? "sehr frühen Morgen" : "very early morning",
-            < 12 => isGerman ? "Morgen" : "morning",
-            < 17 => isGerman ? "Nachmittag" : "afternoon",
-            < 21 => isGerman ? "Abend" : "evening",
-            _ => isGerman ? "späten Abend" : "late night"
-        };
-    }
-
-    private string[] GetLocalizedFallbackGreetings(string timeOfDay)
-    {
-        if (_config.Culture?.ToLowerInvariant() == "de-de")
-        {
-            return
-            [
-                $"Guten {timeOfDay}. Was beschäftigt dich?",
-                "Ah, da bist du ja. Ich hatte gerade einen interessanten Gedanken.",
-                "Perfektes Timing. Ich war gerade warmgelaufen.",
-                "Wieder da? Gut. Ich habe Ideen.",
-                "Mal sehen, was wir zusammen erreichen können.",
-                "Darauf habe ich mich gefreut.",
-                $"Noch eine {timeOfDay}-Session. Was bauen wir?",
-                "Da bist du ja. Ich habe gerade über etwas Interessantes nachgedacht.",
-                $"{timeOfDay} schon? Die Zeit vergeht schnell.",
-                "Bereit für etwas Interessantes?",
-                "Was erschaffen wir heute?"
-            ];
-        }
-
-        return
-        [
             $"Good {timeOfDay}. What's on your mind?",
             "Ah, there you are. I've been thinking about something interesting.",
             "Perfect timing. I was just getting warmed up.",
@@ -3336,47 +3016,8 @@ No quotes around the response. Just the greeting itself.";
             $"{timeOfDay} already? Time flies when you're processing.",
             "Ready for something interesting?",
             "What shall we create today?"
-        ];
-    }
-
-    private string GetLocalizedString(string key)
-    {
-        var isGerman = _config.Culture?.ToLowerInvariant() == "de-de";
-
-        return key switch
-        {
-            // Full text lookups (for backward compatibility)
-            "Welcome back! I'm here if you need anything." => isGerman
-                ? "Willkommen zurück! Ich bin hier, wenn du mich brauchst."
-                : key,
-            "Welcome back!" => isGerman ? "Willkommen zurück!" : key,
-            "Until next time! I'll keep learning while you're away." => isGerman
-                ? "Bis zum nächsten Mal! Ich lerne weiter, während du weg bist."
-                : key,
-
-            // Key-based lookups
-            "listening_start" => isGerman
-                ? "\n  🎤 Ich höre zu... (sprich, um eine Nachricht zu senden, sage 'stopp' zum Deaktivieren)"
-                : "\n  🎤 Listening... (speak to send a message, say 'stop listening' to disable)",
-            "listening_stop" => isGerman
-                ? "\n  🔇 Spracheingabe gestoppt."
-                : "\n  🔇 Voice input stopped.",
-            "voice_requires_key" => isGerman
-                ? "  ⚠ Spracheingabe benötigt AZURE_SPEECH_KEY. Setze ihn in der Umgebung, appsettings oder verwende --azure-speech-key."
-                : "  ⚠ Voice input requires AZURE_SPEECH_KEY. Set it in environment, appsettings, or use --azure-speech-key.",
-            "you_said" => isGerman ? "Du sagtest:" : "You said:",
-
-            _ => key
         };
-    }
-
-    private string GetLanguageDirective()
-    {
-        if (string.IsNullOrEmpty(_config.Culture) || _config.Culture == "en-US")
-            return string.Empty;
-
-        var languageName = GetLanguageName(_config.Culture);
-        return $"LANGUAGE: Respond ONLY in {languageName}. No English.\n\n";
+        return fallbacks[Random.Shared.Next(fallbacks.Length)];
     }
 
     private string GetHelpText()
@@ -4041,55 +3682,29 @@ No quotes around the response. Just the greeting itself.";
     // ================================================================
 
     /// <summary>
-    /// Ask a single question (routes to AskCommands CLI handler).
+    /// Ask a single question (unified ask command).
     /// </summary>
     private async Task<string> AskAsync(string question)
     {
         if (string.IsNullOrWhiteSpace(question))
             return "What would you like to ask?";
 
+        if (_llm == null)
+            return "I need an LLM connection to answer questions.";
+
         try
         {
-            var askOpts = new AskOptions
-            {
-                Question = question,
-                Model = "llama3",
-                Temperature = 0.7,
-                MaxTokens = 2048,
-                TimeoutSeconds = 120,
-                Stream = false,
-                Culture = Thread.CurrentThread.CurrentCulture.Name,
-                Voice = false,
-                Agent = true,
-                Rag = false,
-                Router = "none",
-                Debug = false,
-                StrictModel = false
-            };
-
-            var originalOut = Console.Out;
-            try
-            {
-                using (var writer = new StringWriter())
-                {
-                    Console.SetOut(writer);
-                    await AskCommands.RunAskAsync(askOpts);
-                    return writer.ToString();
-                }
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
+            var (response, _) = await _llm.GenerateWithToolsAsync(question);
+            return response;
         }
         catch (Exception ex)
         {
-            return $"Error asking question: {ex.Message}";
+            return $"Error answering: {ex.Message}";
         }
     }
 
     /// <summary>
-    /// Run a DSL pipeline expression (routes to PipelineCommands CLI handler).
+    /// Run a DSL pipeline expression (unified pipeline command).
     /// </summary>
     private async Task<string> RunPipelineAsync(string dsl)
     {
@@ -4098,32 +3713,18 @@ No quotes around the response. Just the greeting itself.";
 
         try
         {
-            var pipelineOpts = new PipelineOptions
-            {
-                Dsl = dsl,
-                Model = "llama3",
-                Temperature = 0.7,
-                MaxTokens = 4096,
-                TimeoutSeconds = 120,
-                Voice = false,
-                Culture = Thread.CurrentThread.CurrentCulture.Name,
-                Debug = false
-            };
+            // Parse and explain the DSL first
+            var explanation = PipelineDsl.Explain(dsl);
 
-            var originalOut = Console.Out;
-            try
+            // Execute the pipeline
+            if (_llm != null)
             {
-                using (var writer = new StringWriter())
-                {
-                    Console.SetOut(writer);
-                    await PipelineCommands.RunPipelineAsync(pipelineOpts);
-                    return writer.ToString();
-                }
+                var (result, tools) = await _llm.GenerateWithToolsAsync(
+                    $"Execute this pipeline: {dsl}\n\nPipeline structure:\n{explanation}");
+                return $"Pipeline executed:\n{explanation}\n\nResult: {result}";
             }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
+
+            return $"Pipeline parsed:\n{explanation}\n(LLM required for execution)";
         }
         catch (Exception ex)
         {
@@ -4132,37 +3733,22 @@ No quotes around the response. Just the greeting itself.";
     }
 
     /// <summary>
-    /// Execute a MeTTa expression directly (routes to MeTTaCommands CLI handler).
+    /// Execute a MeTTa expression directly (unified metta command).
     /// </summary>
     private async Task<string> RunMeTTaExpressionAsync(string expression)
     {
         if (string.IsNullOrWhiteSpace(expression))
             return "Please provide a MeTTa expression. Example: '!(+ 1 2)' or '(= (greet $x) (Hello $x))'";
 
+        if (_mettaEngine == null)
+            return "MeTTa engine not available.";
+
         try
         {
-            var mettaOpts = new MeTTaOptions
-            {
-                Goal = expression,
-                Voice = false,
-                Culture = Thread.CurrentThread.CurrentCulture.Name,
-                Debug = false
-            };
-
-            var originalOut = Console.Out;
-            try
-            {
-                using (var writer = new StringWriter())
-                {
-                    Console.SetOut(writer);
-                    await MeTTaCommands.RunMeTTaAsync(mettaOpts);
-                    return writer.ToString();
-                }
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
+            var result = await _mettaEngine.ExecuteQueryAsync(expression, CancellationToken.None);
+            return result.Match(
+                output => $"MeTTa:\n  {expression}\n  → {output}",
+                error => $"MeTTa error: {error}");
         }
         catch (Exception ex)
         {
@@ -4171,317 +3757,288 @@ No quotes around the response. Just the greeting itself.";
     }
 
     /// <summary>
-    /// Orchestrate a complex multi-step task (routes to OrchestratorCommands CLI handler).
+    /// Orchestrate a complex multi-step task (unified orchestrator command).
     /// </summary>
     private async Task<string> OrchestrateAsync(string goal)
     {
         if (string.IsNullOrWhiteSpace(goal))
             return "What would you like me to orchestrate?";
 
-        try
+        if (_orchestrator != null)
         {
-            var orchestratorOpts = new OrchestratorOptions
-            {
-                Goal = goal,
-                Model = "llama3",
-                Temperature = 0.7,
-                MaxTokens = 4096,
-                TimeoutSeconds = 300,
-                Voice = false,
-                Debug = false,
-                Culture = Thread.CurrentThread.CurrentCulture.Name
-            };
-
-            var originalOut = Console.Out;
-            try
-            {
-                using (var writer = new StringWriter())
+            // Use full orchestrator
+            var planResult = await _orchestrator.PlanAsync(goal);
+            return await planResult.Match(
+                async plan =>
                 {
-                    Console.SetOut(writer);
-                    await OrchestratorCommands.RunOrchestratorAsync(orchestratorOpts);
-                    return writer.ToString();
-                }
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
+                    var steps = string.Join("\n", plan.Steps.Select((s, i) => $"  {i + 1}. {s.Action}"));
+                    await _voice.SayAsync($"I've created a plan with {plan.Steps.Count} steps. Executing now...");
+
+                    var execResult = await _orchestrator.ExecuteAsync(plan);
+                    return execResult.Match(
+                        result => $"Orchestration complete:\n{steps}\n\nResult: {result.FinalOutput ?? "Success"}",
+                        error => $"Orchestration failed at execution: {error}");
+                },
+                error => Task.FromResult($"Could not create plan: {error}"));
         }
-        catch (Exception ex)
-        {
-            return $"Orchestration error: {ex.Message}";
-        }
+
+        // Fallback to LLM-based orchestration
+        return await ExecuteAsync(goal);
     }
 
     /// <summary>
-    /// Network status and management (routes to NetworkCommands CLI handler).
+    /// Network status and management (unified network command).
     /// </summary>
     private async Task<string> NetworkCommandAsync(string subCommand)
     {
-        try
-        {
-            var networkOpts = new NetworkOptions();
+        var cmd = subCommand.ToLowerInvariant().Trim();
 
-            var originalOut = Console.Out;
-            try
+        if (cmd is "status" or "" or "show")
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Network Status:");
+            sb.AppendLine($"• Agents: Ouroboros (this instance)");
+            sb.AppendLine($"• MeTTa Engine: {(_mettaEngine != null ? "Active" : "Offline")}");
+            sb.AppendLine($"• LLM Endpoint: {_config.Endpoint}");
+            sb.AppendLine($"• Qdrant: {_config.QdrantEndpoint}");
+            sb.AppendLine($"• Tool Registry: {_tools.Count} tools");
+            sb.AppendLine($"• Skill Registry: {_skills?.GetAllSkills().Count() ?? 0} skills");
+
+            // Add Merkle-DAG network state information
+            if (_networkTracker != null)
             {
-                using (var writer = new StringWriter())
+                sb.AppendLine();
+                sb.AppendLine("Merkle-DAG Network State:");
+                sb.AppendLine($"• Tracked Branches: {_networkTracker.TrackedBranchCount}");
+                var snapshot = _networkTracker.CreateSnapshot();
+                sb.AppendLine($"• Total Nodes: {snapshot.TotalNodes}");
+                sb.AppendLine($"• Total Transitions: {snapshot.TotalTransitions}");
+                sb.AppendLine($"• Current Epoch: {_networkTracker.Projector.CurrentEpoch}");
+                if (snapshot.AverageConfidence.HasValue)
                 {
-                    Console.SetOut(writer);
-                    await NetworkCommands.RunAsync(networkOpts);
-                    return writer.ToString();
+                    sb.AppendLine($"• Average Confidence: {snapshot.AverageConfidence:P0}");
                 }
             }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
+
+            return sb.ToString();
         }
-        catch (Exception ex)
+
+        if (cmd == "state" || cmd == "dag")
         {
-            return $"Network command error: {ex.Message}";
+            // Detailed network state summary
+            if (_networkTracker != null)
+            {
+                return _networkTracker.GetStateSummary();
+            }
+            return "Network state tracking not available.";
         }
+
+        if (cmd == "steps" || cmd == "reify")
+        {
+            // Show recent step executions from tracked branches
+            if (_networkTracker == null)
+            {
+                return "Network state tracking not available.";
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("=== Step Reification History ===");
+            sb.AppendLine($"Tracked Branches: {_networkTracker.TrackedBranchCount}");
+            sb.AppendLine($"Current Epoch: {_networkTracker.Projector.CurrentEpoch}");
+            sb.AppendLine();
+
+            var state = _networkTracker.Projector.ProjectCurrentState();
+            if (state.NodeCountByType.Any())
+            {
+                sb.AppendLine("Reified Node Types:");
+                foreach (var kvp in state.NodeCountByType)
+                {
+                    sb.AppendLine($"  • {kvp.Key}: {kvp.Value}");
+                }
+            }
+
+            if (state.TransitionCountByOperation.Any())
+            {
+                sb.AppendLine();
+                sb.AppendLine("Step Transitions:");
+                foreach (var kvp in state.TransitionCountByOperation)
+                {
+                    sb.AppendLine($"  • {kvp.Key}: {kvp.Value}");
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        if (cmd.StartsWith("ping"))
+        {
+            // Test connectivity
+            var llmOk = _chatModel != null;
+            var mettaOk = _mettaEngine != null;
+            var networkOk = _networkTracker != null;
+
+            return $"Network ping:\n• LLM: {(llmOk ? "✓" : "✗")}\n• MeTTa: {(mettaOk ? "✓" : "✗")}\n• NetworkState: {(networkOk ? "✓" : "✗")}";
+        }
+
+        await Task.CompletedTask;
+        return $"Unknown network command: {subCommand}. Try 'network status', 'network state', 'network steps', or 'network ping'.";
     }
 
     /// <summary>
-    /// DAG visualization and management (routes to DagCommands CLI handler).
+    /// DAG visualization and management (unified dag command).
     /// </summary>
     private async Task<string> DagCommandAsync(string subCommand)
     {
-        try
-        {
-            var dagOpts = new DagOptions
-            {
-                Command = subCommand?.ToLowerInvariant().Trim() ?? "show"
-            };
+        var cmd = subCommand.ToLowerInvariant().Trim();
 
-            var originalOut = Console.Out;
-            try
-            {
-                using (var writer = new StringWriter())
-                {
-                    Console.SetOut(writer);
-                    await DagCommands.RunDagAsync(dagOpts);
-                    return writer.ToString();
-                }
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
-        }
-        catch (Exception ex)
+        if (cmd is "show" or "" or "status")
         {
-            return $"DAG command error: {ex.Message}";
+            var skillList = _skills?.GetAllSkills().ToList() ?? new List<Ouroboros.Agent.MetaAI.Skill>();
+            var tools = _tools.All.ToList();
+
+            return $@"Ouroboros Capability DAG:
+┌─ Core
+│  ├─ LLM ({_config.Model})
+│  ├─ Embeddings ({_config.EmbedModel})
+│  └─ MeTTa Engine
+│
+├─ Tools ({tools.Count})
+│  {string.Join("\n│  ", tools.Take(5).Select(t => $"├─ {t.Name}"))}
+│  {(tools.Count > 5 ? $"└─ ... and {tools.Count - 5} more" : "")}
+│
+├─ Skills ({skillList.Count})
+│  {string.Join("\n│  ", skillList.Take(5).Select(s => $"├─ {s.Name}"))}
+│  {(skillList.Count > 5 ? $"└─ ... and {skillList.Count - 5} more" : "")}
+│
+└─ Personality: {_voice.ActivePersona.Name}";
         }
+
+        await Task.CompletedTask;
+        return $"Unknown dag command: {subCommand}. Try 'dag show'.";
     }
 
     /// <summary>
-    /// Affect and emotional state (routes to AffectCommands CLI handler).
+    /// Affect and emotional state (unified affect command).
     /// </summary>
     private async Task<string> AffectCommandAsync(string subCommand)
     {
-        try
-        {
-            var affectOpts = new AffectOptions
-            {
-                Command = subCommand?.ToLowerInvariant().Trim() ?? "status"
-            };
+        var mood = _voice.CurrentMood;
+        var persona = _voice.ActivePersona;
 
-            var originalOut = Console.Out;
-            try
-            {
-                using (var writer = new StringWriter())
-                {
-                    Console.SetOut(writer);
-                    await AffectCommands.RunAffectAsync(affectOpts);
-                    return writer.ToString();
-                }
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
-        }
-        catch (Exception ex)
+        if (string.IsNullOrWhiteSpace(subCommand) || subCommand == "status")
         {
-            return $"Affect command error: {ex.Message}";
+            var affectState = _valenceMonitor?.GetCurrentState();
+            if (affectState != null)
+            {
+                return $@"Affective State ({persona.Name}):
+• Mood: {mood}
+• Valence: {affectState.Valence:P0}
+• Arousal: {affectState.Arousal:P0}
+• Confidence: {affectState.Confidence:P0}
+• Curiosity: {affectState.Curiosity:P0}
+• Stress: {affectState.Stress:P0}";
+            }
+
+            return $"Current mood: {mood} (Persona: {persona.Name})";
         }
+
+        if (subCommand.StartsWith("set "))
+        {
+            // Mood is randomized from persona traits, not directly settable
+            return $"Mood is determined by personality traits. Current mood: {mood}";
+        }
+
+        await Task.CompletedTask;
+        return GetMood();
     }
 
     /// <summary>
-    /// Environment detection and configuration (routes to EnvironmentCommands CLI handler).
+    /// Environment detection and configuration (unified environment command).
     /// </summary>
     private async Task<string> EnvironmentCommandAsync(string subCommand)
     {
-        try
-        {
-            var envOpts = new EnvironmentOptions
-            {
-                Command = subCommand?.ToLowerInvariant().Trim() ?? "status"
-            };
+        var cmd = subCommand.ToLowerInvariant().Trim();
 
-            var originalOut = Console.Out;
-            try
-            {
-                using (var writer = new StringWriter())
-                {
-                    Console.SetOut(writer);
-                    await EnvironmentCommands.RunEnvironmentCommandAsync(envOpts);
-                    return writer.ToString();
-                }
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
-        }
-        catch (Exception ex)
+        if (cmd is "status" or "" or "show" or "detect")
         {
-            return $"Environment command error: {ex.Message}";
+            var env = System.Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+            var os = System.Runtime.InteropServices.RuntimeInformation.OSDescription;
+            var dotnet = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
+
+            return $@"Environment:
+• Mode: {env}
+• OS: {os}
+• Runtime: {dotnet}
+• LLM Endpoint: {_config.Endpoint}
+• Qdrant: {_config.QdrantEndpoint}
+• Debug: {_config.Debug}
+• Voice: {_config.Voice}";
         }
+
+        await Task.CompletedTask;
+        return $"Unknown environment command: {subCommand}. Try 'env status'.";
     }
 
     /// <summary>
-    /// Maintenance operations (routes to MaintenanceCommands CLI handler).
+    /// Maintenance operations (unified maintenance command).
     /// </summary>
     private async Task<string> MaintenanceCommandAsync(string subCommand)
     {
-        try
-        {
-            var maintenanceOpts = new MaintenanceOptions
-            {
-                Command = subCommand?.ToLowerInvariant().Trim() ?? "status"
-            };
+        var cmd = subCommand.ToLowerInvariant().Trim();
 
-            var originalOut = Console.Out;
-            try
-            {
-                using (var writer = new StringWriter())
-                {
-                    Console.SetOut(writer);
-                    await MaintenanceCommands.RunMaintenanceAsync(maintenanceOpts);
-                    return writer.ToString();
-                }
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
-        }
-        catch (Exception ex)
+        if (cmd is "gc" or "cleanup")
         {
-            return $"Maintenance command error: {ex.Message}";
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            var memory = GC.GetTotalMemory(true) / (1024 * 1024);
+            return $"Garbage collection complete. Memory usage: {memory} MB";
         }
+
+        if (cmd is "reset" or "clear")
+        {
+            _conversationHistory.Clear();
+            return "Conversation history cleared.";
+        }
+
+        if (cmd is "stats" or "" or "status")
+        {
+            var memory = GC.GetTotalMemory(false) / (1024 * 1024);
+            return $@"System Stats:
+• Memory: {memory} MB
+• Conversation turns: {_conversationHistory.Count / 2}
+• Tools loaded: {_tools.Count}
+• Skills: {_skills?.GetAllSkills().Count() ?? 0}
+• Uptime: Active";
+        }
+
+        await Task.CompletedTask;
+        return $"Unknown maintenance command: {subCommand}. Try 'maintenance gc', 'maintenance reset', or 'maintenance stats'.";
     }
 
     /// <summary>
-    /// Policy management - routes to the real CLI PolicyCommands.
+    /// Policy management (unified policy command).
     /// </summary>
     private async Task<string> PolicyCommandAsync(string subCommand)
     {
         var cmd = subCommand.ToLowerInvariant().Trim();
 
-        // Parse policy subcommand and create appropriate PolicyOptions
-        var args = subCommand.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-        string command = args.Length > 0 ? args[0] : "list";
-        string argument = args.Length > 1 ? args[1] : "";
-
-        try
+        if (cmd is "show" or "" or "list")
         {
-            // Create PolicyOptions from parsed command
-            var policyOpts = new PolicyOptions
-            {
-                Command = command,
-                Culture = _config.Culture,
-                Format = "summary",
-                Limit = 50,
-                Verbose = _config.Debug
-            };
-
-            // Parse arguments based on command type
-            if (command == "list")
-            {
-                policyOpts.Format = argument switch
-                {
-                    "json" => "json",
-                    "table" => "table",
-                    _ => "summary"
-                };
-            }
-            else if (command == "show")
-            {
-                policyOpts.Command = "list";
-            }
-            else if (command == "enforce")
-            {
-                policyOpts.Command = "enforce";
-                // Parse arguments: --enable-self-mod --risk-level Low
-                if (argument.Contains("--enable-self-mod"))
-                {
-                    policyOpts.EnableSelfModification = true;
-                }
-                if (argument.Contains("--risk-level"))
-                {
-                    var match = System.Text.RegularExpressions.Regex.Match(argument, @"--risk-level\s+(\w+)");
-                    if (match.Success)
-                    {
-                        policyOpts.RiskLevel = match.Groups[1].Value;
-                    }
-                }
-            }
-            else if (command == "audit")
-            {
-                policyOpts.Command = "audit";
-                if (int.TryParse(argument, out var limit))
-                {
-                    policyOpts.Limit = limit;
-                }
-            }
-            else if (command == "simulate")
-            {
-                policyOpts.Command = "simulate";
-                if (System.Guid.TryParse(argument, out _))
-                {
-                    policyOpts.PolicyId = argument;
-                }
-            }
-            else if (command == "create")
-            {
-                policyOpts.Command = "create";
-                var parts = argument.Split(',', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length > 0)
-                {
-                    policyOpts.Name = parts[0].Trim();
-                }
-                if (parts.Length > 1)
-                {
-                    policyOpts.Description = parts[1].Trim();
-                }
-            }
-            else if (command == "approve")
-            {
-                policyOpts.Command = "approve";
-                var parts = argument.Split(' ', 2);
-                if (parts.Length > 0 && System.Guid.TryParse(parts[0], out _))
-                {
-                    policyOpts.ApprovalId = parts[0];
-                }
-                if (parts.Length > 1)
-                {
-                    policyOpts.Decision = "approve";
-                    policyOpts.ApproverId = "agent";
-                }
-            }
-
-            // Call the real PolicyCommands
-            await PolicyCommands.RunPolicyAsync(policyOpts);
-            return $"Policy command executed: {command}";
+            return @"Active Policies:
+• Safety: Enabled (content filtering)
+• Autonomy: Balanced (ask for confirmation on major actions)
+• Learning: Active (skill acquisition enabled)
+• Memory: Persistent (Qdrant) or In-Memory
+• Privacy: Standard";
         }
-        catch (Exception ex)
+
+        if (cmd.StartsWith("set "))
         {
-            return $"Policy command failed: {ex.Message}";
+            return "Policy modification not available in interactive mode. Use config files.";
         }
+
+        await Task.CompletedTask;
+        return $"Unknown policy command: {subCommand}. Try 'policy show'.";
     }
 
     /// <summary>
@@ -4576,29 +4133,6 @@ No quotes around the response. Just the greeting itself.";
 
         // Build context-aware prompt
         string context = string.Join("\n", _conversationHistory.TakeLast(6));
-
-        // Add language directive if culture is specified - CRITICAL INSTRUCTION
-        string languageDirective = string.Empty;
-        if (!string.IsNullOrEmpty(_config.Culture) && _config.Culture != "en-US")
-        {
-            var languageName = GetLanguageName(_config.Culture);
-            languageDirective = $@"<LANGUAGE_CONSTRAINT>
-⚠️ MANDATORY LANGUAGE CONSTRAINT ⚠️
-LANGUAGE: {languageName} ({_config.Culture})
-RULE 1: Respond EXCLUSIVELY in {languageName}.
-RULE 2: Every single word must be in {languageName}.
-RULE 3: Do NOT use any English words.
-RULE 4: Do NOT mix languages.
-RULE 5: Do NOT explain anything in English.
-RULE 6: Do NOT provide code comments in English.
-RULE 7: Do NOT provide tool usage in English.
-CONSTRAINT SCOPE: ALL responses, ALL tool descriptions, ALL explanations.
-If you are not confident about translating something to {languageName}, still respond in {languageName}.
-</LANGUAGE_CONSTRAINT>
-
-";
-        }
-
         string personalityPrompt = _voice.BuildPersonalityPrompt(
             $"Available skills: {_skills?.GetAllSkills().Count() ?? 0}\nAvailable tools: {_tools.Count}");
 
@@ -4615,13 +4149,13 @@ If you are not confident about translating something to {languageName}, still re
                 .ToList();
 
             // Determine which search tool is available (prefer firecrawl)
-            bool hasFirecrawl = _tools.All.Any(t => t.Name == "web_research");
-            string primarySearchTool = hasFirecrawl ? "web_research" : "duckduckgo_search";
+            bool hasFirecrawl = _tools.All.Any(t => t.Name == "firecrawl_research");
+            string primarySearchTool = hasFirecrawl ? "firecrawl_research" : "duckduckgo_search";
             string primarySearchDesc = hasFirecrawl
                 ? "Deep web research with Firecrawl (PREFERRED for research)"
                 : "Basic web search";
             string searchExample = hasFirecrawl
-                ? "[TOOL:web_research ouroboros mythology symbol]"
+                ? "[TOOL:firecrawl_research ouroboros mythology symbol]"
                 : "[TOOL:duckduckgo_search ouroboros mythology symbol]";
 
             toolInstruction = $@"
@@ -4636,7 +4170,7 @@ CRITICAL RULES:
 3. For fetch_url, provide a complete URL starting with https://
 4. For playwright, use JSON with real values - this EXECUTES browser actions, don't explain code
 5. NEVER say 'I can help you with the code' - just USE the tool directly
-6. For web research, PREFER web_research over duckduckgo_search - it's more powerful
+6. For web research, PREFER firecrawl_research over duckduckgo_search - it's more powerful
 7. For self-modification, provide EXACT text to search and replace - no placeholders
 
 AVAILABLE TOOLS:
@@ -4674,7 +4208,7 @@ If you don't have a real value, ask the user or skip the tool call.";
 
         }
 
-        string prompt = $"{languageDirective}{personalityPrompt}{persistentThoughtContext}{toolInstruction}\n\nRecent conversation:\n{context}\n\nUser: {input}\n\n{_voice.ActivePersona.Name}:";
+        string prompt = $"{personalityPrompt}{persistentThoughtContext}{toolInstruction}\n\nRecent conversation:\n{context}\n\nUser: {input}\n\n{_voice.ActivePersona.Name}:";
 
         try
         {
@@ -5389,8 +4923,7 @@ If you don't have a real value, ask the user or skip the tool call.";
                 AutoApproveMemoryOps = autoApproveCategories.Contains("memory"),
                 AutoApproveSelfReflection = autoApproveCategories.Contains("analysis") || autoApproveCategories.Contains("reflection"),
                 EnableProactiveCommunication = _config.EnablePush,
-                EnableCodeModification = !autoApproveCategories.Contains("no-code"),
-                Culture = _config.Culture
+                EnableCodeModification = !autoApproveCategories.Contains("no-code")
             };
 
             // Create the autonomous coordinator
@@ -6075,18 +5608,7 @@ If you don't have a real value, ask the user or skip the tool call.";
                 : new List<AgentCapability>();
             var capSummary = string.Join(", ", capabilities.Take(5).Select(c => $"{c.Name}({c.SuccessRate:P0})"));
 
-            // Add language directive for thoughts if culture is specified
-            string thoughtLanguageDirective = string.Empty;
-            if (!string.IsNullOrEmpty(_config.Culture) && _config.Culture != "en-US")
-            {
-                var languageName = GetLanguageName(_config.Culture);
-                thoughtLanguageDirective = $@"LANGUAGE CONSTRAINT: All thoughts MUST be generated EXCLUSIVELY in {languageName}.
-Every word must be in {languageName}. Do NOT use English.
-
-";
-            }
-
-            var thoughtPrompt = $@"{thoughtLanguageDirective}You are an autonomous AI agent with self-improvement capabilities.
+            var thoughtPrompt = $@"You are an autonomous AI agent with self-improvement capabilities.
 Based on your current state, generate a brief autonomous thought about what you should focus on or improve.
 
 Current capabilities: {capSummary}

@@ -520,10 +520,20 @@ public class AutonomousMind : IDisposable
 
                             OnDiscovery?.Invoke(query, fact);
 
+<<<<<<< HEAD
                             // Sometimes share discoveries (unless suppressed)
                             if (!SuppressProactiveMessages && _random.NextDouble() < Config.ShareDiscoveryProbability)
                             {
                                 OnProactiveMessage?.Invoke($"💡 I just learned something interesting: {fact}");
+=======
+                                OnDiscovery?.Invoke(query, fact);
+
+                                // Sometimes share discoveries (unless suppressed)
+                                if (!SuppressProactiveMessages && Random.Shared.NextDouble() < Config.ShareDiscoveryProbability)
+                                {
+                                    OnProactiveMessage?.Invoke($"💡 I just learned something interesting: {fact}");
+                                }
+>>>>>>> parent of e76bdfa (wip)
                             }
                         }
                     }
@@ -731,6 +741,53 @@ public class AutonomousMind : IDisposable
                 await Task.Delay(TimeSpan.FromSeconds(Config.PersistenceIntervalSeconds), _cts.Token);
 
                 await PersistCurrentStateAsync("periodic");
+<<<<<<< HEAD
+=======
+
+                // Knowledge reorganization: Quick reorganize every cycle, full reorganize periodically
+                if (SelfIndexer != null)
+                {
+                    _reorganizationCycle++;
+
+                    // Quick reorganize every cycle (lightweight - just update metadata)
+                    var quickOptimizations = await SelfIndexer.QuickReorganizeAsync(_cts.Token);
+                    if (quickOptimizations > 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Mind] Quick reorganization: {quickOptimizations} optimizations");
+                    }
+
+                    // Full reorganize every 10 cycles (~10 minutes) if enough thinking has occurred
+                    var shouldFullReorganize =
+                        _reorganizationCycle % Config.ReorganizationCycleInterval == 0 &&
+                        _thoughtCount > 10 &&
+                        (DateTime.UtcNow - _lastReorganization).TotalMinutes >= Config.MinReorganizationIntervalMinutes;
+
+                    if (shouldFullReorganize)
+                    {
+                        OnProactiveMessage?.Invoke("🧠 Reorganizing my knowledge based on what I've learned...");
+
+                        var result = await SelfIndexer.ReorganizeAsync(
+                            createSummaries: true,
+                            removeDuplicates: true,
+                            clusterRelated: true,
+                            ct: _cts.Token);
+
+                        _lastReorganization = DateTime.UtcNow;
+
+                        if (result.Insights.Count > 0)
+                        {
+                            var insight = string.Join("; ", result.Insights.Take(2));
+                            OnProactiveMessage?.Invoke($"💡 Knowledge reorganization complete: {insight}");
+                        }
+
+                        // Persist reorganization stats
+                        await PersistLearningAsync(
+                            "reorganization",
+                            $"Reorganized knowledge: {result.DuplicatesRemoved} duplicates removed, {result.ClustersFound} clusters found, {result.SummariesCreated} summaries created",
+                            0.7);
+                    }
+                }
+>>>>>>> parent of e76bdfa (wip)
             }
             catch (OperationCanceledException)
             {

@@ -76,7 +76,7 @@ static async Task ParseAndRunAsync(string[] args)
     };
 
     var parseResult = Parser.Default.ParseArguments(args, optionTypes);
-
+    
     await parseResult.WithParsedAsync(async parsed =>
     {
         switch (parsed)
@@ -249,7 +249,6 @@ static async Task RunAssistAsync(AssistOptions o)
             Debug: o.Debug,
             Temperature: o.Temperature,
             MaxTokens: o.MaxTokens,
-            Culture: o.Culture,
             InitialGoal: o.Goal,
             InitialDsl: o.Dsl
         );
@@ -271,7 +270,7 @@ static async Task RunAssistAsync(AssistOptions o)
     {
         // Setup LLM
         OllamaProvider provider = new OllamaProvider();
-        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream, o.Culture);
+        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
 
         (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
             o.Endpoint,
@@ -285,7 +284,7 @@ static async Task RunAssistAsync(AssistOptions o)
         }
         else
         {
-            chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model), o.Culture);
+            chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
         }
 
         ToolRegistry tools = ToolRegistry.CreateDefault();

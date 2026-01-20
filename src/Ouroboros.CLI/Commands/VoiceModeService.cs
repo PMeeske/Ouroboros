@@ -21,8 +21,7 @@ public sealed record VoiceModeConfig(
     string Model = "llama3",
     string Endpoint = "http://localhost:11434",
     string EmbedModel = "nomic-embed-text",
-    string QdrantEndpoint = "http://localhost:6334",
-    string? Culture = null);
+    string QdrantEndpoint = "http://localhost:6334");
 
 /// <summary>
 /// Persona definition with voice characteristics.
@@ -142,7 +141,7 @@ public sealed class VoiceModeService : IDisposable
         {
             try
             {
-                _azureTts = new AzureNeuralTtsService(azureKey!, azureRegion!, _persona.Name, _config.Culture);
+                _azureTts = new AzureNeuralTtsService(azureKey!, azureRegion!, _persona.Name);
                 _ttsService = _azureTts;
                 Console.WriteLine($"  [OK] TTS initialized (Azure Neural - Jenny/Cortana-like)");
             }
