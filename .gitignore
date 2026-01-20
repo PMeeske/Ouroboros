@@ -58,3 +58,4 @@ examples/streaming-reasoning-example.ps1
 docs/STREAMING_REASONING.md
 test-litellm.ps1
 metta-motto/
+/.vs
