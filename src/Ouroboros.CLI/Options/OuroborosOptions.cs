@@ -22,8 +22,8 @@ public sealed class OuroborosOptions
     // VOICE & INTERACTION
     // ═══════════════════════════════════════════════════════════════════════════
 
-    [Option('v', "voice", Required = false, HelpText = "Enable voice mode (speak & listen)", Default = true)]
-    public bool Voice { get; set; } = true;
+    [Option('v', "voice", Required = false, HelpText = "Enable voice mode (speak & listen)", Default = false)]
+    public bool Voice { get; set; } = false;
 
     [Option("text-only", Required = false, HelpText = "Disable voice, use text input/output only", Default = false)]
     public bool TextOnly { get; set; }

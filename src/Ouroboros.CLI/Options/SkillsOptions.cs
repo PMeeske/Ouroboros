@@ -58,4 +58,7 @@ public sealed class SkillsOptions : IVoiceOptions
 
     [Option("voice-loop", Required = false, HelpText = "Continue voice conversation after command", Default = false)]
     public bool VoiceLoop { get; set; }
+
+    [Option("culture", Required = false, Default = null, HelpText = "Culture/locale for voice synthesis (e.g., en-US, de-DE).")]
+    public string? Culture { get; set; }
 }
