@@ -6,7 +6,6 @@ namespace Ouroboros.Tests.UnitTests.Genetic;
 
 using FluentAssertions;
 using Ouroboros.Genetic.Core;
-using Ouroboros.Tests.Shared;
 using Xunit;
 
 /// <summary>
@@ -62,7 +61,7 @@ public class RouletteWheelSelectionTests
             new Chromosome<int>(new List<int> { 3 }, 30),
         };
         var population = new Population<int>(chromosomes);
-
+        
         var selection1 = new RouletteWheelSelection<int>(seed: 42);
         var selection2 = new RouletteWheelSelection<int>(seed: 42);
 

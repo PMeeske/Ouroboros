@@ -40,7 +40,7 @@ public static class MeTTaCommands
         try
         {
             OllamaProvider provider = new OllamaProvider();
-            ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false, o.Culture);
+            ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false);
 
             (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
                 o.Endpoint,
@@ -57,7 +57,7 @@ public static class MeTTaCommands
             }
             else
             {
-                chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model), o.Culture);
+                chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
                 Console.WriteLine($"[INIT] Backend=ollama-local");
                 Console.WriteLine($"✓ Using local model: {o.Model}");
             }

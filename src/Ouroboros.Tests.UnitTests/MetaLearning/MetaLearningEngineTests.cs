@@ -118,7 +118,7 @@ public class MetaLearningEngineTests
         result.IsSuccess.Should().BeTrue();
         result.Value.AdaptationSteps.Should().Be(5);
         result.Value.Model.Should().NotBeNull();
-        result.Value.AdaptationTime.TotalMilliseconds.Should().BeGreaterThan(0);
+        result.Value.AdaptationTime.Should().BePositive();
     }
 
     [Fact]

@@ -26,8 +26,8 @@ namespace Ouroboros.Tests.Bdd.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Tool Builder", "    As a developer\r\n    I want to compose tools using builder patterns\r\n    So th" +
-                "at I can create sophisticated tool chains and conditional logic", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Tool Builder", "    As a developer\n    I want to compose tools using builder patterns\n    So that" +
+                " I can create sophisticated tool chains and conditional logic", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         

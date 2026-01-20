@@ -35,8 +35,6 @@ public sealed class DistinctionLearner : IDistinctionLearner
         string stage,
         CancellationToken ct = default)
     {
-        ct.ThrowIfCancellationRequested();
-
         try
         {
             // Extract distinction from observation
@@ -78,8 +76,6 @@ public sealed class DistinctionLearner : IDistinctionLearner
         string circumstance,
         CancellationToken ct = default)
     {
-        ct.ThrowIfCancellationRequested();
-
         try
         {
             // At Recognition stage, boost certainty of related distinctions

@@ -33,9 +33,6 @@ public class AssistOptions : BaseModelOptions, IVoiceOptions
     [Option('m', "mode", Required = false, Default = "suggest", HelpText = "Assistant mode: suggest, complete, validate, explain, build")]
     public string Mode { get; set; } = "suggest";
 
-    [Option('c', "culture", Required = false, HelpText = "Target culture for the response (e.g. en-US, fr-FR, es).")]
-    public string? Culture { get; set; }
-
     [Option('d', "dsl", Required = false, HelpText = "DSL string to analyze or complete")]
     public string? Dsl { get; set; }
 

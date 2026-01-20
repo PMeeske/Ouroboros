@@ -26,8 +26,8 @@ namespace Ouroboros.Tests.Bdd.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "DSL Assistant Simulation Integration Tests", "  As a developer using Ouroboros CLI\r\n  I want AI-powered DSL assistance with cod" +
-                "e generation\r\n  So that I can build pipelines efficiently like GitHub Copilot", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "DSL Assistant Simulation Integration Tests", "  As a developer using Ouroboros CLI\n  I want AI-powered DSL assistance with code" +
+                " generation\n  So that I can build pipelines efficiently like GitHub Copilot", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         

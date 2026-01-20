@@ -6,6 +6,7 @@ namespace Ouroboros.Application.Services;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Ouroboros.Core.Learning;
 using Ouroboros.Core.DistinctionLearning;
 
 /// <summary>
@@ -21,7 +22,6 @@ public sealed class DistinctionConsolidationService : BackgroundService
     private readonly DistinctionStorageConfig _config;
     private readonly ILogger<DistinctionConsolidationService> _logger;
     private readonly TimeSpan _consolidationInterval;
-    private readonly TimeSpan _errorRecoveryDelay;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DistinctionConsolidationService"/> class.
@@ -31,15 +31,13 @@ public sealed class DistinctionConsolidationService : BackgroundService
         IDistinctionWeightStorage storage,
         DistinctionStorageConfig config,
         ILogger<DistinctionConsolidationService> logger,
-        TimeSpan? consolidationInterval = null,
-        TimeSpan? errorRecoveryDelay = null)
+        TimeSpan? consolidationInterval = null)
     {
         _learner = learner ?? throw new ArgumentNullException(nameof(learner));
         _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _consolidationInterval = consolidationInterval ?? TimeSpan.FromMinutes(10);
-        _errorRecoveryDelay = errorRecoveryDelay ?? TimeSpan.FromMinutes(1);
     }
 
     /// <inheritdoc/>
@@ -61,7 +59,7 @@ public sealed class DistinctionConsolidationService : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Consolidation cycle failed");
-                await Task.Delay(_errorRecoveryDelay, stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
         }
 
@@ -73,27 +71,7 @@ public sealed class DistinctionConsolidationService : BackgroundService
         _logger.LogInformation("Starting distinction consolidation cycle");
 
         // 1. Get current state
-        Result<List<DistinctionWeightMetadata>, string> listResult = null!;
-        const int maxRetries = 3;
-        for (int attempt = 0; attempt < maxRetries; attempt++)
-        {
-            try
-            {
-                listResult = await _storage.ListWeightsAsync(ct);
-                break;
-            }
-            catch (Exception ex)
-            {
-                if (attempt == maxRetries - 1)
-                {
-                    _logger.LogError(ex, "Failed to list weights after {MaxRetries} attempts", maxRetries);
-                    return;
-                }
-                _logger.LogWarning(ex, "Failed to list weights, attempt {Attempt}, retrying in 1s", attempt + 1);
-                await Task.Delay(TimeSpan.FromSeconds(1), ct);
-            }
-        }
-
+        var listResult = await _storage.ListWeightsAsync(ct);
         if (listResult.IsFailure)
         {
             _logger.LogWarning("Failed to list weights: {Error}", listResult.Error);

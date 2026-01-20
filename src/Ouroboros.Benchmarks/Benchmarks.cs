@@ -63,7 +63,7 @@ public class ToolExecutionBenchmarks
 }
 
 /// <summary>
-/// Benchmarks for monadic operations (Result and Option types).
+/// Benchmarks for monadic operations (Result<T> and Option<T>).
 /// </summary>
 [MemoryDiagnoser]
 [SimpleJob(warmupCount: 3, iterationCount: 10)]

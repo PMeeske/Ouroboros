@@ -50,10 +50,6 @@ public static class OuroborosCommands
 
         try
         {
-            // Determine if Azure TTS should be used (prefer Azure if credentials available, allow override with --local-tts)
-            var azureKey = opts.AzureSpeechKey ?? Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY");
-            var useAzureTts = opts.LocalTts ? false : (opts.AzureTts && !string.IsNullOrEmpty(azureKey));
-
             // Create unified config from CLI options - ALL features enabled by default
             var config = new OuroborosConfig(
                 Persona: opts.Persona,
@@ -67,16 +63,11 @@ public static class OuroborosCommands
                 Voice: (opts.Push || opts.Yolo) ? opts.PushVoice : (opts.Voice && !opts.TextOnly),
                 VoiceOnly: opts.VoiceOnly,
                 LocalTts: opts.LocalTts,
-                AzureTts: useAzureTts,
-                AzureSpeechKey: azureKey,
-                AzureSpeechRegion: opts.AzureSpeechRegion,
-                TtsVoice: opts.TtsVoice,
                 VoiceChannel: opts.VoiceChannel,
                 Listen: opts.Listen,
                 Debug: opts.Debug,
                 Temperature: opts.Temperature,
                 MaxTokens: opts.MaxTokens,
-                Culture: opts.Culture ?? "en-US",  // Default to English voice
                 // Feature toggles - invert the "No" flags
                 EnableSkills: !opts.NoSkills,
                 EnableMeTTa: !opts.NoMeTTa,
@@ -90,10 +81,6 @@ public static class OuroborosCommands
                 AutoApproveCategories: opts.AutoApprove,
                 IntentionIntervalSeconds: opts.IntentionInterval,
                 DiscoveryIntervalSeconds: opts.DiscoveryInterval,
-                // Governance & Self-Modification
-                EnableSelfModification: opts.EnableSelfModification,
-                RiskLevel: opts.RiskLevel,
-                AutoApproveLow: opts.AutoApproveLow,
                 // Additional config
                 ThinkingIntervalSeconds: opts.ThinkingInterval,
                 AgentMaxSteps: opts.AgentMaxSteps,
@@ -166,8 +153,8 @@ public static class OuroborosCommands
 
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Console.WriteLine("   Quick examples:");
-        Console.WriteLine("     ouroboros                        # Interactive text mode (default)");
-        Console.WriteLine("     ouroboros --voice                # Enable voice mode (speak & listen)");
+        Console.WriteLine("     ouroboros                        # Interactive with voice (default)");
+        Console.WriteLine("     ouroboros --text-only            # Text-only mode");
         Console.WriteLine("     ouroboros -q \"What is AI?\"       # Answer a question");
         Console.WriteLine("     ouroboros -g \"Build a website\"   # Goal-driven planning");
         Console.WriteLine("     ouroboros -d \"SetPrompt | LLM\"   # Execute pipeline DSL");

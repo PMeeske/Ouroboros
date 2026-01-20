@@ -71,7 +71,7 @@ public sealed class DistinctionConsolidationServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert
-        _mockStorage.Verify(s => s.ListWeightsAsync(It.IsAny<CancellationToken>()),
+        _mockStorage.Verify(s => s.ListWeightsAsync(It.IsAny<CancellationToken>()), 
             Times.AtLeast(2), "should run consolidation at least twice");
     }
 
@@ -140,11 +140,11 @@ public sealed class DistinctionConsolidationServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert
-        _mockStorage.Verify(s => s.DissolveWeightsAsync("path1.weights", It.IsAny<CancellationToken>()),
+        _mockStorage.Verify(s => s.DissolveWeightsAsync("path1.weights", It.IsAny<CancellationToken>()), 
             Times.AtLeastOnce, "should dissolve low fitness (0.2)");
-        _mockStorage.Verify(s => s.DissolveWeightsAsync("path3.weights", It.IsAny<CancellationToken>()),
+        _mockStorage.Verify(s => s.DissolveWeightsAsync("path3.weights", It.IsAny<CancellationToken>()), 
             Times.AtLeastOnce, "should dissolve low fitness (0.1)");
-        _mockStorage.Verify(s => s.DissolveWeightsAsync("path2.weights", It.IsAny<CancellationToken>()),
+        _mockStorage.Verify(s => s.DissolveWeightsAsync("path2.weights", It.IsAny<CancellationToken>()), 
             Times.Never, "should not dissolve high fitness (0.8)");
     }
 
@@ -271,7 +271,7 @@ public sealed class DistinctionConsolidationServiceTests : IDisposable
             .ReturnsAsync(Result<List<DistinctionWeightMetadata>, string>.Success(metadata));
         _mockStorage.Setup(s => s.DissolveWeightsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.FromResult(Result<Unit, string>.Success(Unit.Value)));
-
+        
         // Storage exceeds limit
         _mockStorage.Setup(s => s.GetTotalStorageSizeAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<long, string>.Success(2000L)); // Exceeds 1024 limit
@@ -292,7 +292,7 @@ public sealed class DistinctionConsolidationServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert
-        _mockStorage.Verify(s => s.DissolveWeightsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+        _mockStorage.Verify(s => s.DissolveWeightsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), 
             Times.AtLeast(1), "should dissolve distinctions to free space");
     }
 
@@ -330,7 +330,7 @@ public sealed class DistinctionConsolidationServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert
-        _mockStorage.Verify(s => s.DissolveWeightsAsync("path3.weights", It.IsAny<CancellationToken>()),
+        _mockStorage.Verify(s => s.DissolveWeightsAsync("path3.weights", It.IsAny<CancellationToken>()), 
             Times.AtLeastOnce, "should dissolve lowest fitness (0.3)");
     }
 
@@ -392,7 +392,7 @@ public sealed class DistinctionConsolidationServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - should continue despite failure
-        _mockStorage.Verify(s => s.DissolveWeightsAsync("path1.weights", It.IsAny<CancellationToken>()),
+        _mockStorage.Verify(s => s.DissolveWeightsAsync("path1.weights", It.IsAny<CancellationToken>()), 
             Times.AtLeastOnce);
     }
 
@@ -429,9 +429,9 @@ public sealed class DistinctionConsolidationServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert
-        _mockStorage.Verify(s => s.DissolveWeightsAsync("path1.weights.dissolved", It.IsAny<CancellationToken>()),
+        _mockStorage.Verify(s => s.DissolveWeightsAsync("path1.weights.dissolved", It.IsAny<CancellationToken>()), 
             Times.Never, "should not dissolve already dissolved distinctions");
-        _mockStorage.Verify(s => s.DissolveWeightsAsync("path2.weights", It.IsAny<CancellationToken>()),
+        _mockStorage.Verify(s => s.DissolveWeightsAsync("path2.weights", It.IsAny<CancellationToken>()), 
             Times.AtLeastOnce);
     }
 
@@ -458,8 +458,7 @@ public sealed class DistinctionConsolidationServiceTests : IDisposable
             _mockStorage.Object,
             _config,
             _mockLogger.Object,
-            TimeSpan.FromMilliseconds(100),
-            TimeSpan.FromMilliseconds(50));
+            TimeSpan.FromMilliseconds(100));
 
         var cts = new CancellationTokenSource();
 

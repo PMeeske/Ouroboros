@@ -41,8 +41,6 @@ public sealed class FileSystemDistinctionWeightStorage : IDistinctionWeightStora
         DistinctionWeightMetadata metadata,
         CancellationToken ct = default)
     {
-        ct.ThrowIfCancellationRequested();
-
         try
         {
             var filePath = Path.Combine(_config.StoragePath, $"{id}.weights");
@@ -67,8 +65,6 @@ public sealed class FileSystemDistinctionWeightStorage : IDistinctionWeightStora
         string id,
         CancellationToken ct = default)
     {
-        ct.ThrowIfCancellationRequested();
-
         try
         {
             var filePath = Path.Combine(_config.StoragePath, $"{id}.weights");
@@ -91,8 +87,6 @@ public sealed class FileSystemDistinctionWeightStorage : IDistinctionWeightStora
     public async Task<Result<List<DistinctionWeightMetadata>, string>> ListWeightsAsync(
         CancellationToken ct = default)
     {
-        ct.ThrowIfCancellationRequested();
-
         try
         {
             if (!File.Exists(_metadataPath))
@@ -118,8 +112,6 @@ public sealed class FileSystemDistinctionWeightStorage : IDistinctionWeightStora
         string path,
         CancellationToken ct = default)
     {
-        ct.ThrowIfCancellationRequested();
-
         try
         {
             // Move file to .dissolved extension

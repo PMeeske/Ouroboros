@@ -35,7 +35,7 @@ public class FirecrawlToolsTests
 
         // Assert
         tool.Name.Should().Be("web_research");
-        tool.Description.Should().Contain("research");
+        tool.Description.Should().Contain("Research");
         tool.JsonSchema.Should().Contain("query");
     }
 

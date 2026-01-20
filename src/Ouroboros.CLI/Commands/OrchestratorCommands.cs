@@ -32,7 +32,7 @@ public static class OrchestratorCommands
         try
         {
             OllamaProvider provider = new OllamaProvider();
-            ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false, o.Culture);
+            ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, false);
 
             (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
                 o.Endpoint,
@@ -45,7 +45,7 @@ public static class OrchestratorCommands
                 {
                     return ServiceFactory.CreateRemoteChatModel(endpoint, apiKey, modelName, settings, endpointType);
                 }
-                return new OllamaChatAdapter(new OllamaChatModel(provider, modelName), o.Culture);
+                return new OllamaChatAdapter(new OllamaChatModel(provider, modelName));
             }
 
             IChatCompletionModel generalModel = CreateModel(o.Model);

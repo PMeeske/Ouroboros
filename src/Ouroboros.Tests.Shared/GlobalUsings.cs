@@ -13,5 +13,3 @@ global using Ouroboros.Core.Monads;
 global using Ouroboros.Domain;
 global using Ouroboros.Tools;
 global using Ouroboros.Providers;
-global using Ouroboros.Genetic.Abstractions;
-global using Ouroboros.Tools.MeTTa;

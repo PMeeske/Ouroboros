@@ -5,53 +5,13 @@ This document describes how to test the GitHub Actions workflows in this reposit
 ## Overview
 
 The Ouroboros repository contains several GitHub Actions workflows for:
-- **dotnet-unit-tests.yml**: .NET unit tests only (Category=Unit)
-- **dotnet-integration-tests.yml**: .NET integration tests only (Category=Integration)
-- **dotnet-coverage.yml**: .NET unit test coverage analysis
+- **dotnet-coverage.yml**: .NET test coverage analysis
 - **mutation-testing.yml**: Mutation testing with Stryker
-- **ollama-integration-test.yml**: End-to-end integration tests with Ollama LLM
-- **github-models-integration-test.yml**: End-to-end integration tests with GitHub Models
+- **ollama-integration-test.yml**: Integration tests with Ollama LLM
 - **android-build.yml**: Android MAUI app building
 - **terraform-infrastructure.yml**: Terraform infrastructure management
 - **terraform-tests.yml**: Terraform configuration validation
 - **ionos-deploy.yml**: Deployment to IONOS Cloud
-
-## Test Separation Strategy
-
-Tests are separated into two main categories using xUnit traits:
-- **Unit Tests** (`[Trait("Category", "Unit")]`): Run in isolation without external dependencies
-- **Integration Tests** (`[Trait("Category", "Integration")]`): May require external services (Ollama, GitHub Models, etc.)
-
-### Parallel Unit Test Execution
-
-To prevent workflow timeouts, unit tests are split into 8 parallel jobs using namespace-based filtering:
-
-| Category | Test Namespaces |
-|----------|-----------------|
-| **Core** | Ouroboros.Tests.Core, Ouroboros.Tests.Domain, Ouroboros.Tests.Steps |
-| **Pipeline** | Ouroboros.Tests.Pipeline, Ouroboros.Tests.Memory, Ouroboros.Tests.GraphRAG |
-| **AI-Learning** | Ouroboros.Tests.Learning, Ouroboros.Tests.Reasoning, Ouroboros.Tests.MetaLearning, Ouroboros.Tests.MetaAI, Ouroboros.Tests.Council, Ouroboros.Tests.Affect |
-| **Tools-Providers** | Ouroboros.Tests.Tools, Ouroboros.Tests.Providers, Ouroboros.Tests.Hyperon, Ouroboros.Tests.Genetic, Ouroboros.Tests.Synthesis |
-| **Governance** | Ouroboros.Tests.Governance, Ouroboros.Tests.LawsOfForm, Ouroboros.Tests.SelfModel, Ouroboros.Tests.Reflection, Ouroboros.Tests.Agent |
-| **General-Part1** | Ouroboros.Tests.Tests (A-M) |
-| **General-Part2** | Ouroboros.Tests.Tests (N-Z) |
-| **Other** | Ouroboros.Tests.Android, Ouroboros.Tests.MultiAgent |
-
-### Running Tests Locally
-
-```bash
-# Run only unit tests (all categories)
-dotnet test --filter "Category=Unit"
-
-# Run specific unit test category (example: Core)
-dotnet test --filter "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Core.|FullyQualifiedName~Ouroboros.Tests.Domain.|FullyQualifiedName~Ouroboros.Tests.Steps.)"
-
-# Run only integration tests
-dotnet test --filter "Category=Integration"
-
-# Run all tests
-dotnet test
-```
 
 ## Prerequisites for Testing
 

@@ -5,12 +5,11 @@
 using Ouroboros.Providers.SpeechToText;
 using Ouroboros.Providers.TextToSpeech;
 
-namespace Ouroboros.Tests;
+namespace Ouroboros.Tests.UnitTests;
 
 /// <summary>
 /// Tests for the speech-to-text and text-to-speech modules.
 /// </summary>
-[Trait("Category", "Unit")]
 public class SpeechModuleTests
 {
     [Fact]

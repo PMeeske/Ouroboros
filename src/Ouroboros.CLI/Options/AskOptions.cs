@@ -28,9 +28,6 @@ public sealed class AskOptions : IVoiceOptions
     [Option('q', "question", Required = true, HelpText = "Question text.")]
     public string Question { get; set; } = string.Empty;
 
-    [Option('c', "culture", Required = false, HelpText = "Target culture for the response (e.g. en-US, fr-FR, es).")]
-    public string? Culture { get; set; }
-
     [Option("model", Required = false, HelpText = "LLM model name", Default = "ministral-3:latest")]
     public string Model { get; set; } = "ministral-3:latest";
 

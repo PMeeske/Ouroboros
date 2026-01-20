@@ -45,10 +45,7 @@ public sealed record TaskEmbedding(
             return 0;
         }
 
-        var similarity = dotProduct / (Math.Sqrt(normA) * Math.Sqrt(normB));
-
-        // Clamp to [0, 1] range due to floating-point precision errors
-        return Math.Min(1.0, Math.Max(0.0, similarity));
+        return dotProduct / (Math.Sqrt(normA) * Math.Sqrt(normB));
     }
 
     /// <summary>

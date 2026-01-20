@@ -14,9 +14,6 @@ namespace Ouroboros.Domain.Autonomous;
 /// </summary>
 public sealed record AutonomousConfiguration
 {
-    /// <summary>Culture code for localization (e.g., "de-DE", "en-US").</summary>
-    public string? Culture { get; init; }
-
     /// <summary>Whether push-based mode is enabled (vs reactive).</summary>
     public bool PushBasedMode { get; init; } = true;
 
@@ -60,7 +57,7 @@ public sealed record AutonomousConfiguration
     /// </summary>
     public List<string> ResearchToolPriority { get; init; } =
     [
-        "web_research",    // Deep web research with Firecrawl
+        "firecrawl_research",    // Deep web research with Firecrawl
         "firecrawl_scrape",      // Single page scrape with Firecrawl
         "web_search",            // DuckDuckGo search
         "duckduckgo_search",     // Alias for web search
@@ -81,7 +78,7 @@ public sealed record AutonomousConfiguration
     /// </summary>
     public List<string> GeneralToolPriority { get; init; } =
     [
-        "web_research",
+        "firecrawl_research",
         "web_search",
         "recall",
     ];
@@ -122,12 +119,6 @@ public sealed class AutonomousCoordinator : IDisposable
         _intentionBus = new IntentionBus();
         _network = new OuroborosNeuralNetwork(_intentionBus);
         IsYoloMode = _config.YoloMode;
-
-        // Set culture for localization
-        if (!string.IsNullOrEmpty(_config.Culture))
-        {
-            _intentionBus.Culture = _config.Culture;
-        }
 
         // Wire up events
         _intentionBus.OnProactiveMessage += HandleProactiveMessage;
@@ -303,9 +294,7 @@ public sealed class AutonomousCoordinator : IDisposable
     /// <summary>
     /// Event fired when speech is recognized from the user.
     /// </summary>
-#pragma warning disable CS0067 // Event is never used - public API for external subscribers
     public event Action<string>? OnSpeechRecognized;
-#pragma warning restore CS0067
 
     /// <summary>
     /// Set of available tool names for priority resolution.

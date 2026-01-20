@@ -5,6 +5,7 @@
 using System.Collections.Concurrent;
 using Ouroboros.Core.Monads;
 using Ouroboros.Domain.Environment;
+using Unit = Ouroboros.Core.Monads.Unit;
 
 namespace Ouroboros.Domain.Reinforcement;
 
@@ -75,7 +76,7 @@ public sealed class BanditPolicy : IPolicy
     }
 
     /// <inheritdoc/>
-    public ValueTask<Result<Unit>> UpdateAsync(
+    public ValueTask<Result<Ouroboros.Core.Monads.Unit>> UpdateAsync(
         EnvironmentState state,
         EnvironmentAction action,
         Observation observation,
@@ -88,7 +89,7 @@ public sealed class BanditPolicy : IPolicy
         stats.Update(observation.Reward);
         Interlocked.Increment(ref this.totalTrials);
 
-        return ValueTask.FromResult(Result<Unit>.Success(Unit.Value));
+        return ValueTask.FromResult(Result<Ouroboros.Core.Monads.Unit>.Success(Ouroboros.Core.Monads.Unit.Value));
     }
 
     private string GetActionKey(EnvironmentAction action)

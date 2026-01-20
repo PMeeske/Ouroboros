@@ -45,18 +45,6 @@ public sealed class PolicyOptions
     [Option("comments", Required = false, HelpText = "Approval comments")]
     public string? Comments { get; set; }
 
-    [Option('l', "culture", Required = false, HelpText = "Response language/culture (e.g., en-US, fr-FR, de-DE, es-ES, ja-JP)")]
-    public string? Culture { get; set; }
-
-    [Option("enable-self-mod", Required = false, HelpText = "Enable self-modification for policy enforcement", Default = false)]
-    public bool EnableSelfModification { get; set; }
-
-    [Option("risk-level", Required = false, HelpText = "Minimum risk level for approval: Low|Medium|High|Critical", Default = "Medium")]
-    public string RiskLevel { get; set; } = "Medium";
-
-    [Option("auto-approve-low", Required = false, HelpText = "Auto-approve low-risk modifications", Default = true)]
-    public bool AutoApproveLow { get; set; } = true;
-
     [Option('v', "verbose", Required = false, HelpText = "Enable verbose output", Default = false)]
     public bool Verbose { get; set; }
 }

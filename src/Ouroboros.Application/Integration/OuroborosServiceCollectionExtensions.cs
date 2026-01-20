@@ -6,18 +6,18 @@ namespace Ouroboros.Application.Integration;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
+// using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Agent.MetaAI.SelfModel;
-using Ouroboros.Agent.MetaAI.WorldModel;
+// using Ouroboros.Agent.MetaAI.WorldModel; // TODO: Namespace missing after merge conflicts
 using Ouroboros.Core.Learning;
-using Ouroboros.Core.Reasoning;
-using Ouroboros.Core.Synthesis;
-using Ouroboros.Domain.Benchmarks;
-using Ouroboros.Domain.Embodied;
+// using Ouroboros.Core.Reasoning; // TODO: Namespace missing after merge conflicts
+// using Ouroboros.Core.Synthesis; // TODO: Namespace missing after merge conflicts
+// using Ouroboros.Domain.Benchmarks; // TODO: Namespace missing after merge conflicts
+// using Ouroboros.Domain.Embodied; // TODO: Namespace missing after merge conflicts
 using Ouroboros.Domain.MetaLearning;
-using Ouroboros.Domain.MultiAgent;
-using Ouroboros.Domain.Reflection;
+// using Ouroboros.Domain.MultiAgent; // TODO: Namespace missing after merge conflicts
+// using Ouroboros.Domain.Reflection; // TODO: Namespace missing after merge conflicts
 using Ouroboros.Pipeline.Memory;
 using Ouroboros.Tools.MeTTa;
 
@@ -154,22 +154,24 @@ public static class OuroborosServiceCollectionExtensions
 
     private static void RegisterEngineInterfaces(IServiceCollection services)
     {
-        // Register available Tier 1 engines
-        // Note: EpisodicMemoryEngine requires QdrantClient and IEmbeddingModel dependencies
-        // Commenting out to avoid DI errors in minimal setup
-        // services.TryAddSingleton<IEpisodicMemoryEngine, EpisodicMemoryEngine>();
+        // Note: These registrations require actual implementations
+        // This demonstrates the pattern for production usage
 
-        // Tier 2 and 3 engines are defined in interface but require implementation
-        // Uncomment when implementations become available:
+        // Tier 1 engines
+        // services.TryAddSingleton<IEpisodicMemoryEngine, EpisodicMemoryEngine>();
         // services.TryAddSingleton<IAdapterLearningEngine, AdapterLearningEngine>();
         // services.TryAddSingleton<IAdvancedMeTTaEngine, AdvancedMeTTaEngine>();
         // services.TryAddSingleton<IHierarchicalPlanner, HierarchicalPlanner>();
         // services.TryAddSingleton<IReflectionEngine, ReflectionEngine>();
         // services.TryAddSingleton<IBenchmarkSuite, BenchmarkSuite>();
+
+        // Tier 2 engines
         // services.TryAddSingleton<IProgramSynthesisEngine, ProgramSynthesisEngine>();
         // services.TryAddSingleton<IWorldModelEngine, WorldModelEngine>();
         // services.TryAddSingleton<IMultiAgentCoordinator, MultiAgentCoordinator>();
         // services.TryAddSingleton<ICausalReasoningEngine, CausalReasoningEngine>();
+
+        // Tier 3 engines
         // services.TryAddSingleton<IMetaLearningEngine, MetaLearningEngine>();
         // services.TryAddSingleton<IEmbodiedAgent, EmbodiedAgent>();
     }
@@ -197,8 +199,8 @@ public static class OuroborosFeatureExtensions
 
         services.AddSingleton(options);
 
-        // Register episodic memory engine implementation
-        services.TryAddSingleton<IEpisodicMemoryEngine, EpisodicMemoryEngine>();
+        // Register implementation
+        // services.TryAddSingleton<IEpisodicMemoryEngine, EpisodicMemoryEngine>();
 
         return services;
     }

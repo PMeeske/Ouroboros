@@ -37,9 +37,7 @@ public sealed class HyperonFlowIntegration : IAsyncDisposable
     /// <summary>
     /// Event raised when a flow completes.
     /// </summary>
-#pragma warning disable CS0067 // Event is never used - public API for external subscribers
     public event Action<FlowCompletionEvent>? OnFlowComplete;
-#pragma warning restore CS0067
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HyperonFlowIntegration"/> class.
