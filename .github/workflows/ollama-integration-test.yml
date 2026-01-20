@@ -28,6 +28,10 @@ jobs:
     name: Ollama Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    
+    env:
+      Ollama__ApiKey: ${{ secrets.OLLAMA_DEEPSEEK_API_KEY }}
+      Ollama__DeepSeekCloudEndpoint: "https://api.deepseek.com/v1"
 
     steps:
     - name: Checkout code
