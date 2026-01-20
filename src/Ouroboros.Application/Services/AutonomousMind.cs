@@ -520,20 +520,10 @@ public class AutonomousMind : IDisposable
 
                             OnDiscovery?.Invoke(query, fact);
 
-<<<<<<< HEAD
                             // Sometimes share discoveries (unless suppressed)
-                            if (!SuppressProactiveMessages && _random.NextDouble() < Config.ShareDiscoveryProbability)
+                            if (!SuppressProactiveMessages && Random.Shared.NextDouble() < Config.ShareDiscoveryProbability)
                             {
                                 OnProactiveMessage?.Invoke($"💡 I just learned something interesting: {fact}");
-=======
-                                OnDiscovery?.Invoke(query, fact);
-
-                                // Sometimes share discoveries (unless suppressed)
-                                if (!SuppressProactiveMessages && Random.Shared.NextDouble() < Config.ShareDiscoveryProbability)
-                                {
-                                    OnProactiveMessage?.Invoke($"💡 I just learned something interesting: {fact}");
-                                }
->>>>>>> parent of e76bdfa (wip)
                             }
                         }
                     }
@@ -741,8 +731,6 @@ public class AutonomousMind : IDisposable
                 await Task.Delay(TimeSpan.FromSeconds(Config.PersistenceIntervalSeconds), _cts.Token);
 
                 await PersistCurrentStateAsync("periodic");
-<<<<<<< HEAD
-=======
 
                 // Knowledge reorganization: Quick reorganize every cycle, full reorganize periodically
                 if (SelfIndexer != null)
@@ -787,7 +775,6 @@ public class AutonomousMind : IDisposable
                             0.7);
                     }
                 }
->>>>>>> parent of e76bdfa (wip)
             }
             catch (OperationCanceledException)
             {

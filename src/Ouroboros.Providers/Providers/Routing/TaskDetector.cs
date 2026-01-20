@@ -6,6 +6,58 @@
 namespace Ouroboros.Providers.Routing;
 
 /// <summary>
+/// Represents different types of tasks that can be detected from prompts.
+/// </summary>
+public enum TaskType
+{
+    /// <summary>
+    /// Unknown or unclassifiable task type.
+    /// </summary>
+    Unknown,
+
+    /// <summary>
+    /// Simple, straightforward queries or requests.
+    /// </summary>
+    Simple,
+
+    /// <summary>
+    /// Tasks requiring logical reasoning, analysis, or explanation.
+    /// </summary>
+    Reasoning,
+
+    /// <summary>
+    /// Tasks involving planning, strategizing, or organizing steps.
+    /// </summary>
+    Planning,
+
+    /// <summary>
+    /// Tasks related to code generation, debugging, or programming.
+    /// </summary>
+    Coding,
+}
+
+/// <summary>
+/// Strategies for detecting task types from prompts.
+/// </summary>
+public enum TaskDetectionStrategy
+{
+    /// <summary>
+    /// Use keyword-based heuristics for detection.
+    /// </summary>
+    Heuristic,
+
+    /// <summary>
+    /// Use rule-based analysis for detection.
+    /// </summary>
+    RuleBased,
+
+    /// <summary>
+    /// Combine heuristic and rule-based approaches.
+    /// </summary>
+    Hybrid,
+}
+
+/// <summary>
 /// Detects task types from prompts using heuristic analysis.
 /// Used by HybridModelRouter to select appropriate models.
 /// </summary>
