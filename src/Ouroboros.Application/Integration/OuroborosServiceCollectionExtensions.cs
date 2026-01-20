@@ -6,18 +6,18 @@ namespace Ouroboros.Application.Integration;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
+// using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Agent.MetaAI.SelfModel;
-using Ouroboros.Agent.MetaAI.WorldModel;
+// using Ouroboros.Agent.MetaAI.WorldModel; // TODO: Namespace missing after merge conflicts
 using Ouroboros.Core.Learning;
-using Ouroboros.Core.Reasoning;
-using Ouroboros.Core.Synthesis;
-using Ouroboros.Domain.Benchmarks;
-using Ouroboros.Domain.Embodied;
+// using Ouroboros.Core.Reasoning; // TODO: Namespace missing after merge conflicts
+// using Ouroboros.Core.Synthesis; // TODO: Namespace missing after merge conflicts
+// using Ouroboros.Domain.Benchmarks; // TODO: Namespace missing after merge conflicts
+// using Ouroboros.Domain.Embodied; // TODO: Namespace missing after merge conflicts
 using Ouroboros.Domain.MetaLearning;
-using Ouroboros.Domain.MultiAgent;
-using Ouroboros.Domain.Reflection;
+// using Ouroboros.Domain.MultiAgent; // TODO: Namespace missing after merge conflicts
+// using Ouroboros.Domain.Reflection; // TODO: Namespace missing after merge conflicts
 using Ouroboros.Pipeline.Memory;
 using Ouroboros.Tools.MeTTa;
 
