@@ -25,6 +25,9 @@ using Ouroboros.Application.Personality; // Personality engine with MeTTa + GA
 using Ouroboros.CLI; // added
 using Ouroboros.CLI.Commands;
 
+// Initialize Ouroboros system on startup (non-blocking)
+var initTask = Ouroboros.CLI.OuroborosCliIntegration.EnsureInitializedAsync(args);
+
 try
 {
     // Optional minimal host
@@ -33,6 +36,13 @@ try
         using IHost onlyHost = await Ouroboros.Interop.Hosting.MinimalHost.BuildAsync(args);
         await onlyHost.RunAsync();
         return;
+    }
+
+    // Wait for Ouroboros initialization (with timeout)
+    var initCompleted = await Task.WhenAny(initTask, Task.Delay(TimeSpan.FromSeconds(5)));
+    if (initCompleted != initTask)
+    {
+        Console.WriteLine("[INFO] Ouroboros system initializing in background...");
     }
 
     await ParseAndRunAsync(args);
@@ -53,26 +63,98 @@ return;
 static async Task ParseAndRunAsync(string[] args)
 {
     // CommandLineParser verbs - OuroborosOptions is the default (isDefault: true)
-    await Parser.Default.ParseArguments<OuroborosOptions, AskOptions, PipelineOptions, ListTokensOptions, ExplainOptions, TestOptions, OrchestratorOptions, MeTTaOptions, AssistOptions, SkillsOptions, NetworkOptions, DagOptions, EnvironmentOptions, AffectOptions, PolicyOptions, MaintenanceOptions>(args)
-        .MapResult(
-            (OuroborosOptions o) => RunOuroborosAsync(o),
-            (AskOptions o) => RunAskAsync(o),
-            (PipelineOptions o) => RunPipelineAsync(o),
-            (ListTokensOptions _) => RunListTokensAsync(),
-            (ExplainOptions o) => RunExplainAsync(o),
-            (TestOptions o) => RunTestsAsync(o),
-            (OrchestratorOptions o) => RunOrchestratorAsync(o),
-            (MeTTaOptions o) => RunMeTTaAsync(o),
-            (AssistOptions o) => RunAssistAsync(o),
-            (SkillsOptions o) => RunSkillsAsync(o),
-            (NetworkOptions o) => RunNetworkAsync(o),
-            (DagOptions o) => RunDagAsync(o),
-            (EnvironmentOptions o) => RunEnvironmentAsync(o),
-            (AffectOptions o) => RunAffectAsync(o),
-            (PolicyOptions o) => RunPolicyAsync(o),
-            (MaintenanceOptions o) => RunMaintenanceAsync(o),
-            _ => Task.CompletedTask
-        );
+    // Using Type[] array because we exceed the 16-parameter generic overload limit
+    var optionTypes = new[]
+    {
+        typeof(OuroborosOptions), typeof(AskOptions), typeof(PipelineOptions), typeof(ListTokensOptions),
+        typeof(ExplainOptions), typeof(TestOptions), typeof(OrchestratorOptions), typeof(MeTTaOptions),
+        typeof(AssistOptions), typeof(SkillsOptions), typeof(NetworkOptions), typeof(DagOptions),
+        typeof(EnvironmentOptions), typeof(AffectOptions), typeof(PolicyOptions), typeof(MaintenanceOptions),
+        typeof(BenchmarkOptions), typeof(DreamOptions), typeof(DistinctionStatusOptions), typeof(DistinctionListOptions),
+        typeof(DistinctionDissolveOptions), typeof(DistinctionLearnOptions), typeof(DistinctionExportOptions),
+        typeof(DistinctionClearOptions)
+    };
+
+    var parseResult = Parser.Default.ParseArguments(args, optionTypes);
+
+    await parseResult.WithParsedAsync(async parsed =>
+    {
+        switch (parsed)
+        {
+            case OuroborosOptions o:
+                await RunOuroborosAsync(o);
+                break;
+            case AskOptions o:
+                await RunAskAsync(o);
+                break;
+            case PipelineOptions o:
+                await RunPipelineAsync(o);
+                break;
+            case ListTokensOptions _:
+                await RunListTokensAsync();
+                break;
+            case ExplainOptions o:
+                await RunExplainAsync(o);
+                break;
+            case TestOptions o:
+                await RunTestsAsync(o);
+                break;
+            case OrchestratorOptions o:
+                await RunOrchestratorAsync(o);
+                break;
+            case MeTTaOptions o:
+                await RunMeTTaAsync(o);
+                break;
+            case AssistOptions o:
+                await RunAssistAsync(o);
+                break;
+            case SkillsOptions o:
+                await RunSkillsAsync(o);
+                break;
+            case NetworkOptions o:
+                await RunNetworkAsync(o);
+                break;
+            case DagOptions o:
+                await RunDagAsync(o);
+                break;
+            case EnvironmentOptions o:
+                await RunEnvironmentAsync(o);
+                break;
+            case AffectOptions o:
+                await RunAffectAsync(o);
+                break;
+            case PolicyOptions o:
+                await RunPolicyAsync(o);
+                break;
+            case MaintenanceOptions o:
+                await RunMaintenanceAsync(o);
+                break;
+            case BenchmarkOptions o:
+                await RunBenchmarkAsync(o);
+                break;
+            case DreamOptions o:
+                await DreamCommands.RunDreamAsync(o);
+                break;
+            case DistinctionStatusOptions o:
+                await DistinctionCommands.RunStatusAsync(o);
+                break;
+            case DistinctionListOptions o:
+                await DistinctionCommands.RunListAsync(o);
+                break;
+            case DistinctionDissolveOptions o:
+                await DistinctionCommands.RunDissolveAsync(o);
+                break;
+            case DistinctionLearnOptions o:
+                await DistinctionCommands.RunLearnAsync(o);
+                break;
+            case DistinctionExportOptions o:
+                await DistinctionCommands.RunExportAsync(o);
+                break;
+            case DistinctionClearOptions o:
+                await DistinctionCommands.RunClearAsync(o);
+                break;
+        }
+    });
 }
 
 // (usage handled by CommandLineParser built-in help)
@@ -142,6 +224,7 @@ static Task RunPolicyAsync(PolicyOptions o) => PolicyCommands.RunPolicyAsync(o);
 
 static Task RunMaintenanceAsync(MaintenanceOptions o) => MaintenanceCommands.RunMaintenanceAsync(o);
 
+static Task RunBenchmarkAsync(BenchmarkOptions o) => BenchmarkCommands.RunBenchmarksAsync(o);
 
 
 static async Task RunAssistAsync(AssistOptions o)
@@ -166,6 +249,7 @@ static async Task RunAssistAsync(AssistOptions o)
             Debug: o.Debug,
             Temperature: o.Temperature,
             MaxTokens: o.MaxTokens,
+            Culture: o.Culture,
             InitialGoal: o.Goal,
             InitialDsl: o.Dsl
         );
@@ -187,7 +271,7 @@ static async Task RunAssistAsync(AssistOptions o)
     {
         // Setup LLM
         OllamaProvider provider = new OllamaProvider();
-        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
+        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream, o.Culture);
 
         (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
             o.Endpoint,
@@ -201,7 +285,7 @@ static async Task RunAssistAsync(AssistOptions o)
         }
         else
         {
-            chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
+            chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model), o.Culture);
         }
 
         ToolRegistry tools = ToolRegistry.CreateDefault();
