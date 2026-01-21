@@ -82,6 +82,9 @@ jobs:
 
     - name: Run tests with coverage
       uses: nick-fields/retry@v3
+      env:
+        Ollama__ApiKey: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+        Ollama__CloudEndpoint: "https://api.ollama.com"
       with:
         timeout_minutes: 20
         max_attempts: 2

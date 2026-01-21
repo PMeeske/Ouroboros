@@ -12,6 +12,7 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591;SA0001</NoWarn>
     <IsTestProject>true</IsTestProject>
+    <UserSecretsId>ouroboros-tests-integration</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -32,6 +33,9 @@
     <PackageReference Include="FluentAssertions" Version="8.7.1" />
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.1" />
   </ItemGroup>
 
 </Project>

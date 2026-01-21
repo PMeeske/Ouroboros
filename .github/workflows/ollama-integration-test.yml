@@ -28,6 +28,10 @@ jobs:
     name: Ollama Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    
+    env:
+      Ollama__ApiKey: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+      Ollama__CloudEndpoint: "https://api.ollama.com"
 
     steps:
     - name: Checkout code
