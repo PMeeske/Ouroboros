@@ -6,7 +6,7 @@ namespace Ouroboros.Application.Integration;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-// using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Agent.MetaAI.SelfModel;
 // using Ouroboros.Agent.MetaAI.WorldModel; // TODO: Namespace missing after merge conflicts

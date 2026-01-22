@@ -9,6 +9,7 @@ global using System.Threading.Tasks;
 global using Ouroboros.Agent;
 // CLI
 global using Ouroboros.Application;
+global using Ouroboros.Application.Integration;
 global using Ouroboros.Core.Kleisli;
 global using Ouroboros.Core.Monads;
 global using Ouroboros.Core.Steps;

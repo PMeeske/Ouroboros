@@ -152,6 +152,14 @@ public class AutonomousMind : IDisposable
     public AutonomousConfig Config { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the self-indexer for knowledge reorganization.
+    /// </summary>
+    public QdrantSelfIndexer? SelfIndexer { get; set; }
+
+    private int _reorganizationCycle = 0;
+    private DateTime _lastReorganization = DateTime.MinValue;
+
+    /// <summary>
     /// Connects this AutonomousMind to an InnerDialogEngine for sophisticated thought generation.
     /// When connected, uses algorithmic/genetic thought generation instead of LLM for routine thoughts.
     /// LLM is still used for deep exploration and curiosity-driven research.
@@ -927,6 +935,16 @@ public class AutonomousConfig
         "network_info",
         "list_dir",
     ];
+
+    /// <summary>
+    /// Cycle interval for knowledge reorganization.
+    /// </summary>
+    public int ReorganizationCycleInterval { get; set; } = 10;
+
+    /// <summary>
+    /// Minimum interval between reorganizations in minutes.
+    /// </summary>
+    public double MinReorganizationIntervalMinutes { get; set; } = 10.0;
 }
 
 /// <summary>

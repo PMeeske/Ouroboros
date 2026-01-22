@@ -778,6 +778,64 @@ public sealed class QdrantSelfIndexer : IAsyncDisposable
         };
     }
 
+    /// <summary>
+    /// Records access to search results for reorganization tracking.
+    /// </summary>
+    /// <param name="searchResults">The search results that were accessed.</param>
+    public void RecordAccess(List<SearchResult> searchResults)
+    {
+        // Stub implementation - in a full implementation, this would track access patterns
+        // for intelligent reorganization of the knowledge base
+    }
+
+    /// <summary>
+    /// Gets statistics about knowledge reorganization.
+    /// </summary>
+    /// <returns>Reorganization statistics including tracked patterns, hot content, and clusters.</returns>
+    public ReorganizationStats GetReorganizationStats()
+    {
+        // Stub implementation - returns placeholder statistics
+        // In a full implementation, this would analyze access patterns and return actual stats
+        return new ReorganizationStats(
+            TrackedPatterns: 0,
+            HotContentCount: 0,
+            CoAccessClusters: 0);
+    }
+
+    /// <summary>
+    /// Performs a quick reorganization of the knowledge base based on access patterns.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Number of chunks reorganized.</returns>
+    public Task<int> QuickReorganizeAsync(CancellationToken ct = default)
+    {
+        // Stub implementation - returns 0 reorganized chunks
+        // In a full implementation, this would reorganize hot content for faster access
+        return Task.FromResult(0);
+    }
+
+    /// <summary>
+    /// Performs a full reorganization of the knowledge base.
+    /// </summary>
+    /// <param name="createSummaries">Whether to create summaries of content.</param>
+    /// <param name="removeDuplicates">Whether to remove duplicate content.</param>
+    /// <param name="clusterRelated">Whether to cluster related content.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Reorganization result with insights.</returns>
+    public Task<ReorganizationResult> ReorganizeAsync(
+        bool createSummaries = true,
+        bool removeDuplicates = true,
+        bool clusterRelated = true,
+        CancellationToken ct = default)
+    {
+        // Stub implementation - returns empty result
+        // In a full implementation, this would perform comprehensive reorganization
+        return Task.FromResult(new ReorganizationResult
+        {
+            Insights = new List<string>()
+        });
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_isDisposed) return;
@@ -832,4 +890,40 @@ public sealed record IndexStats
     public int IndexedFiles { get; init; }
     public string CollectionName { get; init; } = string.Empty;
     public int VectorSize { get; init; }
+}
+
+/// <summary>
+/// Result of a knowledge base reorganization operation.
+/// </summary>
+public sealed class ReorganizationResult
+{
+    /// <summary>
+    /// Gets or sets insights gained from the reorganization.
+    /// </summary>
+    public List<string> Insights { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the number of items reorganized.
+    /// </summary>
+    public int ItemsReorganized { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of duplicates removed.
+    /// </summary>
+    public int DuplicatesRemoved { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of clusters created.
+    /// </summary>
+    public int ClustersCreated { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of clusters found.
+    /// </summary>
+    public int ClustersFound { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of summaries created.
+    /// </summary>
+    public int SummariesCreated { get; set; }
 }
