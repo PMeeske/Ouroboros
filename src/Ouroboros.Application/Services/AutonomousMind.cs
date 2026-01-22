@@ -877,6 +877,59 @@ public class AutonomousMind : IDisposable
             }
         }
 
+        // Handle code modification: MODIFY: {"file":"path","search":"old","replace":"new"}
+        else if (content.StartsWith("MODIFY:", StringComparison.OrdinalIgnoreCase))
+        {
+            var modifyJson = content.Substring(7).Trim();
+            if (!string.IsNullOrWhiteSpace(modifyJson) && ExecuteToolFunction != null)
+            {
+                // Only allow if modify_my_code is in allowed tools
+                if (Config.AllowedAutonomousTools.Contains("modify_my_code"))
+                {
+                    try
+                    {
+                        var result = await ExecuteToolFunction("modify_my_code", modifyJson, _cts.Token);
+                        if (!string.IsNullOrWhiteSpace(result))
+                        {
+                            OnProactiveMessage?.Invoke(LocalizeWithParam("action", $"🔧 Self-modified code: {result[..Math.Min(100, result.Length)]}..."));
+                        }
+                        await PersistLearningAsync("self_modification", $"Modified: {modifyJson}\nResult: {result}", 0.9);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Self-modification failed: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("Self-modification not allowed - modify_my_code not in AllowedAutonomousTools");
+                }
+            }
+        }
+
+        // Handle save code shorthand: SAVE: file.cs "search" "replace"
+        else if (content.StartsWith("SAVE:", StringComparison.OrdinalIgnoreCase))
+        {
+            var saveCmd = content.Substring(5).Trim();
+            if (!string.IsNullOrWhiteSpace(saveCmd) && ExecutePipeCommandFunction != null)
+            {
+                try
+                {
+                    // Use the save code command via pipe function
+                    var result = await ExecutePipeCommandFunction($"save code {saveCmd}", _cts.Token);
+                    if (!string.IsNullOrWhiteSpace(result))
+                    {
+                        OnProactiveMessage?.Invoke(LocalizeWithParam("action", $"💾 Saved code change: {result[..Math.Min(100, result.Length)]}..."));
+                    }
+                    await PersistLearningAsync("code_save", $"Saved: {saveCmd}\nResult: {result}", 0.85);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Save code failed: {ex.Message}");
+                }
+            }
+        }
+
         // For regular thoughts, persist if they contain insights
         else if (content.Contains("learned") || content.Contains("realized") || content.Contains("understand") || content.Contains("pattern"))
         {
@@ -1227,6 +1280,8 @@ public class AutonomousConfig
         "list_captured_images",
         "search_indexed_content",
         "search_my_code",
+        "read_my_file",
+        "modify_my_code",
         "system_info",
         "disk_info",
         "network_info",
