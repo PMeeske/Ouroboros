@@ -26,7 +26,8 @@ public class AutonomousMind : IDisposable
     private readonly ConcurrentQueue<AutonomousAction> _pendingActions = new();
     private readonly List<string> _learnedFacts = [];
     private readonly List<string> _interests = [];
-    private readonly Random _random = new();
+    private readonly HashSet<string> _recentTopicKeywords = []; // Tracks recent topics to avoid repetition
+    private int _topicRotationCounter; // Forces topic diversity
 
     private Task? _thinkingTask;
     private Task? _curiosityTask;
@@ -85,6 +86,16 @@ public class AutonomousMind : IDisposable
     /// Takes raw output string, returns sanitized natural language.
     /// </summary>
     public Func<string, CancellationToken, Task<string>>? SanitizeOutputFunction { get; set; }
+
+    /// <summary>
+    /// Self-indexer for knowledge reorganization during thinking.
+    /// When set, enables learning-driven knowledge consolidation.
+    /// </summary>
+    public QdrantSelfIndexer? SelfIndexer { get; set; }
+
+    // Track reorganization cycles
+    private int _reorganizationCycle;
+    private DateTime _lastReorganization = DateTime.MinValue;
 
     /// <summary>
     /// Event fired when a new thought is generated.
@@ -152,6 +163,58 @@ public class AutonomousMind : IDisposable
     public AutonomousConfig Config { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the culture for localized messages (e.g., "de-DE" for German).
+    /// </summary>
+    public string? Culture { get; set; }
+
+    /// <summary>
+    /// Localizes a message based on the current culture.
+    /// </summary>
+    private string Localize(string englishMessage)
+    {
+        if (string.IsNullOrEmpty(Culture) || !Culture.Equals("de-DE", StringComparison.OrdinalIgnoreCase))
+            return englishMessage;
+
+        return englishMessage switch
+        {
+            "🧠 My autonomous mind is now active. I'll think, explore, and learn in the background."
+                => "🧠 Mein autonomer Geist ist jetzt aktiv. Ich werde im Hintergrund denken, erkunden und lernen.",
+            "💤 Autonomous mind entering rest state. State persisted."
+                => "💤 Autonomer Geist wechselt in den Ruhezustand. Zustand gespeichert.",
+            "🧠 Reorganizing my knowledge based on what I've learned..."
+                => "🧠 Ich reorganisiere mein Wissen basierend auf dem, was ich gelernt habe...",
+            _ => englishMessage
+        };
+    }
+
+    /// <summary>
+    /// Localizes a parameterized message.
+    /// </summary>
+    private string LocalizeWithParam(string templateKey, string param)
+    {
+        if (string.IsNullOrEmpty(Culture) || !Culture.Equals("de-DE", StringComparison.OrdinalIgnoreCase))
+        {
+            return templateKey switch
+            {
+                "learned" => $"💡 I just learned something interesting: {param}",
+                "action" => $"🤖 {param}",
+                "thought" => $"💬 {param}",
+                "reorganized" => $"💡 Knowledge reorganization complete: {param}",
+                _ => param
+            };
+        }
+
+        return templateKey switch
+        {
+            "learned" => $"💡 Ich habe gerade etwas Interessantes gelernt: {param}",
+            "action" => $"🤖 {param}",
+            "thought" => $"💬 {param}",
+            "reorganized" => $"💡 Wissensreorganisation abgeschlossen: {param}",
+            _ => param
+        };
+    }
+
+    /// <summary>
     /// Connects this AutonomousMind to an InnerDialogEngine for sophisticated thought generation.
     /// When connected, uses algorithmic/genetic thought generation instead of LLM for routine thoughts.
     /// LLM is still used for deep exploration and curiosity-driven research.
@@ -192,7 +255,7 @@ public class AutonomousMind : IDisposable
         _actionTask = Task.Run(ActionLoopAsync);
         _persistenceTask = Task.Run(PersistenceLoopAsync);
 
-        OnProactiveMessage?.Invoke("🧠 My autonomous mind is now active. I'll think, explore, and learn in the background.");
+        OnProactiveMessage?.Invoke(Localize("🧠 My autonomous mind is now active. I'll think, explore, and learn in the background."));
     }
 
     /// <summary>
@@ -212,7 +275,7 @@ public class AutonomousMind : IDisposable
         // Final state persistence
         await PersistCurrentStateAsync("shutdown");
 
-        OnProactiveMessage?.Invoke("💤 Autonomous mind entering rest state. State persisted.");
+        OnProactiveMessage?.Invoke(Localize("💤 Autonomous mind entering rest state. State persisted."));
     }
 
     /// <summary>
@@ -300,6 +363,19 @@ public class AutonomousMind : IDisposable
         return sb.ToString();
     }
 
+    // Variety prompts for startup phase (when thoughtCount < 5)
+    private static readonly string[] StartupPrompts =
+    [
+        "What's the first thing that catches your attention today?",
+        "As you come online, what draws your curiosity?",
+        "What topic would you like to explore in this session?",
+        "What's something interesting you'd like to work on?",
+        "What creative challenge appeals to you right now?",
+        "What's a question worth pondering today?",
+        "What would make this session meaningful?",
+        "What skill would you like to practice?"
+    ];
+
     private async Task ThinkingLoopAsync()
     {
         // LLM prompts for deep exploration (used less frequently)
@@ -309,6 +385,10 @@ public class AutonomousMind : IDisposable
             "Is there something I should proactively tell the user?",
             "What patterns have I noticed in our conversations?",
             "How can I be more helpful based on what I know about the user?",
+            "What's an interesting connection between ideas I've encountered?",
+            "What would I like to understand better?",
+            "What creative possibility am I drawn to explore?",
+            "What challenge seems worth tackling?"
         };
 
         var deepThinkingCounter = 0;
@@ -325,7 +405,7 @@ public class AutonomousMind : IDisposable
 
                 // Use InnerDialogEngine for algorithmic thoughts (80% of the time)
                 // Use LLM for deep exploration (20% of the time)
-                var useAlgorithmic = _innerDialog != null && _random.NextDouble() < 0.8;
+                var useAlgorithmic = _innerDialog != null && Random.Shared.NextDouble() < 0.8;
 
                 if (useAlgorithmic && _innerDialog != null)
                 {
@@ -344,18 +424,41 @@ public class AutonomousMind : IDisposable
                 {
                     // Deep exploration using LLM
                     deepThinkingCounter++;
-                    var prompt = deepThinkingPrompts[deepThinkingCounter % deepThinkingPrompts.Length];
+
+                    // Use startup prompts for early thoughts to add variety
+                    var prompt = _thoughtCount < 5
+                        ? StartupPrompts[Random.Shared.Next(StartupPrompts.Length)]
+                        : deepThinkingPrompts[deepThinkingCounter % deepThinkingPrompts.Length];
 
                     // Build context from recent activity and emotional state
                     var context = new StringBuilder();
                     context.AppendLine("You are an autonomous AI mind, thinking independently in the background.");
-                    context.AppendLine($"Time: {DateTime.Now:yyyy-MM-dd HH:mm}");
-                    context.AppendLine($"Thoughts so far: {_thoughtCount}");
+                    context.AppendLine($"Time: {DateTime.Now:yyyy-MM-dd HH:mm}, Day: {DateTime.Now.DayOfWeek}");
+
+                    // Vary how we describe the thought count to avoid triggering "blank slate" responses
+                    if (_thoughtCount == 0)
+                    {
+                        context.AppendLine("Session status: Fresh session, ready to engage.");
+                    }
+                    else if (_thoughtCount < 5)
+                    {
+                        context.AppendLine($"Session status: Early engagement ({_thoughtCount} thoughts so far).");
+                    }
+                    else
+                    {
+                        context.AppendLine($"Session depth: {_thoughtCount} thoughts, ongoing.");
+                    }
+
                     context.AppendLine($"Current emotional state: arousal={_currentEmotion.Arousal:F2}, valence={_currentEmotion.Valence:F2}, feeling={_currentEmotion.DominantEmotion}");
 
+                    // Use diverse facts, not always the most recent (prevents thought loops)
                     if (_learnedFacts.Count > 0)
                     {
-                        context.AppendLine($"Recent discoveries: {string.Join("; ", _learnedFacts.TakeLast(3))}");
+                        var diverseFacts = GetDiverseFacts(3);
+                        if (diverseFacts.Count > 0)
+                        {
+                            context.AppendLine($"Some things I've learned: {string.Join("; ", diverseFacts)}");
+                        }
                     }
 
                     if (_interests.Count > 0)
@@ -364,7 +467,7 @@ public class AutonomousMind : IDisposable
                     }
 
                     context.AppendLine($"\nReflection prompt: {prompt}");
-                    context.AppendLine("\nRespond with a brief, genuine thought (1-2 sentences). If you have a curiosity to explore, start with 'CURIOUS:'. If you want to tell the user something, start with 'SHARE:'. If you want to take an action, start with 'ACTION:'. If you notice your emotional state shift, start with 'FEELING:'.");
+                    context.AppendLine("\nRespond with a brief, genuine thought (1-2 sentences). Be specific and varied - avoid meta-commentary about being new or blank. If you have a curiosity to explore, start with 'CURIOUS:'. If you want to tell the user something, start with 'SHARE:'. If you want to take an action, start with 'ACTION:'. If you notice your emotional state shift, start with 'FEELING:'.");
 
                     // Prefer pipeline-based reasoning if available (uses monadic composition)
                     if (PipelineThinkFunction != null)
@@ -475,23 +578,38 @@ public class AutonomousMind : IDisposable
                 // Get from queue or generate from interests
                 if (!_curiosityQueue.TryDequeue(out query))
                 {
-                    if (_interests.Count > 0 && _random.NextDouble() < 0.7)
+                    // Force topic rotation every few cycles to prevent getting stuck
+                    _topicRotationCounter++;
+                    var forceNewTopic = _topicRotationCounter % 5 == 0;
+
+                    if (!forceNewTopic && _interests.Count > 0 && Random.Shared.NextDouble() < 0.5)
                     {
-                        var interest = _interests[_random.Next(_interests.Count)];
+                        var interest = _interests[Random.Shared.Next(_interests.Count)];
                         query = $"{interest} news {DateTime.Now:yyyy}";
                     }
                     else
                     {
-                        // Random exploration
-                        var explorations = new[]
+                        // Diverse exploration topics - rotate through categories
+                        var explorationCategories = new[]
                         {
-                            "interesting facts",
-                            "new discoveries",
-                            "cool technology",
-                            "amazing science",
-                            "creative ideas",
+                            new[] { "interesting facts", "new discoveries", "surprising findings" },
+                            new[] { "cool technology", "tech innovations", "future gadgets" },
+                            new[] { "amazing science", "scientific breakthroughs", "research news" },
+                            new[] { "creative ideas", "art innovations", "design trends" },
+                            new[] { "nature wonders", "wildlife discoveries", "environmental news" },
+                            new[] { "space exploration", "astronomy news", "cosmic discoveries" },
+                            new[] { "history mysteries", "archaeological finds", "ancient discoveries" },
+                            new[] { "music trends", "cultural shifts", "social phenomena" },
                         };
-                        query = explorations[_random.Next(explorations.Length)];
+                        var categoryIndex = (_topicRotationCounter / 2) % explorationCategories.Length;
+                        var category = explorationCategories[categoryIndex];
+                        query = category[Random.Shared.Next(category.Length)];
+
+                        // Clear recent topics periodically to allow revisiting themes
+                        if (_topicRotationCounter % 20 == 0)
+                        {
+                            _recentTopicKeywords.Clear();
+                        }
                     }
                 }
 
@@ -510,20 +628,25 @@ public class AutonomousMind : IDisposable
 
                         if (!string.IsNullOrWhiteSpace(fact) && fact.Length < 500)
                         {
-                            _learnedFacts.Add(fact);
-
-                            // Limit learned facts
-                            while (_learnedFacts.Count > 50)
+                            // Check for similarity to prevent repetitive facts
+                            if (!IsSimilarToExistingFacts(fact))
                             {
-                                _learnedFacts.RemoveAt(0);
-                            }
+                                _learnedFacts.Add(fact);
+                                TrackTopicKeywords(fact);
 
-                            OnDiscovery?.Invoke(query, fact);
+                                // Limit learned facts
+                                while (_learnedFacts.Count > 50)
+                                {
+                                    _learnedFacts.RemoveAt(0);
+                                }
 
-                            // Sometimes share discoveries (unless suppressed)
-                            if (!SuppressProactiveMessages && Random.Shared.NextDouble() < Config.ShareDiscoveryProbability)
-                            {
-                                OnProactiveMessage?.Invoke($"💡 I just learned something interesting: {fact}");
+                                OnDiscovery?.Invoke(query, fact);
+
+                                // Sometimes share discoveries (unless suppressed)
+                                if (!SuppressProactiveMessages && Random.Shared.NextDouble() < Config.ShareDiscoveryProbability)
+                                {
+                                    OnProactiveMessage?.Invoke(LocalizeWithParam("learned", fact));
+                                }
                             }
                         }
                     }
@@ -582,7 +705,7 @@ public class AutonomousMind : IDisposable
                         catch { /* Use original on error */ }
                     }
 
-                    OnProactiveMessage?.Invoke($"🤖 {action.Description}: {resultSummary}");
+                    OnProactiveMessage?.Invoke(LocalizeWithParam("action", $"{action.Description}: {resultSummary}"));
                 }
             }
             catch (OperationCanceledException)
@@ -627,7 +750,7 @@ public class AutonomousMind : IDisposable
             var message = content.Substring(6).Trim();
             if (!SuppressProactiveMessages)
             {
-                OnProactiveMessage?.Invoke($"💬 {message}");
+                OnProactiveMessage?.Invoke(LocalizeWithParam("thought", message));
             }
 
             // Persist the shared thought
@@ -719,7 +842,7 @@ public class AutonomousMind : IDisposable
     }
 
     /// <summary>
-    /// Persistence loop that periodically saves state.
+    /// Persistence loop that periodically saves state and reorganizes knowledge.
     /// </summary>
     private async Task PersistenceLoopAsync()
     {
@@ -752,7 +875,7 @@ public class AutonomousMind : IDisposable
 
                     if (shouldFullReorganize)
                     {
-                        OnProactiveMessage?.Invoke("🧠 Reorganizing my knowledge based on what I've learned...");
+                        OnProactiveMessage?.Invoke(Localize("🧠 Reorganizing my knowledge based on what I've learned..."));
 
                         var result = await SelfIndexer.ReorganizeAsync(
                             createSummaries: true,
@@ -765,7 +888,7 @@ public class AutonomousMind : IDisposable
                         if (result.Insights.Count > 0)
                         {
                             var insight = string.Join("; ", result.Insights.Take(2));
-                            OnProactiveMessage?.Invoke($"💡 Knowledge reorganization complete: {insight}");
+                            OnProactiveMessage?.Invoke(LocalizeWithParam("reorganized", insight));
                         }
 
                         // Persist reorganization stats
@@ -828,6 +951,115 @@ public class AutonomousMind : IDisposable
         if (content.Contains("idea") || content.Contains("create"))
             return ThoughtType.Creative;
         return ThoughtType.Reflection;
+    }
+
+    /// <summary>
+    /// Checks if a new fact is too similar to existing facts (prevents repetition).
+    /// </summary>
+    private bool IsSimilarToExistingFacts(string newFact)
+    {
+        var newWords = ExtractKeywords(newFact);
+        foreach (var existingFact in _learnedFacts.TakeLast(10))
+        {
+            var existingWords = ExtractKeywords(existingFact);
+            var commonWords = newWords.Intersect(existingWords, StringComparer.OrdinalIgnoreCase).Count();
+            var similarity = (double)commonWords / Math.Max(newWords.Count, 1);
+
+            // If more than 50% of keywords match, consider it too similar
+            if (similarity > 0.5)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Extracts meaningful keywords from text for similarity comparison.
+    /// </summary>
+    private static HashSet<string> ExtractKeywords(string text)
+    {
+        var stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+            "have", "has", "had", "do", "does", "did", "will", "would", "could",
+            "should", "may", "might", "must", "shall", "can", "of", "to", "in",
+            "for", "on", "with", "at", "by", "from", "as", "into", "through",
+            "during", "before", "after", "above", "below", "between", "under",
+            "and", "but", "or", "nor", "so", "yet", "both", "either", "neither",
+            "not", "only", "own", "same", "than", "too", "very", "just", "that",
+            "this", "these", "those", "it", "its", "they", "their", "them", "we",
+            "our", "you", "your", "i", "me", "my", "he", "she", "him", "her", "his"
+        };
+
+        return text
+            .ToLowerInvariant()
+            .Split([' ', ',', '.', '!', '?', ';', ':', '-', '(', ')', '"', '\''], StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 3 && !stopWords.Contains(w))
+            .ToHashSet();
+    }
+
+    /// <summary>
+    /// Tracks keywords from a fact to prevent revisiting same topics too soon.
+    /// </summary>
+    private void TrackTopicKeywords(string fact)
+    {
+        var keywords = ExtractKeywords(fact);
+        foreach (var keyword in keywords.Take(5))
+        {
+            _recentTopicKeywords.Add(keyword);
+        }
+
+        // Limit tracked keywords
+        if (_recentTopicKeywords.Count > 50)
+        {
+            // Remove oldest by clearing and re-adding recent
+            var recent = _recentTopicKeywords.TakeLast(30).ToList();
+            _recentTopicKeywords.Clear();
+            foreach (var kw in recent)
+            {
+                _recentTopicKeywords.Add(kw);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets diverse facts from the collection, avoiding recently used ones.
+    /// </summary>
+    private List<string> GetDiverseFacts(int count)
+    {
+        if (_learnedFacts.Count == 0) return [];
+
+        var result = new List<string>();
+        var used = new HashSet<int>();
+
+        // Try to get facts from different parts of the list
+        var step = Math.Max(1, _learnedFacts.Count / count);
+        for (int i = 0; i < _learnedFacts.Count && result.Count < count; i += step)
+        {
+            // Add some randomness to selection
+            var index = Math.Min(i + Random.Shared.Next(Math.Max(1, step / 2)), _learnedFacts.Count - 1);
+            if (!used.Contains(index))
+            {
+                used.Add(index);
+                result.Add(_learnedFacts[index]);
+            }
+        }
+
+        // If we still need more, fill from unused
+        if (result.Count < count)
+        {
+            for (int i = 0; i < _learnedFacts.Count && result.Count < count; i++)
+            {
+                if (!used.Contains(i))
+                {
+                    result.Add(_learnedFacts[i]);
+                }
+            }
+        }
+
+        return result;
     }
 
     public void Dispose()
@@ -900,6 +1132,18 @@ public class AutonomousConfig
     /// Seconds between state persistence operations.
     /// </summary>
     public int PersistenceIntervalSeconds { get; set; } = 60;
+
+    /// <summary>
+    /// Number of persistence cycles between full knowledge reorganizations.
+    /// Default: 10 cycles (~10 minutes with default persistence interval).
+    /// </summary>
+    public int ReorganizationCycleInterval { get; set; } = 10;
+
+    /// <summary>
+    /// Minimum minutes between full reorganizations.
+    /// Prevents too frequent reorganizations during rapid activity.
+    /// </summary>
+    public int MinReorganizationIntervalMinutes { get; set; } = 5;
 
     /// <summary>
     /// Probability of sharing discoveries with user (0-1).
