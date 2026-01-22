@@ -133,4 +133,18 @@ public sealed record PipelineBranch
         ArgumentNullException.ThrowIfNull(pipelineEvent);
         return new PipelineBranch(Name, Store, Source, _events.Add(pipelineEvent));
     }
+
+    /// <summary>
+    /// Pure functional operation that returns a new branch with an environment episode recorded.
+    /// This links embodied agent episodes to the DAG for Phase 1 (Embodiment) integration.
+    /// </summary>
+    /// <param name="episode">The completed environment episode to record.</param>
+    /// <returns>A new PipelineBranch with the episode event added.</returns>
+    public PipelineBranch WithEpisode(Ouroboros.Domain.Environment.Episode episode)
+    {
+        ArgumentNullException.ThrowIfNull(episode);
+
+        EpisodeEvent episodeEvent = new EpisodeEvent(Guid.NewGuid(), episode, DateTime.UtcNow);
+        return new PipelineBranch(Name, Store, Source, _events.Add(episodeEvent));
+    }
 }
