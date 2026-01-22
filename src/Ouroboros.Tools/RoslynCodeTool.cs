@@ -194,7 +194,7 @@ namespace {@namespace}
         public string[] Findings { get; }
         public bool IsValid => !Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
 
-        public CodeAnalysisResult(string[] classes, string[] methods, Diagnostic[] diagnostics, string[] findings = null)
+        public CodeAnalysisResult(string[] classes, string[] methods, Diagnostic[] diagnostics, string[]? findings = null)
         {
             Classes = classes;
             Methods = methods;
