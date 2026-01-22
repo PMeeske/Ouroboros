@@ -51,11 +51,6 @@ public interface IVoiceOptions
     /// Gets or sets a value indicating whether to continue voice conversation after command.
     /// </summary>
     bool VoiceLoop { get; set; }
-
-    /// <summary>
-    /// Gets or sets the culture/locale for voice synthesis (e.g., "en-US", "de-DE").
-    /// </summary>
-    string? Culture { get; set; }
 }
 
 /// <summary>
@@ -90,7 +85,4 @@ public abstract class VoiceOptionsBase : IVoiceOptions
 
     [Option("voice-loop", Required = false, Default = false, HelpText = "Continue voice conversation after command.")]
     public bool VoiceLoop { get; set; }
-
-    [Option("culture", Required = false, Default = null, HelpText = "Culture/locale for voice synthesis (e.g., en-US, de-DE).")]
-    public string? Culture { get; set; }
 }

@@ -918,6 +918,9 @@ public static class SystemAccessTools
 
                 var results = await SharedIndexer.SearchAsync(query, limit, scoreThreshold: 0.3f, ct);
 
+                // Record access patterns for knowledge reorganization
+                SharedIndexer.RecordAccess(results);
+
                 if (results.Count == 0)
                 {
                     return Result<string, string>.Success("No matching content found in indexed files.");
@@ -969,6 +972,9 @@ public static class SystemAccessTools
             try
             {
                 var results = await SharedIndexer.SearchAsync(query, limit: 8, scoreThreshold: 0.25f, ct);
+
+                // Record access patterns for knowledge reorganization
+                SharedIndexer.RecordAccess(results);
 
                 if (results.Count == 0)
                 {

@@ -330,21 +330,6 @@ Write-Output 'OK'
     }
 
     /// <summary>
-    /// Speaks text directly to the default audio output.
-    /// </summary>
-    /// <param name="text">Text to speak.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task SpeakAsync(string text, CancellationToken ct = default)
-    {
-        var result = await SpeakDirectAsync(text, ct);
-        if (!result.IsSuccess)
-        {
-            Console.WriteLine($"  [!] Local TTS Error: {result.Error}");
-        }
-    }
-
-    /// <summary>
     /// Speaks text directly without returning audio data (fire and forget).
     /// </summary>
     /// <param name="text">Text to speak.</param>

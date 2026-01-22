@@ -8,7 +8,6 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591;SA0001</NoWarn>
     <IsTestProject>true</IsTestProject>
-    <UserSecretsId>ouroboros-tests</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,7 +21,6 @@
     <ProjectReference Include="..\Ouroboros.Genetic\Ouroboros.Genetic.csproj" />
     <ProjectReference Include="..\Ouroboros.Network\Ouroboros.Network.csproj" />
     <ProjectReference Include="..\Ouroboros.Examples\Ouroboros.Examples.csproj" />
-    <ProjectReference Include="..\Ouroboros.Easy\Ouroboros.Easy.csproj" />
   </ItemGroup>
 
   <!-- Exclude legacy xUnit tests in Tests folder now covered by SpecFlow -->
@@ -51,9 +49,6 @@
     <PackageReference Include="ReqnRoll.xUnit" Version="2.3.0" />
     <PackageReference Include="ReqnRoll.Tools.MsBuild.Generation" Version="2.3.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="9.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.1" />
   </ItemGroup>
 
   <ItemGroup>

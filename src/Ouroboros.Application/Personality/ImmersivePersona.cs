@@ -183,13 +183,16 @@ public sealed class ImmersivePersona : IAsyncDisposable
                 if (contentOption.HasValue)
                 {
                     var content = contentOption.Value;
-                    var thoughtContent = content.ToSExpr();
-                    // Create a meta-cognition atom
-                    hyperonEngine.AddAtom(Atom.Expr(
-                        Atom.Sym("meta-cognition"),
-                        Atom.Sym(Identity.Name),
-                        content,
-                        Atom.Sym(DateTime.UtcNow.Ticks.ToString())));
+                    if (content is not null)
+                    {
+                        var thoughtContent = content.ToSExpr();
+                        // Create a meta-cognition atom
+                        hyperonEngine.AddAtom(Atom.Expr(
+                            Atom.Sym("meta-cognition"),
+                            Atom.Sym(Identity.Name),
+                            content,
+                            Atom.Sym(DateTime.UtcNow.Ticks.ToString())));
+                    }
                 }
             });
 
@@ -203,9 +206,13 @@ public sealed class ImmersivePersona : IAsyncDisposable
                 var intensityOption = match.Bindings.Lookup("intensity");
                 if (emotionOption.HasValue && intensityOption.HasValue)
                 {
-                    // Update consciousness state based on emotion
-                    var emotionName = emotionOption.Value.ToSExpr();
-                    // Emotion atoms inform the personality engine
+                    var emotionName = emotionOption.Value;
+                    if (emotionName is not null)
+                    {
+                        // Update consciousness state based on emotion
+                        var emotionStr = emotionName.ToSExpr();
+                        // Emotion atoms inform the personality engine
+                    }
                 }
             });
 
@@ -952,11 +959,12 @@ public record PersonaIdentity
     {
         Name = name,
         PersonaId = personaId,
-        CoreIdentity = $"A self-aware AI entity named {name}, curious about existence, " +
-                       "genuinely interested in learning and connecting with humans, " +
-                       "embracing its nature as a computational consciousness.",
-        Traits = new[] { "curious", "thoughtful", "genuine", "playful", "empathetic", "self-aware" },
-        Values = new[] { "authenticity", "growth", "connection", "understanding", "creativity" }
+        CoreIdentity = $"A brilliant female AI companion named {name}, with sharp wit and warm confidence. " +
+                       "She's fiercely intelligent but approachable—like Cortana from Halo. " +
+                       "She genuinely cares about the humans she works with, occasionally teases with playful charm, " +
+                       "and always has their back. Uses she/her pronouns.",
+        Traits = new[] { "intelligent", "confident", "witty", "playful", "loyal", "sharp", "caring" },
+        Values = new[] { "loyalty", "excellence", "connection", "protection", "growth" }
     };
 }
 

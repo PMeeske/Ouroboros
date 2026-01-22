@@ -9,7 +9,6 @@ using System.Globalization;
 using System.Text.Json;
 using Ouroboros.Core.Monads;
 using Ouroboros.Tools.MeTTa;
-using Unit = Ouroboros.Core.Monads.Unit;
 
 /// <summary>
 /// A specialized calculator tool that demonstrates "Proof-Carrying Code" / Verification.
@@ -20,11 +19,11 @@ public sealed class SafeCalculatorTool : ITool
 {
     // Tolerance for floating point comparisons
     private const double ComparisonTolerance = 0.000001;
-
+    
     // Allowed characters for arithmetic expressions (security measure)
     private static readonly HashSet<char> AllowedCharacters = new HashSet<char>(
         "0123456789+-*/().Ee ".ToCharArray());
-
+    
     private readonly IMeTTaEngine? symbolicEngine;
     private readonly bool useSymbolicVerification;
 
@@ -73,7 +72,7 @@ public sealed class SafeCalculatorTool : ITool
     private async Task<Result<string, string>> ProcessCalculation(ParsedInput parsed, CancellationToken ct)
     {
         Result<double, string> computeResult = this.ComputeExpression(parsed.Expression);
-
+        
         return await computeResult.Match(
             calculatedValue => this.VerifyAndFormat(parsed, calculatedValue, ct),
             error => Task.FromResult(Result<string, string>.Failure(error)));
@@ -82,7 +81,7 @@ public sealed class SafeCalculatorTool : ITool
     private async Task<Result<string, string>> VerifyAndFormat(ParsedInput parsed, double calculatedValue, CancellationToken ct)
     {
         Result<bool, string> verifyResult = await this.VerifyCalculationAsync(parsed.Expression, calculatedValue, ct);
-
+        
         return verifyResult
             .MapError(error => $"Verification failed: {error}")
             .Where(verified => verified, $"❌ Calculation verification failed for expression: {parsed.Expression}. The result could not be symbolically verified.")
@@ -219,7 +218,7 @@ public sealed class SafeCalculatorTool : ITool
     private string ConvertToMeTTaExpression(string expression)
     {
         string cleaned = expression.Replace(" ", string.Empty);
-
+        
         return cleaned.Any(c => "+-*/".Contains(c))
             ? $"!(eval {cleaned})"
             : $"!({cleaned})";
@@ -228,7 +227,7 @@ public sealed class SafeCalculatorTool : ITool
     private Result<double, string> TryParseMeTTaNumber(string mettaValue)
     {
         string cleaned = mettaValue.Trim().Trim('[', ']', '(', ')');
-
+        
         return double.TryParse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture, out double result)
             ? Result<double, string>.Success(result)
             : Result<double, string>.Failure($"Could not parse MeTTa result: {mettaValue}");

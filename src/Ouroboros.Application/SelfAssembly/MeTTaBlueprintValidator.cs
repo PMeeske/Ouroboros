@@ -232,7 +232,7 @@ public sealed class MeTTaBlueprintValidator
                 return new ConstraintResult(constraint, passed,
                     passed ? null : $"MeTTa evaluation returned: {result}");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Fall back to local evaluation on MeTTa failure
                 return EvaluateLocally(constraint, blueprint);

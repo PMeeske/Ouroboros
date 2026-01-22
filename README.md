@@ -34,6 +34,7 @@ A **sophisticated functional programming-based AI pipeline system** (YET EXPERIM
 - **🌐 Phase 2 — Integrated Self-Model (NEW)**: Persistent self-model with global workspace and predictive monitoring
   - **Identity Graph**: Tracks capabilities, resources, commitments, and performance metrics
   - **Global Workspace**: Shared working memory with attention-based priority management
+  - **Cognitive Processing**: Global Workspace Theory integration with Pavlovian consciousness ([docs](docs/COGNITIVE_ARCHITECTURE.md))
   - **Predictive Monitoring**: Forecast tracking, calibration metrics, and anomaly detection
   - **Self-Explanation**: Generate narratives from execution DAG for transparency
   - **API Endpoints**: `/api/self/state`, `/api/self/forecast`, `/api/self/commitments`, `/api/self/explain`
