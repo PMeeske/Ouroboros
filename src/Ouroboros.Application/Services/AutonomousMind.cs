@@ -29,6 +29,12 @@ public class AutonomousMind : IDisposable
     private readonly HashSet<string> _recentTopicKeywords = []; // Tracks recent topics to avoid repetition
     private int _topicRotationCounter; // Forces topic diversity
 
+    // Anti-hallucination tracking
+    private readonly ConcurrentDictionary<string, ModificationVerification> _pendingVerifications = new();
+    private readonly ConcurrentQueue<ModificationVerification> _verificationHistory = new();
+    private int _hallucinationCount;
+    private int _verifiedActionCount;
+
     private Task? _thinkingTask;
     private Task? _curiosityTask;
     private Task? _actionTask;
@@ -98,6 +104,18 @@ public class AutonomousMind : IDisposable
     /// When set, enables learning-driven knowledge consolidation.
     /// </summary>
     public QdrantSelfIndexer? SelfIndexer { get; set; }
+
+    /// <summary>
+    /// Delegate for verifying file existence. Returns true if file exists.
+    /// Used to prevent hallucination about non-existent files.
+    /// </summary>
+    public Func<string, bool>? VerifyFileExistsFunction { get; set; }
+
+    /// <summary>
+    /// Delegate for computing file hash. Returns hash string or null if file doesn't exist.
+    /// Used to verify modifications actually occurred.
+    /// </summary>
+    public Func<string, string?>? ComputeFileHashFunction { get; set; }
 
     // Track reorganization cycles
     private int _reorganizationCycle;
@@ -878,6 +896,7 @@ public class AutonomousMind : IDisposable
         }
 
         // Handle code modification: MODIFY: {"file":"path","search":"old","replace":"new"}
+        // ANTI-HALLUCINATION: Verify file exists BEFORE attempting modification
         else if (content.StartsWith("MODIFY:", StringComparison.OrdinalIgnoreCase))
         {
             var modifyJson = content.Substring(7).Trim();
@@ -886,18 +905,21 @@ public class AutonomousMind : IDisposable
                 // Only allow if modify_my_code is in allowed tools
                 if (Config.AllowedAutonomousTools.Contains("modify_my_code"))
                 {
-                    try
+                    // ANTI-HALLUCINATION: Parse and verify file exists first
+                    var verification = await VerifyAndExecuteModificationAsync(modifyJson);
+
+                    if (verification.WasVerified && verification.WasModified)
                     {
-                        var result = await ExecuteToolFunction("modify_my_code", modifyJson, _cts.Token);
-                        if (!string.IsNullOrWhiteSpace(result))
-                        {
-                            OnProactiveMessage?.Invoke(LocalizeWithParam("action", $"🔧 Self-modified code: {result[..Math.Min(100, result.Length)]}..."));
-                        }
-                        await PersistLearningAsync("self_modification", $"Modified: {modifyJson}\nResult: {result}", 0.9);
+                        _verifiedActionCount++;
+                        OnProactiveMessage?.Invoke(LocalizeWithParam("action", $"🔧 ✅ VERIFIED modification: {verification.FilePath}"));
+                        await PersistLearningAsync("verified_modification", $"Modified: {modifyJson}\nVerified: hash changed from {verification.BeforeHash?[..8]}... to {verification.AfterHash?[..8]}...", 0.95);
                     }
-                    catch (Exception ex)
+                    else if (verification.Error != null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Self-modification failed: {ex.Message}");
+                        _hallucinationCount++;
+                        System.Diagnostics.Debug.WriteLine($"[AntiHallucination] Modification blocked: {verification.Error}");
+                        // Log the attempted hallucination for learning
+                        await PersistLearningAsync("blocked_hallucination", $"Attempted: {modifyJson}\nBlocked: {verification.Error}", 0.1);
                     }
                 }
                 else
@@ -930,6 +952,25 @@ public class AutonomousMind : IDisposable
             }
         }
 
+        // ANTI-HALLUCINATION: Verify claims about files/code
+        // VERIFY: {"file":"path"} or VERIFY: {"claim":"I modified X"}
+        else if (content.StartsWith("VERIFY:", StringComparison.OrdinalIgnoreCase))
+        {
+            var verifyArg = content.Substring(7).Trim();
+            var verificationResult = await VerifyClaimAsync(verifyArg);
+            if (!verificationResult.IsValid)
+            {
+                _hallucinationCount++;
+                System.Diagnostics.Debug.WriteLine($"[AntiHallucination] VERIFICATION FAILED: {verificationResult.Reason}");
+                OnProactiveMessage?.Invoke(LocalizeWithParam("warning", $"⚠️ Self-check failed: {verificationResult.Reason}"));
+            }
+            else
+            {
+                _verifiedActionCount++;
+                System.Diagnostics.Debug.WriteLine($"[AntiHallucination] Verification passed: {verificationResult.Reason}");
+            }
+        }
+
         // For regular thoughts, persist if they contain insights
         else if (content.Contains("learned") || content.Contains("realized") || content.Contains("understand") || content.Contains("pattern"))
         {
@@ -954,6 +995,276 @@ public class AutonomousMind : IDisposable
             }
         }
     }
+
+    #region Anti-Hallucination Verification
+
+    /// <summary>
+    /// ANTI-HALLUCINATION: Verify and execute a modification with pre/post verification.
+    /// Returns detailed verification results including whether the file was actually modified.
+    /// </summary>
+    private async Task<ModificationVerification> VerifyAndExecuteModificationAsync(string modifyJson)
+    {
+        var verification = new ModificationVerification { AttemptedAt = DateTime.UtcNow };
+
+        try
+        {
+            // Parse the modification request
+            var args = JsonSerializer.Deserialize<JsonElement>(modifyJson);
+            var filePath = args.TryGetProperty("file", out var fp) ? fp.GetString() : null;
+
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return verification with { Error = "No file path specified in modification request" };
+            }
+
+            verification = verification with { FilePath = filePath };
+
+            // Resolve to absolute path
+            var absolutePath = Path.IsPathRooted(filePath)
+                ? filePath
+                : Path.Combine(Environment.CurrentDirectory, filePath);
+
+            // CRITICAL: Verify file exists BEFORE attempting modification
+            bool fileExists;
+            if (VerifyFileExistsFunction != null)
+            {
+                fileExists = VerifyFileExistsFunction(absolutePath);
+            }
+            else
+            {
+                fileExists = File.Exists(absolutePath);
+            }
+
+            if (!fileExists)
+            {
+                var result = verification with
+                {
+                    Error = $"FILE DOES NOT EXIST: {filePath} - Cannot modify non-existent file. This would be a hallucination.",
+                    FileExisted = false
+                };
+                _verificationHistory.Enqueue(result);
+                return result;
+            }
+
+            verification = verification with { FileExisted = true };
+
+            // Compute hash BEFORE modification
+            var beforeHash = ComputeFileHashFunction?.Invoke(absolutePath) ?? ComputeSimpleHash(absolutePath);
+            verification = verification with { BeforeHash = beforeHash };
+
+            // Execute the actual modification
+            if (ExecuteToolFunction != null)
+            {
+                var toolResult = await ExecuteToolFunction("modify_my_code", modifyJson, _cts.Token);
+
+                // Compute hash AFTER modification
+                var afterHash = ComputeFileHashFunction?.Invoke(absolutePath) ?? ComputeSimpleHash(absolutePath);
+
+                // VERIFICATION: Did the file actually change?
+                var wasModified = beforeHash != afterHash;
+
+                verification = verification with
+                {
+                    ToolResult = toolResult,
+                    AfterHash = afterHash,
+                    WasModified = wasModified,
+                    WasVerified = true,
+                    Error = wasModified ? null : "Modification tool returned success but file hash unchanged - modification may not have occurred"
+                };
+            }
+            else
+            {
+                verification = verification with { Error = "ExecuteToolFunction not available" };
+            }
+        }
+        catch (JsonException jex)
+        {
+            verification = verification with { Error = $"Invalid JSON in modification request: {jex.Message}" };
+        }
+        catch (Exception ex)
+        {
+            verification = verification with { Error = $"Modification failed: {ex.Message}" };
+        }
+
+        _verificationHistory.Enqueue(verification);
+
+        // Keep verification history bounded
+        while (_verificationHistory.Count > 100)
+        {
+            _verificationHistory.TryDequeue(out _);
+        }
+
+        return verification;
+    }
+
+    /// <summary>
+    /// ANTI-HALLUCINATION: Verify a claim about the codebase.
+    /// Used to check if stated facts are actually true.
+    /// </summary>
+    private async Task<ClaimVerification> VerifyClaimAsync(string claimArg)
+    {
+        try
+        {
+            // Try to parse as JSON first
+            if (claimArg.TrimStart().StartsWith("{"))
+            {
+                var args = JsonSerializer.Deserialize<JsonElement>(claimArg);
+
+                // Verify file existence claim
+                if (args.TryGetProperty("file", out var fileProp))
+                {
+                    var filePath = fileProp.GetString();
+                    if (!string.IsNullOrWhiteSpace(filePath))
+                    {
+                        var absolutePath = Path.IsPathRooted(filePath)
+                            ? filePath
+                            : Path.Combine(Environment.CurrentDirectory, filePath);
+
+                        var exists = VerifyFileExistsFunction?.Invoke(absolutePath) ?? File.Exists(absolutePath);
+                        return new ClaimVerification
+                        {
+                            IsValid = exists,
+                            Reason = exists ? $"File exists: {filePath}" : $"File DOES NOT exist: {filePath}",
+                            ClaimType = "file_existence"
+                        };
+                    }
+                }
+
+                // Verify file contains text claim
+                if (args.TryGetProperty("file_contains", out var containsProp) &&
+                    args.TryGetProperty("text", out var textProp))
+                {
+                    var filePath = containsProp.GetString();
+                    var searchText = textProp.GetString();
+
+                    if (!string.IsNullOrWhiteSpace(filePath) && !string.IsNullOrWhiteSpace(searchText))
+                    {
+                        var absolutePath = Path.IsPathRooted(filePath)
+                            ? filePath
+                            : Path.Combine(Environment.CurrentDirectory, filePath);
+
+                        if (File.Exists(absolutePath))
+                        {
+                            var content = await File.ReadAllTextAsync(absolutePath, _cts.Token);
+                            var contains = content.Contains(searchText);
+                            return new ClaimVerification
+                            {
+                                IsValid = contains,
+                                Reason = contains ? $"File contains the specified text" : $"File does NOT contain: {searchText[..Math.Min(50, searchText.Length)]}...",
+                                ClaimType = "file_contains"
+                            };
+                        }
+                        else
+                        {
+                            return new ClaimVerification
+                            {
+                                IsValid = false,
+                                Reason = $"Cannot verify content - file does not exist: {filePath}",
+                                ClaimType = "file_contains"
+                            };
+                        }
+                    }
+                }
+
+                // Verify modification claim (check verification history)
+                if (args.TryGetProperty("modification", out var modProp))
+                {
+                    var modPath = modProp.GetString();
+                    var recentMod = _verificationHistory
+                        .Where(v => v.FilePath?.Contains(modPath ?? "", StringComparison.OrdinalIgnoreCase) == true)
+                        .OrderByDescending(v => v.AttemptedAt)
+                        .FirstOrDefault();
+
+                    if (recentMod != null)
+                    {
+                        return new ClaimVerification
+                        {
+                            IsValid = recentMod.WasVerified && recentMod.WasModified,
+                            Reason = recentMod.WasModified
+                                ? $"Modification verified at {recentMod.AttemptedAt:HH:mm:ss}"
+                                : $"Modification NOT verified: {recentMod.Error ?? "unknown reason"}",
+                            ClaimType = "modification"
+                        };
+                    }
+                    else
+                    {
+                        return new ClaimVerification
+                        {
+                            IsValid = false,
+                            Reason = $"No modification record found for: {modPath}",
+                            ClaimType = "modification"
+                        };
+                    }
+                }
+            }
+
+            // Simple file path check (non-JSON)
+            if (!string.IsNullOrWhiteSpace(claimArg) && !claimArg.Contains(" "))
+            {
+                var absolutePath = Path.IsPathRooted(claimArg)
+                    ? claimArg
+                    : Path.Combine(Environment.CurrentDirectory, claimArg);
+                var exists = File.Exists(absolutePath);
+                return new ClaimVerification
+                {
+                    IsValid = exists,
+                    Reason = exists ? $"Path exists: {claimArg}" : $"Path DOES NOT exist: {claimArg}",
+                    ClaimType = "path_check"
+                };
+            }
+
+            return new ClaimVerification
+            {
+                IsValid = false,
+                Reason = "Could not parse verification request",
+                ClaimType = "unknown"
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ClaimVerification
+            {
+                IsValid = false,
+                Reason = $"Verification error: {ex.Message}",
+                ClaimType = "error"
+            };
+        }
+    }
+
+    /// <summary>
+    /// Simple file hash computation fallback.
+    /// </summary>
+    private static string? ComputeSimpleHash(string filePath)
+    {
+        try
+        {
+            if (!File.Exists(filePath)) return null;
+            using var stream = File.OpenRead(filePath);
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var hash = sha256.ComputeHash(stream);
+            return Convert.ToBase64String(hash);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Get anti-hallucination statistics for monitoring.
+    /// </summary>
+    public AntiHallucinationStats GetAntiHallucinationStats() => new()
+    {
+        HallucinationCount = _hallucinationCount,
+        VerifiedActionCount = _verifiedActionCount,
+        PendingVerifications = _pendingVerifications.Count,
+        RecentVerifications = _verificationHistory.ToList(),
+        HallucinationRate = _verifiedActionCount + _hallucinationCount > 0
+            ? (double)_hallucinationCount / (_verifiedActionCount + _hallucinationCount)
+            : 0
+    };
+
+    #endregion
 
     /// <summary>
     /// Persistence loop that periodically saves state and reorganizes knowledge.
@@ -1331,3 +1642,77 @@ public class EmotionalState
         _ => "neutral"
     };
 }
+
+#region Anti-Hallucination Types
+
+/// <summary>
+/// Result of verifying and executing a code modification.
+/// Tracks file existence, hash changes, and verification status.
+/// </summary>
+public sealed record ModificationVerification
+{
+    /// <summary>Path to the file being modified.</summary>
+    public string? FilePath { get; init; }
+
+    /// <summary>Whether the file existed before modification attempt.</summary>
+    public bool FileExisted { get; init; }
+
+    /// <summary>File hash before modification.</summary>
+    public string? BeforeHash { get; init; }
+
+    /// <summary>File hash after modification.</summary>
+    public string? AfterHash { get; init; }
+
+    /// <summary>Whether the modification was verified (file exists, tool executed).</summary>
+    public bool WasVerified { get; init; }
+
+    /// <summary>Whether the file content actually changed (hash differs).</summary>
+    public bool WasModified { get; init; }
+
+    /// <summary>Error message if verification/modification failed.</summary>
+    public string? Error { get; init; }
+
+    /// <summary>Raw result from the modification tool.</summary>
+    public string? ToolResult { get; init; }
+
+    /// <summary>When the modification was attempted.</summary>
+    public DateTime AttemptedAt { get; init; }
+}
+
+/// <summary>
+/// Result of verifying a claim about the codebase.
+/// </summary>
+public sealed record ClaimVerification
+{
+    /// <summary>Whether the claim is valid/true.</summary>
+    public bool IsValid { get; init; }
+
+    /// <summary>Reason for the verification result.</summary>
+    public string Reason { get; init; } = "";
+
+    /// <summary>Type of claim being verified.</summary>
+    public string ClaimType { get; init; } = "";
+}
+
+/// <summary>
+/// Statistics about anti-hallucination measures.
+/// </summary>
+public sealed record AntiHallucinationStats
+{
+    /// <summary>Number of detected hallucinations (blocked false claims).</summary>
+    public int HallucinationCount { get; init; }
+
+    /// <summary>Number of verified successful actions.</summary>
+    public int VerifiedActionCount { get; init; }
+
+    /// <summary>Number of actions pending verification.</summary>
+    public int PendingVerifications { get; init; }
+
+    /// <summary>Recent verification results.</summary>
+    public List<ModificationVerification> RecentVerifications { get; init; } = [];
+
+    /// <summary>Ratio of hallucinations to total actions (0-1).</summary>
+    public double HallucinationRate { get; init; }
+}
+
+#endregion

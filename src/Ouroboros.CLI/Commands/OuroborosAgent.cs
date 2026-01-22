@@ -2727,6 +2727,31 @@ Generate ONLY the C# code, no explanations:";
                 return "Tool not found";
             };
 
+            // ANTI-HALLUCINATION: Configure file verification functions
+            _autonomousMind.VerifyFileExistsFunction = (path) =>
+            {
+                // Resolve relative paths against workspace
+                var absolutePath = Path.IsPathRooted(path) ? path : Path.Combine(Environment.CurrentDirectory, path);
+                return File.Exists(absolutePath);
+            };
+
+            _autonomousMind.ComputeFileHashFunction = (path) =>
+            {
+                try
+                {
+                    var absolutePath = Path.IsPathRooted(path) ? path : Path.Combine(Environment.CurrentDirectory, path);
+                    if (!File.Exists(absolutePath)) return null;
+                    using var stream = File.OpenRead(absolutePath);
+                    using var sha256 = System.Security.Cryptography.SHA256.Create();
+                    var hash = sha256.ComputeHash(stream);
+                    return Convert.ToBase64String(hash);
+                }
+                catch
+                {
+                    return null;
+                }
+            };
+
             // Configure pipe command execution - allows inner thoughts to execute piped commands
             _autonomousMind.ExecutePipeCommandFunction = async (pipeCommand, token) =>
             {
@@ -4250,6 +4275,13 @@ No quotes around the response. Just the greeting itself.";
             $"• MeTTa: {(_mettaEngine != null ? "active" : "offline")}",
             $"• Conversation turns: {_conversationHistory.Count / 2}"
         };
+
+        // Add anti-hallucination stats if autonomous mind is active
+        if (_autonomousMind != null)
+        {
+            var antiHallStats = _autonomousMind.GetAntiHallucinationStats();
+            status.Add($"• Anti-Hallucination: {antiHallStats.VerifiedActionCount} verified, {antiHallStats.HallucinationCount} blocked ({antiHallStats.HallucinationRate:P0} hallucination rate)");
+        }
 
         return "Current status:\n" + string.Join("\n", status);
     }
