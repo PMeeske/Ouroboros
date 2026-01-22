@@ -88,7 +88,14 @@ public sealed record OuroborosConfig(
     // Multi-model
     string? CoderModel = null,
     string? ReasonModel = null,
-    string? SummarizeModel = null);
+    string? SummarizeModel = null,
+    // Piping & Batch mode
+    bool PipeMode = false,
+    string? BatchFile = null,
+    bool JsonOutput = false,
+    bool NoGreeting = false,
+    bool ExitOnError = false,
+    string? ExecCommand = null);
 
 /// <summary>
 /// Unified Ouroboros agent that integrates all capabilities:
@@ -182,6 +189,7 @@ public sealed class OuroborosAgent : IAsyncDisposable
     // Persistent thought memory - enables continuity across sessions
     private ThoughtPersistenceService? _thoughtPersistence;
     private List<InnerThought> _persistentThoughts = new();
+    private string? _lastThoughtContent; // Last generated thought/learning for "save it" command
 
     // Autonomous/Push mode - proposes actions for user approval
     private AutonomousCoordinator? _autonomousCoordinator;
@@ -2719,6 +2727,20 @@ Generate ONLY the C# code, no explanations:";
                 return "Tool not found";
             };
 
+            // Configure pipe command execution - allows inner thoughts to execute piped commands
+            _autonomousMind.ExecutePipeCommandFunction = async (pipeCommand, token) =>
+            {
+                try
+                {
+                    // Use the agent's pipe processing capability
+                    return await ProcessInputWithPipingAsync(pipeCommand);
+                }
+                catch (Exception ex)
+                {
+                    return $"Pipe execution failed: {ex.Message}";
+                }
+            };
+
             // Configure output sanitization - converts raw tool output to natural language
             _autonomousMind.SanitizeOutputFunction = async (rawOutput, token) =>
             {
@@ -2760,6 +2782,16 @@ No markdown, no technical details, just the key insight:
             // Wire up proactive message events
             _autonomousMind.OnProactiveMessage += async (msg) =>
             {
+                // Track the thought for "save it" command
+                // Extract the actual content (strip emoji prefix if present)
+                var thoughtContent = msg.TrimStart();
+                if (thoughtContent.StartsWith("💡") || thoughtContent.StartsWith("💬") ||
+                    thoughtContent.StartsWith("🤔") || thoughtContent.StartsWith("💭"))
+                {
+                    thoughtContent = thoughtContent[2..].Trim(); // Skip emoji + space
+                }
+                TrackLastThought(thoughtContent);
+
                 // Handle proactive messages without corrupting user input
                 string savedInput;
                 lock (_inputLock)
@@ -2873,11 +2905,21 @@ No markdown, no technical details, just the key insight:
             await InitializeAsync();
         }
 
+        // Handle pipe/batch/exec modes
+        if (_config.PipeMode || !string.IsNullOrWhiteSpace(_config.BatchFile) || !string.IsNullOrWhiteSpace(_config.ExecCommand))
+        {
+            await RunNonInteractiveModeAsync();
+            return;
+        }
+
         _voice.PrintHeader("OUROBOROS");
 
         // Greeting - let the LLM generate a natural Cortana-like greeting
-        var greeting = await GetGreetingAsync();
-        await _voice.SayAsync(greeting);
+        if (!_config.NoGreeting)
+        {
+            var greeting = await GetGreetingAsync();
+            await _voice.SayAsync(greeting);
+        }
 
         _isInConversationLoop = true;
         bool running = true;
@@ -2902,10 +2944,10 @@ No markdown, no technical details, just the key insight:
                 continue;
             }
 
-            // Process input through the agent
+            // Process input through the agent (with pipe support)
             try
             {
-                var response = await ProcessInputAsync(input);
+                var response = await ProcessInputWithPipingAsync(input);
 
                 // Strip tool results for voice output (full response shown in console)
                 var voiceResponse = StripToolResults(response);
@@ -2942,6 +2984,285 @@ No markdown, no technical details, just the key insight:
                 await _voice.SayAsync($"Hmm, something went wrong: {ex.Message}");
             }
         }
+    }
+
+    /// <summary>
+    /// Runs in non-interactive mode for piping, batch processing, or single command execution.
+    /// Supports Unix-style | piping within commands to chain agent operations.
+    /// </summary>
+    private async Task RunNonInteractiveModeAsync()
+    {
+        var commands = new List<string>();
+
+        // Collect commands from various sources
+        if (!string.IsNullOrWhiteSpace(_config.ExecCommand))
+        {
+            // Single exec command (may contain | for internal piping)
+            commands.Add(_config.ExecCommand);
+        }
+        else if (!string.IsNullOrWhiteSpace(_config.BatchFile))
+        {
+            // Batch file mode
+            if (!File.Exists(_config.BatchFile))
+            {
+                OutputError($"Batch file not found: {_config.BatchFile}");
+                return;
+            }
+            commands.AddRange(await File.ReadAllLinesAsync(_config.BatchFile));
+        }
+        else if (_config.PipeMode || Console.IsInputRedirected)
+        {
+            // Pipe mode - read from stdin
+            string? line;
+            while ((line = Console.ReadLine()) != null)
+            {
+                if (!string.IsNullOrWhiteSpace(line))
+                    commands.Add(line);
+            }
+        }
+
+        // Process each command
+        string? lastOutput = null;
+        foreach (var rawCmd in commands)
+        {
+            var cmd = rawCmd.Trim();
+            if (string.IsNullOrWhiteSpace(cmd) || cmd.StartsWith("#")) continue; // Skip empty/comments
+
+            // Handle internal piping: "ask question | summarize | remember"
+            var pipeSegments = ParsePipeSegments(cmd);
+
+            foreach (var segment in pipeSegments)
+            {
+                var commandToRun = segment.Trim();
+
+                // Substitute $PIPE or $_ with last output
+                if (lastOutput != null)
+                {
+                    commandToRun = commandToRun
+                        .Replace("$PIPE", lastOutput)
+                        .Replace("$_", lastOutput);
+
+                    // If segment starts with |, prepend last output as context
+                    if (segment.TrimStart().StartsWith("|"))
+                    {
+                        commandToRun = $"{lastOutput}\n---\n{commandToRun.TrimStart().TrimStart('|').Trim()}";
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(commandToRun)) continue;
+
+                try
+                {
+                    var response = await ProcessInputAsync(commandToRun);
+                    lastOutput = response;
+                    OutputResponse(commandToRun, response);
+                }
+                catch (Exception ex)
+                {
+                    OutputError($"Error processing '{commandToRun}': {ex.Message}");
+                    if (_config.ExitOnError)
+                        return;
+                    lastOutput = null;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Parses pipe segments from a command string.
+    /// Handles escaping and quoted strings containing |.
+    /// </summary>
+    private static List<string> ParsePipeSegments(string command)
+    {
+        var segments = new List<string>();
+        var current = new StringBuilder();
+        bool inQuote = false;
+        char quoteChar = '"';
+
+        for (int i = 0; i < command.Length; i++)
+        {
+            char c = command[i];
+
+            // Handle quotes
+            if ((c == '"' || c == '\'') && (i == 0 || command[i - 1] != '\\'))
+            {
+                if (!inQuote)
+                {
+                    inQuote = true;
+                    quoteChar = c;
+                }
+                else if (c == quoteChar)
+                {
+                    inQuote = false;
+                }
+                current.Append(c);
+                continue;
+            }
+
+            // Handle pipe outside quotes
+            if (c == '|' && !inQuote)
+            {
+                var segment = current.ToString().Trim();
+                if (!string.IsNullOrWhiteSpace(segment))
+                    segments.Add(segment);
+                current.Clear();
+                continue;
+            }
+
+            current.Append(c);
+        }
+
+        // Add final segment
+        var final = current.ToString().Trim();
+        if (!string.IsNullOrWhiteSpace(final))
+            segments.Add(final);
+
+        return segments;
+    }
+
+    /// <summary>
+    /// Outputs a response in the configured format (plain text or JSON).
+    /// </summary>
+    private void OutputResponse(string command, string response)
+    {
+        if (_config.JsonOutput)
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                command,
+                response,
+                timestamp = DateTime.UtcNow,
+                success = true
+            });
+            Console.WriteLine(json);
+        }
+        else
+        {
+            Console.WriteLine(response);
+        }
+    }
+
+    /// <summary>
+    /// Outputs an error in the configured format.
+    /// </summary>
+    private void OutputError(string message)
+    {
+        if (_config.JsonOutput)
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                error = message,
+                timestamp = DateTime.UtcNow,
+                success = false
+            });
+            Console.WriteLine(json);
+        }
+        else
+        {
+            Console.Error.WriteLine($"ERROR: {message}");
+        }
+    }
+
+    /// <summary>
+    /// Processes input with support for | piping syntax.
+    /// Allows chaining commands like: "ask what is AI | summarize | remember"
+    /// Also detects and executes pipe commands in model responses.
+    /// </summary>
+    public async Task<string> ProcessInputWithPipingAsync(string input, int maxPipeDepth = 5)
+    {
+        // Check if input contains pipe operators (outside quotes)
+        var segments = ParsePipeSegments(input);
+
+        if (segments.Count <= 1)
+        {
+            // No piping, process normally
+            var response = await ProcessInputAsync(input);
+
+            // Check if model response contains a pipe command to execute
+            response = await ExecuteModelPipeCommandsAsync(response, maxPipeDepth);
+
+            return response;
+        }
+
+        // Execute pipe chain
+        string? lastOutput = null;
+        var allOutputs = new List<string>();
+
+        for (int i = 0; i < segments.Count && i < maxPipeDepth; i++)
+        {
+            var segment = segments[i].Trim();
+            if (string.IsNullOrWhiteSpace(segment)) continue;
+
+            // Substitute previous output into current command
+            var commandToRun = segment;
+            if (lastOutput != null)
+            {
+                // Replace $PIPE or $_ placeholders
+                commandToRun = commandToRun
+                    .Replace("$PIPE", lastOutput)
+                    .Replace("$_", lastOutput);
+
+                // If no placeholder, prepend as context
+                if (!segment.Contains("$PIPE") && !segment.Contains("$_"))
+                {
+                    commandToRun = $"Given this context:\n---\n{lastOutput}\n---\n{segment}";
+                }
+            }
+
+            try
+            {
+                lastOutput = await ProcessInputAsync(commandToRun);
+                allOutputs.Add($"[Step {i + 1}: {segment[..Math.Min(30, segment.Length)]}...]\n{lastOutput}");
+            }
+            catch (Exception ex)
+            {
+                allOutputs.Add($"[Step {i + 1} ERROR: {ex.Message}]");
+                break;
+            }
+        }
+
+        // Return final output (or combined if debug)
+        return lastOutput ?? string.Join("\n\n", allOutputs);
+    }
+
+    /// <summary>
+    /// Detects and executes pipe commands embedded in model responses.
+    /// Looks for patterns like: [PIPE: command1 | command2]
+    /// </summary>
+    private async Task<string> ExecuteModelPipeCommandsAsync(string response, int maxDepth)
+    {
+        if (maxDepth <= 0) return response;
+
+        // Look for [PIPE: ...] or ```pipe ... ``` blocks in response
+        var pipePattern = new Regex(@"\[PIPE:\s*(.+?)\]|\`\`\`pipe\s*\n(.+?)\n\`\`\`", RegexOptions.Singleline);
+        var matches = pipePattern.Matches(response);
+
+        if (matches.Count == 0) return response;
+
+        var result = response;
+        foreach (Match match in matches)
+        {
+            var pipeCommand = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value;
+            if (string.IsNullOrWhiteSpace(pipeCommand)) continue;
+
+            try
+            {
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.WriteLine($"  🔗 Executing pipe: {pipeCommand[..Math.Min(50, pipeCommand.Length)]}...");
+                Console.ResetColor();
+
+                var pipeResult = await ProcessInputWithPipingAsync(pipeCommand.Trim(), maxDepth - 1);
+
+                // Replace the pipe command with its result
+                result = result.Replace(match.Value, $"\n📤 Pipe Result:\n{pipeResult}\n");
+            }
+            catch (Exception ex)
+            {
+                result = result.Replace(match.Value, $"\n❌ Pipe Error: {ex.Message}\n");
+            }
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -3008,6 +3329,7 @@ No markdown, no technical details, just the key insight:
             ActionType.CoordinatorCommand => ProcessCoordinatorCommand(input),
             // Self-modification commands (direct tool invocation)
             ActionType.SaveCode => await SaveCodeCommandAsync(action.Argument),
+            ActionType.SaveThought => await SaveThoughtCommandAsync(action.Argument),
             ActionType.ReadMyCode => await ReadMyCodeCommandAsync(action.Argument),
             ActionType.SearchMyCode => await SearchMyCodeCommandAsync(action.Argument),
             ActionType.AnalyzeCode => await AnalyzeCodeCommandAsync(action.Argument),
@@ -3033,6 +3355,14 @@ No markdown, no technical details, just the key insight:
     private (ActionType Type, string Argument, string? ToolInput) ParseAction(string input)
     {
         var lower = input.ToLowerInvariant().Trim();
+
+        // Handle thought input prefixed with [💭] - track and acknowledge
+        if (input.TrimStart().StartsWith("[💭]"))
+        {
+            var thought = input.TrimStart()[4..].Trim(); // Remove [💭] prefix
+            TrackLastThought(thought);
+            return (ActionType.SaveThought, thought, null);
+        }
 
         // Help
         if (lower is "help" or "?" or "commands")
@@ -3333,14 +3663,27 @@ No markdown, no technical details, just the key insight:
             return (ActionType.AnalyzeCode, input, null);
         }
 
-        // Save/modify code - direct invocation of modify_my_code
-        if (lower.StartsWith("save ") || lower.StartsWith("/save ") ||
-            lower.StartsWith("modify code ") || lower.StartsWith("/modify ") ||
-            lower is "save it" or "save code" or "persist changes" or "write code")
+        // Save thought/learning - persists thoughts to memory
+        if (lower.StartsWith("save thought ") || lower.StartsWith("/save thought ") ||
+            lower.StartsWith("save learning ") || lower.StartsWith("/save learning ") ||
+            lower is "save it" or "save thought" or "save learning" or "persist thought")
         {
             var arg = "";
-            if (lower.StartsWith("save ")) arg = input[5..].Trim();
-            else if (lower.StartsWith("/save ")) arg = input[6..].Trim();
+            if (lower.StartsWith("save thought ")) arg = input[13..].Trim();
+            else if (lower.StartsWith("/save thought ")) arg = input[14..].Trim();
+            else if (lower.StartsWith("save learning ")) arg = input[14..].Trim();
+            else if (lower.StartsWith("/save learning ")) arg = input[15..].Trim();
+            return (ActionType.SaveThought, arg, null);
+        }
+
+        // Save/modify code - direct invocation of modify_my_code
+        if (lower.StartsWith("save code ") || lower.StartsWith("/save code ") ||
+            lower.StartsWith("modify code ") || lower.StartsWith("/modify ") ||
+            lower is "save code" or "persist changes" or "write code")
+        {
+            var arg = "";
+            if (lower.StartsWith("save code ")) arg = input[10..].Trim();
+            else if (lower.StartsWith("/save code ")) arg = input[11..].Trim();
             else if (lower.StartsWith("modify code ")) arg = input[12..].Trim();
             else if (lower.StartsWith("/modify ")) arg = input[8..].Trim();
             return (ActionType.SaveCode, arg, null);
@@ -3588,6 +3931,11 @@ No quotes around the response. Just the greeting itself.";
 ║   epic              - Epic/project orchestration             ║
 ║   selfmodel         - View self-model and identity           ║
 ║   evaluate          - Self-assessment and performance        ║
+║                                                              ║
+║ PIPING & CHAINING (internal command piping)                  ║
+║   cmd1 | cmd2       - Pipe output of cmd1 to cmd2            ║
+║   cmd $PIPE         - Use $PIPE/$_ for previous output       ║
+║   Example: ask what is AI | summarize | remember as AI-def   ║
 ║                                                              ║{pushModeHelp}
 ║ SYSTEM                                                       ║
 ║   status            - Show current system state              ║
@@ -5208,6 +5556,7 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
         CoordinatorCommand,
         // Self-modification
         SaveCode,
+        SaveThought,
         ReadMyCode,
         SearchMyCode,
         AnalyzeCode
@@ -7544,6 +7893,127 @@ Make sure both search and replace text are quoted.";
         {
             return $"❌ SaveCode command failed: {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// Direct command to save a thought/learning to persistent memory.
+    /// Supports "save it" to save the last generated thought, or explicit content.
+    /// </summary>
+    private async Task<string> SaveThoughtCommandAsync(string argument)
+    {
+        try
+        {
+            if (_thoughtPersistence == null)
+            {
+                return "❌ Thought persistence is not initialized. Thoughts cannot be saved.";
+            }
+
+            string contentToSave;
+            string? topic = null;
+
+            if (string.IsNullOrWhiteSpace(argument))
+            {
+                // "save it" or "save thought" without argument - use last thought
+                if (string.IsNullOrWhiteSpace(_lastThoughtContent))
+                {
+                    return @"❌ No recent thought to save.
+
+💡 **Usage:**
+  `save it` - saves the last thought/learning
+  `save thought <content>` - saves explicit content
+  `save learning <content>` - saves a learning
+
+Example: save thought I discovered that monadic composition simplifies error handling";
+                }
+
+                contentToSave = _lastThoughtContent;
+            }
+            else
+            {
+                contentToSave = argument.Trim();
+            }
+
+            // Parse topic if present (format: "content #topic" or "content [topic]")
+            var hashIndex = contentToSave.LastIndexOf('#');
+            var bracketIndex = contentToSave.LastIndexOf('[');
+
+            if (hashIndex > 0)
+            {
+                topic = contentToSave[(hashIndex + 1)..].Trim().TrimEnd(']');
+                contentToSave = contentToSave[..hashIndex].Trim();
+            }
+            else if (bracketIndex > 0 && contentToSave.EndsWith(']'))
+            {
+                topic = contentToSave[(bracketIndex + 1)..^1].Trim();
+                contentToSave = contentToSave[..bracketIndex].Trim();
+            }
+
+            // Determine thought type based on content
+            var thoughtType = InnerThoughtType.Consolidation; // Default for learnings
+            if (contentToSave.Contains("learned", StringComparison.OrdinalIgnoreCase) ||
+                contentToSave.Contains("discovered", StringComparison.OrdinalIgnoreCase))
+            {
+                thoughtType = InnerThoughtType.Consolidation;
+            }
+            else if (contentToSave.Contains("wonder", StringComparison.OrdinalIgnoreCase) ||
+                     contentToSave.Contains("curious", StringComparison.OrdinalIgnoreCase) ||
+                     contentToSave.Contains("?"))
+            {
+                thoughtType = InnerThoughtType.Curiosity;
+            }
+            else if (contentToSave.Contains("feel", StringComparison.OrdinalIgnoreCase) ||
+                     contentToSave.Contains("emotion", StringComparison.OrdinalIgnoreCase))
+            {
+                thoughtType = InnerThoughtType.Emotional;
+            }
+            else if (contentToSave.Contains("idea", StringComparison.OrdinalIgnoreCase) ||
+                     contentToSave.Contains("perhaps", StringComparison.OrdinalIgnoreCase) ||
+                     contentToSave.Contains("maybe", StringComparison.OrdinalIgnoreCase))
+            {
+                thoughtType = InnerThoughtType.Creative;
+            }
+            else if (contentToSave.Contains("think", StringComparison.OrdinalIgnoreCase) ||
+                     contentToSave.Contains("realize", StringComparison.OrdinalIgnoreCase))
+            {
+                thoughtType = InnerThoughtType.Metacognitive;
+            }
+
+            // Create and save the thought
+            var thought = InnerThought.CreateAutonomous(
+                thoughtType,
+                contentToSave,
+                confidence: 0.85,
+                priority: ThoughtPriority.Normal,
+                tags: topic != null ? [topic] : null);
+
+            await PersistThoughtAsync(thought, topic);
+
+            var typeEmoji = thoughtType switch
+            {
+                InnerThoughtType.Consolidation => "💡",
+                InnerThoughtType.Curiosity => "🤔",
+                InnerThoughtType.Emotional => "💭",
+                InnerThoughtType.Creative => "💫",
+                InnerThoughtType.Metacognitive => "🧠",
+                _ => "📝"
+            };
+
+            var topicNote = topic != null ? $" (topic: {topic})" : "";
+            return $"✅ **Thought Saved**{topicNote}\n\n{typeEmoji} {contentToSave}\n\nType: {thoughtType} | ID: {thought.Id:N}";
+        }
+        catch (Exception ex)
+        {
+            return $"❌ Failed to save thought: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Updates the last thought content for "save it" command.
+    /// Call this whenever the agent generates a thought/learning.
+    /// </summary>
+    private void TrackLastThought(string content)
+    {
+        _lastThoughtContent = content;
     }
 
     /// <summary>

@@ -82,6 +82,12 @@ public class AutonomousMind : IDisposable
     public Func<string, string, CancellationToken, Task<string>>? ExecuteToolFunction { get; set; }
 
     /// <summary>
+    /// Delegate for executing piped commands (supports internal | piping).
+    /// Takes a command string that may contain pipe operators.
+    /// </summary>
+    public Func<string, CancellationToken, Task<string>>? ExecutePipeCommandFunction { get; set; }
+
+    /// <summary>
     /// Delegate for sanitizing raw tool outputs into natural conversational text.
     /// Takes raw output string, returns sanitized natural language.
     /// </summary>
@@ -812,6 +818,61 @@ public class AutonomousMind : IDisposable
                 if (safeTool)
                 {
                     _pendingActions.Enqueue(action);
+                }
+            }
+        }
+
+        // Handle piped commands: PIPE: ask what is AI | summarize | remember
+        else if (content.StartsWith("PIPE:", StringComparison.OrdinalIgnoreCase))
+        {
+            var pipeCommand = content.Substring(5).Trim();
+            if (!string.IsNullOrWhiteSpace(pipeCommand) && ExecutePipeCommandFunction != null)
+            {
+                try
+                {
+                    var result = await ExecutePipeCommandFunction(pipeCommand, _cts.Token);
+                    if (!string.IsNullOrWhiteSpace(result) && !SuppressProactiveMessages)
+                    {
+                        // Summarize long results
+                        var displayResult = result.Length > 200 ? result[..200] + "..." : result;
+                        OnProactiveMessage?.Invoke(LocalizeWithParam("action", $"Executed: {pipeCommand[..Math.Min(30, pipeCommand.Length)]}... → {displayResult}"));
+                    }
+                    await PersistLearningAsync("pipe_execution", $"Command: {pipeCommand}\nResult: {result[..Math.Min(500, result.Length)]}", 0.75);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Pipe execution failed: {ex.Message}");
+                }
+            }
+        }
+
+        // Handle direct tool execution: TOOL: search "quantum computing"
+        else if (content.StartsWith("TOOL:", StringComparison.OrdinalIgnoreCase))
+        {
+            var toolCall = content.Substring(5).Trim();
+            var spaceIndex = toolCall.IndexOf(' ');
+            if (spaceIndex > 0 && ExecuteToolFunction != null)
+            {
+                var toolName = toolCall[..spaceIndex].Trim().ToLowerInvariant();
+                var toolInput = toolCall[(spaceIndex + 1)..].Trim().Trim('"', '\'');
+
+                // Only allow safe tools
+                if (Config.AllowedAutonomousTools.Contains(toolName))
+                {
+                    try
+                    {
+                        var result = await ExecuteToolFunction(toolName, toolInput, _cts.Token);
+                        if (!string.IsNullOrWhiteSpace(result) && !SuppressProactiveMessages)
+                        {
+                            var displayResult = result.Length > 200 ? result[..200] + "..." : result;
+                            OnProactiveMessage?.Invoke(LocalizeWithParam("action", $"Used {toolName}: {displayResult}"));
+                        }
+                        await PersistLearningAsync("tool_execution", $"Tool: {toolName}\nInput: {toolInput}\nResult: {result[..Math.Min(500, result.Length)]}", 0.7);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Tool execution failed: {ex.Message}");
+                    }
                 }
             }
         }

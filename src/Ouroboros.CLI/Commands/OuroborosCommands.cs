@@ -103,7 +103,14 @@ public static class OuroborosCommands
                 // Multi-model
                 CoderModel: opts.CoderModel,
                 ReasonModel: opts.ReasonModel,
-                SummarizeModel: opts.SummarizeModel
+                SummarizeModel: opts.SummarizeModel,
+                // Piping & Batch mode
+                PipeMode: opts.Pipe,
+                BatchFile: opts.BatchFile,
+                JsonOutput: opts.JsonOutput,
+                NoGreeting: opts.NoGreeting || opts.Pipe || !string.IsNullOrWhiteSpace(opts.BatchFile) || !string.IsNullOrWhiteSpace(opts.Exec),
+                ExitOnError: opts.ExitOnError,
+                ExecCommand: opts.Exec
             );
 
             // Create the unified Ouroboros agent

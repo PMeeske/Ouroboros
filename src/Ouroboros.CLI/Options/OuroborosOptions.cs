@@ -190,6 +190,28 @@ public sealed class OuroborosOptions
     public int ThinkingInterval { get; set; } = 30;
 
     // ═══════════════════════════════════════════════════════════════════════════
+    // PIPING & BATCH MODE
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    [Option("pipe", Required = false, HelpText = "Enable pipe mode - read commands from stdin, output to stdout", Default = false)]
+    public bool Pipe { get; set; }
+
+    [Option("batch", Required = false, HelpText = "Batch file containing commands to execute (one per line)")]
+    public string? BatchFile { get; set; }
+
+    [Option("json-output", Required = false, HelpText = "Output responses as JSON for scripting", Default = false)]
+    public bool JsonOutput { get; set; }
+
+    [Option("no-greeting", Required = false, HelpText = "Skip greeting in non-interactive mode", Default = false)]
+    public bool NoGreeting { get; set; }
+
+    [Option("exit-on-error", Required = false, HelpText = "Exit immediately on command error in batch/pipe mode", Default = false)]
+    public bool ExitOnError { get; set; }
+
+    [Option('e', "exec", Required = false, HelpText = "Execute a single command and exit (supports | piping syntax)")]
+    public string? Exec { get; set; }
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // DEBUG & OUTPUT
     // ═══════════════════════════════════════════════════════════════════════════
 
