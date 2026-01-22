@@ -26,8 +26,8 @@ namespace Ouroboros.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Tool-Aware Chat Model", "    As a developer\r\n    I want a chat model that can detect and execute tool call" +
-                "s\r\n    So that I can build AI systems that use tools", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Tool-Aware Chat Model", "    As a developer\n    I want a chat model that can detect and execute tool calls" +
+                "\n    So that I can build AI systems that use tools", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         
