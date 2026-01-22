@@ -76,7 +76,7 @@ jobs:
         dotnet-version: '10.0.x'
 
     - name: Install .NET MAUI workloads
-      run: dotnet workload install maui-tizen
+      run: dotnet workload install maui-tizen android
 
     - name: Restore .NET workloads
       run: dotnet workload restore
