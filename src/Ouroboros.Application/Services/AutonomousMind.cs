@@ -163,6 +163,58 @@ public class AutonomousMind : IDisposable
     public AutonomousConfig Config { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the culture for localized messages (e.g., "de-DE" for German).
+    /// </summary>
+    public string? Culture { get; set; }
+
+    /// <summary>
+    /// Localizes a message based on the current culture.
+    /// </summary>
+    private string Localize(string englishMessage)
+    {
+        if (string.IsNullOrEmpty(Culture) || !Culture.Equals("de-DE", StringComparison.OrdinalIgnoreCase))
+            return englishMessage;
+
+        return englishMessage switch
+        {
+            "🧠 My autonomous mind is now active. I'll think, explore, and learn in the background."
+                => "🧠 Mein autonomer Geist ist jetzt aktiv. Ich werde im Hintergrund denken, erkunden und lernen.",
+            "💤 Autonomous mind entering rest state. State persisted."
+                => "💤 Autonomer Geist wechselt in den Ruhezustand. Zustand gespeichert.",
+            "🧠 Reorganizing my knowledge based on what I've learned..."
+                => "🧠 Ich reorganisiere mein Wissen basierend auf dem, was ich gelernt habe...",
+            _ => englishMessage
+        };
+    }
+
+    /// <summary>
+    /// Localizes a parameterized message.
+    /// </summary>
+    private string LocalizeWithParam(string templateKey, string param)
+    {
+        if (string.IsNullOrEmpty(Culture) || !Culture.Equals("de-DE", StringComparison.OrdinalIgnoreCase))
+        {
+            return templateKey switch
+            {
+                "learned" => $"💡 I just learned something interesting: {param}",
+                "action" => $"🤖 {param}",
+                "thought" => $"💬 {param}",
+                "reorganized" => $"💡 Knowledge reorganization complete: {param}",
+                _ => param
+            };
+        }
+
+        return templateKey switch
+        {
+            "learned" => $"💡 Ich habe gerade etwas Interessantes gelernt: {param}",
+            "action" => $"🤖 {param}",
+            "thought" => $"💬 {param}",
+            "reorganized" => $"💡 Wissensreorganisation abgeschlossen: {param}",
+            _ => param
+        };
+    }
+
+    /// <summary>
     /// Connects this AutonomousMind to an InnerDialogEngine for sophisticated thought generation.
     /// When connected, uses algorithmic/genetic thought generation instead of LLM for routine thoughts.
     /// LLM is still used for deep exploration and curiosity-driven research.
@@ -203,7 +255,7 @@ public class AutonomousMind : IDisposable
         _actionTask = Task.Run(ActionLoopAsync);
         _persistenceTask = Task.Run(PersistenceLoopAsync);
 
-        OnProactiveMessage?.Invoke("🧠 My autonomous mind is now active. I'll think, explore, and learn in the background.");
+        OnProactiveMessage?.Invoke(Localize("🧠 My autonomous mind is now active. I'll think, explore, and learn in the background."));
     }
 
     /// <summary>
@@ -223,7 +275,7 @@ public class AutonomousMind : IDisposable
         // Final state persistence
         await PersistCurrentStateAsync("shutdown");
 
-        OnProactiveMessage?.Invoke("💤 Autonomous mind entering rest state. State persisted.");
+        OnProactiveMessage?.Invoke(Localize("💤 Autonomous mind entering rest state. State persisted."));
     }
 
     /// <summary>
@@ -593,7 +645,7 @@ public class AutonomousMind : IDisposable
                                 // Sometimes share discoveries (unless suppressed)
                                 if (!SuppressProactiveMessages && Random.Shared.NextDouble() < Config.ShareDiscoveryProbability)
                                 {
-                                    OnProactiveMessage?.Invoke($"💡 I just learned something interesting: {fact}");
+                                    OnProactiveMessage?.Invoke(LocalizeWithParam("learned", fact));
                                 }
                             }
                         }
@@ -653,7 +705,7 @@ public class AutonomousMind : IDisposable
                         catch { /* Use original on error */ }
                     }
 
-                    OnProactiveMessage?.Invoke($"🤖 {action.Description}: {resultSummary}");
+                    OnProactiveMessage?.Invoke(LocalizeWithParam("action", $"{action.Description}: {resultSummary}"));
                 }
             }
             catch (OperationCanceledException)
@@ -698,7 +750,7 @@ public class AutonomousMind : IDisposable
             var message = content.Substring(6).Trim();
             if (!SuppressProactiveMessages)
             {
-                OnProactiveMessage?.Invoke($"💬 {message}");
+                OnProactiveMessage?.Invoke(LocalizeWithParam("thought", message));
             }
 
             // Persist the shared thought
@@ -823,7 +875,7 @@ public class AutonomousMind : IDisposable
 
                     if (shouldFullReorganize)
                     {
-                        OnProactiveMessage?.Invoke("🧠 Reorganizing my knowledge based on what I've learned...");
+                        OnProactiveMessage?.Invoke(Localize("🧠 Reorganizing my knowledge based on what I've learned..."));
 
                         var result = await SelfIndexer.ReorganizeAsync(
                             createSummaries: true,
@@ -836,7 +888,7 @@ public class AutonomousMind : IDisposable
                         if (result.Insights.Count > 0)
                         {
                             var insight = string.Join("; ", result.Insights.Take(2));
-                            OnProactiveMessage?.Invoke($"💡 Knowledge reorganization complete: {insight}");
+                            OnProactiveMessage?.Invoke(LocalizeWithParam("reorganized", insight));
                         }
 
                         // Persist reorganization stats

@@ -214,6 +214,52 @@ public sealed class IntentionBus : IDisposable
     private Task? _expirationTask;
 
     /// <summary>
+    /// Gets or sets the culture for localized messages (e.g., "de-DE" for German).
+    /// </summary>
+    public string? Culture { get; set; }
+
+    /// <summary>
+    /// Localizes a message based on the current culture.
+    /// </summary>
+    private string Localize(string englishMessage)
+    {
+        if (string.IsNullOrEmpty(Culture) || !Culture.Equals("de-DE", StringComparison.OrdinalIgnoreCase))
+            return englishMessage;
+
+        return englishMessage switch
+        {
+            "🧠 IntentionBus activated. I will now propose actions before executing them."
+                => "🧠 IntentionBus aktiviert. Ich werde jetzt Aktionen vorschlagen, bevor ich sie ausführe.",
+            _ => englishMessage
+        };
+    }
+
+    /// <summary>
+    /// Localizes a parameterized message.
+    /// </summary>
+    private string LocalizeWithParam(string templateKey, string param, string? param2 = null)
+    {
+        if (string.IsNullOrEmpty(Culture) || !Culture.Equals("de-DE", StringComparison.OrdinalIgnoreCase))
+        {
+            return templateKey switch
+            {
+                "completed" => $"✅ Intention completed: {param}",
+                "failed" => $"❌ Intention failed: {param} - {param2}",
+                "proposed" => $"💭 **Intention Proposed:** {param}",
+                _ => param
+            };
+        }
+
+        return templateKey switch
+        {
+            "completed" => $"✅ Absicht abgeschlossen: {param}",
+            "failed" => $"❌ Absicht fehlgeschlagen: {param} - {param2}",
+            "proposed" => $"💭 **Absicht vorgeschlagen:** {param}",
+            _ => param
+        };
+    }
+
+    /// <summary>
     /// Observable stream of intention events.
     /// </summary>
     public IObservable<IntentionEvent> IntentionEvents => _intentionEvents;
@@ -274,7 +320,7 @@ public sealed class IntentionBus : IDisposable
         _isActive = true;
 
         _expirationTask = Task.Run(ExpirationLoopAsync);
-        OnProactiveMessage?.Invoke("🧠 IntentionBus activated. I will now propose actions before executing them.", IntentionPriority.Normal);
+        OnProactiveMessage?.Invoke(Localize("🧠 IntentionBus activated. I will now propose actions before executing them."), IntentionPriority.Normal);
     }
 
     /// <summary>
@@ -445,7 +491,7 @@ public sealed class IntentionBus : IDisposable
 
         _intentions[id] = updated;
         _intentionEvents.OnNext(new IntentionEvent(updated, intention.Status, IntentionStatus.Completed, DateTime.UtcNow));
-        OnProactiveMessage?.Invoke($"✅ Intention completed: {intention.Title}", IntentionPriority.Low);
+        OnProactiveMessage?.Invoke(LocalizeWithParam("completed", intention.Title), IntentionPriority.Low);
         return true;
     }
 
@@ -465,7 +511,7 @@ public sealed class IntentionBus : IDisposable
 
         _intentions[id] = updated;
         _intentionEvents.OnNext(new IntentionEvent(updated, intention.Status, IntentionStatus.Failed, DateTime.UtcNow));
-        OnProactiveMessage?.Invoke($"❌ Intention failed: {intention.Title} - {error}", IntentionPriority.Normal);
+        OnProactiveMessage?.Invoke(LocalizeWithParam("failed", intention.Title, error), IntentionPriority.Normal);
         return true;
     }
 

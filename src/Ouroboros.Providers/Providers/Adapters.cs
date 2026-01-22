@@ -31,10 +31,12 @@ public interface IStreamingChatModel : IChatCompletionModel
 public sealed class OllamaChatAdapter : IStreamingChatModel
 {
     private readonly OllamaChatModel _model;
+    private readonly string? _culture;
 
-    public OllamaChatAdapter(OllamaChatModel model)
+    public OllamaChatAdapter(OllamaChatModel model, string? culture = null)
     {
         _model = model ?? throw new ArgumentNullException(nameof(model));
+        _culture = culture;
     }
 
     /// <inheritdoc/>
@@ -42,7 +44,8 @@ public sealed class OllamaChatAdapter : IStreamingChatModel
     {
         try
         {
-            IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(prompt, cancellationToken: ct);
+            string finalPrompt = _culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
+            IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(finalPrompt, cancellationToken: ct);
             StringBuilder builder = new StringBuilder();
 
             await foreach (LangChain.Providers.ChatResponse? chunk in stream.WithCancellation(ct).ConfigureAwait(false))
@@ -75,7 +78,8 @@ public sealed class OllamaChatAdapter : IStreamingChatModel
         {
             try
             {
-                IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(prompt, cancellationToken: token);
+                string finalPrompt = _culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
+                IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(finalPrompt, cancellationToken: token);
                 await foreach (LangChain.Providers.ChatResponse? chunk in stream.WithCancellation(token).ConfigureAwait(false))
                 {
                     string text = ExtractResponseText(chunk);
@@ -192,7 +196,7 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
                 model = _model,
                 temperature = _settings.Temperature,
                 max_output_tokens = _settings.MaxTokens,
-                input = prompt
+                input = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt
             });
 
             HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
@@ -268,7 +272,7 @@ public sealed class OllamaCloudChatModel : IStreamingChatModel
             var payloadObject = new
             {
                 model = _model,
-                prompt = prompt,
+                prompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt,
                 stream = false,
                 options = new
                 {
@@ -318,7 +322,7 @@ public sealed class OllamaCloudChatModel : IStreamingChatModel
                 using JsonContent payload = JsonContent.Create(new
                 {
                     model = _model,
-                    prompt = prompt,
+                    prompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt,
                     stream = true,
                     options = new
                     {
@@ -433,7 +437,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingChatModel
                 model = _model,
                 messages = new[]
                 {
-                    new { role = "user", content = prompt }
+                    new { role = "user", content = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt }
                 },
                 temperature = _settings.Temperature,
                 max_tokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null
@@ -496,7 +500,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingChatModel
                     model = _model,
                     messages = new[]
                     {
-                        new { role = "user", content = prompt }
+                        new { role = "user", content = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt }
                     },
                     temperature = _settings.Temperature,
                     max_tokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null,

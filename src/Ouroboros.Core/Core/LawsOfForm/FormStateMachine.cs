@@ -5,6 +5,7 @@
 namespace Ouroboros.Core.LawsOfForm;
 
 using Ouroboros.Core.Monads;
+using System.Globalization;
 
 /// <summary>
 /// A state machine that explicitly models indeterminate states using Laws of Form.
@@ -200,7 +201,7 @@ public sealed class FormStateMachine<TState>
 
         // Use sine wave based on phase and time step
         var sampleValue = Math.Sin((this.oscillationPhase + timeStep) * 2 * Math.PI);
-        return sampleValue >= 0 ? state1 : state2;
+        return sampleValue > 0 ? state1 : state2;
     }
 
     /// <summary>
@@ -214,7 +215,7 @@ public sealed class FormStateMachine<TState>
             return $"Certain: {this.currentCertainState.Value}";
         }
 
-        return $"Indeterminate (phase: {this.oscillationPhase:F2})";
+        return $"Indeterminate (phase: {this.oscillationPhase.ToString("F2", CultureInfo.InvariantCulture)})";
     }
 }
 

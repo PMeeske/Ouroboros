@@ -1,4 +1,5 @@
 using Ouroboros.Core.Security;
+using ValidationResult = Ouroboros.Core.Security.ValidationResult;
 
 namespace Ouroboros.Specs.Steps;
 

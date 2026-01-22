@@ -23,13 +23,23 @@ public static class DistributedTracing
     /// <param name="name">Activity name.</param>
     /// <param name="kind">Activity kind (Internal, Client, Server, Producer, Consumer).</param>
     /// <param name="tags">Optional tags to add to the activity.</param>
+    /// <param name="parentContext">Optional parent activity context.</param>
     /// <returns>Activity instance or null if tracing is disabled.</returns>
     public static Activity? StartActivity(
         string name,
         ActivityKind kind = ActivityKind.Internal,
-        Dictionary<string, object?>? tags = null)
+        Dictionary<string, object?>? tags = null,
+        ActivityContext? parentContext = null)
     {
-        Activity? activity = ActivitySource.StartActivity(name, kind);
+        Activity? activity;
+        if (parentContext.HasValue && parentContext.Value != default)
+        {
+            activity = ActivitySource.StartActivity(name, kind, parentContext.Value);
+        }
+        else
+        {
+            activity = ActivitySource.StartActivity(name, kind);
+        }
 
         if (activity != null && tags != null)
         {

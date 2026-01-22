@@ -21,7 +21,8 @@ public sealed record VoiceModeConfig(
     string Model = "llama3",
     string Endpoint = "http://localhost:11434",
     string EmbedModel = "nomic-embed-text",
-    string QdrantEndpoint = "http://localhost:6334");
+    string QdrantEndpoint = "http://localhost:6334",
+    string? Culture = null);
 
 /// <summary>
 /// Persona definition with voice characteristics.
@@ -141,7 +142,8 @@ public sealed class VoiceModeService : IDisposable
         {
             try
             {
-                _azureTts = new AzureNeuralTtsService(azureKey!, azureRegion!, _persona.Name);
+                Console.WriteLine($"  [>] Initializing Azure TTS with culture: {_config.Culture ?? "en-US (default)"}");
+                _azureTts = new AzureNeuralTtsService(azureKey!, azureRegion!, _persona.Name, _config.Culture);
                 _ttsService = _azureTts;
                 Console.WriteLine($"  [OK] TTS initialized (Azure Neural - Jenny/Cortana-like)");
             }
@@ -250,6 +252,13 @@ public sealed class VoiceModeService : IDisposable
     {
         if (string.IsNullOrWhiteSpace(text)) return;
 
+        // If voice mode is not initialized, just print text (no TTS)
+        if (!_isInitialized)
+        {
+            Console.WriteLine($"  [>] {_persona.Name}: {text}");
+            return;
+        }
+
         // Sanitize for TTS
         string sanitized = SanitizeForTts(text);
         if (string.IsNullOrWhiteSpace(sanitized)) return;
@@ -271,6 +280,15 @@ public sealed class VoiceModeService : IDisposable
     public async Task WhisperAsync(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
+
+        // If voice mode is not initialized, just print text (no TTS)
+        if (!_isInitialized)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkMagenta;
+            Console.WriteLine($"  [💭] {text}");
+            Console.ResetColor();
+            return;
+        }
 
         // Sanitize for TTS
         string sanitized = SanitizeForTts(text);
@@ -314,18 +332,22 @@ public sealed class VoiceModeService : IDisposable
             if (_azureTts != null)
             {
                 if (!_config.VoiceOnly) Console.WriteLine(sanitized);
+                System.Diagnostics.Debug.WriteLine($"[TTS] Using Azure Neural TTS for: {sanitized[..Math.Min(50, sanitized.Length)]}...");
                 await _azureTts.SpeakAsync(sanitized, isWhisper);
             }
             else if (_localTts != null)
             {
+                System.Diagnostics.Debug.WriteLine($"[TTS] Using Local SAPI TTS for: {sanitized[..Math.Min(50, sanitized.Length)]}...");
                 await SpeakWithLocalTtsAsync(sanitized, isWhisper);
             }
             else if (_ttsService != null)
             {
+                System.Diagnostics.Debug.WriteLine($"[TTS] Using Cloud TTS for: {sanitized[..Math.Min(50, sanitized.Length)]}...");
                 await SpeakWithCloudTtsAsync(sanitized);
             }
             else if (!_config.VoiceOnly)
             {
+                System.Diagnostics.Debug.WriteLine("[TTS] No TTS available, text only");
                 Console.WriteLine(sanitized);
             }
         }

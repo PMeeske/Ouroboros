@@ -46,7 +46,7 @@ public sealed class VoicePipeline
 
         TranscriptionOptions options = new TranscriptionOptions(Language: _language);
         Result<TranscriptionResult, string> result = await _sttService.TranscribeFileAsync(audioFilePath, options);
-        
+
         if (result.IsSuccess)
         {
             _basePipeline.About(result.Value.Text);
@@ -55,7 +55,7 @@ public sealed class VoicePipeline
         {
             throw new InvalidOperationException($"Transcription failed: {result.Error}");
         }
-        
+
         return this;
     }
 
@@ -215,17 +215,18 @@ public sealed class VoicePipeline
         {
             try
             {
+                TtsVoice voice = ParseVoice(_voiceName);
                 TextToSpeechOptions options = new TextToSpeechOptions(
-                    Voice: TtsVoice.Alloy,  // Default voice, could be customized based on _voiceName
+                    Voice: voice,
                     Format: "mp3"
                 );
-                
+
                 Result<string, string> ttsResult = await _ttsService.SynthesizeToFileAsync(
                     result.Output!,
                     outputAudioPath,
                     options
                 );
-                
+
                 if (ttsResult.IsSuccess)
                 {
                     audioPath = ttsResult.Value;
@@ -254,11 +255,30 @@ public sealed class VoicePipeline
         return $@"{baseDsl}
 Voice Configuration:
   Language: {_language}
-  Voice: {_voiceName ?? "default"}
+  Voice: {_voiceName ?? "alloy"}
   Voice Input: {(_enableVoiceInput ? "enabled" : "disabled")}
   Voice Output: {(_enableVoiceOutput ? "enabled" : "disabled")}
   STT Service: {(_sttService?.GetType().Name ?? "none")}
   TTS Service: {(_ttsService?.GetType().Name ?? "none")}";
+    }
+
+    private static TtsVoice ParseVoice(string? voiceName)
+    {
+        if (string.IsNullOrEmpty(voiceName))
+        {
+            return TtsVoice.Alloy;
+        }
+
+        return voiceName.ToLowerInvariant() switch
+        {
+            "alloy" => TtsVoice.Alloy,
+            "echo" => TtsVoice.Echo,
+            "fable" => TtsVoice.Fable,
+            "onyx" => TtsVoice.Onyx,
+            "nova" => TtsVoice.Nova,
+            "shimmer" => TtsVoice.Shimmer,
+            _ => TtsVoice.Alloy,
+        };
     }
 }
 

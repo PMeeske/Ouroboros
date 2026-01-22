@@ -76,7 +76,7 @@ static async Task ParseAndRunAsync(string[] args)
     };
 
     var parseResult = Parser.Default.ParseArguments(args, optionTypes);
-    
+
     await parseResult.WithParsedAsync(async parsed =>
     {
         switch (parsed)
@@ -289,7 +289,7 @@ static async Task RunAssistAsync(AssistOptions o)
 
         ToolRegistry tools = ToolRegistry.CreateDefault();
         ToolAwareChatModel llm = new ToolAwareChatModel(chatModel, tools);
-        DslAssistant assistant = new DslAssistant(llm, tools);
+        Ouroboros.Application.DslAssistant assistant = new Ouroboros.Application.DslAssistant(llm, tools);
 
         Console.WriteLine($"[OK] Assistant initialized\n");
 
