@@ -4,22 +4,24 @@
 
 namespace Ouroboros.Application.Integration;
 
+using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 /// <summary>
-/// Simple in-memory event bus implementation.
-/// Provides publish-subscribe pattern for cross-component communication.
+/// Implementation of the event bus for cross-feature communication.
+/// Thread-safe implementation using reactive subjects for each event type.
 /// </summary>
-public sealed class EventBus : IEventBus
+public sealed class EventBus : IEventBus, IDisposable
 {
-    private readonly Dictionary<Type, object> _subjects = new();
-    private readonly object _lock = new();
+    private readonly ConcurrentDictionary<Type, object> _subjects = new();
+    private bool _disposed;
 
     /// <inheritdoc/>
     public void Publish<TEvent>(TEvent @event) where TEvent : class
     {
         ArgumentNullException.ThrowIfNull(@event);
+        ThrowIfDisposed();
 
         var subject = GetOrCreateSubject<TEvent>();
         subject.OnNext(@event);
@@ -28,21 +30,50 @@ public sealed class EventBus : IEventBus
     /// <inheritdoc/>
     public IObservable<TEvent> Subscribe<TEvent>() where TEvent : class
     {
+        ThrowIfDisposed();
         return GetOrCreateSubject<TEvent>().AsObservable();
     }
 
-    private ISubject<TEvent> GetOrCreateSubject<TEvent>() where TEvent : class
+    /// <inheritdoc/>
+    public void Clear()
     {
-        lock (_lock)
-        {
-            var eventType = typeof(TEvent);
-            if (!_subjects.TryGetValue(eventType, out var subject))
-            {
-                subject = new Subject<TEvent>();
-                _subjects[eventType] = subject;
-            }
+        ThrowIfDisposed();
 
-            return (ISubject<TEvent>)subject;
+        foreach (var kvp in _subjects)
+        {
+            if (kvp.Value is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+        }
+
+        _subjects.Clear();
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        Clear();
+        _disposed = true;
+    }
+
+    private Subject<TEvent> GetOrCreateSubject<TEvent>() where TEvent : class
+    {
+        return (Subject<TEvent>)_subjects.GetOrAdd(
+            typeof(TEvent),
+            _ => new Subject<TEvent>());
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (_disposed)
+        {
+            throw new ObjectDisposedException(nameof(EventBus));
         }
     }
 }
