@@ -154,24 +154,22 @@ public static class OuroborosServiceCollectionExtensions
 
     private static void RegisterEngineInterfaces(IServiceCollection services)
     {
-        // Note: These registrations require actual implementations
-        // This demonstrates the pattern for production usage
-
-        // Tier 1 engines
+        // Register available Tier 1 engines
+        // Note: EpisodicMemoryEngine requires QdrantClient and IEmbeddingModel dependencies
+        // Commenting out to avoid DI errors in minimal setup
         // services.TryAddSingleton<IEpisodicMemoryEngine, EpisodicMemoryEngine>();
+
+        // Tier 2 and 3 engines are defined in interface but require implementation
+        // Uncomment when implementations become available:
         // services.TryAddSingleton<IAdapterLearningEngine, AdapterLearningEngine>();
         // services.TryAddSingleton<IAdvancedMeTTaEngine, AdvancedMeTTaEngine>();
         // services.TryAddSingleton<IHierarchicalPlanner, HierarchicalPlanner>();
         // services.TryAddSingleton<IReflectionEngine, ReflectionEngine>();
         // services.TryAddSingleton<IBenchmarkSuite, BenchmarkSuite>();
-
-        // Tier 2 engines
         // services.TryAddSingleton<IProgramSynthesisEngine, ProgramSynthesisEngine>();
         // services.TryAddSingleton<IWorldModelEngine, WorldModelEngine>();
         // services.TryAddSingleton<IMultiAgentCoordinator, MultiAgentCoordinator>();
         // services.TryAddSingleton<ICausalReasoningEngine, CausalReasoningEngine>();
-
-        // Tier 3 engines
         // services.TryAddSingleton<IMetaLearningEngine, MetaLearningEngine>();
         // services.TryAddSingleton<IEmbodiedAgent, EmbodiedAgent>();
     }
@@ -199,8 +197,8 @@ public static class OuroborosFeatureExtensions
 
         services.AddSingleton(options);
 
-        // Register implementation
-        // services.TryAddSingleton<IEpisodicMemoryEngine, EpisodicMemoryEngine>();
+        // Register episodic memory engine implementation
+        services.TryAddSingleton<IEpisodicMemoryEngine, EpisodicMemoryEngine>();
 
         return services;
     }

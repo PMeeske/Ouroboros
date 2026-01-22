@@ -24,7 +24,7 @@ public static class AskCommands
         }
         if (o.Router.Equals("auto", StringComparison.OrdinalIgnoreCase)) Environment.SetEnvironmentVariable("MONADIC_ROUTER", "auto");
         if (o.Debug) Environment.SetEnvironmentVariable("MONADIC_DEBUG", "1");
-        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
+        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream, o.Culture);
         ValidateSecrets(o);
         LogBackendSelection(o.Model, settings, o);
         Stopwatch sw = Stopwatch.StartNew();
@@ -43,12 +43,12 @@ public static class AskCommands
                 catch (Exception ex) when (!o.StrictModel && ex.Message.Contains("Invalid model", StringComparison.OrdinalIgnoreCase))
                 {
                     Console.WriteLine($"[WARN] Remote model '{o.Model}' invalid. Falling back to local 'llama3'. Use --strict-model to disable fallback.");
-                    chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+                    chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"), o.Culture);
                 }
             }
             else
             {
-                chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
+                chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model), o.Culture);
             }
 
             ToolRegistry tools = new ToolRegistry();
@@ -170,7 +170,7 @@ public static class AskCommands
                         // Best-effort preset mapping only. If parsing the model name fails,
                         // we intentionally keep provider defaults to avoid hard failures.
                     }
-                    return new OllamaChatAdapter(m);
+                    return new OllamaChatAdapter(m, settings?.Culture);
                 }
                 string general = askOpts.GeneralModel ?? modelName;
                 modelMap["general"] = MakeLocal(general, "general");
@@ -189,13 +189,13 @@ public static class AskCommands
                 {
                     Console.WriteLine($"[WARN] Remote model '{modelName}' invalid. Falling back to local 'llama3'. Use --strict-model to disable fallback.");
                     OllamaChatModel local = new OllamaChatModel(provider, "llama3");
-                    chatModel = new OllamaChatAdapter(local);
+                    chatModel = new OllamaChatAdapter(local, settings?.Culture);
                 }
                 catch (Exception ex) when (askOpts is not null && !askOpts.StrictModel)
                 {
                     Console.WriteLine($"[WARN] Remote model '{modelName}' unavailable ({ex.GetType().Name}). Falling back to local 'llama3'. Use --strict-model to disable fallback.");
                     OllamaChatModel local = new OllamaChatModel(provider, "llama3");
-                    chatModel = new OllamaChatAdapter(local);
+                    chatModel = new OllamaChatAdapter(local, settings?.Culture);
                 }
             }
             else
@@ -216,7 +216,7 @@ public static class AskCommands
                 {
                     // Non-fatal: preset mapping is best-effort. Defaults are fine if detection fails.
                 }
-                chatModel = new OllamaChatAdapter(chat);
+                chatModel = new OllamaChatAdapter(chat, settings?.Culture);
             }
             IEmbeddingModel embed = ServiceFactory.CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);
 

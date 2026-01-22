@@ -249,6 +249,7 @@ static async Task RunAssistAsync(AssistOptions o)
             Debug: o.Debug,
             Temperature: o.Temperature,
             MaxTokens: o.MaxTokens,
+            Culture: o.Culture,
             InitialGoal: o.Goal,
             InitialDsl: o.Dsl
         );
@@ -270,7 +271,7 @@ static async Task RunAssistAsync(AssistOptions o)
     {
         // Setup LLM
         OllamaProvider provider = new OllamaProvider();
-        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream);
+        ChatRuntimeSettings settings = new ChatRuntimeSettings(o.Temperature, o.MaxTokens, o.TimeoutSeconds, o.Stream, o.Culture);
 
         (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(
             o.Endpoint,
@@ -284,7 +285,7 @@ static async Task RunAssistAsync(AssistOptions o)
         }
         else
         {
-            chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model));
+            chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, o.Model), o.Culture);
         }
 
         ToolRegistry tools = ToolRegistry.CreateDefault();

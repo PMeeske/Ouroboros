@@ -13,6 +13,7 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Add services
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
@@ -27,7 +28,7 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddSingleton<IPipelineService, PipelineService>();
 
 // Register self-model components (Phase 2)
-// Note: These services are optional. If ICapabilityRegistry is not available, 
+// Note: These services are optional. If ICapabilityRegistry is not available,
 // create a mock implementation or make the service optional.
 builder.Services.AddSingleton<IGlobalWorkspace>(sp => new GlobalWorkspace());
 builder.Services.AddSingleton<IPredictiveMonitor>(sp => new PredictiveMonitor());
@@ -40,7 +41,7 @@ builder.Services.AddSingleton<IIdentityGraph>(sp =>
         new MockChatModel(),
         new ToolRegistry(),
         new CapabilityRegistryConfig());
-    
+
     return new IdentityGraph(
         Guid.NewGuid(),
         "OuroborosAgent",
@@ -77,6 +78,14 @@ builder.Services.AddCors(options =>
 builder.Services.AddHealthChecks();
 
 WebApplication app = builder.Build();
+
+var supportedCultures = new[] { "en-US", "es", "fr", "de", "zh", "ja" };
+var localizationOptions = new RequestLocalizationOptions()
+    .SetDefaultCulture(supportedCultures[0])
+    .AddSupportedCultures(supportedCultures)
+    .AddSupportedUICultures(supportedCultures);
+
+app.UseRequestLocalization(localizationOptions);
 
 // Configure middleware
 // Enable Swagger in all environments for API documentation

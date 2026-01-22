@@ -42,7 +42,8 @@ public sealed class PipelineService : IPipelineService
             request.Temperature ?? 0.7f,
             request.MaxTokens ?? 2048,
             120,
-            false);
+            false,
+            System.Globalization.CultureInfo.CurrentCulture.Name);
 
         (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(request.Endpoint, request.ApiKey);
         OllamaProvider provider = new OllamaProvider();
@@ -57,7 +58,7 @@ public sealed class PipelineService : IPipelineService
             catch
             {
                 OllamaChatModel local = new OllamaChatModel(provider, "llama3");
-                chatModel = new OllamaChatAdapter(local);
+                chatModel = new OllamaChatAdapter(local, settings.Culture);
             }
         }
         else
@@ -65,7 +66,7 @@ public sealed class PipelineService : IPipelineService
             OllamaChatModel chat = new OllamaChatModel(provider, modelName);
             if (modelName == "deepseek-coder:33b")
                 chat.Settings = OllamaPresets.DeepSeekCoder33B;
-            chatModel = new OllamaChatAdapter(chat);
+            chatModel = new OllamaChatAdapter(chat, settings.Culture);
         }
 
         IEmbeddingModel embed = CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);
@@ -142,7 +143,8 @@ public sealed class PipelineService : IPipelineService
             request.Temperature ?? 0.7f,
             request.MaxTokens ?? 2048,
             120,
-            false);
+            false,
+            System.Globalization.CultureInfo.CurrentCulture.Name);
 
         (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.ResolveWithOverrides(request.Endpoint, request.ApiKey);
         OllamaProvider provider = new OllamaProvider();
@@ -157,7 +159,7 @@ public sealed class PipelineService : IPipelineService
             catch
             {
                 OllamaChatModel local = new OllamaChatModel(provider, "llama3");
-                chatModel = new OllamaChatAdapter(local);
+                chatModel = new OllamaChatAdapter(local, settings.Culture);
             }
         }
         else
@@ -165,7 +167,7 @@ public sealed class PipelineService : IPipelineService
             OllamaChatModel chat = new OllamaChatModel(provider, modelName);
             if (modelName == "deepseek-coder:33b")
                 chat.Settings = OllamaPresets.DeepSeekCoder33B;
-            chatModel = new OllamaChatAdapter(chat);
+            chatModel = new OllamaChatAdapter(chat, settings.Culture);
         }
 
         IEmbeddingModel embed = CreateEmbeddingModel(endpoint, apiKey, endpointType, embedName, provider);

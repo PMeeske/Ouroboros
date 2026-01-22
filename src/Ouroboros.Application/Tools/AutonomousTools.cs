@@ -510,7 +510,7 @@ public static class AutonomousTools
         public string Name => "firecrawl_scrape";
 
         /// <inheritdoc/>
-        public string Description => "Scrape a webpage using Firecrawl API for clean, structured content. Input: URL to scrape.";
+        public string Description => "Scrape a webpage using Firecrawl API for clean, structured content. Requires FIRECRAWL_API_KEY environment variable. Input: URL to scrape.";
 
         /// <inheritdoc/>
         public string? JsonSchema => """{"type":"object","properties":{"url":{"type":"string","description":"URL to scrape"}},"required":["url"]}""";
@@ -608,7 +608,7 @@ public static class AutonomousTools
     public class FirecrawlResearchTool : ITool
     {
         /// <inheritdoc/>
-        public string Name => "firecrawl_research";
+        public string Name => "web_research";
 
         /// <inheritdoc/>
         public string Description => "Deep web research using Firecrawl. PREFERRED for any web search or research task. Input: search query or URL to research.";
