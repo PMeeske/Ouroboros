@@ -1,0 +1,26 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Copyright>Copyright © 2025</Copyright>
+    <Version>1.0.0</Version>
+
+    <!-- Code Quality Settings -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS1591;CS1570;CS1572;CS1573;CS1574</WarningsNotAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <RunAnalyzersDuringLiveAnalysis>false</RunAnalyzersDuringLiveAnalysis>
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+
+  <!-- Include shared global usings for all projects (except test projects and Roslynator) -->
+  <ItemGroup Condition="'$(IsTestProject)' != 'true' AND '$(IsRoslynComponent)' != 'true'">
+    <Compile Include="$(MSBuildThisFileDirectory)Directory.GlobalUsings.cs" Link="Properties\GlobalUsings.Shared.cs" />
+  </ItemGroup>
+
+</Project>

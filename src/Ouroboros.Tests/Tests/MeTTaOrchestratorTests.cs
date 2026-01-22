@@ -9,18 +9,16 @@ using Ouroboros.Tools;
 using Ouroboros.Tools.MeTTa;
 
 /// <summary>
-/// Unit tests for the MeTTa orchestrator v3.0 with symbolic reasoning.
-/// Uses MockMeTTaEngine for isolation - no external MeTTa runtime required.
+/// Tests for MeTTa-first orchestrator v3.0 with symbolic reasoning.
 /// </summary>
 [Trait("Category", "Unit")]
-public class MeTTaOrchestratorTests
+public static class MeTTaOrchestratorTests
 {
     /// <summary>
     /// Tests MeTTa representation of a plan.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    [Fact]
-    public async Task MeTTaRepresentation_TranslatePlan_ShouldSucceed()
+    public static async Task TestMeTTaRepresentationPlan()
     {
         Console.WriteLine("=== Test: MeTTa Plan Representation ===");
 
@@ -50,8 +48,7 @@ public class MeTTaOrchestratorTests
     /// Tests MeTTa representation of execution state.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    [Fact]
-    public async Task MeTTaRepresentation_TranslateExecutionState_ShouldSucceed()
+    public static async Task TestMeTTaRepresentationExecutionState()
     {
         Console.WriteLine("=== Test: MeTTa Execution State Representation ===");
 
@@ -97,8 +94,7 @@ public class MeTTaOrchestratorTests
     /// Tests MeTTa tool representation.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    [Fact]
-    public async Task MeTTaRepresentation_TranslateTools_ShouldSucceed()
+    public static async Task TestMeTTaRepresentationTools()
     {
         Console.WriteLine("=== Test: MeTTa Tool Representation ===");
 
@@ -120,8 +116,7 @@ public class MeTTaOrchestratorTests
     /// Tests NextNode tool functionality.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    [Fact]
-    public async Task NextNodeTool_Execute_ShouldSucceed()
+    public static async Task TestNextNodeTool()
     {
         Console.WriteLine("=== Test: NextNode Tool ===");
 
@@ -154,8 +149,7 @@ public class MeTTaOrchestratorTests
     /// Tests NextNode tool with constraints.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    [Fact]
-    public async Task NextNodeTool_ExecuteWithConstraints_ShouldSucceed()
+    public static async Task TestNextNodeToolWithConstraints()
     {
         Console.WriteLine("=== Test: NextNode Tool with Constraints ===");
 
@@ -187,8 +181,7 @@ public class MeTTaOrchestratorTests
     /// <summary>
     /// Tests MeTTa tool registry integration with NextNode.
     /// </summary>
-    [Fact]
-    public void MeTTaToolRegistry_WithNextNode_ShouldRegisterSuccessfully()
+    public static void TestMeTTaToolRegistryWithNextNode()
     {
         Console.WriteLine("=== Test: MeTTa Tool Registry with NextNode ===");
 
@@ -224,8 +217,7 @@ public class MeTTaOrchestratorTests
     /// Tests constraint addition to MeTTa knowledge base.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    [Fact]
-    public async Task MeTTaConstraints_AddToKnowledgeBase_ShouldSucceed()
+    public static async Task TestMeTTaConstraints()
     {
         Console.WriteLine("=== Test: MeTTa Constraints ===");
 
@@ -254,8 +246,7 @@ public class MeTTaOrchestratorTests
     /// Tests querying next nodes from MeTTa.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    [Fact]
-    public async Task QueryNextNodes_FromMeTTa_ShouldReturnCandidates()
+    public static async Task TestQueryNextNodes()
     {
         Console.WriteLine("=== Test: Query Next Nodes ===");
 
@@ -294,8 +285,7 @@ public class MeTTaOrchestratorTests
     /// Tests querying tools for a goal.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    [Fact]
-    public async Task QueryTools_ForGoal_ShouldReturnRecommendedTools()
+    public static async Task TestQueryToolsForGoal()
     {
         Console.WriteLine("=== Test: Query Tools for Goal ===");
 
@@ -325,7 +315,6 @@ public class MeTTaOrchestratorTests
 
     /// <summary>
     /// Runs all MeTTa orchestrator v3.0 tests.
-    /// Kept for backward compatibility - wraps individual test methods.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAllTests()
@@ -336,16 +325,15 @@ public class MeTTaOrchestratorTests
 
         try
         {
-            var instance = new MeTTaOrchestratorTests();
-            await instance.MeTTaRepresentation_TranslatePlan_ShouldSucceed();
-            await instance.MeTTaRepresentation_TranslateExecutionState_ShouldSucceed();
-            await instance.MeTTaRepresentation_TranslateTools_ShouldSucceed();
-            await instance.NextNodeTool_Execute_ShouldSucceed();
-            await instance.NextNodeTool_ExecuteWithConstraints_ShouldSucceed();
-            instance.MeTTaToolRegistry_WithNextNode_ShouldRegisterSuccessfully();
-            await instance.MeTTaConstraints_AddToKnowledgeBase_ShouldSucceed();
-            await instance.QueryNextNodes_FromMeTTa_ShouldReturnCandidates();
-            await instance.QueryTools_ForGoal_ShouldReturnRecommendedTools();
+            await TestMeTTaRepresentationPlan();
+            await TestMeTTaRepresentationExecutionState();
+            await TestMeTTaRepresentationTools();
+            await TestNextNodeTool();
+            await TestNextNodeToolWithConstraints();
+            TestMeTTaToolRegistryWithNextNode();
+            await TestMeTTaConstraints();
+            await TestQueryNextNodes();
+            await TestQueryToolsForGoal();
 
             Console.WriteLine("╔════════════════════════════════════════════╗");
             Console.WriteLine("║   All v3.0 tests completed successfully    ║");

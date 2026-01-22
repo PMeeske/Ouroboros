@@ -373,7 +373,7 @@ public static class OuroborosCliSteps
             // If MeTTa engine is available, add facts to it
             if (s.MeTTaEngine != null)
             {
-                var result = await s.MeTTaEngine.AddFactAsync(metta);
+                Result<Unit, string> result = await s.MeTTaEngine.AddFactAsync(metta);
                 result.Match(
                     _ =>
                     {

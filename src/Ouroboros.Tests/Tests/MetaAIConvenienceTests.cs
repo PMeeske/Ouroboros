@@ -8,18 +8,16 @@ using LangChain.Providers.Ollama;
 using Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Unit tests for the Meta-AI convenience layer.
-/// Tests simplified API for creating and using orchestrators - no external LLM service required for most tests.
+/// Tests for the Meta-AI convenience layer.
 /// </summary>
 [Trait("Category", "Unit")]
-public class MetaAIConvenienceTests
+public static class MetaAIConvenienceTests
 {
     /// <summary>
     /// Tests simple orchestrator creation.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    [Fact]
-    public async Task SimpleOrchestrator_Creation_ShouldSucceed()
+    public static async Task TestSimpleOrchestratorCreation()
     {
         Console.WriteLine("=== Test: Simple Orchestrator Creation ===");
 
@@ -59,8 +57,7 @@ public class MetaAIConvenienceTests
     /// Tests standard orchestrator creation.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    [Fact]
-    public async Task StandardOrchestrator_Creation_ShouldSucceed()
+    public static async Task TestStandardOrchestratorCreation()
     {
         Console.WriteLine("=== Test: Standard Orchestrator Creation ===");
 
@@ -102,8 +99,7 @@ public class MetaAIConvenienceTests
     /// Tests AskQuestion convenience method.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    [Fact]
-    public async Task AskQuestion_ConvenienceMethod_ShouldReturnAnswer()
+    public static async Task TestAskQuestion()
     {
         Console.WriteLine("=== Test: AskQuestion Convenience Method ===");
 
@@ -150,8 +146,7 @@ public class MetaAIConvenienceTests
     /// Tests preset orchestrators.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    [Fact]
-    public async Task PresetOrchestrators_Creation_ShouldCreateSpecializedTypes()
+    public static async Task TestPresetOrchestrators()
     {
         Console.WriteLine("=== Test: Preset Orchestrators ===");
 
@@ -201,8 +196,7 @@ public class MetaAIConvenienceTests
     /// Tests CompleteWorkflow convenience method.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
-    [Fact]
-    public async Task CompleteWorkflow_ConvenienceMethod_ShouldExecuteEndToEnd()
+    public static async Task TestCompleteWorkflow()
     {
         Console.WriteLine("=== Test: CompleteWorkflow Convenience Method ===");
 
@@ -251,7 +245,6 @@ public class MetaAIConvenienceTests
 
     /// <summary>
     /// Runs all convenience layer tests.
-    /// Kept for backward compatibility - wraps individual test methods.
     /// </summary>
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task RunAll()
@@ -260,12 +253,11 @@ public class MetaAIConvenienceTests
         Console.WriteLine("       META-AI CONVENIENCE LAYER TESTS");
         Console.WriteLine(new string('=', 60) + "\n");
 
-        var instance = new MetaAIConvenienceTests();
-        await instance.SimpleOrchestrator_Creation_ShouldSucceed();
-        await instance.StandardOrchestrator_Creation_ShouldSucceed();
-        await instance.AskQuestion_ConvenienceMethod_ShouldReturnAnswer();
-        await instance.PresetOrchestrators_Creation_ShouldCreateSpecializedTypes();
-        await instance.CompleteWorkflow_ConvenienceMethod_ShouldExecuteEndToEnd();
+        await TestSimpleOrchestratorCreation();
+        await TestStandardOrchestratorCreation();
+        await TestAskQuestion();
+        await TestPresetOrchestrators();
+        await TestCompleteWorkflow();
 
         Console.WriteLine(new string('=', 60));
         Console.WriteLine("       ALL CONVENIENCE LAYER TESTS COMPLETED");

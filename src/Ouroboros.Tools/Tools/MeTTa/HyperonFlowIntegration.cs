@@ -233,8 +233,13 @@ public sealed class HyperonFlowIntegration : IAsyncDisposable
                 return false;
             }
 
-            Substitution result = Unifier.Unify(parseResult.Value, atom);
-            if (!result.IsEmpty || parseResult.Value.ToSExpr() == atom.ToSExpr())
+            if (parseResult.Value is not Atom parsedAtom)
+            {
+                return false;
+            }
+
+            Substitution? result = Unifier.Unify(parsedAtom, atom);
+            if (result is not null && (!result.IsEmpty || parsedAtom.ToSExpr() == atom.ToSExpr()))
             {
                 bindings = result;
                 return true;

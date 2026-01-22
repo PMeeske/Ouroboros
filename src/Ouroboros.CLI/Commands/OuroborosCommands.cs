@@ -68,7 +68,6 @@ public static class OuroborosCommands
                 Debug: opts.Debug,
                 Temperature: opts.Temperature,
                 MaxTokens: opts.MaxTokens,
-                Culture: opts.Culture ?? "en-US",  // Default to English voice
                 // Feature toggles - invert the "No" flags
                 EnableSkills: !opts.NoSkills,
                 EnableMeTTa: !opts.NoMeTTa,
@@ -154,8 +153,8 @@ public static class OuroborosCommands
 
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Console.WriteLine("   Quick examples:");
-        Console.WriteLine("     ouroboros                        # Interactive text mode (default)");
-        Console.WriteLine("     ouroboros --voice                # Enable voice mode (speak & listen)");
+        Console.WriteLine("     ouroboros                        # Interactive with voice (default)");
+        Console.WriteLine("     ouroboros --text-only            # Text-only mode");
         Console.WriteLine("     ouroboros -q \"What is AI?\"       # Answer a question");
         Console.WriteLine("     ouroboros -g \"Build a website\"   # Goal-driven planning");
         Console.WriteLine("     ouroboros -d \"SetPrompt | LLM\"   # Execute pipeline DSL");

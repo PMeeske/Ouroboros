@@ -7,7 +7,6 @@ using Ouroboros.Pipeline.Planning;
 using Ouroboros.Pipeline.Verification;
 using Ouroboros.CLI.Options;
 using Ouroboros.Tools.MeTTa;
-using Unit = Ouroboros.Tools.MeTTa.Unit;
 
 namespace Ouroboros.CLI.Commands;
 
@@ -49,14 +48,14 @@ public static class SelfCommands
             }
 
             string command = options.Command.ToLowerInvariant();
-
+            
             // Check if interactive mode is requested
             if (options.Interactive && (command == "query" || command == "plan"))
             {
                 await MeTTaInteractiveMode.RunInteractiveAsync(_mettaEngine);
                 return;
             }
-
+            
             await (command switch
             {
                 "state" => ExecuteStateAsync(options),
@@ -393,7 +392,7 @@ public static class SelfCommands
         foreach (var plan in candidates)
         {
             Console.WriteLine($"Plan: {plan.Description}");
-
+            
             Result<string, string> explanationResult = await selector.ExplainPlanAsync(
                 plan,
                 SafeContext.ReadOnly,
@@ -437,7 +436,7 @@ public static class SelfCommands
                         Explanation = selected.Explanation
                     };
                     string json = JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true });
-
+                    
                     if (!string.IsNullOrWhiteSpace(options.OutputPath))
                     {
                         File.WriteAllText(options.OutputPath, json);

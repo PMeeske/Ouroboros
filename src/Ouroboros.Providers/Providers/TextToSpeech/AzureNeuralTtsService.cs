@@ -3,7 +3,6 @@
 // </copyright>
 
 using Microsoft.CognitiveServices.Speech;
-using Microsoft.CognitiveServices.Speech.Audio;
 
 namespace Ouroboros.Providers.TextToSpeech;
 
@@ -45,22 +44,11 @@ public sealed class AzureNeuralTtsService : ITextToSpeechService, IDisposable
         InitializeSynthesizer();
     }
 
-    private AudioConfig? _audioConfig;
-
     private void InitializeSynthesizer()
     {
-        // Dispose old synthesizer first before disposing audio config
-        _synthesizer?.Dispose();
-        _synthesizer = null;
-        _audioConfig?.Dispose();
-        _audioConfig = null;
-
         _config = SpeechConfig.FromSubscription(_subscriptionKey, _region);
         _config.SpeechSynthesisVoiceName = _voiceName;
-
-        // Explicitly use default speaker output for audio playback
-        _audioConfig = AudioConfig.FromDefaultSpeakerOutput();
-        _synthesizer = new SpeechSynthesizer(_config, _audioConfig);
+        _synthesizer = new SpeechSynthesizer(_config);
     }
 
     /// <inheritdoc/>
@@ -117,20 +105,16 @@ public sealed class AzureNeuralTtsService : ITextToSpeechService, IDisposable
             if (result.Reason == ResultReason.Canceled)
             {
                 var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
-                Console.WriteLine($"  [!] Azure TTS Canceled: {cancellation.Reason}: {cancellation.ErrorDetails}");
-            }
-            else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
-            {
-                Console.WriteLine($"  [✓] Azure TTS: Audio played ({result.AudioData.Length} bytes)");
+                Console.WriteLine($"  [Azure TTS Error] {cancellation.Reason}: {cancellation.ErrorDetails}");
             }
             else
             {
-                Console.WriteLine($"  [?] Azure TTS Result: {result.Reason}");
+                Console.WriteLine($"  [Azure TTS] Result: {result.Reason}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"  [!] Azure TTS Exception: {ex.Message}");
+            Console.WriteLine($"  [Azure TTS Exception] {ex.Message}");
         }
     }
 
@@ -187,16 +171,16 @@ public sealed class AzureNeuralTtsService : ITextToSpeechService, IDisposable
             if (result.Reason == ResultReason.Canceled)
             {
                 var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
-                Console.WriteLine($"  [!] Azure TTS Canceled (whisper): {cancellation.Reason}: {cancellation.ErrorDetails}");
+                Console.WriteLine($"  {logPrefix} Error: {cancellation.Reason}: {cancellation.ErrorDetails}");
             }
-            else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
+            else
             {
-                Console.WriteLine($"  [✓] Azure TTS (whisper): Audio played ({result.AudioData.Length} bytes)");
+                Console.WriteLine($"  {logPrefix} Result: {result.Reason}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"  [!] Azure TTS Exception (whisper): {ex.Message}");
+            Console.WriteLine($"  [Azure TTS Exception] {ex.Message}");
         }
     }
 
@@ -291,7 +275,5 @@ public sealed class AzureNeuralTtsService : ITextToSpeechService, IDisposable
         _disposed = true;
         _synthesizer?.Dispose();
         _synthesizer = null;
-        _audioConfig?.Dispose();
-        _audioConfig = null;
     }
 }

@@ -239,8 +239,7 @@ public sealed class OllamaCloudChatModel : IStreamingChatModel
 
         _client = new HttpClient
         {
-            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute),
-            Timeout = TimeSpan.FromMinutes(10) // Large cloud models can take minutes to respond
+            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute)
         };
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;

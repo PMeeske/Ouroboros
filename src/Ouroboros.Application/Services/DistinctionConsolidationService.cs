@@ -6,7 +6,6 @@ namespace Ouroboros.Application.Services;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Ouroboros.Core.Learning;
 using Ouroboros.Core.DistinctionLearning;
 
 /// <summary>

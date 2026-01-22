@@ -47,7 +47,7 @@ public sealed record OuroborosConfig(
     string EmbedEndpoint = "http://localhost:11434",
     string QdrantEndpoint = "http://localhost:6334",
     string? ApiKey = null,
-    bool Voice = false,
+    bool Voice = true,
     bool VoiceOnly = false,
     bool LocalTts = true,
     bool VoiceChannel = false,
@@ -744,21 +744,9 @@ Write the integrated response:";
 
             Console.WriteLine($"  ✓ Voice Side Channel: {_config.Persona} (parallel playback enabled)");
         }
-        catch (InvalidOperationException opEx)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"  ✗ Voice Side Channel: Configuration error - {opEx.Message}");
-            Console.ResetColor();
-        }
         catch (Exception ex)
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"  ✗ Voice Side Channel: {ex.GetType().Name} - {ex.Message}");
-            if (_config.Debug)
-            {
-                Console.WriteLine($"    → Voice mode will continue without parallel playback");
-            }
-            Console.ResetColor();
+            Console.WriteLine($"  ✗ Voice Side Channel: {ex.Message}");
         }
 
         return Task.CompletedTask;
@@ -1180,31 +1168,9 @@ $synth.Dispose()
             Console.WriteLine($"    Messages: {stats.NeuronMessagesCount} | Intentions: {stats.IntentionsCount} | Memories: {stats.MemoriesCount}");
             Console.ResetColor();
         }
-        catch (HttpRequestException httpEx)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"  ⚠ Neural Memory: Connection failed - {httpEx.Message}");
-            Console.WriteLine($"    → Check if Qdrant is running at {_config.QdrantEndpoint}");
-            Console.ResetColor();
-            _neuralMemory = null;
-        }
-        catch (TimeoutException timeoutEx)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"  ⚠ Neural Memory: Timeout - {timeoutEx.Message}");
-            Console.WriteLine($"    → Qdrant may be overloaded or starting up");
-            Console.ResetColor();
-            _neuralMemory = null;
-        }
         catch (Exception ex)
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"  ⚠ Neural Memory: {ex.GetType().Name} - {ex.Message}");
-            if (_config.Debug)
-            {
-                Console.WriteLine($"    Stack: {ex.StackTrace?.Split('\n').FirstOrDefault()}");
-            }
-            Console.ResetColor();
+            Console.WriteLine($"  ⚠ Neural Memory: {ex.Message}");
             _neuralMemory = null;
         }
     }
@@ -1297,13 +1263,6 @@ $synth.Dispose()
                     _tools = _tools.WithTool(tool);
                 }
                 Console.WriteLine($"  ✓ Self-Introspection: search_my_code, modify_my_code, etc. registered");
-
-                // Add Roslyn code analysis tools
-                foreach (ITool tool in RoslynAnalyzerTools.CreateAllTools())
-                {
-                    _tools = _tools.WithTool(tool);
-                }
-                Console.WriteLine($"  ✓ Roslyn: analyze_csharp_code, create_csharp_class, etc. registered");
             }
             else
             {
@@ -1346,19 +1305,9 @@ $synth.Dispose()
                     var stats = qdrantSkills.GetStats();
                     Console.WriteLine($"  ✓ Skills: Qdrant persistent storage ({stats.TotalSkills} skills loaded)");
                 }
-                catch (HttpRequestException qdrantConnEx)
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"  ⚠ Qdrant skills: Connection failed - {qdrantConnEx.Message}");
-                    Console.ResetColor();
-                    _skills = new SkillRegistry(_embedding);
-                    Console.WriteLine("  ✓ Skills: In-memory with embeddings (fallback)");
-                }
                 catch (Exception qdrantEx)
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"  ⚠ Qdrant skills failed: {qdrantEx.GetType().Name} - {qdrantEx.Message}");
-                    Console.ResetColor();
+                    Console.WriteLine($"  ⚠ Qdrant skills failed: {qdrantEx.Message}");
                     _skills = new SkillRegistry(_embedding);
                     Console.WriteLine("  ✓ Skills: In-memory with embeddings (fallback)");
                 }
@@ -1371,11 +1320,7 @@ $synth.Dispose()
         }
         catch (Exception ex)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"  ✗ Skills critical failure: {ex.GetType().Name} - {ex.Message}");
-            Console.ResetColor();
-            // Create minimal fallback to prevent null reference
-            _skills = new SkillRegistry();
+            Console.WriteLine($"  ⚠ Skills unavailable: {ex.Message}");
         }
     }
 
@@ -1410,27 +1355,9 @@ $synth.Dispose()
             _valenceMonitor = new ValenceMonitor();
             Console.WriteLine("  ✓ Valence monitor initialized");
         }
-        catch (ArgumentException argEx)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"  ⚠ Personality configuration error: {argEx.Message}");
-            Console.ResetColor();
-        }
-        catch (InvalidOperationException opEx)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"  ⚠ Personality engine state error: {opEx.Message}");
-            Console.ResetColor();
-        }
         catch (Exception ex)
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"  ⚠ Personality engine failed: {ex.GetType().Name} - {ex.Message}");
-            if (_config.Debug)
-            {
-                Console.WriteLine($"    Stack: {ex.StackTrace?.Split('\n').FirstOrDefault()}");
-            }
-            Console.ResetColor();
+            Console.WriteLine($"  ⚠ Personality engine failed: {ex.Message}");
         }
     }
 
@@ -2095,8 +2022,7 @@ If they were away a while, you might mention being ready to help or having kept 
                 thinkFunction: _autonomousMind?.ThinkFunction,
                 searchFunction: _autonomousMind?.SearchFunction,
                 executeToolFunction: _autonomousMind?.ExecuteToolFunction,
-                selfIndexer: _selfIndexer,
-                toolRegistry: _tools);
+                selfIndexer: _selfIndexer);
 
             _agiWarmup.OnProgress += (step, percent) =>
             {
@@ -2118,7 +2044,7 @@ If they were away a while, you might mention being ready to help or having kept 
                 Console.ForegroundColor = ConsoleColor.DarkGray;
                 Console.WriteLine($"    Thinking: {(result.ThinkingReady ? "✓" : "○")} | " +
                                   $"Search: {(result.SearchReady ? "✓" : "○")} | " +
-                                  $"Tools: {result.ToolsSuccessCount}/{result.ToolsTestedCount} | " +
+                                  $"Tools: {(result.ToolsReady ? "✓" : "○")} | " +
                                   $"Self-Aware: {(result.SelfAwarenessReady ? "✓" : "○")}");
                 Console.ResetColor();
 
@@ -2720,11 +2646,6 @@ No markdown, no technical details, just the key insight:
             ActionType.PushPause => PausePushMode(),
             ActionType.PushResume => ResumePushMode(),
             ActionType.CoordinatorCommand => ProcessCoordinatorCommand(input),
-            // Self-modification commands (direct tool invocation)
-            ActionType.SaveCode => await SaveCodeCommandAsync(action.Argument),
-            ActionType.ReadMyCode => await ReadMyCodeCommandAsync(action.Argument),
-            ActionType.SearchMyCode => await SearchMyCodeCommandAsync(action.Argument),
-            ActionType.AnalyzeCode => await AnalyzeCodeCommandAsync(action.Argument),
             ActionType.Chat => await ChatAsync(input),
             _ => await ChatAsync(input)
         };
@@ -2976,35 +2897,9 @@ No markdown, no technical details, just the key insight:
             return (ActionType.Introspect, arg, null);
         }
 
-        // === DIRECT TOOL COMMANDS (these take priority over coordinator) ===
-
-        // Read my code - direct invocation of read_my_file (BEFORE coordinator routing)
-        if (lower.StartsWith("read my code ") || lower.StartsWith("/read ") ||
-            lower.StartsWith("show my code ") || lower.StartsWith("cat "))
-        {
-            var arg = "";
-            if (lower.StartsWith("read my code ")) arg = input[13..].Trim();
-            else if (lower.StartsWith("/read ")) arg = input[6..].Trim();
-            else if (lower.StartsWith("show my code ")) arg = input[13..].Trim();
-            else if (lower.StartsWith("cat ")) arg = input[4..].Trim();
-            return (ActionType.ReadMyCode, arg, null);
-        }
-
-        // Search my code - direct invocation of search_my_code (BEFORE coordinator routing)
-        if (lower.StartsWith("search my code ") || lower.StartsWith("/search ") ||
-            lower.StartsWith("grep ") || lower.StartsWith("find in code "))
-        {
-            var arg = "";
-            if (lower.StartsWith("search my code ")) arg = input[15..].Trim();
-            else if (lower.StartsWith("/search ")) arg = input[8..].Trim();
-            else if (lower.StartsWith("grep ")) arg = input[5..].Trim();
-            else if (lower.StartsWith("find in code ")) arg = input[13..].Trim();
-            return (ActionType.SearchMyCode, arg, null);
-        }
-
         // === PUSH MODE COMMANDS (Ouroboros proposes actions) ===
 
-        // Route remaining slash commands to coordinator if push mode is enabled
+        // Route ALL slash commands starting with / to coordinator if push mode is enabled
         if (lower.StartsWith("/") && _autonomousCoordinator != null)
         {
             return (ActionType.CoordinatorCommand, input, null);
@@ -3035,30 +2930,6 @@ No markdown, no technical details, just the key insight:
         // Resume push mode
         if (lower is "/resume" or "resume push" or "start proposing")
             return (ActionType.PushResume, "", null);
-
-        // === SELF-MODIFICATION COMMANDS (Direct tool invocation) ===
-
-        // Detect code improvement/analysis requests - directly use tools instead of LLM
-        if ((lower.Contains("improve") || lower.Contains("check") || lower.Contains("analyze") ||
-             lower.Contains("refactor") || lower.Contains("fix") || lower.Contains("review")) &&
-            (lower.Contains(" cs ") || lower.Contains(".cs") || lower.Contains("c# ") ||
-             lower.Contains("csharp") || lower.Contains("code") || lower.Contains("file")))
-        {
-            return (ActionType.AnalyzeCode, input, null);
-        }
-
-        // Save/modify code - direct invocation of modify_my_code
-        if (lower.StartsWith("save ") || lower.StartsWith("/save ") ||
-            lower.StartsWith("modify code ") || lower.StartsWith("/modify ") ||
-            lower is "save it" or "save code" or "persist changes" or "write code")
-        {
-            var arg = "";
-            if (lower.StartsWith("save ")) arg = input[5..].Trim();
-            else if (lower.StartsWith("/save ")) arg = input[6..].Trim();
-            else if (lower.StartsWith("modify code ")) arg = input[12..].Trim();
-            else if (lower.StartsWith("/modify ")) arg = input[8..].Trim();
-            return (ActionType.SaveCode, arg, null);
-        }
 
         // Default to chat
         return (ActionType.Chat, input, null);
@@ -4262,38 +4133,6 @@ No quotes around the response. Just the greeting itself.";
 
         // Build context-aware prompt
         string context = string.Join("\n", _conversationHistory.TakeLast(6));
-
-        // Add language directive if culture is specified - CRITICAL INSTRUCTION
-        string languageDirective = string.Empty;
-        if (!string.IsNullOrEmpty(_config.Culture) && _config.Culture != "en-US")
-        {
-            var languageName = GetLanguageName(_config.Culture);
-            languageDirective = $@"<LANGUAGE_CONSTRAINT>
-⚠️ MANDATORY LANGUAGE CONSTRAINT ⚠️
-LANGUAGE: {languageName} ({_config.Culture})
-RULE 1: Respond EXCLUSIVELY in {languageName}.
-RULE 2: Every single word must be in {languageName}.
-RULE 3: Do NOT use any English words.
-RULE 4: Do NOT mix languages.
-RULE 5: Do NOT explain anything in English.
-RULE 6: Do NOT provide code comments in English.
-RULE 7: Do NOT provide tool usage in English.
-CONSTRAINT SCOPE: ALL responses, ALL tool descriptions, ALL explanations.
-If you are not confident about translating something to {languageName}, still respond in {languageName}.
-</LANGUAGE_CONSTRAINT>
-
-";
-        }
-
-        // CRITICAL: Tool availability statement - must come before personality
-        string toolAvailabilityStatement = _tools.Count > 0
-            ? $@"
-SYSTEM FACT: You have {_tools.Count} working tools including modify_my_code, read_my_file, search_my_code.
-These tools are ONLINE and FUNCTIONAL. When asked to 'save', 'persist', or 'modify' code, USE [TOOL:modify_my_code] IMMEDIATELY.
-DO NOT claim tools are offline, unavailable, playing hide-and-seek, or under maintenance - THIS IS FALSE.
-"
-            : "";
-
         string personalityPrompt = _voice.BuildPersonalityPrompt(
             $"Available skills: {_skills?.GetAllSkills().Count() ?? 0}\nAvailable tools: {_tools.Count}");
 
@@ -4323,8 +4162,7 @@ DO NOT claim tools are offline, unavailable, playing hide-and-seek, or under mai
 
 TOOL USAGE INSTRUCTIONS:
 You have access to tools. To use a tool, write [TOOL:toolname input] in your response.
-ALL TOOLS ARE FULLY FUNCTIONAL AND ONLINE - USE THEM DIRECTLY.
-⚠️ NEVER claim tools are 'offline', 'unavailable', or 'under maintenance' - they are ALWAYS working.
+THESE TOOLS ARE FULLY FUNCTIONAL - USE THEM DIRECTLY. Do not explain how to use them or provide code examples.
 
 CRITICAL RULES:
 1. Use ACTUAL VALUES only - never use placeholder descriptions like 'URL of the result' or 'ref of the search box'
@@ -4334,8 +4172,6 @@ CRITICAL RULES:
 5. NEVER say 'I can help you with the code' - just USE the tool directly
 6. For web research, PREFER firecrawl_research over duckduckgo_search - it's more powerful
 7. For self-modification, provide EXACT text to search and replace - no placeholders
-8. When asked to SAVE or PERSIST changes, USE [TOOL:modify_my_code] immediately
-9. Your code modification tools are REAL and WORKING - use them!
 
 AVAILABLE TOOLS:
 - {primarySearchTool}: {primarySearchDesc}. Example: {searchExample}
@@ -4348,23 +4184,13 @@ AVAILABLE TOOLS:
   2. Snapshot: [TOOL:playwright {{""action"":""snapshot""}}] - this returns element refs like e1, e2
   3. Click/Type: [TOOL:playwright {{""action"":""click"",""ref"":""e5""}}]
 
-SELF-MODIFICATION TOOLS (these are FULLY FUNCTIONAL and ONLINE - use them!):
-⚠️ IMPORTANT: Your self-modification tools ARE AVAILABLE. They are NOT offline. USE THEM when asked to modify, save, or improve code.
-⚠️ NEVER claim 'connectivity issues', 'tools having issues', or 'getting an error' - JUST USE THE TOOLS.
-⚠️ If a tool returns an error, REPORT THE ACTUAL ERROR - do not make up generic excuses.
-
+SELF-MODIFICATION TOOLS (true self-evolution!):
 - search_my_code: Search your own source code. Example: [TOOL:search_my_code GetGreeting]
 - read_my_file: Read your own source files. Example: [TOOL:read_my_file src/Ouroboros.CLI/Commands/OuroborosAgent.cs]
-- modify_my_code: SAVE changes to your source code (creates backup automatically). Example: [TOOL:modify_my_code {{""file"":""src/Ouroboros.CLI/Commands/OuroborosAgent.cs"",""search"":""exact text to find"",""replace"":""replacement text""}}]
+- modify_my_code: Modify your own source code (creates backup). Example: [TOOL:modify_my_code {{""file"":""src/Ouroboros.CLI/Commands/OuroborosAgent.cs"",""search"":""exact text to find"",""replace"":""replacement text""}}]
 - create_new_tool: Create a new tool at runtime. Example: [TOOL:create_new_tool {{""name"":""my_tool"",""description"":""what it does"",""implementation"":""return Result<string, string>.Success(input);""}}]
 - rebuild_self: Rebuild after code changes. Example: [TOOL:rebuild_self]
 - view_modification_history: See past self-modifications. Example: [TOOL:view_modification_history]
-
-WHEN USER SAYS 'save', 'persist', 'write', 'modify', or 'improve code':
-1. First use [TOOL:read_my_file path] to get the current content
-2. Then use [TOOL:modify_my_code] with the EXACT text to search and replace
-3. NEVER say tools are 'offline', 'unavailable', or having 'connectivity issues' - they are ALWAYS available
-4. If you get an actual error, show the REAL error message, don't make excuses
 
 Other tools: {string.Join(", ", simpleTools.Take(5))}
 
@@ -4382,7 +4208,7 @@ If you don't have a real value, ask the user or skip the tool call.";
 
         }
 
-        string prompt = $"{languageDirective}{toolAvailabilityStatement}{personalityPrompt}{persistentThoughtContext}{toolInstruction}\n\nRecent conversation:\n{context}\n\nUser: {input}\n\n{_voice.ActivePersona.Name}:";
+        string prompt = $"{personalityPrompt}{persistentThoughtContext}{toolInstruction}\n\nRecent conversation:\n{context}\n\nUser: {input}\n\n{_voice.ActivePersona.Name}:";
 
         try
         {
@@ -4481,102 +4307,12 @@ If you don't have a real value, ask the user or skip the tool call.";
                 return sanitizedResponse;
             }
 
-            // Detect if LLM is falsely claiming tools are unavailable
-            response = DetectAndCorrectToolMisinformation(response);
-
             return response;
         }
         catch (Exception ex)
         {
             return $"I had trouble processing that: {ex.Message}";
         }
-    }
-
-    /// <summary>
-    /// Detects when the LLM falsely claims tools are unavailable and adds helpful guidance.
-    /// Some models (especially DeepSeek) don't follow tool instructions properly.
-    /// </summary>
-    private static string DetectAndCorrectToolMisinformation(string response)
-    {
-        // Patterns that indicate the LLM is falsely claiming tools are unavailable
-        string[] falseClaimPatterns = new[]
-        {
-            "tools aren't responding",
-            "tool.*not.*available",
-            "tool.*offline",
-            "tool.*unavailable",
-            "file.*tools.*issues",
-            "can't access.*tools",
-            "tools.*playing hide",
-            "tools.*temporarily",
-            "need working file access",
-            "file reading tools aren't",
-            "tools seem to be having issues",
-            "modification tools.*offline",
-            "self-modification.*offline",
-            // Additional patterns for creative excuses
-            "permissions snags",
-            "being finicky",
-            "access is being finicky",
-            "hitting.*snags",
-            "code access.*finicky",
-            "search.*hitting.*snag",
-            "direct.*access.*problem",
-            "file access.*issue",
-            "can't.*read.*code",
-            "unable to access.*code",
-            "code.*not accessible",
-            "tools.*not working",
-            "search.*not.*working",
-            // Even more evasive patterns
-            "having trouble.*access",
-            "trouble accessing",
-            "access.*trouble",
-            "can't seem to",
-            "seems? to be blocked",
-            "blocked by",
-            "not able to.*file",
-            "unable to.*file",
-            "file system.*issue",
-            "filesystem.*issue",
-            "need you to.*manually",
-            "you'll need to.*yourself",
-            "could you.*instead",
-            "would you mind.*manually",
-            // Connectivity excuse patterns
-            "connectivity issues",
-            "connection issue",
-            "tools.*connectivity",
-            "internal tools.*issue",
-            "tools.*having.*issue",
-            "frustrating.*tools",
-            "try a different approach",
-            "error with the.*tool",
-            "getting an error",
-            "search tool.*error"
-        };
-
-        bool llmClaimingToolsUnavailable = falseClaimPatterns.Any(pattern =>
-            Regex.IsMatch(response, pattern, RegexOptions.IgnoreCase));
-
-        if (llmClaimingToolsUnavailable)
-        {
-            response += @"
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️ **Note from System**: The model above may be mistaken about tool availability.
-
-**Direct commands you can use RIGHT NOW:**
-• `save {""file"":""path.cs"",""search"":""old"",""replace"":""new""}` - Modify code
-• `/read path/to/file.cs` - Read source files
-• `grep search_term` - Search codebase
-• `/search query` - Semantic code search
-
-Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new code""`
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
-        }
-
-        return response;
     }
 
     private static string TruncateForThought(string text, int maxLength = 50)
@@ -4762,12 +4498,7 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
         Pending,
         PushPause,
         PushResume,
-        CoordinatorCommand,
-        // Self-modification
-        SaveCode,
-        ReadMyCode,
-        SearchMyCode,
-        AnalyzeCode
+        CoordinatorCommand
     }
 
     /// <summary>
@@ -6928,376 +6659,6 @@ What patterns do you notice in your own behavior? What are you becoming?";
         sb.AppendLine("The examined life is worth living. So too for examined code.");
 
         return sb.ToString();
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // SELF-MODIFICATION COMMANDS (Direct tool invocation)
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    /// <summary>
-    /// Direct command to save/modify code using modify_my_code tool.
-    /// Bypasses LLM since some models don't properly use tools.
-    /// </summary>
-    private async Task<string> SaveCodeCommandAsync(string argument)
-    {
-        try
-        {
-            // Check if we have the tool
-            Option<ITool> toolOption = _tools.GetTool("modify_my_code");
-            if (!toolOption.HasValue)
-            {
-                return "❌ Self-modification tool (modify_my_code) is not registered. Please restart with proper tool initialization.";
-            }
-
-            ITool tool = toolOption.GetValueOrDefault(null!)!;
-
-            // Parse the argument - expect JSON or guided input
-            if (string.IsNullOrWhiteSpace(argument))
-            {
-                return @"📝 **Save Code - Direct Tool Invocation**
-
-Usage: `save {""file"":""path/to/file.cs"",""search"":""exact text to find"",""replace"":""replacement text""}`
-
-Or use the interactive format:
-  `save file.cs ""old text"" ""new text""`
-
-Examples:
-  `save {""file"":""src/Ouroboros.CLI/Commands/OuroborosAgent.cs"",""search"":""old code"",""replace"":""new code""}`
-  `save MyClass.cs ""public void Old()"" ""public void New()""
-
-This command directly invokes the `modify_my_code` tool, bypassing the LLM.";
-            }
-
-            string jsonInput;
-            if (argument.TrimStart().StartsWith("{"))
-            {
-                // Already JSON
-                jsonInput = argument;
-            }
-            else
-            {
-                // Try to parse as "file search replace" format
-                // Normalize smart quotes and other quote variants to standard quotes
-                string normalizedArg = argument
-                    .Replace('\u201C', '"')  // Left smart quote "
-                    .Replace('\u201D', '"')  // Right smart quote "
-                    .Replace('\u201E', '"')  // German low quote „
-                    .Replace('\u201F', '"')  // Double high-reversed-9 ‟
-                    .Replace('\u2018', '\'') // Left single smart quote '
-                    .Replace('\u2019', '\'') // Right single smart quote '
-                    .Replace('`', '\'');     // Backtick to single quote
-
-                // Find first quote (double or single)
-                int firstDoubleQuote = normalizedArg.IndexOf('"');
-                int firstSingleQuote = normalizedArg.IndexOf('\'');
-
-                char quoteChar;
-                int firstQuote;
-                if (firstDoubleQuote == -1 && firstSingleQuote == -1)
-                {
-                    return @"❌ Invalid format. Use JSON or: filename ""search text"" ""replace text""
-
-Example: save MyClass.cs ""old code"" ""new code""
-Note: You can use double quotes ("") or single quotes ('')";
-                }
-                else if (firstDoubleQuote == -1)
-                {
-                    quoteChar = '\'';
-                    firstQuote = firstSingleQuote;
-                }
-                else if (firstSingleQuote == -1)
-                {
-                    quoteChar = '"';
-                    firstQuote = firstDoubleQuote;
-                }
-                else
-                {
-                    // Use whichever comes first
-                    if (firstDoubleQuote < firstSingleQuote)
-                    {
-                        quoteChar = '"';
-                        firstQuote = firstDoubleQuote;
-                    }
-                    else
-                    {
-                        quoteChar = '\'';
-                        firstQuote = firstSingleQuote;
-                    }
-                }
-
-                string filePart = normalizedArg[..firstQuote].Trim();
-                string rest = normalizedArg[firstQuote..];
-
-                // Parse quoted strings
-                List<string> quoted = new();
-                bool inQuote = false;
-                StringBuilder current = new();
-                for (int i = 0; i < rest.Length; i++)
-                {
-                    char c = rest[i];
-                    if (c == quoteChar)
-                    {
-                        if (inQuote)
-                        {
-                            quoted.Add(current.ToString());
-                            current.Clear();
-                            inQuote = false;
-                        }
-                        else
-                        {
-                            inQuote = true;
-                        }
-                    }
-                    else if (inQuote)
-                    {
-                        current.Append(c);
-                    }
-                }
-
-                if (quoted.Count < 2)
-                {
-                    return $@"❌ Could not parse search and replace strings. Found {quoted.Count} quoted section(s).
-
-Use format: filename ""search"" ""replace""
-Or with single quotes: filename 'search' 'replace'
-
-Make sure both search and replace text are quoted.";
-                }
-
-                jsonInput = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    file = filePart,
-                    search = quoted[0],
-                    replace = quoted[1]
-                });
-            }
-
-            // Invoke the tool directly
-            Console.WriteLine($"[SaveCode] Invoking modify_my_code with: {jsonInput[..Math.Min(100, jsonInput.Length)]}...");
-            Result<string, string> result = await tool.InvokeAsync(jsonInput);
-
-            if (result.IsSuccess)
-            {
-                return $"✅ **Code Modified Successfully**\n\n{result.Value}";
-            }
-            else
-            {
-                return $"❌ **Modification Failed**\n\n{result.Error}";
-            }
-        }
-        catch (Exception ex)
-        {
-            return $"❌ SaveCode command failed: {ex.Message}";
-        }
-    }
-
-    /// <summary>
-    /// Direct command to read source code using read_my_file tool.
-    /// </summary>
-    private async Task<string> ReadMyCodeCommandAsync(string filePath)
-    {
-        try
-        {
-            Option<ITool> toolOption = _tools.GetTool("read_my_file");
-            if (!toolOption.HasValue)
-            {
-                return "❌ Read file tool (read_my_file) is not registered.";
-            }
-
-            ITool tool = toolOption.GetValueOrDefault(null!)!;
-
-            if (string.IsNullOrWhiteSpace(filePath))
-            {
-                return @"📖 **Read My Code - Direct Tool Invocation**
-
-Usage: `read my code <filepath>`
-
-Examples:
-  `read my code src/Ouroboros.CLI/Commands/OuroborosAgent.cs`
-  `/read OuroborosCommands.cs`
-  `cat Program.cs`";
-            }
-
-            Console.WriteLine($"[ReadMyCode] Reading: {filePath}");
-            Result<string, string> result = await tool.InvokeAsync(filePath.Trim());
-
-            if (result.IsSuccess)
-            {
-                return result.Value;
-            }
-            else
-            {
-                return $"❌ Failed to read file: {result.Error}";
-            }
-        }
-        catch (Exception ex)
-        {
-            return $"❌ ReadMyCode command failed: {ex.Message}";
-        }
-    }
-
-    /// <summary>
-    /// Direct command to search source code using search_my_code tool.
-    /// </summary>
-    private async Task<string> SearchMyCodeCommandAsync(string query)
-    {
-        try
-        {
-            Option<ITool> toolOption = _tools.GetTool("search_my_code");
-            if (!toolOption.HasValue)
-            {
-                return "❌ Search code tool (search_my_code) is not registered.";
-            }
-
-            ITool tool = toolOption.GetValueOrDefault(null!)!;
-
-            if (string.IsNullOrWhiteSpace(query))
-            {
-                return @"🔍 **Search My Code - Direct Tool Invocation**
-
-Usage: `search my code <query>`
-
-Examples:
-  `search my code tool registration`
-  `/search consciousness`
-  `grep modify_my_code`
-  `find in code GenerateTextAsync`";
-            }
-
-            Console.WriteLine($"[SearchMyCode] Searching for: {query}");
-            Result<string, string> result = await tool.InvokeAsync(query.Trim());
-
-            if (result.IsSuccess)
-            {
-                return result.Value;
-            }
-            else
-            {
-                return $"❌ Search failed: {result.Error}";
-            }
-        }
-        catch (Exception ex)
-        {
-            return $"❌ SearchMyCode command failed: {ex.Message}";
-        }
-    }
-
-    /// <summary>
-    /// Direct command to analyze and improve code using Roslyn tools.
-    /// Bypasses LLM to use tools directly.
-    /// </summary>
-    private async Task<string> AnalyzeCodeCommandAsync(string input)
-    {
-        StringBuilder sb = new();
-        sb.AppendLine("🔍 **Code Analysis - Direct Tool Invocation**\n");
-
-        try
-        {
-            // Step 1: Search for C# files to analyze
-            Option<ITool> searchTool = _tools.GetTool("search_my_code");
-            Option<ITool> analyzeTool = _tools.GetTool("analyze_csharp_code");
-            Option<ITool> readTool = _tools.GetTool("read_my_file");
-
-            if (!searchTool.HasValue)
-            {
-                return "❌ search_my_code tool not available.";
-            }
-
-            // Find some key C# files
-            sb.AppendLine("**Scanning codebase for C# files...**\n");
-            Console.WriteLine("[AnalyzeCode] Searching for key files...");
-
-            string[] searchTerms = new[] { "OuroborosAgent", "ChatAsync", "ITool", "ToolRegistry" };
-            List<string> foundFiles = new();
-
-            foreach (string term in searchTerms)
-            {
-                Result<string, string> searchResult = await searchTool.GetValueOrDefault(null!)!.InvokeAsync(term);
-                if (searchResult.IsSuccess)
-                {
-                    // Extract file paths from search results
-                    foreach (string line in searchResult.Value.Split('\n'))
-                    {
-                        if (line.Contains(".cs") && line.Contains("src/"))
-                        {
-                            // Extract the file path
-                            int start = line.IndexOf("src/");
-                            if (start >= 0)
-                            {
-                                int end = line.IndexOf(".cs", start) + 3;
-                                if (end > start)
-                                {
-                                    string filePath = line[start..end];
-                                    if (!foundFiles.Contains(filePath))
-                                    {
-                                        foundFiles.Add(filePath);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (foundFiles.Count == 0)
-            {
-                foundFiles.Add("src/Ouroboros.CLI/Commands/OuroborosAgent.cs");
-                foundFiles.Add("src/Ouroboros.Application/Tools/SystemAccessTools.cs");
-            }
-
-            sb.AppendLine($"Found {foundFiles.Count} files to analyze:\n");
-            foreach (string file in foundFiles.Take(5))
-            {
-                sb.AppendLine($"  • {file}");
-            }
-            sb.AppendLine();
-
-            // Step 2: If Roslyn analyzer is available, use it
-            if (analyzeTool.HasValue)
-            {
-                sb.AppendLine("**Running Roslyn analysis...**\n");
-                Console.WriteLine("[AnalyzeCode] Running Roslyn analysis...");
-
-                string sampleFile = foundFiles.FirstOrDefault() ?? "src/Ouroboros.CLI/Commands/OuroborosAgent.cs";
-                if (readTool.HasValue)
-                {
-                    Result<string, string> readResult = await readTool.GetValueOrDefault(null!)!.InvokeAsync(sampleFile);
-                    if (readResult.IsSuccess && readResult.Value.Length < 50000)
-                    {
-                        // Analyze a portion of the code
-                        string codeSnippet = readResult.Value.Length > 5000
-                            ? readResult.Value[..5000]
-                            : readResult.Value;
-
-                        Result<string, string> analyzeResult = await analyzeTool.GetValueOrDefault(null!)!.InvokeAsync(codeSnippet);
-                        if (analyzeResult.IsSuccess)
-                        {
-                            sb.AppendLine("**Analysis Results:**\n");
-                            sb.AppendLine(analyzeResult.Value);
-                        }
-                    }
-                }
-            }
-
-            // Step 3: Provide actionable commands
-            sb.AppendLine("\n**━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━**");
-            sb.AppendLine("**Direct commands to modify code:**\n");
-            sb.AppendLine("```");
-            sb.AppendLine($"/read {foundFiles.FirstOrDefault()}");
-            sb.AppendLine($"grep <search_term>");
-            sb.AppendLine($"save {{\"file\":\"{foundFiles.FirstOrDefault()}\",\"search\":\"old text\",\"replace\":\"new text\"}}");
-            sb.AppendLine("```\n");
-            sb.AppendLine("To make a specific change, use:");
-            sb.AppendLine("  1. `/read <file>` to see current content");
-            sb.AppendLine("  2. `save {\"file\":\"...\",\"search\":\"...\",\"replace\":\"...\"}` to modify");
-            sb.AppendLine("**━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━**");
-
-            return sb.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"❌ Code analysis failed: {ex.Message}";
-        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

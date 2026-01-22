@@ -963,6 +963,126 @@ public static class SkillCliSteps
         };
 
     /// <summary>
+    /// Reorganize knowledge based on access patterns and learning.
+    /// Consolidates duplicates, clusters related content, and creates summaries.
+    /// Usage: ReorganizeKnowledge | UseOutput
+    /// </summary>
+    [PipelineToken("ReorganizeKnowledge", "Reorganize", "ConsolidateKnowledge", "OptimizeIndex")]
+    public static Step<CliPipelineState, CliPipelineState> ReorganizeKnowledge(string? options = null)
+        => async s =>
+        {
+            var indexer = Tools.SystemAccessTools.SharedIndexer;
+            if (indexer == null)
+            {
+                Console.WriteLine("[ReorganizeKnowledge] ❌ Self-indexer not available");
+                s.Output = "Knowledge reorganization unavailable - self-indexer not connected.";
+                return s;
+            }
+
+            Console.WriteLine("[ReorganizeKnowledge] 🧠 Starting knowledge reorganization...");
+
+            try
+            {
+                // Parse options
+                bool createSummaries = true, removeDuplicates = true, clusterRelated = true;
+                if (!string.IsNullOrWhiteSpace(options))
+                {
+                    var opts = ParseString(options)?.ToLowerInvariant() ?? "";
+                    if (opts.Contains("nosummaries")) createSummaries = false;
+                    if (opts.Contains("noduplicates")) removeDuplicates = false;
+                    if (opts.Contains("noclusters")) clusterRelated = false;
+                }
+
+                var result = await indexer.ReorganizeAsync(createSummaries, removeDuplicates, clusterRelated);
+
+                var sb = new StringBuilder();
+                sb.AppendLine("🧠 **Knowledge Reorganization Complete**");
+                sb.AppendLine($"   ⏱️ Duration: {result.Duration.TotalSeconds:F1}s");
+                sb.AppendLine($"   🗑️ Duplicates removed: {result.DuplicatesRemoved}");
+                sb.AppendLine($"   📊 Clusters found: {result.ClustersFound}");
+                sb.AppendLine($"   📝 Summaries created: {result.SummariesCreated}");
+                sb.AppendLine($"   ✏️ Chunks consolidated: {result.ConsolidatedChunks}");
+
+                if (result.Insights.Count > 0)
+                {
+                    sb.AppendLine("\n💡 **Insights:**");
+                    foreach (var insight in result.Insights)
+                    {
+                        sb.AppendLine($"   • {insight}");
+                    }
+                }
+
+                Console.WriteLine(sb.ToString());
+                s.Output = sb.ToString();
+
+                // Also get reorganization stats
+                var stats = indexer.GetReorganizationStats();
+                if (stats.TopAccessedFiles.Count > 0)
+                {
+                    Console.WriteLine("\n📈 **Top Accessed Files:**");
+                    foreach (var (file, count) in stats.TopAccessedFiles)
+                    {
+                        var fileName = Path.GetFileName(file);
+                        Console.WriteLine($"   • {fileName}: {count} accesses");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ReorganizeKnowledge] ❌ Error: {ex.Message}");
+                s.Output = $"Reorganization failed: {ex.Message}";
+            }
+
+            return s;
+        };
+
+    /// <summary>
+    /// Get knowledge organization statistics.
+    /// Shows access patterns, hot content, and cluster information.
+    /// Usage: KnowledgeStats | UseOutput
+    /// </summary>
+    [PipelineToken("KnowledgeStats", "IndexStats", "KnowledgeInfo", "ReorgStats")]
+    public static Step<CliPipelineState, CliPipelineState> KnowledgeStats(string? _ = null)
+        => async s =>
+        {
+            var indexer = Tools.SystemAccessTools.SharedIndexer;
+            if (indexer == null)
+            {
+                s.Output = "Self-indexer not available.";
+                return s;
+            }
+
+            var stats = await indexer.GetStatsAsync();
+            var reorgStats = indexer.GetReorganizationStats();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("📊 **Knowledge Index Statistics**");
+            sb.AppendLine($"   📁 Collection: {stats.CollectionName}");
+            sb.AppendLine($"   🔢 Total vectors: {stats.TotalVectors:N0}");
+            sb.AppendLine($"   📄 Indexed files: {stats.IndexedFiles}");
+            sb.AppendLine($"   📐 Vector size: {stats.VectorSize}D");
+
+            sb.AppendLine("\n🧠 **Reorganization State**");
+            sb.AppendLine($"   📈 Tracked patterns: {reorgStats.TrackedPatterns}");
+            sb.AppendLine($"   🔥 Hot content: {reorgStats.HotContentCount}");
+            sb.AppendLine($"   🔗 Co-access clusters: {reorgStats.CoAccessClusters}");
+
+            if (reorgStats.TopAccessedFiles.Count > 0)
+            {
+                sb.AppendLine("\n📈 **Most Accessed Files:**");
+                foreach (var (file, count) in reorgStats.TopAccessedFiles)
+                {
+                    var fileName = Path.GetFileName(file);
+                    sb.AppendLine($"   • {fileName}: {count} accesses");
+                }
+            }
+
+            Console.WriteLine(sb.ToString());
+            s.Output = sb.ToString();
+            return s;
+        };
+
+    /// <summary>
     /// Run the full Ouroboros emergence cycle on a topic.
     /// Usage: EmergenceCycle 'transformer architectures' | UseOutput
     /// </summary>
@@ -1570,6 +1690,77 @@ public static class SkillCliSteps
         var spaced = Regex.Replace(name, @"(?<!^)([A-Z])", " $1");
         return $"Pipeline step: {spaced}";
     }
+
+    #region Presence Detection CLI Steps
+
+    /// <summary>
+    /// Shared presence detector for CLI access.
+    /// </summary>
+    public static Services.PresenceDetector? SharedPresenceDetector { get; set; }
+
+    /// <summary>
+    /// Check user presence status.
+    /// Reports whether the user is detected as present via input/WiFi/camera.
+    /// Usage: CheckPresence | UseOutput
+    /// </summary>
+    [PipelineToken("CheckPresence", "PresenceStatus", "IsUserHere", "WhereAmI")]
+    public static Step<CliPipelineState, CliPipelineState> CheckPresence(string? _ = null)
+        => async s =>
+        {
+            if (SharedPresenceDetector == null)
+            {
+                s.Output = "⚠️ Presence detection not initialized.";
+                Console.WriteLine(s.Output);
+                return s;
+            }
+
+            var result = await SharedPresenceDetector.CheckPresenceAsync();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("👁️ **Presence Detection Status**");
+            sb.AppendLine($"   State: {(result.IsPresent ? "✅ User Present" : "❌ User Absent")}");
+            sb.AppendLine($"   Confidence: {result.OverallConfidence:P0}");
+            sb.AppendLine();
+            sb.AppendLine("📊 **Detection Sources:**");
+            sb.AppendLine($"   💻 Input Activity: {(result.RecentInputActivity ? "✓" : "○")} ({result.InputActivityConfidence:P0})");
+            sb.AppendLine($"   📶 WiFi/Network: {result.WifiDevicesNearby} devices ({result.WifiPresenceConfidence:P0})");
+            sb.AppendLine($"   📷 Camera/Motion: {(result.MotionDetected ? "✓" : "○")} ({result.CameraConfidence:P0})");
+            sb.AppendLine();
+            sb.AppendLine($"   Last check: {result.Timestamp:HH:mm:ss}");
+
+            Console.WriteLine(sb.ToString());
+            s.Output = sb.ToString();
+            return s;
+        };
+
+    /// <summary>
+    /// Get presence detector configuration and state.
+    /// Usage: PresenceConfig | UseOutput
+    /// </summary>
+    [PipelineToken("PresenceConfig", "PresenceSettings")]
+    public static Step<CliPipelineState, CliPipelineState> PresenceConfig(string? _ = null)
+        => async s =>
+        {
+            if (SharedPresenceDetector == null)
+            {
+                s.Output = "⚠️ Presence detection not initialized.";
+                Console.WriteLine(s.Output);
+                return s;
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine("⚙️ **Presence Detection Configuration**");
+            sb.AppendLine($"   Monitoring: {(SharedPresenceDetector.IsMonitoring ? "✅ Active" : "❌ Stopped")}");
+            sb.AppendLine($"   Current State: {SharedPresenceDetector.CurrentState}");
+            sb.AppendLine($"   Last Presence: {SharedPresenceDetector.LastPresenceTime:yyyy-MM-dd HH:mm:ss}");
+
+            Console.WriteLine(sb.ToString());
+            s.Output = sb.ToString();
+            await Task.CompletedTask;
+            return s;
+        };
+
+    #endregion
 }
 
 /// <summary>

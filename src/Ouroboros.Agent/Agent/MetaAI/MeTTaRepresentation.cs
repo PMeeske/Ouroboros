@@ -9,7 +9,6 @@ using System.Text;
 using Ouroboros.Core.Hyperon;
 using Ouroboros.Core.LawsOfForm;
 using Ouroboros.Tools.MeTTa;
-using Unit = Ouroboros.Tools.MeTTa.Unit;
 
 namespace Ouroboros.Agent.MetaAI;
 
