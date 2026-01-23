@@ -5,8 +5,73 @@ using LangChain.Providers.Ollama;
 using Polly;
 using Polly.Retry;
 using System.Reactive.Linq;
+using System.Text.RegularExpressions;
 
 namespace Ouroboros.Providers;
+
+/// <summary>
+/// Represents a response from a model that includes both thinking/reasoning content and the final response.
+/// Used by models that support extended thinking (Claude, DeepSeek R1, o1, etc.).
+/// </summary>
+/// <param name="Thinking">The thinking/reasoning content, if any. This is the model's internal reasoning process.</param>
+/// <param name="Content">The final response content after thinking.</param>
+/// <param name="ThinkingTokens">Estimated token count for thinking content (if available from API).</param>
+/// <param name="ContentTokens">Estimated token count for content (if available from API).</param>
+public sealed record ThinkingResponse(
+    string? Thinking,
+    string Content,
+    int? ThinkingTokens = null,
+    int? ContentTokens = null)
+{
+    /// <summary>
+    /// Returns true if this response contains thinking content.
+    /// </summary>
+    public bool HasThinking => !string.IsNullOrEmpty(Thinking);
+
+    /// <summary>
+    /// Combines thinking and content into a single formatted string.
+    /// </summary>
+    /// <param name="thinkingPrefix">Prefix for thinking section (default: "🤔 Thinking:\n").</param>
+    /// <param name="contentPrefix">Prefix for content section (default: "\n\n📝 Response:\n").</param>
+    public string ToFormattedString(string thinkingPrefix = "🤔 Thinking:\n", string contentPrefix = "\n\n📝 Response:\n")
+    {
+        if (!HasThinking)
+            return Content;
+
+        return $"{thinkingPrefix}{Thinking}{contentPrefix}{Content}";
+    }
+
+    /// <summary>
+    /// Creates a ThinkingResponse from raw text that may contain thinking tags.
+    /// Supports &lt;think&gt;...&lt;/think&gt; format used by some models.
+    /// </summary>
+    public static ThinkingResponse FromRawText(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return new ThinkingResponse(null, text ?? string.Empty);
+
+        // Try to extract <think>...</think> tags (used by DeepSeek R1, etc.)
+        var thinkMatch = Regex.Match(text, @"<think>(.*?)</think>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        if (thinkMatch.Success)
+        {
+            string thinking = thinkMatch.Groups[1].Value.Trim();
+            string content = text.Replace(thinkMatch.Value, "").Trim();
+            return new ThinkingResponse(thinking, content);
+        }
+
+        // Try <thinking>...</thinking> format
+        var thinkingMatch = Regex.Match(text, @"<thinking>(.*?)</thinking>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        if (thinkingMatch.Success)
+        {
+            string thinking = thinkingMatch.Groups[1].Value.Trim();
+            string content = text.Replace(thinkingMatch.Value, "").Trim();
+            return new ThinkingResponse(thinking, content);
+        }
+
+        // No thinking tags found
+        return new ThinkingResponse(null, text);
+    }
+}
 
 /// <summary>
 /// Minimal contract used by <see cref="ToolAwareChatModel"/> to obtain text responses.
@@ -25,10 +90,41 @@ public interface IStreamingChatModel : IChatCompletionModel
 }
 
 /// <summary>
+/// Extended contract for models that support thinking/reasoning mode.
+/// These models can return separate thinking content and response content.
+/// Examples include Claude (with extended thinking), DeepSeek R1, and o1 models.
+/// </summary>
+public interface IThinkingChatModel : IChatCompletionModel
+{
+    /// <summary>
+    /// Generates a response with separate thinking and content.
+    /// </summary>
+    /// <param name="prompt">The input prompt.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A ThinkingResponse containing both thinking and content.</returns>
+    Task<ThinkingResponse> GenerateWithThinkingAsync(string prompt, CancellationToken ct = default);
+}
+
+/// <summary>
+/// Extended contract for models that support streaming thinking/reasoning mode.
+/// </summary>
+public interface IStreamingThinkingChatModel : IThinkingChatModel, IStreamingChatModel
+{
+    /// <summary>
+    /// Streams the thinking and content separately.
+    /// </summary>
+    /// <param name="prompt">The input prompt.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>An observable that emits (isThinking, chunk) tuples.</returns>
+    IObservable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default);
+}
+
+/// <summary>
 /// Adapter for local Ollama models. We attempt to call the SDK when available,
 /// falling back to a deterministic stub when the local daemon is not reachable.
+/// Supports thinking mode for models like DeepSeek R1 that emit &lt;think&gt; tags.
 /// </summary>
-public sealed class OllamaChatAdapter : IStreamingChatModel
+public sealed class OllamaChatAdapter : IStreamingThinkingChatModel
 {
     private readonly OllamaChatModel _model;
     private readonly string? _culture;
@@ -69,6 +165,79 @@ public sealed class OllamaChatAdapter : IStreamingChatModel
             // Deterministic fallback keeps the pipeline running in offline scenarios.
             return $"[ollama-fallback:{_model.GetType().Name}] {prompt}";
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<ThinkingResponse> GenerateWithThinkingAsync(string prompt, CancellationToken ct = default)
+    {
+        string rawText = await GenerateTextAsync(prompt, ct);
+        return ThinkingResponse.FromRawText(rawText);
+    }
+
+    /// <inheritdoc/>
+    public IObservable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
+    {
+        return Observable.Create<(bool IsThinking, string Chunk)>(async (observer, token) =>
+        {
+            try
+            {
+                string finalPrompt = _culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
+                IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(finalPrompt, cancellationToken: token);
+
+                bool inThinking = false;
+                StringBuilder buffer = new();
+
+                await foreach (LangChain.Providers.ChatResponse? chunk in stream.WithCancellation(token).ConfigureAwait(false))
+                {
+                    string text = ExtractResponseText(chunk);
+                    if (string.IsNullOrEmpty(text)) continue;
+
+                    buffer.Append(text);
+                    string bufferStr = buffer.ToString();
+
+                    // Check for thinking tag transitions
+                    if (!inThinking && bufferStr.Contains("<think>", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int idx = bufferStr.IndexOf("<think>", StringComparison.OrdinalIgnoreCase);
+                        string beforeTag = bufferStr[..idx];
+                        if (!string.IsNullOrEmpty(beforeTag))
+                            observer.OnNext((false, beforeTag));
+
+                        buffer.Clear();
+                        buffer.Append(bufferStr[(idx + 7)..]);
+                        inThinking = true;
+                        continue;
+                    }
+
+                    if (inThinking && bufferStr.Contains("</think>", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int idx = bufferStr.IndexOf("</think>", StringComparison.OrdinalIgnoreCase);
+                        string thinkingContent = bufferStr[..idx];
+                        if (!string.IsNullOrEmpty(thinkingContent))
+                            observer.OnNext((true, thinkingContent));
+
+                        buffer.Clear();
+                        buffer.Append(bufferStr[(idx + 8)..]);
+                        inThinking = false;
+                        continue;
+                    }
+
+                    // Emit chunk with current state
+                    observer.OnNext((inThinking, text));
+                    buffer.Clear();
+                }
+
+                // Flush any remaining buffer
+                if (buffer.Length > 0)
+                    observer.OnNext((inThinking, buffer.ToString()));
+
+                observer.OnCompleted();
+            }
+            catch (Exception ex)
+            {
+                observer.OnError(ex);
+            }
+        });
     }
 
     /// <inheritdoc/>
@@ -228,8 +397,9 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
 /// HTTP client specifically designed for Ollama Cloud API endpoints.
 /// Uses Ollama's native JSON API format with /api/generate endpoint.
 /// Includes Polly exponential backoff retry policy to handle rate limiting.
+/// Supports thinking mode for models like DeepSeek R1 that emit &lt;think&gt; tags.
 /// </summary>
-public sealed class OllamaCloudChatModel : IStreamingChatModel
+public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
@@ -313,6 +483,119 @@ public sealed class OllamaCloudChatModel : IStreamingChatModel
     }
 
     /// <inheritdoc/>
+    public async Task<ThinkingResponse> GenerateWithThinkingAsync(string prompt, CancellationToken ct = default)
+    {
+        string rawText = await GenerateTextAsync(prompt, ct);
+        return ThinkingResponse.FromRawText(rawText);
+    }
+
+    /// <inheritdoc/>
+    public IObservable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
+    {
+        return Observable.Create<(bool IsThinking, string Chunk)>(async (observer, token) =>
+        {
+            try
+            {
+                using JsonContent payload = JsonContent.Create(new
+                {
+                    model = _model,
+                    prompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt,
+                    stream = true,
+                    options = new
+                    {
+                        temperature = _settings.Temperature,
+                        num_predict = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null
+                    }
+                });
+
+                HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
+                {
+                    return await _client.PostAsync("/api/generate", payload, token).ConfigureAwait(false);
+                }).ConfigureAwait(false);
+
+                response.EnsureSuccessStatusCode();
+
+                using Stream responseStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+                using StreamReader reader = new StreamReader(responseStream);
+
+                bool inThinking = false;
+                StringBuilder buffer = new();
+
+                while (!reader.EndOfStream && !token.IsCancellationRequested)
+                {
+                    string? line = await reader.ReadLineAsync().ConfigureAwait(false);
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    try
+                    {
+                        using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(line);
+                        if (doc.RootElement.TryGetProperty("response", out System.Text.Json.JsonElement responseElement))
+                        {
+                            string? content = responseElement.GetString();
+                            if (!string.IsNullOrEmpty(content))
+                            {
+                                buffer.Append(content);
+                                string bufferStr = buffer.ToString();
+
+                                // Check for thinking tag transitions
+                                if (!inThinking && bufferStr.Contains("<think>", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    int idx = bufferStr.IndexOf("<think>", StringComparison.OrdinalIgnoreCase);
+                                    string beforeTag = bufferStr[..idx];
+                                    if (!string.IsNullOrEmpty(beforeTag))
+                                        observer.OnNext((false, beforeTag));
+
+                                    buffer.Clear();
+                                    buffer.Append(bufferStr[(idx + 7)..]);
+                                    inThinking = true;
+                                    continue;
+                                }
+
+                                if (inThinking && bufferStr.Contains("</think>", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    int idx = bufferStr.IndexOf("</think>", StringComparison.OrdinalIgnoreCase);
+                                    string thinkingContent = bufferStr[..idx];
+                                    if (!string.IsNullOrEmpty(thinkingContent))
+                                        observer.OnNext((true, thinkingContent));
+
+                                    buffer.Clear();
+                                    buffer.Append(bufferStr[(idx + 8)..]);
+                                    inThinking = false;
+                                    continue;
+                                }
+
+                                // Emit chunk with current state
+                                observer.OnNext((inThinking, content));
+                                buffer.Clear();
+                            }
+                        }
+
+                        if (doc.RootElement.TryGetProperty("done", out System.Text.Json.JsonElement doneElement) && doneElement.GetBoolean())
+                        {
+                            // Flush any remaining buffer
+                            if (buffer.Length > 0)
+                                observer.OnNext((inThinking, buffer.ToString()));
+                            observer.OnCompleted();
+                            return;
+                        }
+                    }
+                    catch (System.Text.Json.JsonException)
+                    {
+                        // Skip malformed JSON chunks
+                        continue;
+                    }
+                }
+
+                observer.OnCompleted();
+            }
+            catch (Exception ex)
+            {
+                observer.OnError(ex);
+            }
+        });
+    }
+
+    /// <inheritdoc/>
     public IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
     {
         return Observable.Create<string>(async (observer, token) =>
@@ -389,14 +672,21 @@ public sealed class OllamaCloudChatModel : IStreamingChatModel
 /// <summary>
 /// Base class for OpenAI-compatible chat models that use /v1/chat/completions endpoint.
 /// Provides shared implementation for request/response handling and streaming.
+/// Supports thinking mode via reasoning_content field (DeepSeek, o1, etc.) and thinking tags.
 /// </summary>
-public abstract class OpenAiCompatibleChatModelBase : IStreamingChatModel
+public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
     private readonly ChatRuntimeSettings _settings;
     private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
     private readonly string _providerName;
+
+    /// <summary>Gets the model name.</summary>
+    protected string ModelName => _model;
+
+    /// <summary>Gets the settings.</summary>
+    protected ChatRuntimeSettings Settings => _settings;
 
     protected OpenAiCompatibleChatModelBase(string endpoint, string apiKey, string model, string providerName, ChatRuntimeSettings? settings = null)
     {
@@ -429,6 +719,14 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingChatModel
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
+        var response = await GenerateWithThinkingAsync(prompt, ct);
+        // Return combined thinking + content for backward compatibility if thinking is present
+        return response.HasThinking ? response.ToFormattedString() : response.Content;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ThinkingResponse> GenerateWithThinkingAsync(string prompt, CancellationToken ct = default)
+    {
         try
         {
             // Use OpenAI-compatible chat completions format
@@ -453,7 +751,21 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingChatModel
             string jsonString = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(jsonString);
 
-            // Extract content from OpenAI response format: choices[0].message.content or reasoning_content
+            string? reasoningContent = null;
+            string? content = null;
+            int? reasoningTokens = null;
+            int? contentTokens = null;
+
+            // Try to extract usage info
+            if (doc.RootElement.TryGetProperty("usage", out var usageElement))
+            {
+                if (usageElement.TryGetProperty("reasoning_tokens", out var rtElement))
+                    reasoningTokens = rtElement.GetInt32();
+                if (usageElement.TryGetProperty("completion_tokens", out var ctElement))
+                    contentTokens = ctElement.GetInt32();
+            }
+
+            // Extract content from OpenAI response format: choices[0].message
             if (doc.RootElement.TryGetProperty("choices", out System.Text.Json.JsonElement choicesElement) &&
                 choicesElement.ValueKind == System.Text.Json.JsonValueKind.Array &&
                 choicesElement.GetArrayLength() > 0)
@@ -461,37 +773,49 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingChatModel
                 System.Text.Json.JsonElement firstChoice = choicesElement[0];
                 if (firstChoice.TryGetProperty("message", out System.Text.Json.JsonElement messageElement))
                 {
-                    // Try standard content field first
+                    // Extract reasoning_content if present (DeepSeek, o1, etc.)
+                    if (messageElement.TryGetProperty("reasoning_content", out System.Text.Json.JsonElement reasoningElement) &&
+                        reasoningElement.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        reasoningContent = reasoningElement.GetString();
+                    }
+
+                    // Extract standard content
                     if (messageElement.TryGetProperty("content", out System.Text.Json.JsonElement contentElement) &&
                         contentElement.ValueKind == System.Text.Json.JsonValueKind.String)
                     {
-                        string? content = contentElement.GetString();
-                        if (!string.IsNullOrEmpty(content))
-                        {
-                            return content;
-                        }
-                    }
-
-                    // Fall back to reasoning_content (for models that use it)
-                    if (messageElement.TryGetProperty("reasoning_content", out System.Text.Json.JsonElement reasoningElement))
-                    {
-                        return reasoningElement.GetString() ?? string.Empty;
+                        content = contentElement.GetString();
                     }
                 }
             }
+
+            // If we have explicit reasoning_content, return structured response
+            if (!string.IsNullOrEmpty(reasoningContent))
+            {
+                return new ThinkingResponse(reasoningContent, content ?? string.Empty, reasoningTokens, contentTokens);
+            }
+
+            // Otherwise, try to parse thinking tags from content
+            if (!string.IsNullOrEmpty(content))
+            {
+                var parsed = ThinkingResponse.FromRawText(content);
+                return parsed with { ThinkingTokens = reasoningTokens, ContentTokens = contentTokens };
+            }
+
+            return new ThinkingResponse(null, string.Empty);
         }
         catch
         {
             // Remote endpoint not reachable → fall back to indicating failure.
         }
 
-        return GetFallbackMessage(prompt);
+        return new ThinkingResponse(null, GetFallbackMessage(prompt));
     }
 
     /// <inheritdoc/>
-    public System.IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
+    public IObservable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
     {
-        return System.Reactive.Linq.Observable.Create<string>(async (observer, token) =>
+        return Observable.Create<(bool IsThinking, string Chunk)>(async (observer, token) =>
         {
             try
             {
@@ -517,6 +841,9 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingChatModel
                 using Stream responseStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
                 using StreamReader reader = new StreamReader(responseStream);
 
+                bool inThinkingFromTag = false;
+                StringBuilder tagBuffer = new();
+
                 while (!reader.EndOfStream && !token.IsCancellationRequested)
                 {
                     string? line = await reader.ReadLineAsync().ConfigureAwait(false);
@@ -525,6 +852,9 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingChatModel
                     string jsonData = line.Substring(6).Trim();
                     if (jsonData == "[DONE]")
                     {
+                        // Flush any remaining buffer
+                        if (tagBuffer.Length > 0)
+                            observer.OnNext((inThinkingFromTag, tagBuffer.ToString()));
                         observer.OnCompleted();
                         return;
                     }
@@ -539,22 +869,56 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingChatModel
                             System.Text.Json.JsonElement delta = choicesElement[0];
                             if (delta.TryGetProperty("delta", out System.Text.Json.JsonElement deltaElement))
                             {
-                                // Try content field
+                                // Check for reasoning_content (structured thinking from API)
+                                if (deltaElement.TryGetProperty("reasoning_content", out System.Text.Json.JsonElement reasoningElement))
+                                {
+                                    string? reasoning = reasoningElement.GetString();
+                                    if (!string.IsNullOrEmpty(reasoning))
+                                    {
+                                        observer.OnNext((true, reasoning));
+                                    }
+                                    continue;
+                                }
+
+                                // Check for content
                                 if (deltaElement.TryGetProperty("content", out System.Text.Json.JsonElement contentElement))
                                 {
                                     string? content = contentElement.GetString();
                                     if (!string.IsNullOrEmpty(content))
                                     {
-                                        observer.OnNext(content);
-                                    }
-                                }
-                                // Try reasoning_content field for models that use it
-                                else if (deltaElement.TryGetProperty("reasoning_content", out System.Text.Json.JsonElement reasoningElement))
-                                {
-                                    string? reasoning = reasoningElement.GetString();
-                                    if (!string.IsNullOrEmpty(reasoning))
-                                    {
-                                        observer.OnNext(reasoning);
+                                        // Check for thinking tags in content
+                                        tagBuffer.Append(content);
+                                        string bufferStr = tagBuffer.ToString();
+
+                                        if (!inThinkingFromTag && bufferStr.Contains("<think>", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            int idx = bufferStr.IndexOf("<think>", StringComparison.OrdinalIgnoreCase);
+                                            string beforeTag = bufferStr[..idx];
+                                            if (!string.IsNullOrEmpty(beforeTag))
+                                                observer.OnNext((false, beforeTag));
+
+                                            tagBuffer.Clear();
+                                            tagBuffer.Append(bufferStr[(idx + 7)..]);
+                                            inThinkingFromTag = true;
+                                            continue;
+                                        }
+
+                                        if (inThinkingFromTag && bufferStr.Contains("</think>", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            int idx = bufferStr.IndexOf("</think>", StringComparison.OrdinalIgnoreCase);
+                                            string thinkingContent = bufferStr[..idx];
+                                            if (!string.IsNullOrEmpty(thinkingContent))
+                                                observer.OnNext((true, thinkingContent));
+
+                                            tagBuffer.Clear();
+                                            tagBuffer.Append(bufferStr[(idx + 8)..]);
+                                            inThinkingFromTag = false;
+                                            continue;
+                                        }
+
+                                        // Emit with current state
+                                        observer.OnNext((inThinkingFromTag, content));
+                                        tagBuffer.Clear();
                                     }
                                 }
                             }
@@ -574,6 +938,13 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingChatModel
                 observer.OnError(ex);
             }
         });
+    }
+
+    /// <inheritdoc/>
+    public System.IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
+    {
+        // Flatten the thinking stream to just emit all chunks (both thinking and content)
+        return StreamWithThinkingAsync(prompt, ct).Select(tuple => tuple.Chunk);
     }
 
     /// <inheritdoc/>

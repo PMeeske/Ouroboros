@@ -7,6 +7,7 @@ namespace Ouroboros.Providers;
 /// <summary>
 /// A chat model wrapper that can execute tools based on special tool invocation syntax in responses.
 /// Uses monadic Result{T,E} for consistent error handling throughout the pipeline.
+/// Supports thinking mode when the underlying model implements IThinkingChatModel.
 /// </summary>
 /// <param name="llm">The underlying chat completion model.</param>
 /// <param name="registry">The tool registry for tool execution.</param>
@@ -18,6 +19,11 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
     public IChatCompletionModel InnerModel => llm;
 
     /// <summary>
+    /// Returns true if the underlying model supports thinking mode.
+    /// </summary>
+    public bool SupportsThinking => llm is IThinkingChatModel;
+
+    /// <summary>
     /// Generates a response and executes any tools mentioned in the response.
     /// </summary>
     /// <param name="prompt">The input prompt.</param>
@@ -26,6 +32,73 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
     public async Task<(string Text, List<ToolExecution> Tools)> GenerateWithToolsAsync(string prompt, CancellationToken ct = default)
     {
         string result = await llm.GenerateTextAsync(prompt, ct);
+        return await ProcessToolCallsAsync(result, ct);
+    }
+
+    /// <summary>
+    /// Generates a response with thinking/reasoning content and executes any tools mentioned.
+    /// </summary>
+    /// <param name="prompt">The input prompt.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A tuple containing the thinking response and list of tool executions.</returns>
+    public async Task<(ThinkingResponse Response, List<ToolExecution> Tools)> GenerateWithThinkingAndToolsAsync(string prompt, CancellationToken ct = default)
+    {
+        if (llm is not IThinkingChatModel thinkingModel)
+        {
+            // Fallback: use regular generation and wrap in ThinkingResponse
+            string result = await llm.GenerateTextAsync(prompt, ct);
+            var (processedText, tools) = await ProcessToolCallsAsync(result, ct);
+            return (new ThinkingResponse(null, processedText), tools);
+        }
+
+        ThinkingResponse response = await thinkingModel.GenerateWithThinkingAsync(prompt, ct);
+
+        // Process tool calls in the content only (not in thinking)
+        var (processedContent, toolCalls) = await ProcessToolCallsAsync(response.Content, ct);
+
+        return (response with { Content = processedContent }, toolCalls);
+    }
+
+    /// <summary>
+    /// Monadic version that returns Result{T,E} for better error handling.
+    /// </summary>
+    /// <param name="prompt">The input prompt.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A Result containing the response and tool executions, or an error.</returns>
+    public async Task<Result<(string Text, List<ToolExecution> Tools), string>> GenerateWithToolsResultAsync(string prompt, CancellationToken ct = default)
+    {
+        try
+        {
+            (string text, List<ToolExecution> tools) = await this.GenerateWithToolsAsync(prompt, ct);
+            return Result<(string, List<ToolExecution>), string>.Success((text, tools));
+        }
+        catch (Exception ex)
+        {
+            return Result<(string, List<ToolExecution>), string>.Failure($"Tool-aware generation failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Monadic version with thinking support that returns Result{T,E}.
+    /// </summary>
+    /// <param name="prompt">The input prompt.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A Result containing the thinking response and tool executions, or an error.</returns>
+    public async Task<Result<(ThinkingResponse Response, List<ToolExecution> Tools), string>> GenerateWithThinkingAndToolsResultAsync(string prompt, CancellationToken ct = default)
+    {
+        try
+        {
+            var result = await GenerateWithThinkingAndToolsAsync(prompt, ct);
+            return Result<(ThinkingResponse, List<ToolExecution>), string>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            return Result<(ThinkingResponse, List<ToolExecution>), string>.Failure($"Tool-aware generation with thinking failed: {ex.Message}");
+        }
+    }
+
+    private async Task<(string Text, List<ToolExecution> Tools)> ProcessToolCallsAsync(string result, CancellationToken ct)
+    {
         List<ToolExecution> toolCalls = [];
         string modifiedResult = result;
 
@@ -76,24 +149,5 @@ public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry re
         }
 
         return (modifiedResult, toolCalls);
-    }
-
-    /// <summary>
-    /// Monadic version that returns Result{T,E} for better error handling.
-    /// </summary>
-    /// <param name="prompt">The input prompt.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>A Result containing the response and tool executions, or an error.</returns>
-    public async Task<Result<(string Text, List<ToolExecution> Tools), string>> GenerateWithToolsResultAsync(string prompt, CancellationToken ct = default)
-    {
-        try
-        {
-            (string text, List<ToolExecution> tools) = await this.GenerateWithToolsAsync(prompt, ct);
-            return Result<(string, List<ToolExecution>), string>.Success((text, tools));
-        }
-        catch (Exception ex)
-        {
-            return Result<(string, List<ToolExecution>), string>.Failure($"Tool-aware generation failed: {ex.Message}");
-        }
     }
 }

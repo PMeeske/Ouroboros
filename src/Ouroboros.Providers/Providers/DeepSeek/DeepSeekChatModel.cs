@@ -3,14 +3,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+using System.Reactive.Linq;
+
 namespace Ouroboros.Providers.DeepSeek;
 
 /// <summary>
 /// Chat model implementation for DeepSeek models via Ollama (local or cloud).
 /// Supports DeepSeek R1 models (7B, 8B, 14B, 32B, 70B) through Ollama infrastructure.
 /// Provides both local inference and Ollama Cloud API access.
+/// DeepSeek R1 models support extended thinking mode with &lt;think&gt; tags.
 /// </summary>
-public sealed class DeepSeekChatModel : IStreamingChatModel
+public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
 {
     private readonly IChatCompletionModel _underlyingModel;
     private readonly string _modelName;
@@ -125,6 +128,42 @@ public sealed class DeepSeekChatModel : IStreamingChatModel
     public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
         return _underlyingModel.GenerateTextAsync(prompt, ct);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ThinkingResponse> GenerateWithThinkingAsync(string prompt, CancellationToken ct = default)
+    {
+        if (_underlyingModel is IThinkingChatModel thinkingModel)
+        {
+            return await thinkingModel.GenerateWithThinkingAsync(prompt, ct);
+        }
+
+        // Fallback: parse thinking from raw text
+        string result = await GenerateTextAsync(prompt, ct);
+        return ThinkingResponse.FromRawText(result);
+    }
+
+    /// <inheritdoc/>
+    public IObservable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
+    {
+        if (_underlyingModel is IStreamingThinkingChatModel streamingThinkingModel)
+        {
+            return streamingThinkingModel.StreamWithThinkingAsync(prompt, ct);
+        }
+
+        // Fallback to non-thinking streaming
+        if (_underlyingModel is IStreamingChatModel streamingModel)
+        {
+            return streamingModel.StreamReasoningContent(prompt, ct)
+                .Select(chunk => (false, chunk));
+        }
+
+        // Ultimate fallback to non-streaming
+        return System.Reactive.Linq.Observable.FromAsync(async () =>
+        {
+            var response = await GenerateWithThinkingAsync(prompt, ct);
+            return (response.HasThinking, response.ToFormattedString());
+        });
     }
 
     /// <inheritdoc/>
