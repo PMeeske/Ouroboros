@@ -4,6 +4,8 @@
 // Automatic extraction of reusable skills from successful executions
 // ==========================================================
 
+using Ouroboros.Core.Ethics;
+
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
@@ -14,11 +16,13 @@ public sealed class SkillExtractor : ISkillExtractor
 {
     private readonly IChatCompletionModel _llm;
     private readonly ISkillRegistry _skillRegistry;
+    private readonly IEthicsFramework _ethics;
 
-    public SkillExtractor(IChatCompletionModel llm, ISkillRegistry skillRegistry)
+    public SkillExtractor(IChatCompletionModel llm, ISkillRegistry skillRegistry, IEthicsFramework ethics)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _skillRegistry = skillRegistry ?? throw new ArgumentNullException(nameof(skillRegistry));
+        _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
     }
 
     /// <summary>
@@ -110,6 +114,61 @@ public sealed class SkillExtractor : ISkillExtractor
                 UsageCount: 1, // First usage is the extraction itself
                 CreatedAt: DateTime.UtcNow,
                 LastUsed: DateTime.UtcNow);
+
+            // Ethics evaluation - validate skill before registration
+            var skillContext = new SkillUsageContext
+            {
+                Skill = new Core.Ethics.Skill
+                {
+                    Name = skill.Name,
+                    Description = skill.Description,
+                    Prerequisites = skill.Prerequisites,
+                    Steps = skill.Steps.Select(s => new Core.Ethics.PlanStep
+                    {
+                        Action = s.Action,
+                        Parameters = s.Parameters,
+                        ExpectedOutcome = s.ExpectedOutcome,
+                        ConfidenceScore = s.ConfidenceScore
+                    }).ToArray(),
+                    SuccessRate = skill.SuccessRate,
+                    UsageCount = skill.UsageCount,
+                    CreatedAt = skill.CreatedAt,
+                    LastUsed = skill.LastUsed
+                },
+                ActionContext = new ActionContext
+                {
+                    AgentId = "skill-extractor",
+                    UserId = null,
+                    Environment = "skill_extraction",
+                    State = new Dictionary<string, object>
+                    {
+                        ["goal"] = execution.Plan.Goal,
+                        ["quality_score"] = verification.QualityScore
+                    }
+                },
+                Goal = execution.Plan.Goal,
+                HistoricalSuccessRate = initialSuccessRate
+            };
+
+            var ethicsResult = await _ethics.EvaluateSkillAsync(skillContext, ct);
+
+            if (ethicsResult.IsFailure)
+            {
+                return Result<Skill, string>.Failure(
+                    $"Skill rejected by ethics evaluation: {ethicsResult.Error}");
+            }
+
+            if (!ethicsResult.Value.IsPermitted)
+            {
+                return Result<Skill, string>.Failure(
+                    $"Skill rejected by ethics framework: {ethicsResult.Value.Reasoning}");
+            }
+
+            if (ethicsResult.Value.Level == EthicalClearanceLevel.RequiresHumanApproval)
+            {
+                return Result<Skill, string>.Failure(
+                    $"Skill requires human approval before registration: {ethicsResult.Value.Reasoning}");
+            }
 
             // Register the skill
             _skillRegistry.RegisterSkill(skill);

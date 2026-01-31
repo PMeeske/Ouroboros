@@ -229,12 +229,11 @@ public class ToolAwareChatModelExtendedTests
 
     #region Cancellation Tests
 
-    [Fact(Skip = "MockChatModel constructor does not have shouldCheckCancellation parameter")]
+    [Fact]
     public async Task GenerateWithToolsAsync_WithCancellationToken_PropagatesToken()
     {
         // Arrange
-        // var mockModel = new MockChatModel("Response", shouldCheckCancellation: true);
-        var mockModel = new MockChatModel("Response");
+        var mockModel = new MockChatModel("Response", shouldCheckCancellation: true);
         var registry = new ToolRegistry();
         var toolAwareModel = new ToolAwareChatModel(mockModel, registry);
         using var cts = new CancellationTokenSource();
@@ -245,12 +244,11 @@ public class ToolAwareChatModelExtendedTests
             await toolAwareModel.GenerateWithToolsAsync("test", cts.Token));
     }
 
-    [Fact(Skip = "MockChatModel constructor does not have shouldCheckCancellation parameter")]
+    [Fact]
     public async Task GenerateWithToolsResultAsync_WithCancellation_ReturnsFailureResult()
     {
         // Arrange
-        // var mockModel = new MockChatModel("Response", shouldCheckCancellation: true);
-        var mockModel = new MockChatModel("Response");
+        var mockModel = new MockChatModel("Response", shouldCheckCancellation: true);
         var registry = new ToolRegistry();
         var toolAwareModel = new ToolAwareChatModel(mockModel, registry);
         using var cts = new CancellationTokenSource();

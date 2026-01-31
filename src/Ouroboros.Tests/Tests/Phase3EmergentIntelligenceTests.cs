@@ -120,7 +120,8 @@ public static class Phase3EmergentIntelligenceTests
             router,
             safety);
 
-        var hypothesisEngine = new HypothesisEngine(chatModel, orchestrator, memory);
+        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
+        var hypothesisEngine = new HypothesisEngine(chatModel, orchestrator, memory, ethics);
 
         // Generate hypothesis from observation
         var observation = "Tasks involving structured data consistently have higher success rates than unstructured data tasks";
@@ -224,8 +225,9 @@ public static class Phase3EmergentIntelligenceTests
         var memory = new MemoryStore();
         var skills = new SkillRegistry();
         var safety = new SafetyGuard();
+        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
 
-        var curiosityEngine = new CuriosityEngine(chatModel, memory, skills, safety);
+        var curiosityEngine = new CuriosityEngine(chatModel, memory, skills, safety, ethics);
 
         // Test novelty computation
         var testPlan = new Plan(
@@ -330,9 +332,10 @@ public static class Phase3EmergentIntelligenceTests
             safety);
 
         // Create all Phase 3 components
+        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
         var transferLearner = new TransferLearner(chatModel, skills, memory);
-        var hypothesisEngine = new HypothesisEngine(chatModel, orchestrator, memory);
-        var curiosityEngine = new CuriosityEngine(chatModel, memory, skills, safety);
+        var hypothesisEngine = new HypothesisEngine(chatModel, orchestrator, memory, ethics);
+        var curiosityEngine = new CuriosityEngine(chatModel, memory, skills, safety, ethics);
 
         Console.WriteLine("✓ All Phase 3 components initialized\n");
 

@@ -3,8 +3,8 @@
 // </copyright>
 
 using Microsoft.Extensions.Logging;
-using Ouroboros.Agent.WorldModel;
 using Ouroboros.Core.Monads;
+using Ouroboros.Core.Ethics;
 using Ouroboros.Domain.Embodied;
 using Ouroboros.Domain.Reinforcement;
 
@@ -17,8 +17,8 @@ namespace Ouroboros.Application.Embodied;
 public sealed class EmbodiedAgent : IEmbodiedAgent
 {
     private readonly IEnvironmentManager environmentManager;
+    private readonly IEthicsFramework ethics;
     private readonly ILogger<EmbodiedAgent> logger;
-    private readonly IWorldModel? worldModel;
     private EnvironmentHandle? currentEnvironment;
     private SensorState? lastSensorState;
     private readonly List<EmbodiedTransition> experienceBuffer;
@@ -27,16 +27,16 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
     /// Initializes a new instance of the <see cref="EmbodiedAgent"/> class.
     /// </summary>
     /// <param name="environmentManager">Environment manager for lifecycle operations</param>
+    /// <param name="ethics">Ethics framework for action validation</param>
     /// <param name="logger">Logger for diagnostic output</param>
-    /// <param name="worldModel">Optional world model for model-based planning</param>
     public EmbodiedAgent(
         IEnvironmentManager environmentManager,
-        ILogger<EmbodiedAgent> logger,
-        IWorldModel? worldModel = null)
+        IEthicsFramework ethics,
+        ILogger<EmbodiedAgent> logger)
     {
         this.environmentManager = environmentManager ?? throw new ArgumentNullException(nameof(environmentManager));
+        this.ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        this.worldModel = worldModel;
         this.experienceBuffer = new List<EmbodiedTransition>();
     }
 
@@ -112,6 +112,61 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
                 action.ActionName ?? "Unnamed",
                 this.currentEnvironment.Id);
 
+            // Ethics evaluation - evaluate the action before execution
+            var proposedAction = new ProposedAction
+            {
+                ActionType = "embodied_action",
+                Description = action.ActionName ?? "Embodied action in environment",
+                Parameters = new Dictionary<string, object>
+                {
+                    ["movement"] = action.Movement,
+                    ["rotation"] = action.Rotation,
+                    ["custom_actions"] = action.CustomActions
+                },
+                PotentialEffects = new[] 
+                { 
+                    "Modify environment state",
+                    "Generate reward signal",
+                    "Update sensor readings"
+                }
+            };
+
+            var actionContext = new ActionContext
+            {
+                AgentId = this.currentEnvironment.Id.ToString(),
+                UserId = null,
+                Environment = "embodied_simulation",
+                State = new Dictionary<string, object>
+                {
+                    ["environment_id"] = this.currentEnvironment.Id,
+                    ["scene_name"] = this.currentEnvironment.SceneName ?? "unknown"
+                }
+            };
+
+            var ethicsResult = await this.ethics.EvaluateActionAsync(proposedAction, actionContext, ct);
+
+            if (ethicsResult.IsFailure)
+            {
+                this.logger.LogWarning("Action failed ethics evaluation: {Error}", ethicsResult.Error);
+                return Result<ActionResult, string>.Failure($"Action blocked by ethics: {ethicsResult.Error}");
+            }
+
+            if (!ethicsResult.Value.IsPermitted)
+            {
+                this.logger.LogWarning("Action blocked by ethics: {Reasoning}", ethicsResult.Value.Reasoning);
+                return Result<ActionResult, string>.Failure($"Action blocked by ethics: {ethicsResult.Value.Reasoning}");
+            }
+
+            if (ethicsResult.Value.Level == EthicalClearanceLevel.RequiresHumanApproval)
+            {
+                // TODO: Implement actual human-in-the-loop approval workflow
+                // Currently, actions requiring approval are treated as denied (blocked).
+                // Future enhancement: Add mechanism to request/receive human approval
+                // and resume execution upon authorization.
+                this.logger.LogInformation("Action requires human approval: {Reasoning}", ethicsResult.Value.Reasoning);
+                return Result<ActionResult, string>.Failure($"Action requires human approval: {ethicsResult.Value.Reasoning}");
+            }
+
             // In a real implementation, this would send the action to the environment
             // and receive the resulting state and reward
             var resultingState = this.lastSensorState ?? SensorState.Default();
@@ -144,27 +199,13 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
             // Add transitions to experience buffer
             this.experienceBuffer.AddRange(transitions);
 
-            // Update world model with new experience
-            if (this.worldModel != null)
-            {
-                var updateResult = await this.worldModel.UpdateFromExperienceAsync(transitions, ct);
-                if (updateResult.IsFailure)
-                {
-                    this.logger.LogWarning("World model update failed: {Error}", updateResult.Error);
-                }
-                else
-                {
-                    this.logger.LogDebug("World model updated successfully");
-                }
-            }
-
-            // In a real implementation, this would also:
+            // In a real implementation, this would:
             // 1. Sample batches from the experience buffer
             // 2. Compute policy gradients or Q-value updates
             // 3. Update neural network weights
             // 4. Log learning metrics (loss, reward, etc.)
 
-            await Task.CompletedTask; // Placeholder for async policy learning operation
+            await Task.CompletedTask; // Placeholder for async learning operation
 
             this.logger.LogInformation("Learning completed successfully");
             return Result<Unit, string>.Success(Unit.Value);
@@ -177,7 +218,7 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
     }
 
     /// <inheritdoc/>
-    public async Task<Result<Plan, string>> PlanEmbodiedAsync(
+    public async Task<Result<Domain.Embodied.Plan, string>> PlanEmbodiedAsync(
         string goal,
         SensorState currentState,
         CancellationToken ct = default)
@@ -186,70 +227,29 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
         {
             this.logger.LogInformation("Planning to achieve goal: {Goal}", goal);
 
-            // Use world model for planning if available
-            if (this.worldModel != null)
-            {
-                var planResult = await this.worldModel.PlanWithModelAsync(currentState, goal, horizon: 10, ct);
+            // In a real implementation, this would:
+            // 1. Use a world model to simulate future states
+            // 2. Search for action sequences that achieve the goal
+            // 3. Evaluate expected rewards
+            // 4. Return the best plan
 
-                if (planResult.IsSuccess && planResult.Value.Count > 0)
-                {
-                    // Simulate trajectory to get expected states
-                    var trajectoryResult = await this.worldModel.SimulateTrajectoryAsync(
-                        currentState,
-                        planResult.Value,
-                        ct);
-
-                    var expectedStates = trajectoryResult.IsSuccess
-                        ? trajectoryResult.Value.Select(p => p.State).ToList()
-                        : new List<SensorState> { currentState };
-
-                    var estimatedReward = trajectoryResult.IsSuccess
-                        ? trajectoryResult.Value.Sum(p => p.Reward)
-                        : 0.0;
-
-                    var confidence = trajectoryResult.IsSuccess
-                        ? trajectoryResult.Value.Average(p => p.Confidence)
-                        : 0.5;
-
-                    var plan = new Plan(
-                        Goal: goal,
-                        Actions: planResult.Value,
-                        ExpectedStates: expectedStates,
-                        Confidence: confidence,
-                        EstimatedReward: estimatedReward);
-
-                    this.logger.LogInformation(
-                        "Model-based planning completed: {ActionCount} actions, confidence {Confidence:F2}, reward {Reward:F2}",
-                        plan.Actions.Count,
-                        plan.Confidence,
-                        plan.EstimatedReward);
-
-                    return Result<Plan, string>.Success(plan);
-                }
-
-                this.logger.LogWarning("World model planning failed: {Error}", planResult.Error);
-            }
-
-            // Fallback: use heuristic planning without world model
-            this.logger.LogInformation("Using fallback heuristic planning (no world model available)");
-
-            var fallbackPlan = new Plan(
+            // Placeholder plan with no-op action
+            var plan = new Domain.Embodied.Plan(
                 Goal: goal,
                 Actions: new[] { EmbodiedAction.NoOp() },
                 ExpectedStates: new[] { currentState },
                 Confidence: 0.5,
                 EstimatedReward: 0.0);
 
-            return Result<Plan, string>.Success(fallbackPlan);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
+            await Task.CompletedTask; // Placeholder for async planning operation
+
+            this.logger.LogInformation("Planning completed with {ActionCount} actions", plan.Actions.Count);
+            return Result<Domain.Embodied.Plan, string>.Success(plan);
         }
         catch (Exception ex)
         {
             this.logger.LogError(ex, "Failed to plan embodied actions");
-            return Result<Plan, string>.Failure($"Planning failed: {ex.Message}");
+            return Result<Domain.Embodied.Plan, string>.Failure($"Planning failed: {ex.Message}");
         }
     }
 }

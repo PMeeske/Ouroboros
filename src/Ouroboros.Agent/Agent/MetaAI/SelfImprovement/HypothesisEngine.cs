@@ -16,6 +16,7 @@ public sealed class HypothesisEngine : IHypothesisEngine
     private readonly IChatCompletionModel _llm;
     private readonly IMetaAIPlannerOrchestrator _orchestrator;
     private readonly IMemoryStore _memory;
+    private readonly Core.Ethics.IEthicsFramework _ethics;
     private readonly HypothesisEngineConfig _config;
     private readonly ConcurrentDictionary<Guid, Hypothesis> _hypotheses = new();
     private readonly ConcurrentDictionary<Guid, List<(DateTime time, double confidence)>> _confidenceTrends = new();
@@ -24,11 +25,13 @@ public sealed class HypothesisEngine : IHypothesisEngine
         IChatCompletionModel llm,
         IMetaAIPlannerOrchestrator orchestrator,
         IMemoryStore memory,
+        Core.Ethics.IEthicsFramework ethics,
         HypothesisEngineConfig? config = null)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
         _config = config ?? new HypothesisEngineConfig();
     }
 
@@ -149,6 +152,42 @@ CRITERIA: [how to measure success]";
 
         try
         {
+            // Ethics evaluation - validate research before executing
+            var researchDescription = $"Hypothesis: {hypothesis.Statement}, Experiment: {experiment.Description}";
+
+            var context = new Core.Ethics.ActionContext
+            {
+                AgentId = "hypothesis-engine",
+                UserId = null,
+                Environment = "research",
+                State = new Dictionary<string, object>
+                {
+                    ["hypothesis_domain"] = hypothesis.Domain,
+                    ["confidence"] = hypothesis.Confidence,
+                    ["experiment_steps"] = experiment.Steps.Count
+                }
+            };
+
+            var ethicsResult = await _ethics.EvaluateResearchAsync(researchDescription, context, ct);
+
+            if (ethicsResult.IsFailure)
+            {
+                return Result<HypothesisTestResult, string>.Failure(
+                    $"Research rejected by ethics evaluation: {ethicsResult.Error}");
+            }
+
+            if (!ethicsResult.Value.IsPermitted)
+            {
+                return Result<HypothesisTestResult, string>.Failure(
+                    $"Research rejected by ethics framework: {ethicsResult.Value.Reasoning}");
+            }
+
+            if (ethicsResult.Value.Level == Core.Ethics.EthicalClearanceLevel.RequiresHumanApproval)
+            {
+                return Result<HypothesisTestResult, string>.Failure(
+                    $"Research requires human approval before execution: {ethicsResult.Value.Reasoning}");
+            }
+
             // Create plan from experiment steps
             Plan plan = new Plan(
                 $"Test: {hypothesis.Statement}",
