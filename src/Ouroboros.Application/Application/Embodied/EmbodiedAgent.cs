@@ -24,6 +24,7 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
     private readonly Random random;
     private EnvironmentHandle? currentEnvironment;
     private SensorState? lastSensorState;
+    private EnvironmentState? lastEnvironmentState; // Track last environment state to avoid unnecessary resets
     private readonly List<EmbodiedTransition> experienceBuffer;
     private readonly int maxBufferSize;
 
@@ -54,7 +55,7 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         this.experienceBuffer = new List<EmbodiedTransition>();
         this.maxBufferSize = maxBufferSize;
-        this.random = new Random();
+        this.random = Random.Shared;
     }
 
     /// <inheritdoc/>
@@ -117,42 +118,59 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
             // Try to get state from Unity client if connected
             if (this.unityClient.IsConnected)
             {
-                var resetResult = await this.unityClient.ResetEnvironmentAsync(ct);
-                if (resetResult.IsSuccess)
+                // Use last environment state if available, otherwise reset environment
+                EnvironmentState envState;
+                if (this.lastEnvironmentState != null)
                 {
-                    var envState = resetResult.Value;
-
-                    // Process visual observations if available
-                    float[] visualFeatures = Array.Empty<float>();
-                    if (envState.Observations.Length > 0)
+                    // Use cached state from last step (avoid resetting on every perception)
+                    envState = this.lastEnvironmentState;
+                }
+                else
+                {
+                    // First perception after initialization - reset to get initial state
+                    var resetResult = await this.unityClient.ResetEnvironmentAsync(ct);
+                    if (resetResult.IsFailure)
                     {
-                        // Simulate visual processing (in real implementation, would be actual image data)
-                        var mockImageData = this.GenerateMockImageData(84, 84, 3);
-                        var visualResult = await this.visualProcessor.ProcessVisualObservationAsync(
-                            mockImageData,
-                            84,
-                            84,
-                            3,
-                            ct);
-
-                        if (visualResult.IsSuccess)
-                        {
-                            visualFeatures = visualResult.Value;
-                        }
+                        this.logger.LogWarning("Failed to reset environment: {Error}", resetResult.Error);
+                        var fallbackState = SensorState.Default();
+                        this.lastSensorState = fallbackState;
+                        return Result<SensorState, string>.Success(fallbackState);
                     }
 
-                    var sensorState = new SensorState(
-                        Position: Vector3.Zero,
-                        Rotation: Quaternion.Identity,
-                        Velocity: Vector3.Zero,
-                        VisualObservation: visualFeatures,
-                        ProprioceptiveState: envState.Observations,
-                        CustomSensors: new Dictionary<string, float>(),
-                        Timestamp: DateTime.UtcNow);
-
-                    this.lastSensorState = sensorState;
-                    return Result<SensorState, string>.Success(sensorState);
+                    envState = resetResult.Value;
+                    this.lastEnvironmentState = envState;
                 }
+
+                // Process visual observations if available
+                float[] visualFeatures = Array.Empty<float>();
+                if (envState.Observations.Length > 0)
+                {
+                    // Simulate visual processing (in real implementation, would be actual image data)
+                    var mockImageData = this.GenerateMockImageData(84, 84, 3);
+                    var visualResult = await this.visualProcessor.ProcessVisualObservationAsync(
+                        mockImageData,
+                        84,
+                        84,
+                        3,
+                        ct);
+
+                    if (visualResult.IsSuccess)
+                    {
+                        visualFeatures = visualResult.Value;
+                    }
+                }
+
+                var sensorState = new SensorState(
+                    Position: Vector3.Zero,
+                    Rotation: Quaternion.Identity,
+                    Velocity: Vector3.Zero,
+                    VisualObservation: visualFeatures,
+                    ProprioceptiveState: envState.Observations,
+                    CustomSensors: new Dictionary<string, float>(),
+                    Timestamp: DateTime.UtcNow);
+
+                this.lastSensorState = sensorState;
+                return Result<SensorState, string>.Success(sensorState);
             }
 
             // Fallback to default state
@@ -201,6 +219,9 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
                 if (stepResult.IsSuccess)
                 {
                     var envState = stepResult.Value.State;
+
+                    // Update last environment state for next perception
+                    this.lastEnvironmentState = envState;
 
                     // Create new sensor state from environment response
                     var resultingState = new SensorState(
@@ -377,13 +398,15 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
 
     /// <summary>
     /// Samples a random batch from experience buffer with unique samples.
+    /// Note: This implementation uses uniform random sampling. True prioritized
+    /// experience replay (PER) based on TD-error is planned for future implementation.
     /// </summary>
     private List<EmbodiedTransition> SampleBatch(int batchSize)
     {
         // Ensure we don't sample more than available
         var actualBatchSize = Math.Min(batchSize, this.experienceBuffer.Count);
         
-        // Use shuffling to get unique samples
+        // Use shuffling to get unique samples (uniform random sampling)
         var shuffledIndices = Enumerable.Range(0, this.experienceBuffer.Count)
             .OrderBy(_ => this.random.Next())
             .Take(actualBatchSize)
@@ -407,23 +430,26 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
 
     /// <summary>
     /// Converts SensorState to vector for RL agent.
+    /// Uses only proprioceptive state to match expected state space size (8 dimensions).
     /// </summary>
     private float[] ConvertSensorStateToVector(SensorState state)
     {
-        // Combine position, velocity, and proprioceptive state
-        var vector = new List<float>
+        // Use only the proprioceptive state as input to the RL agent.
+        // The proprioceptive state from Unity is already an 8-dimensional vector,
+        // which matches the RLAgent's expected stateSpaceSize.
+        if (state.ProprioceptiveState.Length == 8)
         {
-            state.Position.X,
-            state.Position.Y,
-            state.Position.Z,
-            state.Velocity.X,
-            state.Velocity.Y,
-            state.Velocity.Z,
-        };
+            return state.ProprioceptiveState;
+        }
 
-        vector.AddRange(state.ProprioceptiveState);
+        // Fallback: if proprioceptive state is not 8-dimensional, pad or truncate
+        var vector = new float[8];
+        Array.Copy(
+            state.ProprioceptiveState,
+            vector,
+            Math.Min(8, state.ProprioceptiveState.Length));
 
-        return vector.ToArray();
+        return vector;
     }
 
     /// <summary>

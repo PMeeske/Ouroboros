@@ -137,17 +137,19 @@ public sealed class RewardShaper : IRewardShaper
             // Check if state is novel
             if (!this.visitedStates.Contains(stateKey))
             {
-                // Implement capacity limit with simple eviction if needed
+                // Implement capacity limit with eviction when needed
                 if (this.visitedStates.Count >= this.maxVisitedStates)
                 {
-                    // Clear oldest states (simple approach - clear half when capacity reached)
+                    // Evict a subset of states (simple approach - remove half when capacity is reached)
+                    // Note: HashSet does not guarantee insertion order, so this is not true LRU.
+                    // For true LRU eviction, consider using LinkedHashSet or maintaining separate order tracking.
                     var toRemove = this.visitedStates.Take(this.maxVisitedStates / 2).ToList();
                     foreach (var key in toRemove)
                     {
                         this.visitedStates.Remove(key);
                     }
 
-                    this.logger.LogDebug("Visited states cache cleared: removed {Count} oldest entries", toRemove.Count);
+                    this.logger.LogDebug("Visited states cache cleared: removed {Count} entries due to capacity limit", toRemove.Count);
                 }
 
                 this.visitedStates.Add(stateKey);

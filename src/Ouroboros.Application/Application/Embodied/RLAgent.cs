@@ -94,8 +94,8 @@ public sealed class RLAgent : IRLAgent
     private readonly int actionSpaceSize;
     private readonly int stateSpaceSize;
     private double epsilon;
-    private double learningRate;
-    private double gamma; // Discount factor
+    private readonly double learningRate;
+    private readonly double gamma; // Discount factor
     private int updateCount;
 
     /// <summary>

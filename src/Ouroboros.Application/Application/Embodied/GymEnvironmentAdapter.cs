@@ -119,7 +119,7 @@ public sealed class GymEnvironmentAdapter : IGymEnvironment
         this.actionSpaceSize = actionSpaceSize;
         this.isContinuousAction = isContinuousAction;
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        this.random = new Random();
+        this.random = Random.Shared;
         this.isInitialized = false;
         this.stepCount = 0;
     }

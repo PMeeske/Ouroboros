@@ -99,8 +99,11 @@ public interface IUnityMLAgentsClient
 public sealed class UnityMLAgentsClient : IUnityMLAgentsClient, IDisposable
 {
     private readonly ILogger<UnityMLAgentsClient> logger;
-    private string? serverAddress; // Mutable to support reconnecting to different servers
-    private int port; // Mutable to support reconnecting to different ports
+    // Note: These fields are mutable to support the ConnectAsync(host, port) pattern in the interface.
+    // This is a pragmatic exception to immutability - the alternative would require creating new
+    // client instances for each connection, which is incompatible with the IUnityMLAgentsClient interface.
+    private string? serverAddress;
+    private int port;
     private bool isConnected;
     private bool disposed;
     private UnityEnvironmentInfo? environmentInfo;
