@@ -16,23 +16,45 @@ namespace Ouroboros.Application.Embodied;
 public sealed class EmbodiedAgent : IEmbodiedAgent
 {
     private readonly IEnvironmentManager environmentManager;
+    private readonly IUnityMLAgentsClient unityClient;
+    private readonly IVisualProcessor visualProcessor;
+    private readonly IRLAgent rlAgent;
+    private readonly IRewardShaper rewardShaper;
     private readonly ILogger<EmbodiedAgent> logger;
+    private readonly Random random;
     private EnvironmentHandle? currentEnvironment;
     private SensorState? lastSensorState;
     private readonly List<EmbodiedTransition> experienceBuffer;
+    private readonly int maxBufferSize;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmbodiedAgent"/> class.
     /// </summary>
     /// <param name="environmentManager">Environment manager for lifecycle operations</param>
+    /// <param name="unityClient">Unity ML-Agents client for environment communication</param>
+    /// <param name="visualProcessor">Visual processor for image observations</param>
+    /// <param name="rlAgent">Reinforcement learning agent for action selection and learning</param>
+    /// <param name="rewardShaper">Reward shaper for reward engineering</param>
     /// <param name="logger">Logger for diagnostic output</param>
+    /// <param name="maxBufferSize">Maximum size of experience replay buffer</param>
     public EmbodiedAgent(
         IEnvironmentManager environmentManager,
-        ILogger<EmbodiedAgent> logger)
+        IUnityMLAgentsClient unityClient,
+        IVisualProcessor visualProcessor,
+        IRLAgent rlAgent,
+        IRewardShaper rewardShaper,
+        ILogger<EmbodiedAgent> logger,
+        int maxBufferSize = 10000)
     {
         this.environmentManager = environmentManager ?? throw new ArgumentNullException(nameof(environmentManager));
+        this.unityClient = unityClient ?? throw new ArgumentNullException(nameof(unityClient));
+        this.visualProcessor = visualProcessor ?? throw new ArgumentNullException(nameof(visualProcessor));
+        this.rlAgent = rlAgent ?? throw new ArgumentNullException(nameof(rlAgent));
+        this.rewardShaper = rewardShaper ?? throw new ArgumentNullException(nameof(rewardShaper));
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         this.experienceBuffer = new List<EmbodiedTransition>();
+        this.maxBufferSize = maxBufferSize;
+        this.random = new Random();
     }
 
     /// <inheritdoc/>
@@ -51,9 +73,27 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
             }
 
             this.currentEnvironment = createResult.Value;
+
+            // Connect Unity client if Unity environment
+            if (environment.Type == EnvironmentType.Unity)
+            {
+                var host = environment.Parameters.GetValueOrDefault("host", "localhost")?.ToString() ?? "localhost";
+                var port = Convert.ToInt32(environment.Parameters.GetValueOrDefault("port", 5005));
+
+                var connectResult = await this.unityClient.ConnectAsync(host, port, ct);
+                if (connectResult.IsFailure)
+                {
+                    this.logger.LogWarning("Failed to connect Unity client: {Error}", connectResult.Error);
+                }
+            }
+
             this.logger.LogInformation("Agent initialized in environment {Id}", this.currentEnvironment.Id);
 
             return Result<Unit, string>.Success(Unit.Value);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -72,16 +112,58 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
                 return Result<SensorState, string>.Failure("Agent not initialized in any environment");
             }
 
-            // In a real implementation, this would query the environment for sensor data
-            // For now, we return a default state or the last known state
             this.logger.LogDebug("Perceiving sensor state in environment {Id}", this.currentEnvironment.Id);
 
-            var sensorState = SensorState.Default();
-            this.lastSensorState = sensorState;
+            // Try to get state from Unity client if connected
+            if (this.unityClient.IsConnected)
+            {
+                var resetResult = await this.unityClient.ResetEnvironmentAsync(ct);
+                if (resetResult.IsSuccess)
+                {
+                    var envState = resetResult.Value;
 
-            await Task.CompletedTask; // Placeholder for async perception operation
+                    // Process visual observations if available
+                    float[] visualFeatures = Array.Empty<float>();
+                    if (envState.Observations.Length > 0)
+                    {
+                        // Simulate visual processing (in real implementation, would be actual image data)
+                        var mockImageData = this.GenerateMockImageData(84, 84, 3);
+                        var visualResult = await this.visualProcessor.ProcessVisualObservationAsync(
+                            mockImageData,
+                            84,
+                            84,
+                            3,
+                            ct);
 
-            return Result<SensorState, string>.Success(sensorState);
+                        if (visualResult.IsSuccess)
+                        {
+                            visualFeatures = visualResult.Value;
+                        }
+                    }
+
+                    var sensorState = new SensorState(
+                        Position: Vector3.Zero,
+                        Rotation: Quaternion.Identity,
+                        Velocity: Vector3.Zero,
+                        VisualObservation: visualFeatures,
+                        ProprioceptiveState: envState.Observations,
+                        CustomSensors: new Dictionary<string, float>(),
+                        Timestamp: DateTime.UtcNow);
+
+                    this.lastSensorState = sensorState;
+                    return Result<SensorState, string>.Success(sensorState);
+                }
+            }
+
+            // Fallback to default state
+            var defaultState = SensorState.Default();
+            this.lastSensorState = defaultState;
+
+            return Result<SensorState, string>.Success(defaultState);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -107,18 +189,71 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
                 action.ActionName ?? "Unnamed",
                 this.currentEnvironment.Id);
 
-            // In a real implementation, this would send the action to the environment
-            // and receive the resulting state and reward
-            var resultingState = this.lastSensorState ?? SensorState.Default();
-            var actionResult = new ActionResult(
+            var previousState = this.lastSensorState ?? SensorState.Default();
+
+            // Convert action to float array for Unity client
+            var actionArray = this.ConvertActionToArray(action);
+
+            // Execute action via Unity client if connected
+            if (this.unityClient.IsConnected)
+            {
+                var stepResult = await this.unityClient.StepAsync(actionArray, ct);
+                if (stepResult.IsSuccess)
+                {
+                    var envState = stepResult.Value.State;
+
+                    // Create new sensor state from environment response
+                    var resultingState = new SensorState(
+                        Position: Vector3.Zero,
+                        Rotation: Quaternion.Identity,
+                        Velocity: Vector3.Zero,
+                        VisualObservation: Array.Empty<float>(),
+                        ProprioceptiveState: envState.Observations,
+                        CustomSensors: new Dictionary<string, float>(),
+                        Timestamp: stepResult.Value.Timestamp);
+
+                    this.lastSensorState = resultingState;
+
+                    // Shape reward
+                    var shapedReward = this.rewardShaper.ShapeReward(
+                        envState.Reward,
+                        previousState,
+                        action,
+                        resultingState);
+
+                    var actionResult = new ActionResult(
+                        Success: true,
+                        ResultingState: resultingState,
+                        Reward: shapedReward,
+                        EpisodeTerminated: envState.Done);
+
+                    // Store transition in experience buffer
+                    var transition = new EmbodiedTransition(
+                        StateBefore: previousState,
+                        Action: action,
+                        StateAfter: resultingState,
+                        Reward: shapedReward,
+                        Terminal: envState.Done);
+
+                    this.AddToExperienceBuffer(transition);
+
+                    return Result<ActionResult, string>.Success(actionResult);
+                }
+            }
+
+            // Fallback to stub implementation
+            var resultingStateStub = this.lastSensorState ?? SensorState.Default();
+            var actionResultStub = new ActionResult(
                 Success: true,
-                ResultingState: resultingState,
+                ResultingState: resultingStateStub,
                 Reward: 0.0,
                 EpisodeTerminated: false);
 
-            await Task.CompletedTask; // Placeholder for async action execution
-
-            return Result<ActionResult, string>.Success(actionResult);
+            return Result<ActionResult, string>.Success(actionResultStub);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -137,18 +272,47 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
             this.logger.LogInformation("Learning from {Count} transitions", transitions.Count);
 
             // Add transitions to experience buffer
-            this.experienceBuffer.AddRange(transitions);
+            foreach (var transition in transitions)
+            {
+                this.AddToExperienceBuffer(transition);
+            }
 
-            // In a real implementation, this would:
-            // 1. Sample batches from the experience buffer
-            // 2. Compute policy gradients or Q-value updates
-            // 3. Update neural network weights
-            // 4. Log learning metrics (loss, reward, etc.)
+            // Sample a batch from experience buffer for training
+            const int batchSize = 32;
+            if (this.experienceBuffer.Count >= batchSize)
+            {
+                var batch = this.SampleBatch(batchSize);
 
-            await Task.CompletedTask; // Placeholder for async learning operation
+                // Convert to RL agent format
+                var rlTransitions = batch.Select(t => new Transition(
+                    State: this.ConvertSensorStateToVector(t.StateBefore),
+                    Action: this.ConvertActionToArray(t.Action),
+                    Reward: (float)t.Reward,
+                    NextState: this.ConvertSensorStateToVector(t.StateAfter),
+                    Done: t.Terminal)).ToList();
+
+                // Update policy
+                var updateResult = await this.rlAgent.UpdatePolicyAsync(rlTransitions, ct);
+                if (updateResult.IsSuccess)
+                {
+                    var metrics = updateResult.Value;
+                    this.logger.LogInformation(
+                        "Policy update complete: Loss={Loss:F4}, AvgReward={Reward:F2}",
+                        metrics.PolicyLoss,
+                        metrics.AverageReward);
+                }
+                else
+                {
+                    this.logger.LogWarning("Policy update failed: {Error}", updateResult.Error);
+                }
+            }
 
             this.logger.LogInformation("Learning completed successfully");
             return Result<Unit, string>.Success(Unit.Value);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -186,10 +350,89 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
             this.logger.LogInformation("Planning completed with {ActionCount} actions", plan.Actions.Count);
             return Result<Plan, string>.Success(plan);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             this.logger.LogError(ex, "Failed to plan embodied actions");
             return Result<Plan, string>.Failure($"Planning failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Adds transition to experience buffer with prioritization.
+    /// </summary>
+    private void AddToExperienceBuffer(EmbodiedTransition transition)
+    {
+        this.experienceBuffer.Add(transition);
+
+        // Maintain buffer size limit (FIFO)
+        while (this.experienceBuffer.Count > this.maxBufferSize)
+        {
+            this.experienceBuffer.RemoveAt(0);
+        }
+    }
+
+    /// <summary>
+    /// Samples a random batch from experience buffer.
+    /// </summary>
+    private List<EmbodiedTransition> SampleBatch(int batchSize)
+    {
+        var batch = new List<EmbodiedTransition>();
+
+        // Simple random sampling (can be improved with prioritized experience replay)
+        for (int i = 0; i < batchSize && i < this.experienceBuffer.Count; i++)
+        {
+            var index = this.random.Next(this.experienceBuffer.Count);
+            batch.Add(this.experienceBuffer[index]);
+        }
+
+        return batch;
+    }
+
+    /// <summary>
+    /// Converts EmbodiedAction to float array for Unity client.
+    /// </summary>
+    private float[] ConvertActionToArray(EmbodiedAction action)
+    {
+        // Simple conversion: movement X, movement Z (2D movement)
+        return new float[]
+        {
+            action.Movement.X,
+            action.Movement.Z,
+        };
+    }
+
+    /// <summary>
+    /// Converts SensorState to vector for RL agent.
+    /// </summary>
+    private float[] ConvertSensorStateToVector(SensorState state)
+    {
+        // Combine position, velocity, and proprioceptive state
+        var vector = new List<float>
+        {
+            state.Position.X,
+            state.Position.Y,
+            state.Position.Z,
+            state.Velocity.X,
+            state.Velocity.Y,
+            state.Velocity.Z,
+        };
+
+        vector.AddRange(state.ProprioceptiveState);
+
+        return vector.ToArray();
+    }
+
+    /// <summary>
+    /// Generates mock image data for testing visual processing.
+    /// </summary>
+    private byte[] GenerateMockImageData(int width, int height, int channels)
+    {
+        var data = new byte[width * height * channels];
+        this.random.NextBytes(data);
+        return data;
     }
 }

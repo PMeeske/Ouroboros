@@ -41,7 +41,17 @@ public static class EmbodiedSimulationExample
         }
 
         Console.WriteLine("\n2. Creating embodied agent...");
-        var agent = new EmbodiedAgent(environmentManager, NullLogger<EmbodiedAgent>.Instance);
+        var unityClient = new UnityMLAgentsClient(NullLogger<UnityMLAgentsClient>.Instance);
+        var visualProcessor = new VisualProcessor(NullLogger<VisualProcessor>.Instance);
+        var rlAgent = new RLAgent(8, 2, NullLogger<RLAgent>.Instance);
+        var rewardShaper = new RewardShaper(NullLogger<RewardShaper>.Instance);
+        var agent = new EmbodiedAgent(
+            environmentManager,
+            unityClient,
+            visualProcessor,
+            rlAgent,
+            rewardShaper,
+            NullLogger<EmbodiedAgent>.Instance);
 
         // Define environment configuration
         var config = new EnvironmentConfig(
@@ -160,43 +170,34 @@ public static class EmbodiedSimulationExample
     {
         Console.WriteLine("\n=== Unity ML-Agents Client Example ===\n");
 
-        using var client = new UnityMLAgentsClient(
-            "localhost",
-            5005,
-            NullLogger<UnityMLAgentsClient>.Instance);
+        var client = new UnityMLAgentsClient(NullLogger<UnityMLAgentsClient>.Instance);
 
         Console.WriteLine("1. Connecting to Unity ML-Agents...");
-        var connectResult = await client.ConnectAsync();
+        var connectResult = await client.ConnectAsync("localhost", 5005);
         if (connectResult.IsSuccess)
         {
             Console.WriteLine("   Connected successfully!");
 
-            // Get initial sensor state
-            Console.WriteLine("\n2. Getting sensor state...");
-            var stateResult = await client.GetSensorStateAsync();
-            if (stateResult.IsSuccess)
-            {
-                Console.WriteLine("   Sensor state retrieved");
-            }
-
-            // Send an action
-            Console.WriteLine("\n3. Sending action...");
-            var action = EmbodiedAction.Move(Vector3.UnitX, "MoveRight");
-            var actionResult = await client.SendActionAsync(action);
-            if (actionResult.IsSuccess)
-            {
-                Console.WriteLine("   Action executed successfully");
-            }
-
-            // Reset environment
-            Console.WriteLine("\n4. Resetting environment...");
+            // Get initial environment state
+            Console.WriteLine("\n2. Resetting environment...");
             var resetResult = await client.ResetEnvironmentAsync();
             if (resetResult.IsSuccess)
             {
-                Console.WriteLine("   Environment reset successfully");
+                Console.WriteLine("   Environment reset complete");
+                Console.WriteLine($"   Observations: {resetResult.Value.Observations.Length}");
             }
 
-            Console.WriteLine("\n5. Disconnecting...");
+            // Step environment with action
+            Console.WriteLine("\n3. Stepping environment with action...");
+            var actions = new float[] { 0.5f, 0.5f };
+            var stepResult = await client.StepAsync(actions);
+            if (stepResult.IsSuccess)
+            {
+                Console.WriteLine("   Step executed successfully");
+                Console.WriteLine($"   Reward: {stepResult.Value.State.Reward}");
+            }
+
+            Console.WriteLine("\n4. Disconnecting...");
             await client.DisconnectAsync();
             Console.WriteLine("   Disconnected");
         }

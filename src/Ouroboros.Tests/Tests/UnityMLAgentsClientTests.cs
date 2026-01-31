@@ -20,88 +20,53 @@ public sealed class UnityMLAgentsClientTests : IDisposable
 
     public UnityMLAgentsClientTests()
     {
-        this.client = new UnityMLAgentsClient("localhost", 5005, NullLogger<UnityMLAgentsClient>.Instance);
+        this.client = new UnityMLAgentsClient(NullLogger<UnityMLAgentsClient>.Instance);
     }
 
     [Fact]
     public async Task ConnectAsync_FirstTime_ShouldSucceed()
     {
         // Act
-        var result = await this.client.ConnectAsync();
+        var result = await this.client.ConnectAsync("localhost", 5005);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
+        this.client.IsConnected.Should().BeTrue();
     }
 
     [Fact]
     public async Task ConnectAsync_WhenAlreadyConnected_ShouldSucceed()
     {
         // Arrange
-        await this.client.ConnectAsync();
+        await this.client.ConnectAsync("localhost", 5005);
 
         // Act
-        var result = await this.client.ConnectAsync();
+        var result = await this.client.ConnectAsync("localhost", 5005);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
-    public async Task SendActionAsync_WhenNotConnected_ShouldReturnFailure()
+    public async Task ConnectAsync_WithInvalidHost_ShouldReturnFailure()
     {
-        // Arrange
-        var action = EmbodiedAction.NoOp();
-
         // Act
-        var result = await this.client.SendActionAsync(action);
+        var result = await this.client.ConnectAsync(string.Empty, 5005);
 
         // Assert
         result.IsFailure.Should().BeTrue();
-        result.Error.Should().Contain("Not connected");
+        result.Error.Should().Contain("Host");
     }
 
     [Fact]
-    public async Task SendActionAsync_WhenConnected_ShouldReturnActionResult()
-    {
-        // Arrange
-        await this.client.ConnectAsync();
-        var action = EmbodiedAction.Move(new Vector3(1f, 0f, 0f), "Forward");
-
-        // Act
-        var result = await this.client.SendActionAsync(action);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeNull();
-        result.Value.Success.Should().BeTrue();
-        result.Value.ResultingState.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task GetSensorStateAsync_WhenNotConnected_ShouldReturnFailure()
+    public async Task ConnectAsync_WithInvalidPort_ShouldReturnFailure()
     {
         // Act
-        var result = await this.client.GetSensorStateAsync();
+        var result = await this.client.ConnectAsync("localhost", 0);
 
         // Assert
         result.IsFailure.Should().BeTrue();
-        result.Error.Should().Contain("Not connected");
-    }
-
-    [Fact]
-    public async Task GetSensorStateAsync_WhenConnected_ShouldReturnSensorState()
-    {
-        // Arrange
-        await this.client.ConnectAsync();
-
-        // Act
-        var result = await this.client.GetSensorStateAsync();
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeNull();
-        result.Value.Position.Should().NotBeNull();
-        result.Value.Rotation.Should().NotBeNull();
+        result.Error.Should().Contain("Port");
     }
 
     [Fact]
@@ -116,30 +81,105 @@ public sealed class UnityMLAgentsClientTests : IDisposable
     }
 
     [Fact]
-    public async Task ResetEnvironmentAsync_WhenConnected_ShouldSucceed()
+    public async Task ResetEnvironmentAsync_WhenConnected_ShouldReturnState()
     {
         // Arrange
-        await this.client.ConnectAsync();
+        await this.client.ConnectAsync("localhost", 5005);
 
         // Act
         var result = await this.client.ResetEnvironmentAsync();
 
         // Assert
         result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.Observations.Should().NotBeNull();
+        result.Value.Done.Should().BeFalse();
     }
 
     [Fact]
-    public async Task DisconnectAsync_WhenConnected_ShouldDisconnect()
+    public async Task StepAsync_WhenNotConnected_ShouldReturnFailure()
     {
         // Arrange
-        await this.client.ConnectAsync();
+        var actions = new float[] { 0.5f, 0.5f };
+
+        // Act
+        var result = await this.client.StepAsync(actions);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Not connected");
+    }
+
+    [Fact]
+    public async Task StepAsync_WhenConnected_ShouldReturnStepResult()
+    {
+        // Arrange
+        await this.client.ConnectAsync("localhost", 5005);
+        var actions = new float[] { 0.5f, 0.5f };
+
+        // Act
+        var result = await this.client.StepAsync(actions);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.State.Should().NotBeNull();
+        result.Value.State.Observations.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task StepAsync_WithNullActions_ShouldReturnFailure()
+    {
+        // Arrange
+        await this.client.ConnectAsync("localhost", 5005);
+
+        // Act
+        var result = await this.client.StepAsync(null!);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Actions");
+    }
+
+    [Fact]
+    public async Task GetEnvironmentInfoAsync_WhenNotConnected_ShouldReturnFailure()
+    {
+        // Act
+        var result = await this.client.GetEnvironmentInfoAsync();
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Not connected");
+    }
+
+    [Fact]
+    public async Task GetEnvironmentInfoAsync_WhenConnected_ShouldReturnInfo()
+    {
+        // Arrange
+        await this.client.ConnectAsync("localhost", 5005);
+
+        // Act
+        var result = await this.client.GetEnvironmentInfoAsync();
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.EnvironmentName.Should().NotBeNullOrEmpty();
+        result.Value.ObservationSpaceSize.Should().BeGreaterThan(0);
+        result.Value.ActionSpaceSize.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_WhenConnected_ShouldSucceed()
+    {
+        // Arrange
+        await this.client.ConnectAsync("localhost", 5005);
 
         // Act
         await this.client.DisconnectAsync();
 
-        // Assert - subsequent operations should fail
-        var result = await this.client.GetSensorStateAsync();
-        result.IsFailure.Should().BeTrue();
+        // Assert
+        this.client.IsConnected.Should().BeFalse();
     }
 
     [Fact]
@@ -156,42 +196,13 @@ public sealed class UnityMLAgentsClientTests : IDisposable
     public async Task Dispose_ShouldDisconnect()
     {
         // Arrange
-        await this.client.ConnectAsync();
+        await this.client.ConnectAsync("localhost", 5005);
 
         // Act
         this.client.Dispose();
 
-        // Assert - subsequent operations should fail
-        var result = await this.client.GetSensorStateAsync();
-        result.IsFailure.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task FullWorkflow_ConnectSendActionDisconnect_ShouldSucceed()
-    {
-        // Arrange
-        var action = EmbodiedAction.Move(Vector3.UnitX, "MoveRight");
-
-        // Act & Assert - Connect
-        var connectResult = await this.client.ConnectAsync();
-        connectResult.IsSuccess.Should().BeTrue();
-
-        // Act & Assert - Send action
-        var actionResult = await this.client.SendActionAsync(action);
-        actionResult.IsSuccess.Should().BeTrue();
-
-        // Act & Assert - Get sensor state
-        var stateResult = await this.client.GetSensorStateAsync();
-        stateResult.IsSuccess.Should().BeTrue();
-
-        // Act & Assert - Reset
-        var resetResult = await this.client.ResetEnvironmentAsync();
-        resetResult.IsSuccess.Should().BeTrue();
-
-        // Act & Assert - Disconnect
-        await this.client.DisconnectAsync();
-        var postDisconnectResult = await this.client.SendActionAsync(action);
-        postDisconnectResult.IsFailure.Should().BeTrue();
+        // Assert
+        this.client.IsConnected.Should().BeFalse();
     }
 
     public void Dispose()

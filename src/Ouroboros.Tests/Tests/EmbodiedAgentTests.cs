@@ -18,12 +18,26 @@ namespace Ouroboros.Tests;
 public sealed class EmbodiedAgentTests
 {
     private readonly IEnvironmentManager environmentManager;
+    private readonly IUnityMLAgentsClient unityClient;
+    private readonly IVisualProcessor visualProcessor;
+    private readonly IRLAgent rlAgent;
+    private readonly IRewardShaper rewardShaper;
     private readonly EmbodiedAgent agent;
 
     public EmbodiedAgentTests()
     {
         this.environmentManager = new EnvironmentManager(NullLogger<EnvironmentManager>.Instance);
-        this.agent = new EmbodiedAgent(this.environmentManager, NullLogger<EmbodiedAgent>.Instance);
+        this.unityClient = new UnityMLAgentsClient(NullLogger<UnityMLAgentsClient>.Instance);
+        this.visualProcessor = new VisualProcessor(NullLogger<VisualProcessor>.Instance);
+        this.rlAgent = new RLAgent(8, 2, NullLogger<RLAgent>.Instance);
+        this.rewardShaper = new RewardShaper(NullLogger<RewardShaper>.Instance);
+        this.agent = new EmbodiedAgent(
+            this.environmentManager,
+            this.unityClient,
+            this.visualProcessor,
+            this.rlAgent,
+            this.rewardShaper,
+            NullLogger<EmbodiedAgent>.Instance);
     }
 
     [Fact]
