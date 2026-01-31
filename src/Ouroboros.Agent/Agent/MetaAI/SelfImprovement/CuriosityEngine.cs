@@ -17,6 +17,7 @@ public sealed class CuriosityEngine : ICuriosityEngine
     private readonly IMemoryStore _memory;
     private readonly ISkillRegistry _skills;
     private readonly ISafetyGuard _safety;
+    private readonly Core.Ethics.IEthicsFramework _ethics;
     private readonly CuriosityEngineConfig _config;
     private readonly ConcurrentBag<(Plan plan, double novelty, DateTime when)> _explorationHistory = new();
     private int _totalExplorations = 0;
@@ -27,12 +28,14 @@ public sealed class CuriosityEngine : ICuriosityEngine
         IMemoryStore memory,
         ISkillRegistry skills,
         ISafetyGuard safety,
+        Core.Ethics.IEthicsFramework ethics,
         CuriosityEngineConfig? config = null)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _safety = safety ?? throw new ArgumentNullException(nameof(safety));
+        _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
         _config = config ?? new CuriosityEngineConfig();
     }
 
@@ -152,6 +155,42 @@ STEP 2: ...";
                     ["novelty"] = bestOpportunity.NoveltyScore
                 },
                 DateTime.UtcNow);
+
+            // Ethics evaluation - validate exploration before proceeding
+            var researchDescription = $"Exploratory research: {bestOpportunity.Description}";
+
+            var context = new Core.Ethics.ActionContext
+            {
+                AgentId = "curiosity-engine",
+                UserId = null,
+                Environment = "exploration",
+                State = new Dictionary<string, object>
+                {
+                    ["novelty_score"] = bestOpportunity.NoveltyScore,
+                    ["info_gain_estimate"] = bestOpportunity.InformationGainEstimate,
+                    ["step_count"] = steps.Count
+                }
+            };
+
+            var ethicsResult = await _ethics.EvaluateResearchAsync(researchDescription, context, ct);
+
+            if (ethicsResult.IsFailure)
+            {
+                return Result<Plan, string>.Failure(
+                    $"Exploration rejected by ethics evaluation: {ethicsResult.Error}");
+            }
+
+            if (!ethicsResult.Value.IsPermitted)
+            {
+                return Result<Plan, string>.Failure(
+                    $"Exploration rejected by ethics framework: {ethicsResult.Value.Reasoning}");
+            }
+
+            if (ethicsResult.Value.Level == Core.Ethics.EthicalClearanceLevel.RequiresHumanApproval)
+            {
+                return Result<Plan, string>.Failure(
+                    $"Exploration requires human approval before execution: {ethicsResult.Value.Reasoning}");
+            }
 
             return Result<Plan, string>.Success(plan);
         }

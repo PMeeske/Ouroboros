@@ -7,6 +7,8 @@ namespace Ouroboros.Examples;
 using LangChain.Providers.Ollama;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Core.Ethics;
+using IEthicsFramework = Ouroboros.Core.Ethics.IEthicsFramework;
+using AgentGoal = Ouroboros.Agent.MetaAI.Goal;
 using AgentPlan = Ouroboros.Agent.MetaAI.Plan;
 using AgentPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
 using AgentSkill = Ouroboros.Agent.MetaAI.Skill;
@@ -38,12 +40,12 @@ public static class Phase2MetacognitionExample
         PersistentMemoryStore memory = new PersistentMemoryStore();
         SkillRegistry skills = new SkillRegistry();
         SafetyGuard safety = new SafetyGuard();
+        IEthicsFramework ethics = EthicsFrameworkFactory.CreateDefault();
 
         // Initialize Phase 2 components
         CapabilityRegistry capabilityRegistry = new CapabilityRegistry(chatModel, tools);
-        GoalHierarchy goalHierarchy = new GoalHierarchy(chatModel, safety);
+        GoalHierarchy goalHierarchy = new GoalHierarchy(chatModel, safety, ethics);
         UncertaintyRouter router = new UncertaintyRouter(null!, 0.7);
-        IEthicsFramework ethics = EthicsFrameworkFactory.CreateDefault();
 
         MetaAIPlannerOrchestrator orchestrator = new MetaAIPlannerOrchestrator(
             chatModel,
@@ -368,12 +370,12 @@ public static class Phase2MetacognitionExample
         Console.WriteLine("\nTesting goal conflict detection:\n");
 
         // Add potentially conflicting goals
-        Goal speedGoal = new Goal(
+        AgentGoal speedGoal = new AgentGoal(
             "Minimize response latency to under 100ms",
             GoalType.Secondary,
             0.8);
 
-        Goal qualityGoal = new Goal(
+        AgentGoal qualityGoal = new AgentGoal(
             "Maximize response accuracy and detail",
             GoalType.Secondary,
             0.85);
@@ -416,9 +418,9 @@ public static class Phase2MetacognitionExample
             bool success = random.NextDouble() > 0.3; // 70% success rate
             double quality = success ? 0.7 + (random.NextDouble() * 0.3) : random.NextDouble() * 0.5;
 
-            Plan plan = new Plan(
+            AgentPlan plan = new AgentPlan(
                 $"Simulated task {i + 1}",
-                new List<PlanStep>(),
+                new List<AgentPlanStep>(),
                 new Dictionary<string, double>(),
                 DateTime.UtcNow.AddDays(-random.Next(1, 30)));
 

@@ -115,8 +115,9 @@ public static class Phase2MetacognitionTests
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var safety = new SafetyGuard();
+        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
 
-        var goalHierarchy = new GoalHierarchy(chatModel, safety);
+        var goalHierarchy = new GoalHierarchy(chatModel, safety, ethics);
 
         // Create a primary goal
         var primaryGoal = new Goal(
@@ -378,10 +379,11 @@ public static class Phase2MetacognitionTests
         var memory = new PersistentMemoryStore();
         var skills = new SkillRegistry();
         var safety = new SafetyGuard();
+        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
 
         // Create all Phase 2 components
         var capabilityRegistry = new CapabilityRegistry(chatModel, tools);
-        var goalHierarchy = new GoalHierarchy(chatModel, safety);
+        var goalHierarchy = new GoalHierarchy(chatModel, safety, ethics);
         var router = new UncertaintyRouter(null!, 0.7);
 
         var orchestrator = new MetaAIPlannerOrchestrator(

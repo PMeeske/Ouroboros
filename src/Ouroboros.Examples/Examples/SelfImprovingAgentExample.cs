@@ -7,6 +7,7 @@ namespace Ouroboros.Examples;
 using LangChain.Providers.Ollama;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Core.Ethics;
+using IEthicsFramework = Ouroboros.Core.Ethics.IEthicsFramework;
 using AgentPlan = Ouroboros.Agent.MetaAI.Plan;
 using AgentPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
 using AgentSkill = Ouroboros.Agent.MetaAI.Skill;

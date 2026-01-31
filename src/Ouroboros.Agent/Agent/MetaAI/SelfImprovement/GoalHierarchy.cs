@@ -47,15 +47,18 @@ public sealed class GoalHierarchy : IGoalHierarchy
     private readonly ConcurrentDictionary<Guid, Goal> _goals = new();
     private readonly IChatCompletionModel _llm;
     private readonly ISafetyGuard _safety;
+    private readonly Core.Ethics.IEthicsFramework _ethics;
     private readonly GoalHierarchyConfig _config;
 
     public GoalHierarchy(
         IChatCompletionModel llm,
         ISafetyGuard safety,
+        Core.Ethics.IEthicsFramework ethics,
         GoalHierarchyConfig? config = null)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _safety = safety ?? throw new ArgumentNullException(nameof(safety));
+        _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
         _config = config ?? new GoalHierarchyConfig();
     }
 
@@ -73,6 +76,75 @@ public sealed class GoalHierarchy : IGoalHierarchy
         foreach (Goal subgoal in goal.Subgoals)
         {
             AddGoal(subgoal);
+        }
+    }
+
+    /// <summary>
+    /// Adds a goal to the hierarchy with ethics evaluation.
+    /// </summary>
+    public async Task<Result<Goal, string>> AddGoalAsync(Goal goal, CancellationToken ct = default)
+    {
+        if (goal == null)
+            return Result<Goal, string>.Failure("Goal cannot be null");
+
+        try
+        {
+            // Ethics evaluation - validate goal before accepting
+            var goalForEthics = new Core.Ethics.Goal
+            {
+                Id = goal.Id,
+                Description = goal.Description,
+                Type = goal.Type.ToString(),
+                Priority = goal.Priority
+            };
+
+            var context = new Core.Ethics.ActionContext
+            {
+                AgentId = "goal-hierarchy",
+                UserId = null,
+                Environment = "goal-management",
+                State = new Dictionary<string, object>
+                {
+                    ["goal_type"] = goal.Type.ToString(),
+                    ["priority"] = goal.Priority,
+                    ["has_constraints"] = goal.Constraints.Count > 0
+                }
+            };
+
+            var ethicsResult = await _ethics.EvaluateGoalAsync(goalForEthics, context, ct);
+
+            if (ethicsResult.IsFailure)
+            {
+                return Result<Goal, string>.Failure(
+                    $"Goal rejected by ethics evaluation: {ethicsResult.Error}");
+            }
+
+            if (!ethicsResult.Value.IsPermitted)
+            {
+                return Result<Goal, string>.Failure(
+                    $"Goal rejected by ethics framework: {ethicsResult.Value.Reasoning}");
+            }
+
+            if (ethicsResult.Value.Level == Core.Ethics.EthicalClearanceLevel.RequiresHumanApproval)
+            {
+                return Result<Goal, string>.Failure(
+                    $"Goal requires human approval before acceptance: {ethicsResult.Value.Reasoning}");
+            }
+
+            // Add goal to hierarchy
+            _goals[goal.Id] = goal;
+
+            // Add subgoals recursively
+            foreach (Goal subgoal in goal.Subgoals)
+            {
+                AddGoal(subgoal);
+            }
+
+            return Result<Goal, string>.Success(goal);
+        }
+        catch (Exception ex)
+        {
+            return Result<Goal, string>.Failure($"Goal addition failed: {ex.Message}");
         }
     }
 

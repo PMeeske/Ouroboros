@@ -7,6 +7,8 @@ namespace Ouroboros.Examples;
 using LangChain.Providers.Ollama;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Core.Ethics;
+using IEthicsFramework = Ouroboros.Core.Ethics.IEthicsFramework;
+using AgentGoal = Ouroboros.Agent.MetaAI.Goal;
 using AgentPlan = Ouroboros.Agent.MetaAI.Plan;
 using AgentPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
 using AgentSkill = Ouroboros.Agent.MetaAI.Skill;
@@ -50,8 +52,8 @@ public static class Phase3EmergentIntelligenceExample
 
         // Initialize Phase 3 components
         TransferLearner transferLearner = new TransferLearner(llm, skills, memory);
-        HypothesisEngine hypothesisEngine = new HypothesisEngine(llm, orchestrator, memory);
-        CuriosityEngine curiosityEngine = new CuriosityEngine(llm, memory, skills, safety);
+        HypothesisEngine hypothesisEngine = new HypothesisEngine(llm, orchestrator, memory, ethics);
+        CuriosityEngine curiosityEngine = new CuriosityEngine(llm, memory, skills, safety, ethics);
 
         Console.WriteLine("✓ Phase 3 components initialized\n");
 
@@ -59,7 +61,7 @@ public static class Phase3EmergentIntelligenceExample
         Console.WriteLine("=== Part 1: Transfer Learning ===\n");
 
         // Register a skill learned in one domain
-        Skill codingSkill = new Skill(
+        AgentSkill codingSkill = new AgentSkill(
             "debug_code",
             "Systematically debug code by identifying and fixing errors",
             new List<string> { "code_analysis", "error_detection" },
@@ -272,7 +274,7 @@ public static class Phase3EmergentIntelligenceExample
 
             if (exploratoryPlanResult.IsSuccess)
             {
-                Plan expPlan = exploratoryPlanResult.Value;
+                AgentPlan expPlan = exploratoryPlanResult.Value;
 
                 Console.WriteLine("Generated Exploratory Plan:");
                 Console.WriteLine($"  Goal: {expPlan.Goal}");
@@ -286,7 +288,7 @@ public static class Phase3EmergentIntelligenceExample
                 Console.WriteLine($"\n  Steps ({expPlan.Steps.Count}):");
                 for (int i = 0; i < expPlan.Steps.Count; i++)
                 {
-                    PlanStep step = expPlan.Steps[i];
+                    AgentPlanStep step = expPlan.Steps[i];
                     Console.WriteLine($"  {i + 1}. {step.Action}");
 
                     if (step.Parameters.TryGetValue("expected_learning", out object? learning))

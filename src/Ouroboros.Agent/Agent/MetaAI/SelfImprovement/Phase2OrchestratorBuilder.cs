@@ -167,7 +167,7 @@ public sealed class Phase2OrchestratorBuilder
 
         // Create Phase 2 components
         _capabilityRegistry ??= new CapabilityRegistry(_llm, _tools, _capabilityConfig);
-        _goalHierarchy ??= new GoalHierarchy(_llm, _safety, _goalConfig);
+        _goalHierarchy ??= new GoalHierarchy(_llm, _safety, _ethics, _goalConfig);
 
         // Create orchestrator
         MetaAIPlannerOrchestrator orchestrator = new MetaAIPlannerOrchestrator(
