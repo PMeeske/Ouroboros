@@ -14,6 +14,8 @@ using Ouroboros.Tools.MeTTa;
 /// </summary>
 public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
 {
+    private const int MaxInferenceResults = 100;
+    
     private readonly IMeTTaEngine _mettaEngine;
     private readonly ConcurrentDictionary<string, SymbolicRule> _rules = new();
 
@@ -109,7 +111,7 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
             var queue = new Queue<(string currentFact, int depth)>();
             queue.Enqueue((fact, 0));
 
-            while (queue.Count > 0 && inferred.Count < 100) // Limit results
+            while (queue.Count > 0 && inferred.Count < MaxInferenceResults)
             {
                 var (currentFact, depth) = queue.Dequeue();
                 
