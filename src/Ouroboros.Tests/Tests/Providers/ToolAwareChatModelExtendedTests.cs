@@ -233,7 +233,7 @@ public class ToolAwareChatModelExtendedTests
     public async Task GenerateWithToolsAsync_WithCancellationToken_PropagatesToken()
     {
         // Arrange
-        var mockModel = new MockChatModel("Response", shouldCheckCancellation: true);
+        var mockModel = new MockChatModel("Response");
         var registry = new ToolRegistry();
         var toolAwareModel = new ToolAwareChatModel(mockModel, registry);
         using var cts = new CancellationTokenSource();
@@ -248,7 +248,7 @@ public class ToolAwareChatModelExtendedTests
     public async Task GenerateWithToolsResultAsync_WithCancellation_ReturnsFailureResult()
     {
         // Arrange
-        var mockModel = new MockChatModel("Response", shouldCheckCancellation: true);
+        var mockModel = new MockChatModel("Response");
         var registry = new ToolRegistry();
         var toolAwareModel = new ToolAwareChatModel(mockModel, registry);
         using var cts = new CancellationTokenSource();
