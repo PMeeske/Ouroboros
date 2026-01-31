@@ -26,8 +26,8 @@ namespace Ouroboros.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Android Behavior", "    As an Android developer\r\n    I want the app to handle initialization failures" +
-                " gracefully\r\n    So that users never see a purple screen crash", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Android Behavior", "    As an Android developer\n    I want the app to handle initialization failures " +
+                "gracefully\n    So that users never see a purple screen crash", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         
