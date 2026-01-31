@@ -3,6 +3,7 @@
 // Meta-AI Builder - Fluent API for orchestrator configuration
 // ==========================================================
 
+using Ouroboros.Core.Ethics;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -18,6 +19,7 @@ public sealed class MetaAIBuilder
     private ISkillRegistry? _skills;
     private IUncertaintyRouter? _router;
     private ISafetyGuard? _safety;
+    private IEthicsFramework? _ethics;
     private ISkillExtractor? _skillExtractor;
     private IEmbeddingModel? _embedding;
     private TrackedVectorStore? _vectorStore;
@@ -97,6 +99,15 @@ public sealed class MetaAIBuilder
     }
 
     /// <summary>
+    /// Sets custom ethics framework.
+    /// </summary>
+    public MetaAIBuilder WithEthicsFramework(IEthicsFramework ethics)
+    {
+        _ethics = ethics;
+        return this;
+    }
+
+    /// <summary>
     /// Sets custom skill extractor.
     /// </summary>
     public MetaAIBuilder WithSkillExtractor(ISkillExtractor skillExtractor)
@@ -141,6 +152,9 @@ public sealed class MetaAIBuilder
         // Safety guard is required first for router
         ISafetyGuard safety = _safety ?? new SafetyGuard(_defaultPermissionLevel);
 
+        // Ethics framework is required - create default if not provided
+        IEthicsFramework ethics = _ethics ?? EthicsFrameworkFactory.CreateDefault();
+
         // Router needs orchestrator - create a simple one if not provided
         IUncertaintyRouter router;
         if (_router == null)
@@ -154,7 +168,7 @@ public sealed class MetaAIBuilder
             router = _router;
         }
 
-        return new MetaAIPlannerOrchestrator(_llm, tools, memory, skills, router, safety, _skillExtractor);
+        return new MetaAIPlannerOrchestrator(_llm, tools, memory, skills, router, safety, ethics, _skillExtractor);
     }
 
     /// <summary>

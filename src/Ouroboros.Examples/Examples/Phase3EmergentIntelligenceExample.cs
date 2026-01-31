@@ -6,6 +6,10 @@ namespace Ouroboros.Examples;
 
 using LangChain.Providers.Ollama;
 using Ouroboros.Agent.MetaAI;
+using Ouroboros.Core.Ethics;
+using AgentPlan = Ouroboros.Agent.MetaAI.Plan;
+using AgentPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using AgentSkill = Ouroboros.Agent.MetaAI.Skill;
 
 /// <summary>
 /// Example demonstrating Phase 3 emergent intelligence capabilities.
@@ -33,6 +37,7 @@ public static class Phase3EmergentIntelligenceExample
         SkillRegistry skills = new SkillRegistry();
         SafetyGuard safety = new SafetyGuard();
         UncertaintyRouter router = new UncertaintyRouter(null!, 0.7);
+        IEthicsFramework ethics = EthicsFrameworkFactory.CreateDefault();
 
         MetaAIPlannerOrchestrator orchestrator = new MetaAIPlannerOrchestrator(
             llm,
@@ -40,7 +45,8 @@ public static class Phase3EmergentIntelligenceExample
             memory,
             skills,
             router,
-            safety);
+            safety,
+            ethics);
 
         // Initialize Phase 3 components
         TransferLearner transferLearner = new TransferLearner(llm, skills, memory);
@@ -57,12 +63,12 @@ public static class Phase3EmergentIntelligenceExample
             "debug_code",
             "Systematically debug code by identifying and fixing errors",
             new List<string> { "code_analysis", "error_detection" },
-            new List<PlanStep>
+            new List<AgentPlanStep>
             {
-                new PlanStep("analyze_error_message", new Dictionary<string, object>(), "Error understood", 0.9),
-                new PlanStep("locate_source", new Dictionary<string, object>(), "Source identified", 0.8),
-                new PlanStep("propose_fix", new Dictionary<string, object>(), "Fix proposed", 0.7),
-                new PlanStep("validate_solution", new Dictionary<string, object>(), "Solution validated", 0.85),
+                new AgentPlanStep("analyze_error_message", new Dictionary<string, object>(), "Error understood", 0.9),
+                new AgentPlanStep("locate_source", new Dictionary<string, object>(), "Source identified", 0.8),
+                new AgentPlanStep("propose_fix", new Dictionary<string, object>(), "Fix proposed", 0.7),
+                new AgentPlanStep("validate_solution", new Dictionary<string, object>(), "Solution validated", 0.85),
             },
             SuccessRate: 0.87,
             UsageCount: 42,
@@ -262,7 +268,7 @@ public static class Phase3EmergentIntelligenceExample
             }
 
             // Generate exploratory plan
-            Result<Plan, string> exploratoryPlanResult = await curiosityEngine.GenerateExploratoryPlanAsync();
+            Result<AgentPlan, string> exploratoryPlanResult = await curiosityEngine.GenerateExploratoryPlanAsync();
 
             if (exploratoryPlanResult.IsSuccess)
             {

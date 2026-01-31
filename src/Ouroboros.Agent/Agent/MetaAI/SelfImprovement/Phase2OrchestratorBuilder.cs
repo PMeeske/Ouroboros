@@ -4,6 +4,8 @@
 // Fluent builder for orchestrator with metacognitive components
 // ==========================================================
 
+using Ouroboros.Core.Ethics;
+
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
@@ -17,6 +19,7 @@ public sealed class Phase2OrchestratorBuilder
     private ISkillRegistry? _skills;
     private IUncertaintyRouter? _router;
     private ISafetyGuard? _safety;
+    private IEthicsFramework? _ethics;
     private ISkillExtractor? _skillExtractor;
     private ICapabilityRegistry? _capabilityRegistry;
     private IGoalHierarchy? _goalHierarchy;
@@ -119,6 +122,15 @@ public sealed class Phase2OrchestratorBuilder
     }
 
     /// <summary>
+    /// Sets the ethics framework.
+    /// </summary>
+    public Phase2OrchestratorBuilder WithEthics(IEthicsFramework ethics)
+    {
+        _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
+        return this;
+    }
+
+    /// <summary>
     /// Sets the uncertainty router confidence threshold.
     /// </summary>
     public Phase2OrchestratorBuilder WithConfidenceThreshold(double threshold)
@@ -145,11 +157,12 @@ public sealed class Phase2OrchestratorBuilder
 
         // Initialize defaults if not provided
         _safety ??= new SafetyGuard();
+        _ethics ??= EthicsFrameworkFactory.CreateDefault();
         _skills ??= new SkillRegistry();
         _memory ??= new PersistentMemoryStore(config: _memoryConfig);
 
         // Create Phase 1 components
-        _skillExtractor ??= new SkillExtractor(_llm, _skills);
+        _skillExtractor ??= new SkillExtractor(_llm, _skills, _ethics);
         _router ??= new UncertaintyRouter(null!, _confidenceThreshold);
 
         // Create Phase 2 components
@@ -164,6 +177,7 @@ public sealed class Phase2OrchestratorBuilder
             _skills,
             _router,
             _safety,
+            _ethics,
             _skillExtractor);
 
         // Create self-evaluator (requires orchestrator)

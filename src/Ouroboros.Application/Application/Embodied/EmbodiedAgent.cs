@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.Logging;
 using Ouroboros.Core.Monads;
+using Ouroboros.Core.Ethics;
 using Ouroboros.Domain.Embodied;
 using Ouroboros.Domain.Reinforcement;
 
@@ -16,6 +17,7 @@ namespace Ouroboros.Application.Embodied;
 public sealed class EmbodiedAgent : IEmbodiedAgent
 {
     private readonly IEnvironmentManager environmentManager;
+    private readonly IEthicsFramework ethics;
     private readonly ILogger<EmbodiedAgent> logger;
     private EnvironmentHandle? currentEnvironment;
     private SensorState? lastSensorState;
@@ -25,12 +27,15 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
     /// Initializes a new instance of the <see cref="EmbodiedAgent"/> class.
     /// </summary>
     /// <param name="environmentManager">Environment manager for lifecycle operations</param>
+    /// <param name="ethics">Ethics framework for action validation</param>
     /// <param name="logger">Logger for diagnostic output</param>
     public EmbodiedAgent(
         IEnvironmentManager environmentManager,
+        IEthicsFramework ethics,
         ILogger<EmbodiedAgent> logger)
     {
         this.environmentManager = environmentManager ?? throw new ArgumentNullException(nameof(environmentManager));
+        this.ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         this.experienceBuffer = new List<EmbodiedTransition>();
     }
@@ -107,6 +112,57 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
                 action.ActionName ?? "Unnamed",
                 this.currentEnvironment.Id);
 
+            // Ethics evaluation - evaluate the action before execution
+            var proposedAction = new ProposedAction
+            {
+                ActionType = "embodied_action",
+                Description = action.ActionName ?? "Embodied action in environment",
+                Parameters = new Dictionary<string, object>
+                {
+                    ["movement"] = action.Movement,
+                    ["rotation"] = action.Rotation,
+                    ["custom_actions"] = action.CustomActions
+                },
+                PotentialEffects = new[] 
+                { 
+                    "Modify environment state",
+                    "Generate reward signal",
+                    "Update sensor readings"
+                }
+            };
+
+            var actionContext = new ActionContext
+            {
+                AgentId = this.currentEnvironment.Id.ToString(),
+                UserId = null,
+                Environment = "embodied_simulation",
+                State = new Dictionary<string, object>
+                {
+                    ["environment_id"] = this.currentEnvironment.Id,
+                    ["scene_name"] = this.currentEnvironment.SceneName ?? "unknown"
+                }
+            };
+
+            var ethicsResult = await this.ethics.EvaluateActionAsync(proposedAction, actionContext, ct);
+
+            if (ethicsResult.IsFailure)
+            {
+                this.logger.LogWarning("Action failed ethics evaluation: {Error}", ethicsResult.Error);
+                return Result<ActionResult, string>.Failure($"Action blocked by ethics: {ethicsResult.Error}");
+            }
+
+            if (!ethicsResult.Value.IsPermitted)
+            {
+                this.logger.LogWarning("Action blocked by ethics: {Reasoning}", ethicsResult.Value.Reasoning);
+                return Result<ActionResult, string>.Failure($"Action blocked by ethics: {ethicsResult.Value.Reasoning}");
+            }
+
+            if (ethicsResult.Value.Level == EthicalClearanceLevel.RequiresHumanApproval)
+            {
+                this.logger.LogInformation("Action requires human approval: {Reasoning}", ethicsResult.Value.Reasoning);
+                return Result<ActionResult, string>.Failure($"Action requires human approval: {ethicsResult.Value.Reasoning}");
+            }
+
             // In a real implementation, this would send the action to the environment
             // and receive the resulting state and reward
             var resultingState = this.lastSensorState ?? SensorState.Default();
@@ -158,7 +214,7 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
     }
 
     /// <inheritdoc/>
-    public async Task<Result<Plan, string>> PlanEmbodiedAsync(
+    public async Task<Result<Domain.Embodied.Plan, string>> PlanEmbodiedAsync(
         string goal,
         SensorState currentState,
         CancellationToken ct = default)
@@ -174,7 +230,7 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
             // 4. Return the best plan
 
             // Placeholder plan with no-op action
-            var plan = new Plan(
+            var plan = new Domain.Embodied.Plan(
                 Goal: goal,
                 Actions: new[] { EmbodiedAction.NoOp() },
                 ExpectedStates: new[] { currentState },
@@ -184,12 +240,12 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
             await Task.CompletedTask; // Placeholder for async planning operation
 
             this.logger.LogInformation("Planning completed with {ActionCount} actions", plan.Actions.Count);
-            return Result<Plan, string>.Success(plan);
+            return Result<Domain.Embodied.Plan, string>.Success(plan);
         }
         catch (Exception ex)
         {
             this.logger.LogError(ex, "Failed to plan embodied actions");
-            return Result<Plan, string>.Failure($"Planning failed: {ex.Message}");
+            return Result<Domain.Embodied.Plan, string>.Failure($"Planning failed: {ex.Message}");
         }
     }
 }

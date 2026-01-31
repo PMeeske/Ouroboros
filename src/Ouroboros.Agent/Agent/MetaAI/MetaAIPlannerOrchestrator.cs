@@ -6,6 +6,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using Ouroboros.Core.Ethics;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -21,6 +22,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
     private readonly ISkillRegistry _skills;
     private readonly IUncertaintyRouter _router;
     private readonly ISafetyGuard _safety;
+    private readonly IEthicsFramework _ethics;
     private readonly ISkillExtractor? _skillExtractor;
     private readonly ConcurrentDictionary<string, PerformanceMetrics> _metrics = new();
 
@@ -31,6 +33,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
         ISkillRegistry skills,
         IUncertaintyRouter router,
         ISafetyGuard safety,
+        IEthicsFramework ethics,
         ISkillExtractor? skillExtractor = null)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
@@ -39,7 +42,8 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _router = router ?? throw new ArgumentNullException(nameof(router));
         _safety = safety ?? throw new ArgumentNullException(nameof(safety));
-        _skillExtractor = skillExtractor ?? new SkillExtractor(llm, skills);
+        _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
+        _skillExtractor = skillExtractor ?? new SkillExtractor(llm, skills, ethics);
     }
 
     /// <summary>
@@ -82,6 +86,55 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
                     return Result<Plan, string>.Failure(
                         $"Plan step '{step.Action}' failed safety check: {string.Join(", ", safetyCheck.Violations)}");
                 }
+            }
+
+            // Ethics evaluation - evaluate the entire plan
+            var planContext = new PlanContext
+            {
+                Plan = new Core.Ethics.Plan
+                {
+                    Goal = goal,
+                    Steps = plan.Steps.Select(s => new Core.Ethics.PlanStep
+                    {
+                        Action = s.Action,
+                        Parameters = s.Parameters,
+                        ExpectedOutcome = s.ExpectedOutcome,
+                        ConfidenceScore = s.ConfidenceScore
+                    }).ToArray(),
+                    ConfidenceScores = plan.ConfidenceScores,
+                    CreatedAt = plan.CreatedAt
+                },
+                ActionContext = new ActionContext
+                {
+                    AgentId = "meta-ai-planner",
+                    UserId = null, // Set if available from context
+                    Environment = context?.ContainsKey("environment") == true 
+                        ? context["environment"]?.ToString() ?? "planning" 
+                        : "planning",
+                    State = context != null 
+                        ? new Dictionary<string, object>(context) 
+                        : new Dictionary<string, object>()
+                }
+            };
+
+            var ethicsResult = await _ethics.EvaluatePlanAsync(planContext, ct);
+
+            if (ethicsResult.IsFailure)
+            {
+                return Result<Plan, string>.Failure(
+                    $"Plan failed ethics evaluation: {ethicsResult.Error}");
+            }
+
+            if (!ethicsResult.Value.IsPermitted)
+            {
+                return Result<Plan, string>.Failure(
+                    $"Plan blocked by ethics framework: {ethicsResult.Value.Reasoning}");
+            }
+
+            if (ethicsResult.Value.Level == EthicalClearanceLevel.RequiresHumanApproval)
+            {
+                return Result<Plan, string>.Failure(
+                    $"Plan requires human approval: {ethicsResult.Value.Reasoning}");
             }
 
             RecordMetric("planner", 1.0, true);

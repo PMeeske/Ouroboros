@@ -6,6 +6,10 @@ namespace Ouroboros.Examples;
 
 using LangChain.Providers.Ollama;
 using Ouroboros.Agent.MetaAI;
+using Ouroboros.Core.Ethics;
+using AgentPlan = Ouroboros.Agent.MetaAI.Plan;
+using AgentPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using AgentSkill = Ouroboros.Agent.MetaAI.Skill;
 
 /// <summary>
 /// Example demonstrating self-improving agent capabilities with automatic skill learning.
@@ -35,7 +39,8 @@ public static class SelfImprovingAgentExample
 
         PersistentMemoryStore memory = new PersistentMemoryStore(config: memoryConfig);
         SkillRegistry skillRegistry = new SkillRegistry();
-        SkillExtractor skillExtractor = new SkillExtractor(chatModel, skillRegistry);
+        IEthicsFramework ethics = EthicsFrameworkFactory.CreateDefault();
+        SkillExtractor skillExtractor = new SkillExtractor(chatModel, skillRegistry, ethics);
 
         // Build Meta-AI orchestrator with skill extraction
         MetaAIPlannerOrchestrator orchestrator = MetaAIBuilder.CreateDefault()
@@ -43,6 +48,7 @@ public static class SelfImprovingAgentExample
             .WithTools(tools)
             .WithMemoryStore(memory)
             .WithSkillRegistry(skillRegistry)
+            .WithEthicsFramework(ethics)
             .WithSkillExtractor(skillExtractor)
             .Build();
 
@@ -89,7 +95,8 @@ public static class SelfImprovingAgentExample
             EnableAutoParameterization: true,
             EnableSkillVersioning: true);
 
-        SkillExtractor skillExtractor = new SkillExtractor(chatModel, skillRegistry);
+        IEthicsFramework ethics = EthicsFrameworkFactory.CreateDefault();
+        SkillExtractor skillExtractor = new SkillExtractor(chatModel, skillRegistry, ethics);
 
         Console.WriteLine("Configuration:");
         Console.WriteLine($"  Min Quality: {extractionConfig.MinQualityThreshold:P0}");
@@ -98,13 +105,13 @@ public static class SelfImprovingAgentExample
         Console.WriteLine($"  Auto Parameterization: {extractionConfig.EnableAutoParameterization}");
 
         // Create mock execution for demonstration
-        Plan plan = new Plan(
+        AgentPlan plan = new AgentPlan(
             "Multi-step analysis task",
             new List<PlanStep>
             {
-                new PlanStep("analyze_input", new Dictionary<string, object> { ["data"] = "sample" }, "analyzed", 0.85),
-                new PlanStep("process_data", new Dictionary<string, object> { ["input"] = "analyzed" }, "processed", 0.80),
-                new PlanStep("generate_output", new Dictionary<string, object> { ["data"] = "processed" }, "output", 0.90),
+                new AgentPlanStep("analyze_input", new Dictionary<string, object> { ["data"] = "sample" }, "analyzed", 0.85),
+                new AgentPlanStep("process_data", new Dictionary<string, object> { ["input"] = "analyzed" }, "processed", 0.80),
+                new AgentPlanStep("generate_output", new Dictionary<string, object> { ["data"] = "processed" }, "output", 0.90),
             },
             new Dictionary<string, double> { ["overall"] = 0.85 },
             DateTime.UtcNow);
@@ -126,7 +133,7 @@ public static class SelfImprovingAgentExample
             RevisedPlan: null);
 
         // Extract skill with custom config
-        Result<Skill, string> result = await skillExtractor.ExtractSkillAsync(execution, verification, extractionConfig);
+        Result<AgentSkill, string> result = await skillExtractor.ExtractSkillAsync(execution, verification, extractionConfig);
 
         result.Match(
             skill =>
@@ -217,14 +224,14 @@ public static class SelfImprovingAgentExample
         try
         {
             // Plan
-            Result<Plan, string> planResult = await orchestrator.PlanAsync(goal);
+            Result<AgentPlan, string> planResult = await orchestrator.PlanAsync(goal);
             if (!planResult.IsSuccess)
             {
                 Console.WriteLine($"✗ Planning failed: {planResult.Error}");
                 return;
             }
 
-            Plan plan = planResult.Value;
+            AgentPlan plan = planResult.Value;
             Console.WriteLine($"✓ Plan created with {plan.Steps.Count} steps");
 
             // Execute
@@ -274,7 +281,7 @@ public static class SelfImprovingAgentExample
 
         Console.WriteLine($"Total skills learned: {skills.Count}\n");
 
-        foreach (Skill? skill in skills.Take(10))
+        foreach (AgentSkill? skill in skills.Take(10))
         {
             Console.WriteLine($"Skill: {skill.Name}");
             Console.WriteLine($"  Description: {skill.Description}");
@@ -313,9 +320,9 @@ public static class SelfImprovingAgentExample
     /// </summary>
     private static Experience CreateExperience(string goal, double quality)
     {
-        Plan plan = new Plan(
+        AgentPlan plan = new AgentPlan(
             goal,
-            new List<PlanStep> { new PlanStep("action", new(), "outcome", 0.8) },
+            new List<PlanStep> { new AgentPlanStep("action", new(), "outcome", 0.8) },
             new Dictionary<string, double>(),
             DateTime.UtcNow);
 

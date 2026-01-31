@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Application.Embodied;
 using Ouroboros.Core.Monads;
+using Ouroboros.Core.Ethics;
 using Ouroboros.Domain.Embodied;
 using Ouroboros.Domain.Reinforcement;
 
@@ -41,7 +42,8 @@ public static class EmbodiedSimulationExample
         }
 
         Console.WriteLine("\n2. Creating embodied agent...");
-        var agent = new EmbodiedAgent(environmentManager, NullLogger<EmbodiedAgent>.Instance);
+        var ethics = EthicsFrameworkFactory.CreateDefault();
+        var agent = new EmbodiedAgent(environmentManager, ethics, NullLogger<EmbodiedAgent>.Instance);
 
         // Define environment configuration
         var config = new EnvironmentConfig(

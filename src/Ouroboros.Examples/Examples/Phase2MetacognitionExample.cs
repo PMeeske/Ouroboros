@@ -6,6 +6,10 @@ namespace Ouroboros.Examples;
 
 using LangChain.Providers.Ollama;
 using Ouroboros.Agent.MetaAI;
+using Ouroboros.Core.Ethics;
+using AgentPlan = Ouroboros.Agent.MetaAI.Plan;
+using AgentPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using AgentSkill = Ouroboros.Agent.MetaAI.Skill;
 
 /// <summary>
 /// Example demonstrating Phase 2 metacognitive capabilities.
@@ -39,6 +43,7 @@ public static class Phase2MetacognitionExample
         CapabilityRegistry capabilityRegistry = new CapabilityRegistry(chatModel, tools);
         GoalHierarchy goalHierarchy = new GoalHierarchy(chatModel, safety);
         UncertaintyRouter router = new UncertaintyRouter(null!, 0.7);
+        IEthicsFramework ethics = EthicsFrameworkFactory.CreateDefault();
 
         MetaAIPlannerOrchestrator orchestrator = new MetaAIPlannerOrchestrator(
             chatModel,
@@ -46,7 +51,8 @@ public static class Phase2MetacognitionExample
             memory,
             skills,
             router,
-            safety);
+            safety,
+            ethics);
 
         SelfEvaluator evaluator = new SelfEvaluator(
             chatModel,
