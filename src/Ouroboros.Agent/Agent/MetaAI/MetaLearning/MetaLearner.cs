@@ -548,10 +548,11 @@ APPLICABLE_TO: [task types, comma-separated]";
         string sanitizedTaskName = System.Text.RegularExpressions.Regex.Replace(
             taskDescription.ToLowerInvariant(),
             @"[^a-z0-9]",
-            "_")[..Math.Min(20, taskDescription.Length)];
+            "_");
+        sanitizedTaskName = sanitizedTaskName[..Math.Min(20, sanitizedTaskName.Length)];
 
         Skill adaptedSkill = new Skill(
-            Name: $"adapted_{sanitizedTaskName}_{DateTime.UtcNow.Ticks}",
+            Name: $"adapted_{sanitizedTaskName}_{startTime.Ticks}",
             Description: taskDescription,
             Prerequisites: new List<string>(),
             Steps: steps.Any() ? steps : new List<PlanStep>

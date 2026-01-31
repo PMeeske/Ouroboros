@@ -223,7 +223,7 @@ ESTIMATED_PERFORMANCE: 0.85");
         // Arrange
         string taskDescription = "Test task";
         List<TaskExample> examples = Enumerable.Range(0, 10)
-            .Select(i => new TaskExample($"input{i}", $"output{i}", Importance: i / 10.0))
+            .Select(i => new TaskExample($"input{i}", $"output{i}", Importance: (i + 1) / 10.0))
             .ToList();
 
         this.mockLlm
