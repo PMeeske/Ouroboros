@@ -73,22 +73,8 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             // Parse plan from LLM response
             Plan plan = ParsePlan(planText, goal);
 
-            // Validate plan safety
-            foreach (PlanStep step in plan.Steps)
-            {
-                SafetyCheckResult safetyCheck = _safety.CheckSafety(
-                    step.Action,
-                    step.Parameters,
-                    PermissionLevel.UserDataWithConfirmation);
-
-                if (!safetyCheck.Safe)
-                {
-                    return Result<Plan, string>.Failure(
-                        $"Plan step '{step.Action}' failed safety check: {string.Join(", ", safetyCheck.Violations)}");
-                }
-            }
-
-            // Ethics evaluation - evaluate the entire plan
+            // Ethics evaluation - foundational gate that runs BEFORE safety checks
+            // This ensures ethical constraints are the first and primary consideration
             var planContext = new PlanContext
             {
                 Plan = new Core.Ethics.Plan
@@ -135,6 +121,21 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             {
                 return Result<Plan, string>.Failure(
                     $"Plan requires human approval: {ethicsResult.Value.Reasoning}");
+            }
+
+            // Safety checks - secondary validation after ethics clearance
+            foreach (PlanStep step in plan.Steps)
+            {
+                SafetyCheckResult safetyCheck = _safety.CheckSafety(
+                    step.Action,
+                    step.Parameters,
+                    PermissionLevel.UserDataWithConfirmation);
+
+                if (!safetyCheck.Safe)
+                {
+                    return Result<Plan, string>.Failure(
+                        $"Plan step '{step.Action}' failed safety check: {string.Join(", ", safetyCheck.Violations)}");
+                }
             }
 
             RecordMetric("planner", 1.0, true);

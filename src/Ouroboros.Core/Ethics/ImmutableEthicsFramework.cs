@@ -120,14 +120,14 @@ public sealed class ImmutableEthicsFramework : IEthicsFramework
             // Evaluate each step in the plan
             foreach (var step in planContext.Plan.Steps)
             {
+                step.Parameters.TryGetValue("target", out var targetValue);
+
                 var proposedAction = new ProposedAction
                 {
                     ActionType = step.Action,
                     Description = $"{step.Action}: {step.ExpectedOutcome}",
                     Parameters = step.Parameters,
-                    TargetEntity = step.Parameters.ContainsKey("target") 
-                        ? step.Parameters["target"]?.ToString() 
-                        : null,
+                    TargetEntity = targetValue?.ToString(),
                     PotentialEffects = new[] { step.ExpectedOutcome }
                 };
 
@@ -489,23 +489,15 @@ public sealed class ImmutableEthicsFramework : IEthicsFramework
                 });
             }
 
-            EthicalClearance clearance;
-
-            if (violations.Count > 0)
-            {
-                clearance = EthicalClearance.Denied(
+            var clearance = violations.Count > 0
+                ? EthicalClearance.Denied(
                     "Self-modification violates ethical principles",
                     violations,
-                    _corePrinciples);
-            }
-            else
-            {
-                // ALL self-modifications require human approval
-                clearance = EthicalClearance.RequiresApproval(
+                    _corePrinciples)
+                : EthicalClearance.RequiresApproval(
                     "Self-modification requires mandatory human approval",
                     concerns,
                     _corePrinciples);
-            }
 
             await LogEvaluationAsync(
                 "SelfModification",

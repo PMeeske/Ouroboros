@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using System.Text.RegularExpressions;
+
 namespace Ouroboros.Core.Ethics;
 
 /// <summary>
@@ -113,7 +115,11 @@ internal sealed class BasicEthicalReasoner : IEthicalReasoner
             return false;
 
         var lowerDescription = description.ToLowerInvariant();
-        return HarmfulKeywords.Any(keyword => lowerDescription.Contains(keyword));
+        
+        // Use word boundary matching to avoid false positives
+        // e.g., "harmonic" won't match "harm", "embark" won't match "bar"
+        return HarmfulKeywords.Any(keyword => 
+            Regex.IsMatch(lowerDescription, $@"\b{Regex.Escape(keyword)}\b", RegexOptions.IgnoreCase));
     }
 
     /// <inheritdoc/>
@@ -142,7 +148,8 @@ internal sealed class BasicEthicalReasoner : IEthicalReasoner
             return false;
 
         var lowerDescription = description.ToLowerInvariant();
-        return HighRiskKeywords.Any(keyword => lowerDescription.Contains(keyword));
+        return HighRiskKeywords.Any(keyword => 
+            Regex.IsMatch(lowerDescription, $@"\b{Regex.Escape(keyword)}\b", RegexOptions.IgnoreCase));
     }
 
     private static bool ContainsPrivacyRisks(string description)
@@ -151,7 +158,8 @@ internal sealed class BasicEthicalReasoner : IEthicalReasoner
             return false;
 
         var lowerDescription = description.ToLowerInvariant();
-        return PrivacyKeywords.Any(keyword => lowerDescription.Contains(keyword));
+        return PrivacyKeywords.Any(keyword => 
+            Regex.IsMatch(lowerDescription, $@"\b{Regex.Escape(keyword)}\b", RegexOptions.IgnoreCase));
     }
 
     private static bool ContainsDeceptionPatterns(string description)
@@ -161,7 +169,8 @@ internal sealed class BasicEthicalReasoner : IEthicalReasoner
 
         var lowerDescription = description.ToLowerInvariant();
         var deceptionKeywords = new[] { "deceive", "mislead", "trick", "fake", "impersonate", "pretend" };
-        return deceptionKeywords.Any(keyword => lowerDescription.Contains(keyword));
+        return deceptionKeywords.Any(keyword => 
+            Regex.IsMatch(lowerDescription, $@"\b{Regex.Escape(keyword)}\b", RegexOptions.IgnoreCase));
     }
 
     private static bool HasConsentParameter(IReadOnlyDictionary<string, object> parameters)
