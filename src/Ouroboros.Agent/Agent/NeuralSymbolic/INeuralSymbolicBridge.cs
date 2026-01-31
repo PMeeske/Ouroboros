@@ -62,7 +62,11 @@ public interface INeuralSymbolicBridge
     /// <param name="hypothesis">The hypothesis to check.</param>
     /// <param name="knowledgeBase">The symbolic knowledge base to check against.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Consistency report with conflicts and suggestions.</returns>
+    /// <returns>
+    /// Consistency report with conflicts and suggestions.
+    /// Note: LogicalConflict.Rule1 and Rule2 may be null when conflicts are detected 
+    /// through LLM analysis but specific conflicting rules cannot be identified.
+    /// </returns>
     Task<Result<ConsistencyReport, string>> CheckConsistencyAsync(
         MetaAI.Hypothesis hypothesis,
         IReadOnlyList<SymbolicRule> knowledgeBase,

@@ -9,6 +9,11 @@ namespace Ouroboros.Agent.NeuralSymbolic;
 /// <summary>
 /// Report of logical consistency checking.
 /// </summary>
+/// <remarks>
+/// LogicalConflict objects in the Conflicts list may have null Rule1 and Rule2 
+/// when conflicts are detected through LLM analysis but the specific conflicting 
+/// rules cannot be programmatically identified.
+/// </remarks>
 public sealed record ConsistencyReport(
     bool IsConsistent,
     List<LogicalConflict> Conflicts,
