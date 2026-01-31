@@ -10,6 +10,22 @@ using Ouroboros.Providers;
 namespace Ouroboros.Agent.TemporalReasoning;
 
 /// <summary>
+/// Configuration constants for temporal reasoning.
+/// </summary>
+internal static class TemporalReasoningConstants
+{
+    /// <summary>
+    /// Maximum number of events to consider when computing relations in timeline construction.
+    /// </summary>
+    public const int MaxRelationLookahead = 5;
+
+    /// <summary>
+    /// Maximum time window (in minutes) for considering causal relationships.
+    /// </summary>
+    public const double MaxCausalityWindowMinutes = 60.0;
+}
+
+/// <summary>
 /// Implementation of temporal reasoning engine.
 /// Enables reasoning about time, sequences, causality, and temporal relationships between events.
 /// </summary>
@@ -243,7 +259,7 @@ public sealed class TemporalReasoner : ITemporalReasoner
             var relations = new List<TemporalRelation>();
             for (int i = 0; i < sortedEvents.Count; i++)
             {
-                for (int j = i + 1; j < Math.Min(i + 5, sortedEvents.Count); j++)
+                for (int j = i + 1; j < Math.Min(i + TemporalReasoningConstants.MaxRelationLookahead, sortedEvents.Count); j++)
                 {
                     var relation = this.ComputeAllenRelation(sortedEvents[i], sortedEvents[j]);
                     relations.Add(new TemporalRelation(
@@ -404,10 +420,10 @@ public sealed class TemporalReasoner : ITemporalReasoner
             {
                 var timeDiff = (sortedEvents[j].StartTime - sortedEvents[i].StartTime).TotalMinutes;
 
-                // If events are within 60 minutes and not overlapping, consider potential causality
-                if (timeDiff > 0 && timeDiff <= 60)
+                // If events are within the causal window and not overlapping, consider potential causality
+                if (timeDiff > 0 && timeDiff <= TemporalReasoningConstants.MaxCausalityWindowMinutes)
                 {
-                    var strength = Math.Max(0.1, 1.0 - (timeDiff / 60.0));
+                    var strength = Math.Max(0.1, 1.0 - (timeDiff / TemporalReasoningConstants.MaxCausalityWindowMinutes));
                     causalRelations.Add(new CausalRelation(
                         sortedEvents[i],
                         sortedEvents[j],
@@ -634,7 +650,7 @@ REASONING: [explanation]
                     description,
                     predictedTime,
                     confidence,
-                    history.ToList(),
+                    history,
                     reasoning));
 
                 // Reset for next prediction
@@ -655,7 +671,7 @@ REASONING: [explanation]
                 description,
                 predictedTime,
                 confidence,
-                history.ToList(),
+                history,
                 reasoning));
         }
 
