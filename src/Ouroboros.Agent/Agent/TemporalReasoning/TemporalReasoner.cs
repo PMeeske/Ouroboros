@@ -90,13 +90,13 @@ public sealed class TemporalReasoner : ITemporalReasoner
     /// <summary>
     /// Queries events matching temporal constraints.
     /// </summary>
-    public Task<Result<List<TemporalEvent>, string>> QueryEventsAsync(
+    public Task<Result<IReadOnlyList<TemporalEvent>, string>> QueryEventsAsync(
         TemporalQuery query,
         CancellationToken ct = default)
     {
         if (query == null)
         {
-            return Task.FromResult(Result<List<TemporalEvent>, string>.Failure("Query cannot be null"));
+            return Task.FromResult(Result<IReadOnlyList<TemporalEvent>, string>.Failure("Query cannot be null"));
         }
 
         try
@@ -136,43 +136,43 @@ public sealed class TemporalReasoner : ITemporalReasoner
             }
 
             // Filter by temporal relation to another event
-            if (query.RelationTo.HasValue && query.RelatedEventId.HasValue)
+            if (query.RelationTo.HasValue &&
+                query.RelatedEventId.HasValue &&
+                this.eventStore.TryGetValue(query.RelatedEventId.Value, out var relatedEvent))
             {
-                if (this.eventStore.TryGetValue(query.RelatedEventId.Value, out var relatedEvent))
+                events = events.Where(e =>
                 {
-                    events = events.Where(e =>
-                    {
-                        var relation = this.ComputeAllenRelation(e, relatedEvent);
-                        return relation == query.RelationTo.Value;
-                    });
-                }
+                    var relation = this.ComputeAllenRelation(e, relatedEvent);
+                    return relation == query.RelationTo.Value;
+                });
             }
 
-            var results = events.Take(query.MaxResults).ToList();
-            return Task.FromResult(Result<List<TemporalEvent>, string>.Success(results));
+            IReadOnlyList<TemporalEvent> results = events.Take(query.MaxResults).ToList();
+            return Task.FromResult(Result<IReadOnlyList<TemporalEvent>, string>.Success(results));
         }
         catch (Exception ex)
         {
-            return Task.FromResult(Result<List<TemporalEvent>, string>.Failure($"Query failed: {ex.Message}"));
+            return Task.FromResult(Result<IReadOnlyList<TemporalEvent>, string>.Failure($"Query failed: {ex.Message}"));
         }
     }
 
     /// <summary>
     /// Infers causal relationships from temporal patterns using LLM.
     /// </summary>
-    public async Task<Result<List<CausalRelation>, string>> InferCausalityAsync(
+    public async Task<Result<IReadOnlyList<CausalRelation>, string>> InferCausalityAsync(
         IReadOnlyList<TemporalEvent> events,
         CancellationToken ct = default)
     {
         if (events == null || events.Count == 0)
         {
-            return Result<List<CausalRelation>, string>.Failure("Events list cannot be null or empty");
+            return Result<IReadOnlyList<CausalRelation>, string>.Failure("Events list cannot be null or empty");
         }
 
         if (this.llm == null)
         {
             // Without LLM, use simple temporal correlation
-            return Result<List<CausalRelation>, string>.Success(this.InferSimpleCausality(events));
+            IReadOnlyList<CausalRelation> simpleCausality = this.InferSimpleCausality(events);
+            return Result<IReadOnlyList<CausalRelation>, string>.Success(simpleCausality);
         }
 
         try
@@ -182,32 +182,32 @@ public sealed class TemporalReasoner : ITemporalReasoner
             var response = await this.llm.GenerateTextAsync(prompt, ct);
 
             // Parse causal relations from response
-            var causalRelations = this.ParseCausalRelations(response, events);
+            IReadOnlyList<CausalRelation> causalRelations = this.ParseCausalRelations(response, events);
 
-            return Result<List<CausalRelation>, string>.Success(causalRelations);
+            return Result<IReadOnlyList<CausalRelation>, string>.Success(causalRelations);
         }
         catch (Exception ex)
         {
-            return Result<List<CausalRelation>, string>.Failure($"Causal inference failed: {ex.Message}");
+            return Result<IReadOnlyList<CausalRelation>, string>.Failure($"Causal inference failed: {ex.Message}");
         }
     }
 
     /// <summary>
     /// Predicts future events based on temporal patterns.
     /// </summary>
-    public async Task<Result<List<PredictedEvent>, string>> PredictFutureEventsAsync(
+    public async Task<Result<IReadOnlyList<PredictedEvent>, string>> PredictFutureEventsAsync(
         IReadOnlyList<TemporalEvent> history,
         TimeSpan horizon,
         CancellationToken ct = default)
     {
         if (history == null || history.Count == 0)
         {
-            return Result<List<PredictedEvent>, string>.Failure("History cannot be null or empty");
+            return Result<IReadOnlyList<PredictedEvent>, string>.Failure("History cannot be null or empty");
         }
 
         if (horizon <= TimeSpan.Zero)
         {
-            return Result<List<PredictedEvent>, string>.Failure("Horizon must be positive");
+            return Result<IReadOnlyList<PredictedEvent>, string>.Failure("Horizon must be positive");
         }
 
         try
@@ -218,17 +218,19 @@ public sealed class TemporalReasoner : ITemporalReasoner
             }
 
             // Fallback to pattern-based prediction
-            var predictions = this.PredictWithPatterns(history, horizon);
-            return Result<List<PredictedEvent>, string>.Success(predictions);
+            IReadOnlyList<PredictedEvent> predictions = this.PredictWithPatterns(history, horizon);
+            return Result<IReadOnlyList<PredictedEvent>, string>.Success(predictions);
         }
         catch (Exception ex)
         {
-            return Result<List<PredictedEvent>, string>.Failure($"Prediction failed: {ex.Message}");
+            return Result<IReadOnlyList<PredictedEvent>, string>.Failure($"Prediction failed: {ex.Message}");
         }
     }
 
     /// <summary>
     /// Constructs a timeline from a set of events.
+    /// NOTE: This method maintains state - events are stored in the reasoner's internal event store for future queries.
+    /// The same event can be added multiple times if ConstructTimeline is called multiple times.
     /// </summary>
     public Result<Timeline, string> ConstructTimeline(IReadOnlyList<TemporalEvent> events)
     {
@@ -300,7 +302,7 @@ public sealed class TemporalReasoner : ITemporalReasoner
     /// Checks if a temporal constraint is satisfiable.
     /// </summary>
     public Task<Result<bool, string>> CheckConstraintSatisfiabilityAsync(
-        List<TemporalConstraint> constraints,
+        IReadOnlyList<TemporalConstraint> constraints,
         CancellationToken ct = default)
     {
         if (constraints == null)
@@ -348,10 +350,6 @@ public sealed class TemporalReasoner : ITemporalReasoner
         var end1 = event1.EndTime ?? event1.StartTime;
         var start2 = event2.StartTime;
         var end2 = event2.EndTime ?? event2.StartTime;
-
-        // Check for point events (no duration)
-        var isPoint1 = start1 == end1;
-        var isPoint2 = start2 == end2;
 
         // Equals
         if (start1 == start2 && end1 == end2)
@@ -408,7 +406,7 @@ public sealed class TemporalReasoner : ITemporalReasoner
         return TemporalRelationType.Before;
     }
 
-    private List<CausalRelation> InferSimpleCausality(IReadOnlyList<TemporalEvent> events)
+    private IReadOnlyList<CausalRelation> InferSimpleCausality(IReadOnlyList<TemporalEvent> events)
     {
         var causalRelations = new List<CausalRelation>();
         var sortedEvents = events.OrderBy(e => e.StartTime).ToList();
@@ -429,7 +427,7 @@ public sealed class TemporalReasoner : ITemporalReasoner
                         sortedEvents[j],
                         strength,
                         "Temporal proximity",
-                        new List<string>()));
+                        Array.Empty<string>()));
                 }
             }
         }
@@ -468,7 +466,7 @@ CONFOUNDS: [comma-separated factors or 'none']
 Provide multiple causal relationships if they exist.";
     }
 
-    private List<CausalRelation> ParseCausalRelations(string response, IReadOnlyList<TemporalEvent> events)
+    private IReadOnlyList<CausalRelation> ParseCausalRelations(string response, IReadOnlyList<TemporalEvent> events)
     {
         var relations = new List<CausalRelation>();
         var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -477,7 +475,7 @@ Provide multiple causal relationships if they exist.";
         int? effectIdx = null;
         double strength = 0.5;
         string mechanism = "Unknown";
-        var confounds = new List<string>();
+        var confoundsBuilder = new List<string>();
 
         foreach (var line in lines)
         {
@@ -516,7 +514,7 @@ Provide multiple causal relationships if they exist.";
                 var confoundStr = trimmed.Substring("CONFOUNDS:".Length).Trim();
                 if (!confoundStr.Equals("none", StringComparison.OrdinalIgnoreCase))
                 {
-                    confounds = confoundStr.Split(',').Select(s => s.Trim()).ToList();
+                    confoundsBuilder = confoundStr.Split(',').Select(s => s.Trim()).ToList();
                 }
             }
             else if (trimmed == "---" && causeIdx.HasValue && effectIdx.HasValue)
@@ -527,14 +525,14 @@ Provide multiple causal relationships if they exist.";
                     events[effectIdx.Value],
                     strength,
                     mechanism,
-                    confounds));
+                    confoundsBuilder.ToArray()));
 
                 // Reset for next relation
                 causeIdx = null;
                 effectIdx = null;
                 strength = 0.5;
                 mechanism = "Unknown";
-                confounds = new List<string>();
+                confoundsBuilder = new List<string>();
             }
         }
 
@@ -546,21 +544,21 @@ Provide multiple causal relationships if they exist.";
                 events[effectIdx.Value],
                 strength,
                 mechanism,
-                confounds));
+                confoundsBuilder.ToArray()));
         }
 
         return relations;
     }
 
-    private async Task<Result<List<PredictedEvent>, string>> PredictWithLLMAsync(
+    private async Task<Result<IReadOnlyList<PredictedEvent>, string>> PredictWithLLMAsync(
         IReadOnlyList<TemporalEvent> history,
         TimeSpan horizon,
         CancellationToken ct)
     {
         var prompt = this.BuildPredictionPrompt(history, horizon);
         var response = await this.llm!.GenerateTextAsync(prompt, ct);
-        var predictions = this.ParsePredictions(response, history);
-        return Result<List<PredictedEvent>, string>.Success(predictions);
+        IReadOnlyList<PredictedEvent> predictions = this.ParsePredictions(response, history);
+        return Result<IReadOnlyList<PredictedEvent>, string>.Success(predictions);
     }
 
     private string BuildPredictionPrompt(IReadOnlyList<TemporalEvent> history, TimeSpan horizon)
@@ -596,7 +594,7 @@ REASONING: [explanation]
 ---";
     }
 
-    private List<PredictedEvent> ParsePredictions(string response, IReadOnlyList<TemporalEvent> history)
+    private IReadOnlyList<PredictedEvent> ParsePredictions(string response, IReadOnlyList<TemporalEvent> history)
     {
         var predictions = new List<PredictedEvent>();
         var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -678,35 +676,35 @@ REASONING: [explanation]
         return predictions;
     }
 
-    private List<PredictedEvent> PredictWithPatterns(IReadOnlyList<TemporalEvent> history, TimeSpan horizon)
+    private IReadOnlyList<PredictedEvent> PredictWithPatterns(IReadOnlyList<TemporalEvent> history, TimeSpan horizon)
     {
         var predictions = new List<PredictedEvent>();
 
         // Group events by type to find patterns
-        var eventsByType = history.GroupBy(e => e.EventType).ToList();
+        var groupedEventsByType = history.GroupBy(e => e.EventType).ToList();
 
         var latestTime = history.Max(e => e.EndTime ?? e.StartTime);
         var targetTime = latestTime + horizon;
 
-        foreach (var group in eventsByType)
+        foreach (var group in groupedEventsByType)
         {
-            var events = group.OrderBy(e => e.StartTime).ToList();
-            if (events.Count < 2)
+            var groupEvents = group.OrderBy(e => e.StartTime).ToList();
+            if (groupEvents.Count < 2)
             {
                 continue;
             }
 
             // Calculate average time between events of this type
             var intervals = new List<TimeSpan>();
-            for (int i = 1; i < events.Count; i++)
+            for (int i = 1; i < groupEvents.Count; i++)
             {
-                intervals.Add(events[i].StartTime - events[i - 1].StartTime);
+                intervals.Add(groupEvents[i].StartTime - groupEvents[i - 1].StartTime);
             }
 
             var avgInterval = TimeSpan.FromTicks((long)intervals.Average(t => t.Ticks));
 
             // Predict next occurrence
-            var lastEvent = events.Last();
+            var lastEvent = groupEvents.Last();
             var predictedTime = (lastEvent.EndTime ?? lastEvent.StartTime) + avgInterval;
 
             if (predictedTime <= targetTime)
@@ -716,8 +714,8 @@ REASONING: [explanation]
                     $"Predicted {group.Key} based on historical pattern",
                     predictedTime,
                     0.6,
-                    events,
-                    $"Based on average interval of {avgInterval.TotalHours:F1} hours between {events.Count} historical events"));
+                    groupEvents,
+                    $"Based on average interval of {avgInterval.TotalHours:F1} hours between {groupEvents.Count} historical events"));
             }
         }
 
@@ -730,22 +728,15 @@ REASONING: [explanation]
         // A more complete implementation would use Allen's composition table
         // For now, we check for obvious contradictions
 
-        var eventIds = constraints.Keys
-            .SelectMany(k => new[] { k.Item1, k.Item2 })
-            .Distinct()
-            .ToList();
-
         // Check for direct contradictions
         foreach (var key in constraints.Keys)
         {
             var reverseKey = (key.Item2, key.Item1);
-            if (constraints.TryGetValue(reverseKey, out var reverseRelation))
+            if (constraints.TryGetValue(reverseKey, out var reverseRelation) &&
+                !this.AreInverseRelations(constraints[key], reverseRelation))
             {
-                // Check if relations are consistent (inverse of each other)
-                if (!this.AreInverseRelations(constraints[key], reverseRelation))
-                {
-                    return false;
-                }
+                // Relations are inconsistent (not proper inverses)
+                return false;
             }
         }
 

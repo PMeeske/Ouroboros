@@ -38,8 +38,8 @@ public class TemporalReasonerTests
             description,
             start,
             end,
-            properties ?? new Dictionary<string, object>(),
-            participants ?? new List<string>());
+            (properties ?? new Dictionary<string, object>()).AsReadOnly(),
+            (participants ?? new List<string>()).AsReadOnly());
     }
 
     #endregion

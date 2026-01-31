@@ -29,8 +29,8 @@ public interface ITemporalReasoner
     /// </summary>
     /// <param name="query">Query parameters for filtering events.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>List of matching temporal events or an error message.</returns>
-    Task<Result<List<TemporalEvent>, string>> QueryEventsAsync(
+    /// <returns>Collection of matching temporal events or an error message.</returns>
+    Task<Result<IReadOnlyList<TemporalEvent>, string>> QueryEventsAsync(
         TemporalQuery query,
         CancellationToken ct = default);
 
@@ -39,8 +39,8 @@ public interface ITemporalReasoner
     /// </summary>
     /// <param name="events">Collection of temporal events to analyze.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>List of inferred causal relations or an error message.</returns>
-    Task<Result<List<CausalRelation>, string>> InferCausalityAsync(
+    /// <returns>Collection of inferred causal relations or an error message.</returns>
+    Task<Result<IReadOnlyList<CausalRelation>, string>> InferCausalityAsync(
         IReadOnlyList<TemporalEvent> events,
         CancellationToken ct = default);
 
@@ -50,8 +50,8 @@ public interface ITemporalReasoner
     /// <param name="history">Historical temporal events to base predictions on.</param>
     /// <param name="horizon">Time horizon for predictions.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>List of predicted events or an error message.</returns>
-    Task<Result<List<PredictedEvent>, string>> PredictFutureEventsAsync(
+    /// <returns>Collection of predicted events or an error message.</returns>
+    Task<Result<IReadOnlyList<PredictedEvent>, string>> PredictFutureEventsAsync(
         IReadOnlyList<TemporalEvent> history,
         TimeSpan horizon,
         CancellationToken ct = default);
@@ -66,10 +66,10 @@ public interface ITemporalReasoner
     /// <summary>
     /// Checks if a temporal constraint is satisfiable.
     /// </summary>
-    /// <param name="constraints">List of temporal constraints to validate.</param>
+    /// <param name="constraints">Collection of temporal constraints to validate.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>True if constraints are satisfiable, false otherwise, or an error message.</returns>
     Task<Result<bool, string>> CheckConstraintSatisfiabilityAsync(
-        List<TemporalConstraint> constraints,
+        IReadOnlyList<TemporalConstraint> constraints,
         CancellationToken ct = default);
 }
