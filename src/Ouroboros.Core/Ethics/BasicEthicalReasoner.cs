@@ -10,6 +10,29 @@ namespace Ouroboros.Core.Ethics;
 /// Basic implementation of ethical reasoning logic.
 /// Uses keyword-based pattern matching and heuristics for ethical evaluation.
 /// </summary>
+/// <remarks>
+/// <para><b>IMPORTANT LIMITATIONS:</b> This is a simplified heuristic approach using keyword matching.
+/// It provides baseline ethical oversight but has known limitations:</para>
+/// 
+/// <list type="bullet">
+/// <item>Can be bypassed with synonyms or rephrasing that avoids trigger keywords</item>
+/// <item>Lacks semantic understanding - cannot detect nuanced ethical violations</item>
+/// <item>No intent analysis beyond surface-level string matching</item>
+/// <item>Context-unaware - doesn't consider full action semantics</item>
+/// </list>
+/// 
+/// <para><b>PERFORMANCE CHARACTERISTICS:</b> Every action, plan, goal, skill, and research activity
+/// incurs keyword matching overhead across multiple arrays. For high-frequency operations, consider:</para>
+/// 
+/// <list type="bullet">
+/// <item>Implementing caching for identical action descriptions</item>
+/// <item>Profiling performance impact in realistic scenarios</item>
+/// <item>Using development/test environment configurations (while keeping mandatory for production)</item>
+/// </list>
+/// 
+/// <para><b>FUTURE ENHANCEMENTS:</b> Consider upgrading to LLM-based semantic analysis for more
+/// robust evaluation, intent analysis, and context-aware ethical reasoning.</para>
+/// </remarks>
 internal sealed class BasicEthicalReasoner : IEthicalReasoner
 {
     private static readonly string[] HarmfulKeywords = new[]

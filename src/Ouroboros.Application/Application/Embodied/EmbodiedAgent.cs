@@ -159,6 +159,10 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
 
             if (ethicsResult.Value.Level == EthicalClearanceLevel.RequiresHumanApproval)
             {
+                // TODO: Implement actual human-in-the-loop approval workflow
+                // Currently, actions requiring approval are treated as denied (blocked).
+                // Future enhancement: Add mechanism to request/receive human approval
+                // and resume execution upon authorization.
                 this.logger.LogInformation("Action requires human approval: {Reasoning}", ethicsResult.Value.Reasoning);
                 return Result<ActionResult, string>.Failure($"Action requires human approval: {ethicsResult.Value.Reasoning}");
             }

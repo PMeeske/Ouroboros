@@ -119,6 +119,8 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
 
             if (ethicsResult.Value.Level == EthicalClearanceLevel.RequiresHumanApproval)
             {
+                // TODO: Implement human approval workflow for plans
+                // Currently blocked until human review mechanism is implemented
                 return Result<Plan, string>.Failure(
                     $"Plan requires human approval: {ethicsResult.Value.Reasoning}");
             }
