@@ -545,8 +545,13 @@ APPLICABLE_TO: [task types, comma-separated]";
         }
 
         // Create skill from extracted information
+        string sanitizedTaskName = System.Text.RegularExpressions.Regex.Replace(
+            taskDescription.ToLowerInvariant(),
+            @"[^a-z0-9]",
+            "_")[..Math.Min(20, taskDescription.Length)];
+
         Skill adaptedSkill = new Skill(
-            Name: $"adapted_{Guid.NewGuid().ToString().Substring(0, 8)}",
+            Name: $"adapted_{sanitizedTaskName}_{DateTime.UtcNow.Ticks}",
             Description: taskDescription,
             Prerequisites: new List<string>(),
             Steps: steps.Any() ? steps : new List<PlanStep>
@@ -599,7 +604,7 @@ APPLICABLE_TO: [task types, comma-separated]";
         return trend;
     }
 
-    private async Task<List<string>> IdentifyBottlenecksAsync(
+    private Task<List<string>> IdentifyBottlenecksAsync(
         List<LearningEpisode> episodes,
         CancellationToken ct)
     {
@@ -634,11 +639,10 @@ APPLICABLE_TO: [task types, comma-separated]";
             }
         }
 
-        await Task.CompletedTask;
-        return bottlenecks;
+        return Task.FromResult(bottlenecks);
     }
 
-    private async Task<List<string>> GenerateRecommendationsAsync(
+    private Task<List<string>> GenerateRecommendationsAsync(
         List<LearningEpisode> episodes,
         double successRate,
         double learningSpeedTrend,
@@ -667,8 +671,7 @@ APPLICABLE_TO: [task types, comma-separated]";
             recommendations.Add("Consider providing more examples for better learning");
         }
 
-        await Task.CompletedTask;
-        return recommendations;
+        return Task.FromResult(recommendations);
     }
 
     private List<MetaKnowledge> ParseMetaKnowledgeResponse(

@@ -525,7 +525,7 @@ APPLICABLE_TO: classification");
     #region Recording Tests
 
     [Fact]
-    public void RecordLearningEpisode_WithValidEpisode_RecordsSuccessfully()
+    public async Task RecordLearningEpisode_WithValidEpisode_RecordsSuccessfully()
     {
         // Arrange
         LearningEpisode episode = CreateEpisode("test", true, 10, 0.9);
@@ -535,11 +535,10 @@ APPLICABLE_TO: classification");
 
         // Assert - Episode should be available for future queries
         // We can't directly access episodes, but we can test through efficiency evaluation
-        Task<Result<LearningEfficiencyReport, string>> task = this.metaLearner.EvaluateLearningEfficiencyAsync(
+        Result<LearningEfficiencyReport, string> result = await this.metaLearner.EvaluateLearningEfficiencyAsync(
             TimeSpan.FromDays(30),
             CancellationToken.None);
-        task.Wait();
-        task.Result.IsSuccess.Should().BeTrue();
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
