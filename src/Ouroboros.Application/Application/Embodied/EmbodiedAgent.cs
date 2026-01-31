@@ -376,20 +376,20 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
     }
 
     /// <summary>
-    /// Samples a random batch from experience buffer.
+    /// Samples a random batch from experience buffer with unique samples.
     /// </summary>
     private List<EmbodiedTransition> SampleBatch(int batchSize)
     {
-        var batch = new List<EmbodiedTransition>();
-
-        // Simple random sampling (can be improved with prioritized experience replay)
-        for (int i = 0; i < batchSize && i < this.experienceBuffer.Count; i++)
-        {
-            var index = this.random.Next(this.experienceBuffer.Count);
-            batch.Add(this.experienceBuffer[index]);
-        }
-
-        return batch;
+        // Ensure we don't sample more than available
+        var actualBatchSize = Math.Min(batchSize, this.experienceBuffer.Count);
+        
+        // Use shuffling to get unique samples
+        var shuffledIndices = Enumerable.Range(0, this.experienceBuffer.Count)
+            .OrderBy(_ => this.random.Next())
+            .Take(actualBatchSize)
+            .ToList();
+        
+        return shuffledIndices.Select(i => this.experienceBuffer[i]).ToList();
     }
 
     /// <summary>

@@ -99,8 +99,8 @@ public interface IUnityMLAgentsClient
 public sealed class UnityMLAgentsClient : IUnityMLAgentsClient, IDisposable
 {
     private readonly ILogger<UnityMLAgentsClient> logger;
-    private string? serverAddress;
-    private int port;
+    private string? serverAddress; // Mutable to support reconnecting to different servers
+    private int port; // Mutable to support reconnecting to different ports
     private bool isConnected;
     private bool disposed;
     private UnityEnvironmentInfo? environmentInfo;

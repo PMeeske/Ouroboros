@@ -104,6 +104,7 @@ public sealed class RLAgent : IRLAgent
     /// <param name="stateSpaceSize">Size of state space</param>
     /// <param name="actionSpaceSize">Size of action space</param>
     /// <param name="logger">Logger for diagnostic output</param>
+    /// <param name="random">Random number generator (optional, uses Random.Shared if null)</param>
     /// <param name="epsilon">Initial exploration rate</param>
     /// <param name="learningRate">Learning rate for updates</param>
     /// <param name="gamma">Discount factor for future rewards</param>
@@ -111,6 +112,7 @@ public sealed class RLAgent : IRLAgent
         int stateSpaceSize,
         int actionSpaceSize,
         ILogger<RLAgent> logger,
+        Random? random = null,
         double epsilon = 0.1,
         double learningRate = 0.001,
         double gamma = 0.99)
@@ -128,7 +130,7 @@ public sealed class RLAgent : IRLAgent
         this.stateSpaceSize = stateSpaceSize;
         this.actionSpaceSize = actionSpaceSize;
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        this.random = new Random();
+        this.random = random ?? Random.Shared; // Use Random.Shared for thread-safe shared instance
         this.epsilon = epsilon;
         this.learningRate = learningRate;
         this.gamma = gamma;

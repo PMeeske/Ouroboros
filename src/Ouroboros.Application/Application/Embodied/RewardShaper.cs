@@ -49,6 +49,7 @@ public sealed class RewardShaper : IRewardShaper
     private readonly HashSet<string> visitedStates;
     private readonly double distanceWeight;
     private readonly double curiosityWeight;
+    private readonly int maxVisitedStates; // Maximum capacity to prevent unbounded growth
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RewardShaper"/> class.
@@ -56,15 +57,18 @@ public sealed class RewardShaper : IRewardShaper
     /// <param name="logger">Logger for diagnostic output</param>
     /// <param name="distanceWeight">Weight for distance-based reward shaping</param>
     /// <param name="curiosityWeight">Weight for curiosity bonus</param>
+    /// <param name="maxVisitedStates">Maximum number of visited states to track (default: 10000)</param>
     public RewardShaper(
         ILogger<RewardShaper> logger,
         double distanceWeight = 0.1,
-        double curiosityWeight = 0.05)
+        double curiosityWeight = 0.05,
+        int maxVisitedStates = 10000)
     {
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         this.visitedStates = new HashSet<string>();
         this.distanceWeight = distanceWeight;
         this.curiosityWeight = curiosityWeight;
+        this.maxVisitedStates = maxVisitedStates;
     }
 
     /// <inheritdoc/>
@@ -133,6 +137,19 @@ public sealed class RewardShaper : IRewardShaper
             // Check if state is novel
             if (!this.visitedStates.Contains(stateKey))
             {
+                // Implement capacity limit with simple eviction if needed
+                if (this.visitedStates.Count >= this.maxVisitedStates)
+                {
+                    // Clear oldest states (simple approach - clear half when capacity reached)
+                    var toRemove = this.visitedStates.Take(this.maxVisitedStates / 2).ToList();
+                    foreach (var key in toRemove)
+                    {
+                        this.visitedStates.Remove(key);
+                    }
+
+                    this.logger.LogDebug("Visited states cache cleared: removed {Count} oldest entries", toRemove.Count);
+                }
+
                 this.visitedStates.Add(stateKey);
                 var curiosityBonus = this.curiosityWeight;
 
