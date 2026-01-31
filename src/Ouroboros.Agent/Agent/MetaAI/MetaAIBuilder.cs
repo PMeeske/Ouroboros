@@ -6,6 +6,8 @@
 
 namespace Ouroboros.Agent.MetaAI;
 
+using Ouroboros.Agent.WorldModel;
+
 /// <summary>
 /// Builder for configuring and creating Meta-AI v2 orchestrator instances.
 /// Provides a fluent API following the builder pattern.
@@ -21,6 +23,7 @@ public sealed class MetaAIBuilder
     private ISkillExtractor? _skillExtractor;
     private IEmbeddingModel? _embedding;
     private TrackedVectorStore? _vectorStore;
+    private IWorldModel? _worldModel;
     private double _confidenceThreshold = 0.7;
     private PermissionLevel _defaultPermissionLevel = PermissionLevel.Isolated;
 
@@ -120,6 +123,17 @@ public sealed class MetaAIBuilder
     public MetaAIBuilder WithDefaultPermissionLevel(PermissionLevel level)
     {
         _defaultPermissionLevel = level;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the world model for embodied planning and simulation.
+    /// </summary>
+    /// <param name="worldModel">World model instance</param>
+    /// <returns>Builder instance for chaining</returns>
+    public MetaAIBuilder WithWorldModel(IWorldModel worldModel)
+    {
+        _worldModel = worldModel;
         return this;
     }
 

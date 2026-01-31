@@ -3,6 +3,7 @@
 // </copyright>
 
 using Microsoft.Extensions.Logging;
+using Ouroboros.Agent.WorldModel;
 using Ouroboros.Core.Monads;
 using Ouroboros.Domain.Embodied;
 using Ouroboros.Domain.Reinforcement;
@@ -17,6 +18,7 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
 {
     private readonly IEnvironmentManager environmentManager;
     private readonly ILogger<EmbodiedAgent> logger;
+    private readonly IWorldModel? worldModel;
     private EnvironmentHandle? currentEnvironment;
     private SensorState? lastSensorState;
     private readonly List<EmbodiedTransition> experienceBuffer;
@@ -26,12 +28,15 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
     /// </summary>
     /// <param name="environmentManager">Environment manager for lifecycle operations</param>
     /// <param name="logger">Logger for diagnostic output</param>
+    /// <param name="worldModel">Optional world model for model-based planning</param>
     public EmbodiedAgent(
         IEnvironmentManager environmentManager,
-        ILogger<EmbodiedAgent> logger)
+        ILogger<EmbodiedAgent> logger,
+        IWorldModel? worldModel = null)
     {
         this.environmentManager = environmentManager ?? throw new ArgumentNullException(nameof(environmentManager));
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        this.worldModel = worldModel;
         this.experienceBuffer = new List<EmbodiedTransition>();
     }
 
@@ -139,13 +144,27 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
             // Add transitions to experience buffer
             this.experienceBuffer.AddRange(transitions);
 
-            // In a real implementation, this would:
+            // Update world model with new experience
+            if (this.worldModel != null)
+            {
+                var updateResult = await this.worldModel.UpdateFromExperienceAsync(transitions, ct);
+                if (updateResult.IsFailure)
+                {
+                    this.logger.LogWarning("World model update failed: {Error}", updateResult.Error);
+                }
+                else
+                {
+                    this.logger.LogDebug("World model updated successfully");
+                }
+            }
+
+            // In a real implementation, this would also:
             // 1. Sample batches from the experience buffer
             // 2. Compute policy gradients or Q-value updates
             // 3. Update neural network weights
             // 4. Log learning metrics (loss, reward, etc.)
 
-            await Task.CompletedTask; // Placeholder for async learning operation
+            await Task.CompletedTask; // Placeholder for async policy learning operation
 
             this.logger.LogInformation("Learning completed successfully");
             return Result<Unit, string>.Success(Unit.Value);
@@ -167,24 +186,65 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
         {
             this.logger.LogInformation("Planning to achieve goal: {Goal}", goal);
 
-            // In a real implementation, this would:
-            // 1. Use a world model to simulate future states
-            // 2. Search for action sequences that achieve the goal
-            // 3. Evaluate expected rewards
-            // 4. Return the best plan
+            // Use world model for planning if available
+            if (this.worldModel != null)
+            {
+                var planResult = await this.worldModel.PlanWithModelAsync(currentState, goal, horizon: 10, ct);
 
-            // Placeholder plan with no-op action
-            var plan = new Plan(
+                if (planResult.IsSuccess && planResult.Value.Count > 0)
+                {
+                    // Simulate trajectory to get expected states
+                    var trajectoryResult = await this.worldModel.SimulateTrajectoryAsync(
+                        currentState,
+                        planResult.Value,
+                        ct);
+
+                    var expectedStates = trajectoryResult.IsSuccess
+                        ? trajectoryResult.Value.Select(p => p.State).ToList()
+                        : new List<SensorState> { currentState };
+
+                    var estimatedReward = trajectoryResult.IsSuccess
+                        ? trajectoryResult.Value.Sum(p => p.Reward)
+                        : 0.0;
+
+                    var confidence = trajectoryResult.IsSuccess
+                        ? trajectoryResult.Value.Average(p => p.Confidence)
+                        : 0.5;
+
+                    var plan = new Plan(
+                        Goal: goal,
+                        Actions: planResult.Value,
+                        ExpectedStates: expectedStates,
+                        Confidence: confidence,
+                        EstimatedReward: estimatedReward);
+
+                    this.logger.LogInformation(
+                        "Model-based planning completed: {ActionCount} actions, confidence {Confidence:F2}, reward {Reward:F2}",
+                        plan.Actions.Count,
+                        plan.Confidence,
+                        plan.EstimatedReward);
+
+                    return Result<Plan, string>.Success(plan);
+                }
+
+                this.logger.LogWarning("World model planning failed: {Error}", planResult.Error);
+            }
+
+            // Fallback: use heuristic planning without world model
+            this.logger.LogInformation("Using fallback heuristic planning (no world model available)");
+
+            var fallbackPlan = new Plan(
                 Goal: goal,
                 Actions: new[] { EmbodiedAction.NoOp() },
                 ExpectedStates: new[] { currentState },
                 Confidence: 0.5,
                 EstimatedReward: 0.0);
 
-            await Task.CompletedTask; // Placeholder for async planning operation
-
-            this.logger.LogInformation("Planning completed with {ActionCount} actions", plan.Actions.Count);
-            return Result<Plan, string>.Success(plan);
+            return Result<Plan, string>.Success(fallbackPlan);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
