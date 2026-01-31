@@ -527,13 +527,25 @@ MISSING: <missing prerequisites, if any>";
         if (conflictsMatch.Success)
         {
             var conflictText = conflictsMatch.Groups[1].Value.Trim();
-            if (!conflictText.Contains("None", StringComparison.OrdinalIgnoreCase))
+            if (!conflictText.Contains("None", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(conflictText))
             {
+                // Create a conflict with a descriptive message about the conflict
+                // In a real implementation, the LLM response would ideally specify which rules conflict
+                // For now, we create a general conflict with the description from the LLM
+                var unknownRule = new SymbolicRule(
+                    "ConflictingRule", 
+                    "(conflict-detected)", 
+                    "A rule in the knowledge base conflicts with the hypothesis", 
+                    new List<string>(), 
+                    new List<string>(), 
+                    1.0, 
+                    RuleSource.UserProvided);
+                    
                 conflicts.Add(new LogicalConflict(
                     conflictText,
-                    knowledgeBase.FirstOrDefault() ?? new SymbolicRule("Unknown", "", "", new(), new(), 0, RuleSource.UserProvided),
-                    knowledgeBase.Skip(1).FirstOrDefault() ?? new SymbolicRule("Unknown", "", "", new(), new(), 0, RuleSource.UserProvided),
-                    "Resolve manually"));
+                    unknownRule,
+                    unknownRule,
+                    "Review the conflicting rules and resolve inconsistencies manually. Consider refining the hypothesis or updating the knowledge base."));
             }
         }
 

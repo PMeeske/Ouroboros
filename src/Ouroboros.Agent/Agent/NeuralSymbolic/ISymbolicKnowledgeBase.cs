@@ -6,6 +6,8 @@
 
 namespace Ouroboros.Agent.NeuralSymbolic;
 
+using Ouroboros.Tools.MeTTa;
+
 /// <summary>
 /// Interface for managing symbolic knowledge and executing MeTTa queries.
 /// </summary>
