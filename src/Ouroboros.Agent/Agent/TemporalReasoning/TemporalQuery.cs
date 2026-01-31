@@ -5,6 +5,17 @@
 namespace Ouroboros.Agent.TemporalReasoning;
 
 /// <summary>
+/// Default configuration values for temporal queries.
+/// </summary>
+public static class TemporalQueryDefaults
+{
+    /// <summary>
+    /// Default maximum number of results to return from a temporal query.
+    /// </summary>
+    public const int DefaultMaxResults = 100;
+}
+
+/// <summary>
 /// Represents a query for temporal events with various filtering criteria.
 /// </summary>
 public sealed record TemporalQuery(
@@ -14,7 +25,7 @@ public sealed record TemporalQuery(
     string? EventType,
     TemporalRelationType? RelationTo,
     Guid? RelatedEventId,
-    int MaxResults = 100);
+    int MaxResults = TemporalQueryDefaults.DefaultMaxResults);
 
 /// <summary>
 /// Represents a temporal constraint between two events.

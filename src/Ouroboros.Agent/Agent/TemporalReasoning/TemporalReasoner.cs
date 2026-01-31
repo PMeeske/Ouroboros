@@ -258,10 +258,12 @@ public sealed class TemporalReasoner : ITemporalReasoner
             var earliestTime = sortedEvents.Min(e => e.StartTime);
             var latestTime = sortedEvents.Max(e => e.EndTime ?? e.StartTime);
 
-            // Group events by type
+            // Group events by type (convert to read-only collections)
             var eventsByType = sortedEvents
                 .GroupBy(e => e.EventType)
-                .ToDictionary(g => g.Key, g => g.ToList());
+                .ToDictionary(
+                    g => g.Key,
+                    g => (IReadOnlyList<TemporalEvent>)g.ToList());
 
             var timeline = new Timeline(
                 sortedEvents,
@@ -341,13 +343,13 @@ public sealed class TemporalReasoner : ITemporalReasoner
             return TemporalRelationType.Equals;
         }
 
-        // Before / After
-        if (end1 < start2)
+        // Before / After / Meets / MetBy
+        if (end1 <= start2)
         {
             return end1 == start2 ? TemporalRelationType.Meets : TemporalRelationType.Before;
         }
 
-        if (start1 > end2)
+        if (start1 >= end2)
         {
             return start1 == end2 ? TemporalRelationType.MetBy : TemporalRelationType.After;
         }

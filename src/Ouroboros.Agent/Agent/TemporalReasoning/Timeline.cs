@@ -8,8 +8,8 @@ namespace Ouroboros.Agent.TemporalReasoning;
 /// Represents a timeline constructed from a set of temporal events.
 /// </summary>
 public sealed record Timeline(
-    List<TemporalEvent> Events,
-    List<TemporalRelation> Relations,
+    IReadOnlyList<TemporalEvent> Events,
+    IReadOnlyList<TemporalRelation> Relations,
     DateTime EarliestTime,
     DateTime LatestTime,
-    Dictionary<string, List<TemporalEvent>> EventsByType);
+    IReadOnlyDictionary<string, IReadOnlyList<TemporalEvent>> EventsByType);

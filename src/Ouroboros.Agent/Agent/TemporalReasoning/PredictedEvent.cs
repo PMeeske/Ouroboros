@@ -12,5 +12,5 @@ public sealed record PredictedEvent(
     string Description,
     DateTime PredictedTime,
     double Confidence,
-    List<TemporalEvent> BasedOnEvents,
+    IReadOnlyList<TemporalEvent> BasedOnEvents,
     string ReasoningExplanation);

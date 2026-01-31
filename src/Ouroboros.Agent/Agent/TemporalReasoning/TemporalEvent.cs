@@ -13,5 +13,5 @@ public sealed record TemporalEvent(
     string Description,
     DateTime StartTime,
     DateTime? EndTime,
-    Dictionary<string, object> Properties,
-    List<string> Participants);
+    IReadOnlyDictionary<string, object> Properties,
+    IReadOnlyList<string> Participants);

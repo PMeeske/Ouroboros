@@ -12,4 +12,4 @@ public sealed record CausalRelation(
     TemporalEvent Effect,
     double CausalStrength,
     string Mechanism,
-    List<string> ConfoundingFactors);
+    IReadOnlyList<string> ConfoundingFactors);
