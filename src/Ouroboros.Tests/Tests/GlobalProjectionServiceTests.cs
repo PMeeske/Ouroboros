@@ -1,12 +1,13 @@
 using FluentAssertions;
 using LangChain.DocumentLoaders;
+using Ouroboros.Domain.Vectors;
 using Ouroboros.Pipeline.Branches;
 using Xunit;
 
 namespace Ouroboros.Tests;
 
 /// <summary>
-/// Comprehensive tests for GlobalProjectionService.
+/// Comprehensive tests for GlobalProjectionService (refactored to immutable event sourcing).
 /// Tests focus on epoch management, metrics computation, and Result monad patterns.
 /// </summary>
 [Trait("Category", "Unit")]
@@ -18,25 +19,26 @@ public sealed class GlobalProjectionServiceTests
     public async Task CreateEpochAsync_WithValidBranches_ShouldSucceed()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branches = new[] { CreateTestBranch("branch1") };
 
         // Act
-        var result = await service.CreateEpochAsync(branches);
+        var result = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var epoch = result.Value;
+        var (epoch, updatedBranch) = result.Value;
         epoch.EpochNumber.Should().Be(1);
         epoch.Branches.Should().HaveCount(1);
         epoch.Branches[0].Name.Should().Be("branch1");
+        updatedBranch.Events.Should().HaveCount(1);
     }
 
     [Fact]
     public async Task CreateEpochAsync_WithMultipleBranches_ShouldCaptureAll()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branches = new[]
         {
             CreateTestBranch("branch1"),
@@ -45,18 +47,18 @@ public sealed class GlobalProjectionServiceTests
         };
 
         // Act
-        var result = await service.CreateEpochAsync(branches);
+        var result = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Branches.Should().HaveCount(3);
+        result.Value.Epoch.Branches.Should().HaveCount(3);
     }
 
     [Fact]
     public async Task CreateEpochAsync_WithMetadata_ShouldStoreMetadata()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branches = new[] { CreateTestBranch("branch1") };
         var metadata = new Dictionary<string, object>
         {
@@ -65,91 +67,93 @@ public sealed class GlobalProjectionServiceTests
         };
 
         // Act
-        var result = await service.CreateEpochAsync(branches, metadata);
+        var result = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches, metadata);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Metadata.Should().ContainKey("version");
-        result.Value.Metadata.Should().ContainKey("author");
-        result.Value.Metadata["version"].Should().Be("1.0");
+        var epoch = result.Value.Epoch;
+        epoch.Metadata.Should().ContainKey("version");
+        epoch.Metadata.Should().ContainKey("author");
+        epoch.Metadata["version"].Should().Be("1.0");
     }
 
     [Fact]
     public async Task CreateEpochAsync_ShouldIncrementEpochNumber()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branches = new[] { CreateTestBranch("branch1") };
 
         // Act
-        var result1 = await service.CreateEpochAsync(branches);
-        var result2 = await service.CreateEpochAsync(branches);
-        var result3 = await service.CreateEpochAsync(branches);
+        var result1 = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches);
+        var result2 = await GlobalProjectionService.CreateEpochAsync(result1.Value.UpdatedBranch, branches);
+        var result3 = await GlobalProjectionService.CreateEpochAsync(result2.Value.UpdatedBranch, branches);
 
         // Assert
-        result1.Value.EpochNumber.Should().Be(1);
-        result2.Value.EpochNumber.Should().Be(2);
-        result3.Value.EpochNumber.Should().Be(3);
+        result1.Value.Epoch.EpochNumber.Should().Be(1);
+        result2.Value.Epoch.EpochNumber.Should().Be(2);
+        result3.Value.Epoch.EpochNumber.Should().Be(3);
     }
 
     [Fact]
     public async Task CreateEpochAsync_ShouldSetUniqueEpochIds()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branches = new[] { CreateTestBranch("branch1") };
 
         // Act
-        var result1 = await service.CreateEpochAsync(branches);
-        var result2 = await service.CreateEpochAsync(branches);
+        var result1 = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches);
+        var result2 = await GlobalProjectionService.CreateEpochAsync(result1.Value.UpdatedBranch, branches);
 
         // Assert
-        result1.Value.EpochId.Should().NotBe(result2.Value.EpochId);
+        result1.Value.Epoch.EpochId.Should().NotBe(result2.Value.Epoch.EpochId);
     }
 
     [Fact]
     public async Task CreateEpochAsync_ShouldSetCreatedAt()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branches = new[] { CreateTestBranch("branch1") };
         var beforeCreate = DateTime.UtcNow.AddSeconds(-1);
 
         // Act
-        var result = await service.CreateEpochAsync(branches);
+        var result = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches);
         var afterCreate = DateTime.UtcNow.AddSeconds(1);
 
         // Assert
-        result.Value.CreatedAt.Should().BeAfter(beforeCreate);
-        result.Value.CreatedAt.Should().BeBefore(afterCreate);
+        result.Value.Epoch.CreatedAt.Should().BeAfter(beforeCreate);
+        result.Value.Epoch.CreatedAt.Should().BeBefore(afterCreate);
     }
 
     [Fact]
-    public async Task CreateEpochAsync_WithNullBranches_ShouldThrowArgumentNullException()
+    public async Task CreateEpochAsync_WithNullBranches_ShouldReturnFailure()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
 
         // Act
-        Func<Task> act = async () => await service.CreateEpochAsync(null!);
+        var result = await GlobalProjectionService.CreateEpochAsync(trackingBranch, null!);
 
         // Assert
-        await act.Should().ThrowAsync<ArgumentNullException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Failed to create epoch snapshot");
     }
 
     [Fact]
     public async Task CreateEpochAsync_WithEmptyBranches_ShouldSucceed()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branches = Array.Empty<PipelineBranch>();
 
         // Act
-        var result = await service.CreateEpochAsync(branches);
+        var result = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Branches.Should().BeEmpty();
+        result.Value.Epoch.Branches.Should().BeEmpty();
     }
 
     #endregion
@@ -160,26 +164,26 @@ public sealed class GlobalProjectionServiceTests
     public async Task GetEpoch_WithExistingEpoch_ShouldReturnSuccess()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branches = new[] { CreateTestBranch("branch1") };
-        var created = await service.CreateEpochAsync(branches);
+        var created = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches);
 
         // Act
-        var result = service.GetEpoch(created.Value.EpochNumber);
+        var result = GlobalProjectionService.GetEpoch(created.Value.UpdatedBranch, 1);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.EpochNumber.Should().Be(created.Value.EpochNumber);
+        result.Value.EpochNumber.Should().Be(1);
     }
 
     [Fact]
     public void GetEpoch_WithNonExistentEpoch_ShouldReturnFailure()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
 
         // Act
-        var result = service.GetEpoch(999);
+        var result = GlobalProjectionService.GetEpoch(trackingBranch, 999);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -190,18 +194,19 @@ public sealed class GlobalProjectionServiceTests
     public async Task GetEpoch_WithMultipleEpochs_ShouldReturnCorrectOne()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branches = new[] { CreateTestBranch("branch1") };
-        await service.CreateEpochAsync(branches);
-        var epoch2 = await service.CreateEpochAsync(branches);
-        await service.CreateEpochAsync(branches);
+        
+        var result1 = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches);
+        var result2 = await GlobalProjectionService.CreateEpochAsync(result1.Value.UpdatedBranch, branches);
+        var result3 = await GlobalProjectionService.CreateEpochAsync(result2.Value.UpdatedBranch, branches);
 
         // Act
-        var result = service.GetEpoch(2);
+        var epochResult = GlobalProjectionService.GetEpoch(result3.Value.UpdatedBranch, 2);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.EpochId.Should().Be(epoch2.Value.EpochId);
+        epochResult.IsSuccess.Should().BeTrue();
+        epochResult.Value.EpochNumber.Should().Be(2);
     }
 
     #endregion
@@ -212,29 +217,29 @@ public sealed class GlobalProjectionServiceTests
     public async Task GetLatestEpoch_WithEpochs_ShouldReturnMostRecent()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branches = new[] { CreateTestBranch("branch1") };
-        await service.CreateEpochAsync(branches);
-        await service.CreateEpochAsync(branches);
-        var latest = await service.CreateEpochAsync(branches);
+        
+        var result1 = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches);
+        var result2 = await GlobalProjectionService.CreateEpochAsync(result1.Value.UpdatedBranch, branches);
+        var result3 = await GlobalProjectionService.CreateEpochAsync(result2.Value.UpdatedBranch, branches);
 
         // Act
-        var result = service.GetLatestEpoch();
+        var latest = GlobalProjectionService.GetLatestEpoch(result3.Value.UpdatedBranch);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.EpochId.Should().Be(latest.Value.EpochId);
-        result.Value.EpochNumber.Should().Be(3);
+        latest.IsSuccess.Should().BeTrue();
+        latest.Value.EpochNumber.Should().Be(3);
     }
 
     [Fact]
     public void GetLatestEpoch_WithNoEpochs_ShouldReturnFailure()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
 
         // Act
-        var result = service.GetLatestEpoch();
+        var result = GlobalProjectionService.GetLatestEpoch(trackingBranch);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -249,10 +254,10 @@ public sealed class GlobalProjectionServiceTests
     public void GetMetrics_WithNoEpochs_ShouldReturnZeroMetrics()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
 
         // Act
-        var result = service.GetMetrics();
+        var result = GlobalProjectionService.GetMetrics(trackingBranch);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -267,7 +272,7 @@ public sealed class GlobalProjectionServiceTests
     public async Task GetMetrics_WithEpochs_ShouldComputeCorrectMetrics()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branch1 = CreateTestBranch("branch1");
         var branch2 = CreateTestBranch("branch2");
         
@@ -276,15 +281,15 @@ public sealed class GlobalProjectionServiceTests
         branch2 = branch2.WithReasoning(new Draft("test2"), "prompt2");
         branch2 = branch2.WithReasoning(new Draft("test3"), "prompt3");
 
-        await service.CreateEpochAsync(new[] { branch1, branch2 });
-        await service.CreateEpochAsync(new[] { branch1 });
+        var result1 = await GlobalProjectionService.CreateEpochAsync(trackingBranch, new[] { branch1, branch2 });
+        var result2 = await GlobalProjectionService.CreateEpochAsync(result1.Value.UpdatedBranch, new[] { branch1 });
 
         // Act
-        var result = service.GetMetrics();
+        var metricsResult = GlobalProjectionService.GetMetrics(result2.Value.UpdatedBranch);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        var metrics = result.Value;
+        metricsResult.IsSuccess.Should().BeTrue();
+        var metrics = metricsResult.Value;
         metrics.TotalEpochs.Should().Be(2);
         metrics.TotalBranches.Should().Be(2); // Distinct branches
         metrics.TotalEvents.Should().Be(4); // 1 + 2 from first epoch, 1 from second epoch
@@ -295,7 +300,7 @@ public sealed class GlobalProjectionServiceTests
     public async Task GetMetrics_ShouldComputeAverageEventsPerBranch()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branch1 = CreateTestBranch("branch1");
         var branch2 = CreateTestBranch("branch2");
         
@@ -303,53 +308,14 @@ public sealed class GlobalProjectionServiceTests
         branch1 = branch1.WithReasoning(new Draft("test2"), "prompt2");
         branch2 = branch2.WithReasoning(new Draft("test3"), "prompt3");
 
-        await service.CreateEpochAsync(new[] { branch1, branch2 });
+        var result = await GlobalProjectionService.CreateEpochAsync(trackingBranch, new[] { branch1, branch2 });
 
         // Act
-        var result = service.GetMetrics();
+        var metricsResult = GlobalProjectionService.GetMetrics(result.Value.UpdatedBranch);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.AverageEventsPerBranch.Should().BeApproximately(1.5, 0.01); // 3 events / 2 branches
-    }
-
-    #endregion
-
-    #region Clear Tests
-
-    [Fact]
-    public async Task Clear_ShouldRemoveAllEpochs()
-    {
-        // Arrange
-        var service = new GlobalProjectionService();
-        var branches = new[] { CreateTestBranch("branch1") };
-        await service.CreateEpochAsync(branches);
-        await service.CreateEpochAsync(branches);
-
-        // Act
-        service.Clear();
-
-        // Assert
-        service.Epochs.Should().BeEmpty();
-        var latestResult = service.GetLatestEpoch();
-        latestResult.IsFailure.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task Clear_ShouldResetEpochNumber()
-    {
-        // Arrange
-        var service = new GlobalProjectionService();
-        var branches = new[] { CreateTestBranch("branch1") };
-        await service.CreateEpochAsync(branches);
-        await service.CreateEpochAsync(branches);
-
-        // Act
-        service.Clear();
-        var newEpoch = await service.CreateEpochAsync(branches);
-
-        // Assert
-        newEpoch.Value.EpochNumber.Should().Be(1);
+        metricsResult.IsSuccess.Should().BeTrue();
+        metricsResult.Value.AverageEventsPerBranch.Should().BeApproximately(1.5, 0.01); // 3 events / 2 branches
     }
 
     #endregion
@@ -360,20 +326,23 @@ public sealed class GlobalProjectionServiceTests
     public async Task GetEpochsInRange_ShouldReturnEpochsWithinRange()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branches = new[] { CreateTestBranch("branch1") };
         
-        var epoch1 = await service.CreateEpochAsync(branches);
+        var result1 = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches);
         await Task.Delay(10); // Small delay to ensure different timestamps
-        var epoch2 = await service.CreateEpochAsync(branches);
+        var result2 = await GlobalProjectionService.CreateEpochAsync(result1.Value.UpdatedBranch, branches);
         await Task.Delay(10);
-        var epoch3 = await service.CreateEpochAsync(branches);
+        var result3 = await GlobalProjectionService.CreateEpochAsync(result2.Value.UpdatedBranch, branches);
 
-        var start = epoch1.Value.CreatedAt.AddMilliseconds(-1);
-        var end = epoch2.Value.CreatedAt.AddMilliseconds(1);
+        var epoch1 = GlobalProjectionService.GetEpoch(result3.Value.UpdatedBranch, 1).Value;
+        var epoch2 = GlobalProjectionService.GetEpoch(result3.Value.UpdatedBranch, 2).Value;
+
+        var start = epoch1.CreatedAt.AddMilliseconds(-1);
+        var end = epoch2.CreatedAt.AddMilliseconds(1);
 
         // Act
-        var epochs = service.GetEpochsInRange(start, end);
+        var epochs = GlobalProjectionService.GetEpochsInRange(result3.Value.UpdatedBranch, start, end);
 
         // Assert
         epochs.Should().HaveCount(2);
@@ -385,12 +354,12 @@ public sealed class GlobalProjectionServiceTests
     public void GetEpochsInRange_WithNoEpochsInRange_ShouldReturnEmpty()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var start = DateTime.UtcNow.AddDays(-10);
         var end = DateTime.UtcNow.AddDays(-5);
 
         // Act
-        var epochs = service.GetEpochsInRange(start, end);
+        var epochs = GlobalProjectionService.GetEpochsInRange(trackingBranch, start, end);
 
         // Assert
         epochs.Should().BeEmpty();
@@ -400,18 +369,18 @@ public sealed class GlobalProjectionServiceTests
     public async Task GetEpochsInRange_ShouldReturnEpochsInOrder()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branches = new[] { CreateTestBranch("branch1") };
         
-        await service.CreateEpochAsync(branches);
-        await service.CreateEpochAsync(branches);
-        await service.CreateEpochAsync(branches);
+        var result1 = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches);
+        var result2 = await GlobalProjectionService.CreateEpochAsync(result1.Value.UpdatedBranch, branches);
+        var result3 = await GlobalProjectionService.CreateEpochAsync(result2.Value.UpdatedBranch, branches);
 
         var start = DateTime.UtcNow.AddMinutes(-1);
         var end = DateTime.UtcNow.AddMinutes(1);
 
         // Act
-        var epochs = service.GetEpochsInRange(start, end);
+        var epochs = GlobalProjectionService.GetEpochsInRange(result3.Value.UpdatedBranch, start, end);
 
         // Assert
         epochs.Should().HaveCount(3);
@@ -422,32 +391,33 @@ public sealed class GlobalProjectionServiceTests
 
     #endregion
 
-    #region Epochs Property Tests
+    #region GetEpochs Tests
 
     [Fact]
-    public async Task Epochs_ShouldReturnAllEpochs()
+    public async Task GetEpochs_ShouldReturnAllEpochs()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
         var branches = new[] { CreateTestBranch("branch1") };
-        await service.CreateEpochAsync(branches);
-        await service.CreateEpochAsync(branches);
+        
+        var result1 = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches);
+        var result2 = await GlobalProjectionService.CreateEpochAsync(result1.Value.UpdatedBranch, branches);
 
         // Act
-        var epochs = service.Epochs;
+        var epochs = GlobalProjectionService.GetEpochs(result2.Value.UpdatedBranch);
 
         // Assert
         epochs.Should().HaveCount(2);
     }
 
     [Fact]
-    public void Epochs_ShouldReturnReadOnlyList()
+    public void GetEpochs_ShouldReturnReadOnlyList()
     {
         // Arrange
-        var service = new GlobalProjectionService();
+        var trackingBranch = CreateTestBranch("tracking");
 
         // Act
-        var epochs = service.Epochs;
+        var epochs = GlobalProjectionService.GetEpochs(trackingBranch);
 
         // Assert
         epochs.Should().BeAssignableTo<IReadOnlyList<EpochSnapshot>>();

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LangChain.DocumentLoaders;
+using Ouroboros.Domain.Vectors;
 using Ouroboros.Options;
 using Ouroboros.Pipeline.Branches;
 
@@ -8,10 +9,40 @@ namespace Ouroboros.CLI.Commands;
 /// <summary>
 /// DAG (Directed Acyclic Graph) commands for pipeline branch management.
 /// Provides snapshot, show, replay, and retention operations.
+/// Uses immutable PipelineBranch event sourcing pattern for tracking epochs.
+/// 
+/// Note: This CLI infrastructure maintains session-scoped state, which is acceptable
+/// per refactoring guidelines (infrastructure code may use imperative patterns).
+/// Each CLI invocation represents a single session with one tracking branch.
 /// </summary>
 public static class DagCommands
 {
-    private static readonly GlobalProjectionService _projectionService = new();
+    // Session-scoped tracking branch - acceptable for CLI infrastructure layer
+    // Alternative approaches would require dependency injection or context passing,
+    // which adds complexity without benefit for a CLI session
+    private static PipelineBranch? _trackingBranch;
+
+    /// <summary>
+    /// Gets or initializes the tracking branch for epoch management.
+    /// </summary>
+    private static PipelineBranch GetTrackingBranch()
+    {
+        if (_trackingBranch == null)
+        {
+            var store = new TrackedVectorStore();
+            var source = DataSource.FromPath("/cli/tracking");
+            _trackingBranch = new PipelineBranch("dag-tracking", store, source);
+        }
+        return _trackingBranch;
+    }
+
+    /// <summary>
+    /// Updates the tracking branch with a new version.
+    /// </summary>
+    private static void UpdateTrackingBranch(PipelineBranch updated)
+    {
+        _trackingBranch = updated;
+    }
 
     /// <summary>
     /// Executes a DAG command based on the provided options.
@@ -67,11 +98,14 @@ public static class DagCommands
             ["branch_count"] = branches.Count
         };
 
-        var result = await _projectionService.CreateEpochAsync(branches, metadata);
+        var trackingBranch = GetTrackingBranch();
+        var result = await GlobalProjectionService.CreateEpochAsync(trackingBranch, branches, metadata);
         
         if (result.IsSuccess)
         {
-            var epoch = result.Value;
+            var (epoch, updatedBranch) = result.Value;
+            UpdateTrackingBranch(updatedBranch);
+            
             Console.WriteLine($"✓ Created epoch {epoch.EpochNumber} (ID: {epoch.EpochId})");
             Console.WriteLine($"  Branches: {epoch.Branches.Count}");
             Console.WriteLine($"  Created: {epoch.CreatedAt:yyyy-MM-dd HH:mm:ss} UTC");
@@ -92,10 +126,12 @@ public static class DagCommands
     {
         Console.WriteLine("=== DAG Information ===");
 
+        var trackingBranch = GetTrackingBranch();
+
         if (options.EpochNumber.HasValue)
         {
             // Show specific epoch
-            var result = _projectionService.GetEpoch(options.EpochNumber.Value);
+            var result = GlobalProjectionService.GetEpoch(trackingBranch, options.EpochNumber.Value);
             if (result.IsSuccess)
             {
                 PrintEpochInfo(result.Value, options.Format == "json");
@@ -108,13 +144,13 @@ public static class DagCommands
         else
         {
             // Show latest epoch or metrics
-            var metricsResult = _projectionService.GetMetrics();
+            var metricsResult = GlobalProjectionService.GetMetrics(trackingBranch);
             if (metricsResult.IsSuccess)
             {
                 PrintMetrics(metricsResult.Value, options.Format == "json");
             }
 
-            var latestResult = _projectionService.GetLatestEpoch();
+            var latestResult = GlobalProjectionService.GetLatestEpoch(trackingBranch);
             if (latestResult.IsSuccess)
             {
                 Console.WriteLine("\nLatest Epoch:");
@@ -185,7 +221,7 @@ public static class DagCommands
     {
         Console.WriteLine("=== DAG Validation ===");
 
-        var allEpochs = _projectionService.Epochs;
+        var allEpochs = GlobalProjectionService.GetEpochs(GetTrackingBranch());
         Console.WriteLine($"Total epochs: {allEpochs.Count}");
 
         var validationErrors = 0;
@@ -240,7 +276,7 @@ public static class DagCommands
         }
 
         // Convert epochs to snapshot metadata
-        var snapshots = _projectionService.Epochs
+        var snapshots = GlobalProjectionService.GetEpochs(GetTrackingBranch())
             .SelectMany(e => e.Branches.Select(b => new SnapshotMetadata
             {
                 Id = e.EpochId.ToString(),

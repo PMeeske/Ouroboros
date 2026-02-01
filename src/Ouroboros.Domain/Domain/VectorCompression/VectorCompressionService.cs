@@ -2,36 +2,43 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using Ouroboros.Core.Monads;
+
 namespace Ouroboros.Domain.VectorCompression;
 
 /// <summary>
-/// Unified service for vector compression using spectral methods.
-/// Supports FFT and DCT-based compression with configurable quality/size tradeoffs.
+/// Available compression methods.
 /// </summary>
-public sealed class VectorCompressionService
+public enum CompressionMethod
 {
-    private readonly FourierVectorCompressor _fftCompressor;
-    private readonly DCTVectorCompressor _dctCompressor;
-    private readonly CompressionMethod _defaultMethod;
+    /// <summary>Discrete Cosine Transform - best for real-valued embeddings.</summary>
+    DCT,
 
-    /// <summary>
-    /// Available compression methods.
-    /// </summary>
-    public enum CompressionMethod
-    {
-        /// <summary>Discrete Cosine Transform - best for real-valued embeddings.</summary>
-        DCT,
+    /// <summary>Fast Fourier Transform - good for periodic patterns.</summary>
+    FFT,
 
-        /// <summary>Fast Fourier Transform - good for periodic patterns.</summary>
-        FFT,
+    /// <summary>Quantized DCT - maximum compression with some quality loss.</summary>
+    QuantizedDCT,
 
-        /// <summary>Quantized DCT - maximum compression with some quality loss.</summary>
-        QuantizedDCT,
+    /// <summary>Adaptive - auto-select based on vector characteristics.</summary>
+    Adaptive
+}
 
-        /// <summary>Adaptive - auto-select based on vector characteristics.</summary>
-        Adaptive
-    }
+/// <summary>
+/// Configuration for vector compression operations.
+/// </summary>
+public sealed record CompressionConfig(
+    int TargetDimension = 128,
+    double EnergyThreshold = 0.95,
+    CompressionMethod DefaultMethod = CompressionMethod.DCT);
 
+/// <summary>
+/// Unified service for vector compression using spectral methods.
+/// Refactored to follow immutable event sourcing pattern with PipelineBranch.
+/// All compression operations track statistics through events.
+/// </summary>
+public static class VectorCompressionService
+{
     /// <summary>
     /// Compression statistics for monitoring.
     /// </summary>
@@ -42,171 +49,307 @@ public sealed class VectorCompressionService
         double AverageCompressionRatio,
         double AverageEnergyRetained);
 
-    private int _vectorsCompressed;
-    private long _originalBytes;
-    private long _compressedBytes;
-    private double _totalEnergyRetained;
-
     /// <summary>
-    /// Initializes a new instance of the <see cref="VectorCompressionService"/> class.
+    /// Synchronous compress operation that returns Result with compressed data and event.
+    /// Pure function that returns both the compressed data and an event record for tracking.
     /// </summary>
-    /// <param name="targetDimension">Target dimension for compressed vectors.</param>
-    /// <param name="energyThreshold">Energy retention threshold (0.9-0.99).</param>
-    /// <param name="defaultMethod">Default compression method.</param>
-    public VectorCompressionService(
-        int targetDimension = 128,
-        double energyThreshold = 0.95,
-        CompressionMethod defaultMethod = CompressionMethod.DCT)
+    public static Result<(byte[] CompressedData, VectorCompressionEvent Event)> Compress(
+        float[] vector,
+        CompressionConfig config,
+        CompressionMethod? method = null)
     {
-        _fftCompressor = new FourierVectorCompressor(
-            targetDimension,
-            FourierVectorCompressor.CompressionStrategy.HighestMagnitude);
-
-        _dctCompressor = new DCTVectorCompressor(
-            targetDimension,
-            energyThreshold);
-
-        _defaultMethod = defaultMethod;
-    }
-
-    /// <summary>
-    /// Compresses a vector using the specified or default method.
-    /// </summary>
-    /// <param name="vector">Input embedding vector.</param>
-    /// <param name="method">Compression method (null = default).</param>
-    /// <returns>Compressed vector data.</returns>
-    public byte[] Compress(float[] vector, CompressionMethod? method = null)
-    {
-        var m = method ?? _defaultMethod;
-
-        if (m == CompressionMethod.Adaptive)
+        try
         {
-            m = SelectOptimalMethod(vector);
+            ArgumentNullException.ThrowIfNull(vector);
+            ArgumentNullException.ThrowIfNull(config);
+
+            var m = method ?? config.DefaultMethod;
+
+            if (m == CompressionMethod.Adaptive)
+            {
+                m = SelectOptimalMethod(vector);
+            }
+
+            // Create compressors
+            var fftCompressor = new FourierVectorCompressor(
+                config.TargetDimension,
+                FourierVectorCompressor.CompressionStrategy.HighestMagnitude);
+
+            var dctCompressor = new DCTVectorCompressor(
+                config.TargetDimension,
+                config.EnergyThreshold);
+
+            byte[] result;
+            double energyRetained = 1.0;
+
+            switch (m)
+            {
+                case CompressionMethod.DCT:
+                    var dct = dctCompressor.Compress(vector);
+                    result = WrapWithHeader(CompressionMethod.DCT, dct.ToBytes());
+                    energyRetained = dct.EnergyRetained;
+                    break;
+
+                case CompressionMethod.QuantizedDCT:
+                    var dctQ = dctCompressor.Compress(vector);
+                    var quantized = dctCompressor.Quantize(dctQ, 8);
+                    result = WrapWithHeader(CompressionMethod.QuantizedDCT, quantized.ToBytes());
+                    energyRetained = dctQ.EnergyRetained;
+                    break;
+
+                case CompressionMethod.FFT:
+                    var fft = fftCompressor.Compress(vector);
+                    result = WrapWithHeader(CompressionMethod.FFT, fft.ToBytes());
+                    break;
+
+                default:
+                    return Result<(byte[], VectorCompressionEvent)>.Failure($"Unknown compression method: {m}");
+            }
+
+            // Create compression event
+            var compressionEvent = VectorCompressionEvent.Create(
+                method: m.ToString(),
+                originalBytes: vector.Length * sizeof(float),
+                compressedBytes: result.Length,
+                energyRetained: energyRetained);
+
+            return Result<(byte[], VectorCompressionEvent)>.Success((result, compressionEvent));
         }
-
-        byte[] result;
-        double energyRetained = 1.0;
-
-        switch (m)
+        catch (Exception ex)
         {
-            case CompressionMethod.DCT:
-                var dct = _dctCompressor.Compress(vector);
-                result = WrapWithHeader(CompressionMethod.DCT, dct.ToBytes());
-                energyRetained = dct.EnergyRetained;
-                break;
-
-            case CompressionMethod.QuantizedDCT:
-                var dctQ = _dctCompressor.Compress(vector);
-                var quantized = _dctCompressor.Quantize(dctQ, 8);
-                result = WrapWithHeader(CompressionMethod.QuantizedDCT, quantized.ToBytes());
-                energyRetained = dctQ.EnergyRetained;
-                break;
-
-            case CompressionMethod.FFT:
-                var fft = _fftCompressor.Compress(vector);
-                result = WrapWithHeader(CompressionMethod.FFT, fft.ToBytes());
-                break;
-
-            default:
-                throw new ArgumentOutOfRangeException(nameof(method));
+            return Result<(byte[], VectorCompressionEvent)>.Failure($"Compression failed: {ex.Message}");
         }
-
-        // Update stats
-        Interlocked.Increment(ref _vectorsCompressed);
-        Interlocked.Add(ref _originalBytes, vector.Length * sizeof(float));
-        Interlocked.Add(ref _compressedBytes, result.Length);
-        Interlocked.Exchange(ref _totalEnergyRetained, _totalEnergyRetained + energyRetained);
-
-        return result;
     }
 
     /// <summary>
     /// Decompresses vector data back to float array.
+    /// Pure function with no side effects.
     /// </summary>
     /// <param name="data">Compressed vector data.</param>
-    /// <returns>Decompressed vector.</returns>
-    public float[] Decompress(byte[] data)
+    /// <param name="config">Compression configuration.</param>
+    /// <returns>Result containing decompressed vector.</returns>
+    public static Result<float[]> Decompress(byte[] data, CompressionConfig config)
     {
-        var (method, payload) = UnwrapHeader(data);
-
-        return method switch
+        try
         {
-            CompressionMethod.DCT => _dctCompressor.Decompress(DCTCompressedVector.FromBytes(payload)),
-            CompressionMethod.QuantizedDCT => _dctCompressor.DecompressQuantized(QuantizedDCTVector.FromBytes(payload)),
-            CompressionMethod.FFT => _fftCompressor.Decompress(CompressedVector.FromBytes(payload)),
-            _ => throw new InvalidOperationException($"Unknown compression method: {method}")
-        };
+            ArgumentNullException.ThrowIfNull(data);
+            ArgumentNullException.ThrowIfNull(config);
+
+            var (method, payload) = UnwrapHeader(data);
+
+            // Create compressors
+            var fftCompressor = new FourierVectorCompressor(
+                config.TargetDimension,
+                FourierVectorCompressor.CompressionStrategy.HighestMagnitude);
+
+            var dctCompressor = new DCTVectorCompressor(
+                config.TargetDimension,
+                config.EnergyThreshold);
+
+            var result = method switch
+            {
+                CompressionMethod.DCT => dctCompressor.Decompress(DCTCompressedVector.FromBytes(payload)),
+                CompressionMethod.QuantizedDCT => dctCompressor.DecompressQuantized(QuantizedDCTVector.FromBytes(payload)),
+                CompressionMethod.FFT => fftCompressor.Decompress(CompressedVector.FromBytes(payload)),
+                _ => throw new InvalidOperationException($"Unknown compression method: {method}")
+            };
+
+            return Result<float[]>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            return Result<float[]>.Failure($"Decompression failed: {ex.Message}");
+        }
     }
 
     /// <summary>
     /// Computes similarity between two compressed vectors without full decompression.
+    /// Pure function with no side effects.
     /// </summary>
-    public double CompressedSimilarity(byte[] a, byte[] b)
+    public static Result<double> CompressedSimilarity(byte[] a, byte[] b, CompressionConfig config)
     {
-        var (methodA, payloadA) = UnwrapHeader(a);
-        var (methodB, payloadB) = UnwrapHeader(b);
-
-        if (methodA != methodB)
+        try
         {
-            // Fall back to full decompression if methods differ
-            var vecA = Decompress(a);
-            var vecB = Decompress(b);
-            return CosineSimilarity(vecA, vecB);
+            ArgumentNullException.ThrowIfNull(a);
+            ArgumentNullException.ThrowIfNull(b);
+            ArgumentNullException.ThrowIfNull(config);
+
+            var (methodA, payloadA) = UnwrapHeader(a);
+            var (methodB, payloadB) = UnwrapHeader(b);
+
+            // Create compressors
+            var fftCompressor = new FourierVectorCompressor(
+                config.TargetDimension,
+                FourierVectorCompressor.CompressionStrategy.HighestMagnitude);
+
+            var dctCompressor = new DCTVectorCompressor(
+                config.TargetDimension,
+                config.EnergyThreshold);
+
+            if (methodA != methodB)
+            {
+                // Fall back to full decompression if methods differ
+                var vecAResult = Decompress(a, config);
+                var vecBResult = Decompress(b, config);
+
+                if (vecAResult.IsFailure || vecBResult.IsFailure)
+                {
+                    return Result<double>.Failure("Failed to decompress vectors for similarity");
+                }
+
+                return Result<double>.Success(CosineSimilarity(vecAResult.Value, vecBResult.Value));
+            }
+
+            double similarity = methodA switch
+            {
+                CompressionMethod.DCT => dctCompressor.CompressedSimilarity(
+                    DCTCompressedVector.FromBytes(payloadA),
+                    DCTCompressedVector.FromBytes(payloadB)),
+                CompressionMethod.FFT => fftCompressor.CompressedSimilarity(
+                    CompressedVector.FromBytes(payloadA),
+                    CompressedVector.FromBytes(payloadB)),
+                _ => throw new InvalidOperationException($"Compressed similarity not supported for method: {methodA}")
+            };
+
+            return Result<double>.Success(similarity);
         }
-
-        return methodA switch
+        catch (Exception ex)
         {
-            CompressionMethod.DCT => _dctCompressor.CompressedSimilarity(
-                DCTCompressedVector.FromBytes(payloadA),
-                DCTCompressedVector.FromBytes(payloadB)),
-            CompressionMethod.FFT => _fftCompressor.CompressedSimilarity(
-                CompressedVector.FromBytes(payloadA),
-                CompressedVector.FromBytes(payloadB)),
-            _ => CosineSimilarity(Decompress(a), Decompress(b))
-        };
+            return Result<double>.Failure($"Compressed similarity failed: {ex.Message}");
+        }
     }
 
     /// <summary>
-    /// Gets compression statistics.
+    /// Gets compression statistics from a collection of compression events.
+    /// Pure function that derives statistics from event stream.
     /// </summary>
-    public CompressionStats GetStats()
+    public static Result<VectorCompressionStats> GetStats(IEnumerable<VectorCompressionEvent> events)
     {
-        int count = _vectorsCompressed;
-        return new CompressionStats(
-            VectorsCompressed: count,
-            OriginalBytes: _originalBytes,
-            CompressedBytes: _compressedBytes,
-            AverageCompressionRatio: count > 0 ? (double)_originalBytes / _compressedBytes : 1.0,
-            AverageEnergyRetained: count > 0 ? _totalEnergyRetained / count : 1.0);
+        try
+        {
+            ArgumentNullException.ThrowIfNull(events);
+
+            var eventList = events.ToList();
+
+            if (eventList.Count == 0)
+            {
+                return Result<VectorCompressionStats>.Success(new VectorCompressionStats
+                {
+                    VectorsCompressed = 0,
+                    TotalOriginalBytes = 0,
+                    TotalCompressedBytes = 0,
+                    AverageEnergyRetained = 0.0,
+                    MethodBreakdown = new Dictionary<string, int>()
+                });
+            }
+
+            var totalOriginal = eventList.Sum(e => e.OriginalBytes);
+            var totalCompressed = eventList.Sum(e => e.CompressedBytes);
+            var avgEnergy = eventList.Average(e => e.EnergyRetained);
+            var methodBreakdown = eventList.GroupBy(e => e.Method)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            var stats = new VectorCompressionStats
+            {
+                VectorsCompressed = eventList.Count,
+                TotalOriginalBytes = totalOriginal,
+                TotalCompressedBytes = totalCompressed,
+                AverageEnergyRetained = avgEnergy,
+                FirstCompressionAt = eventList.Min(e => e.Timestamp),
+                LastCompressionAt = eventList.Max(e => e.Timestamp),
+                MethodBreakdown = methodBreakdown
+            };
+
+            return Result<VectorCompressionStats>.Success(stats);
+        }
+        catch (Exception ex)
+        {
+            return Result<VectorCompressionStats>.Failure($"Failed to compute stats: {ex.Message}");
+        }
     }
 
     /// <summary>
     /// Batch compress multiple vectors efficiently.
+    /// Returns compressed data and compression events for tracking.
     /// </summary>
-    public IReadOnlyList<byte[]> BatchCompress(IEnumerable<float[]> vectors, CompressionMethod? method = null)
+    public static async Task<Result<(IReadOnlyList<byte[]> CompressedData, IReadOnlyList<VectorCompressionEvent> Events)>> BatchCompressAsync(
+        IEnumerable<float[]> vectors,
+        CompressionConfig config,
+        CompressionMethod? method = null)
     {
-        return vectors.AsParallel().Select(v => Compress(v, method)).ToList();
+        try
+        {
+            ArgumentNullException.ThrowIfNull(vectors);
+            ArgumentNullException.ThrowIfNull(config);
+
+            var vectorList = vectors.ToList();
+            var compressedResults = new List<byte[]>();
+            var compressionEvents = new List<VectorCompressionEvent>();
+
+            // Process in parallel for efficiency
+            var compressionTasks = vectorList.Select(v => Task.Run(() => Compress(v, config, method))).ToList();
+            var results = await Task.WhenAll(compressionTasks);
+
+            foreach (var result in results)
+            {
+                if (result.IsFailure)
+                {
+                    return Result<(IReadOnlyList<byte[]>, IReadOnlyList<VectorCompressionEvent>)>.Failure(result.Error);
+                }
+
+                compressedResults.Add(result.Value.CompressedData);
+                compressionEvents.Add(result.Value.Event);
+            }
+
+            return Result<(IReadOnlyList<byte[]>, IReadOnlyList<VectorCompressionEvent>)>.Success(
+                (compressedResults.AsReadOnly(), compressionEvents.AsReadOnly()));
+        }
+        catch (Exception ex)
+        {
+            return Result<(IReadOnlyList<byte[]>, IReadOnlyList<VectorCompressionEvent>)>.Failure($"Batch compression failed: {ex.Message}");
+        }
     }
 
     /// <summary>
     /// Analyzes a vector and returns compression statistics preview.
+    /// Pure function with no side effects.
     /// </summary>
-    public CompressionPreview Preview(float[] vector, CompressionMethod method)
+    public static Result<CompressionPreview> Preview(float[] vector, CompressionConfig config)
     {
-        var dct = _dctCompressor.Compress(vector);
-        var fft = _fftCompressor.Compress(vector);
+        try
+        {
+            ArgumentNullException.ThrowIfNull(vector);
+            ArgumentNullException.ThrowIfNull(config);
 
-        return new CompressionPreview(
-            OriginalDimension: vector.Length,
-            OriginalSizeBytes: vector.Length * sizeof(float),
-            DCTCompressedSize: dct.ToBytes().Length,
-            DCTEnergyRetained: dct.EnergyRetained,
-            FFTCompressedSize: fft.ToBytes().Length,
-            FFTCompressionRatio: fft.CompressionRatio,
-            QuantizedDCTSize: _dctCompressor.Quantize(dct, 8).ToBytes().Length);
+            var fftCompressor = new FourierVectorCompressor(
+                config.TargetDimension,
+                FourierVectorCompressor.CompressionStrategy.HighestMagnitude);
+
+            var dctCompressor = new DCTVectorCompressor(
+                config.TargetDimension,
+                config.EnergyThreshold);
+
+            var dct = dctCompressor.Compress(vector);
+            var fft = fftCompressor.Compress(vector);
+
+            var preview = new CompressionPreview(
+                OriginalDimension: vector.Length,
+                OriginalSizeBytes: vector.Length * sizeof(float),
+                DCTCompressedSize: dct.ToBytes().Length,
+                DCTEnergyRetained: dct.EnergyRetained,
+                FFTCompressedSize: fft.ToBytes().Length,
+                FFTCompressionRatio: fft.CompressionRatio,
+                QuantizedDCTSize: dctCompressor.Quantize(dct, 8).ToBytes().Length);
+
+            return Result<CompressionPreview>.Success(preview);
+        }
+        catch (Exception ex)
+        {
+            return Result<CompressionPreview>.Failure($"Preview generation failed: {ex.Message}");
+        }
     }
 
-    private CompressionMethod SelectOptimalMethod(float[] vector)
+    private static CompressionMethod SelectOptimalMethod(float[] vector)
     {
         // Use DCT for typical embedding vectors - it's more efficient for real-valued data
         // FFT is better when there are periodic patterns
@@ -305,16 +448,16 @@ public sealed record CompressionPreview(
     public double BestCompressionRatio => (double)OriginalSizeBytes / Math.Min(DCTCompressedSize, Math.Min(FFTCompressedSize, QuantizedDCTSize));
 
     /// <summary>Recommended method based on size/quality tradeoff.</summary>
-    public VectorCompressionService.CompressionMethod RecommendedMethod
+    public CompressionMethod RecommendedMethod
     {
         get
         {
             if (QuantizedDCTSize < DCTCompressedSize / 2 && DCTEnergyRetained > 0.9)
-                return VectorCompressionService.CompressionMethod.QuantizedDCT;
+                return CompressionMethod.QuantizedDCT;
 
             return DCTCompressedSize <= FFTCompressedSize
-                ? VectorCompressionService.CompressionMethod.DCT
-                : VectorCompressionService.CompressionMethod.FFT;
+                ? CompressionMethod.DCT
+                : CompressionMethod.FFT;
         }
     }
 }
