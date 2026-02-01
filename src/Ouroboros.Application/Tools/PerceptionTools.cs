@@ -132,7 +132,10 @@ public static class PerceptionTools
                                 regEl.GetProperty("height").GetInt32());
                         }
                     }
-                    catch { }
+                    catch
+                    {
+                        // Invalid JSON input - use defaults (full screen, monitor 0)
+                    }
                 }
 
                 // Get screen bounds

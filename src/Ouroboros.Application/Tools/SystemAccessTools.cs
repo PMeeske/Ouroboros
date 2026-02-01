@@ -333,6 +333,7 @@ public static class SystemAccessTools
                 var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
                 var files = Directory.EnumerateFiles(path, pattern, searchOption).Take(200).ToList();
 
+                int skipped = 0;
                 if (!string.IsNullOrEmpty(contains))
                 {
                     var matching = new List<string>();
@@ -344,7 +345,11 @@ public static class SystemAccessTools
                             if (content.Contains(contains, StringComparison.OrdinalIgnoreCase))
                                 matching.Add(file);
                         }
-                        catch { }
+                        catch
+                        {
+                            // File cannot be read (permissions, locked, etc.) - skip it
+                            skipped++;
+                        }
                     }
                     files = matching;
                 }
@@ -355,6 +360,8 @@ public static class SystemAccessTools
                     sb.AppendLine($"  {file}");
                 if (files.Count > 50)
                     sb.AppendLine($"  ... and {files.Count - 50} more");
+                if (skipped > 0)
+                    sb.AppendLine($"  (Skipped {skipped} inaccessible file(s))");
 
                 return Result<string, string>.Success(sb.ToString());
             }
@@ -381,7 +388,11 @@ public static class SystemAccessTools
                 var filter = input.Trim().ToLower();
                 var processes = Process.GetProcesses()
                     .Where(p => string.IsNullOrEmpty(filter) || p.ProcessName.ToLower().Contains(filter))
-                    .OrderByDescending(p => { try { return p.WorkingSet64; } catch { return 0; } })
+                    .OrderByDescending(p =>
+                    {
+                        try { return p.WorkingSet64; }
+                        catch { return 0; } // Process exited or access denied
+                    })
                     .Take(50)
                     .ToList();
 
@@ -389,6 +400,7 @@ public static class SystemAccessTools
                 sb.AppendLine($"{"PID",-8} {"Name",-30} {"Memory",-12} {"CPU Time",-15}");
                 sb.AppendLine(new string('-', 70));
 
+                var skipped = 0;
                 foreach (var p in processes)
                 {
                     try
@@ -397,8 +409,15 @@ public static class SystemAccessTools
                         var cpu = p.TotalProcessorTime.ToString(@"hh\:mm\:ss");
                         sb.AppendLine($"{p.Id,-8} {p.ProcessName,-30} {mem,-12} {cpu,-15}");
                     }
-                    catch { }
+                    catch
+                    {
+                        // Process exited or access denied during formatting
+                        skipped++;
+                    }
                 }
+
+                if (skipped > 0)
+                    sb.AppendLine($"\n(Skipped {skipped} inaccessible process(es))");
 
                 return Task.FromResult(Result<string, string>.Success(sb.ToString()));
             }
@@ -755,7 +774,11 @@ public static class SystemAccessTools
                     var externalIp = await http.GetStringAsync("https://api.ipify.org", ct);
                     output += $"\nExternal IP: {externalIp}";
                 }
-                catch { }
+                catch
+                {
+                    // External IP check failed (offline, API unavailable, timeout) - optional feature
+                    output += "\nExternal IP: (unavailable)";
+                }
 
                 return Result<string, string>.Success(output);
             }
@@ -783,6 +806,7 @@ public static class SystemAccessTools
                 sb.AppendLine($"{"Drive",-6} {"Label",-20} {"Type",-12} {"Total",-12} {"Free",-12} {"Used %",-8}");
                 sb.AppendLine(new string('-', 75));
 
+                var skipped = 0;
                 foreach (var drive in DriveInfo.GetDrives())
                 {
                     try
@@ -791,8 +815,15 @@ public static class SystemAccessTools
                         var usedPercent = 100.0 * (drive.TotalSize - drive.TotalFreeSpace) / drive.TotalSize;
                         sb.AppendLine($"{drive.Name,-6} {drive.VolumeLabel,-20} {drive.DriveType,-12} {FormatSize(drive.TotalSize),-12} {FormatSize(drive.TotalFreeSpace),-12} {usedPercent:F1}%");
                     }
-                    catch { }
+                    catch
+                    {
+                        // Drive not ready or access denied
+                        skipped++;
+                    }
                 }
+
+                if (skipped > 0)
+                    sb.AppendLine($"\n(Skipped {skipped} inaccessible drive(s))");
 
                 return Task.FromResult(Result<string, string>.Success(sb.ToString()));
             }
@@ -991,7 +1022,10 @@ public static class SystemAccessTools
                     {
                         relativePath = Path.GetRelativePath(Environment.CurrentDirectory, result.FilePath);
                     }
-                    catch { }
+                    catch
+                    {
+                        // Path conversion failed - use absolute path as fallback
+                    }
 
                     // Extract a brief summary (first meaningful line or truncated content)
                     string summary = ExtractBriefSummary(result.Content, 80);
