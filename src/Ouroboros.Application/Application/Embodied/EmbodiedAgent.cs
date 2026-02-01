@@ -12,13 +12,21 @@ namespace Ouroboros.Application.Embodied;
 
 /// <summary>
 /// Implementation of an embodied agent that can perceive, act, learn, and plan in simulated environments.
-/// Provides sensorimotor grounding for cognitive capabilities.
+/// Provides sensorimotor grounding for cognitive capabilities with Unity ML-Agents integration,
+/// visual processing, reinforcement learning, and reward shaping.
+/// Note: The caller is responsible for managing the lifecycle of the optional UnityMLAgentsClient.
+/// EmbodiedAgent does not dispose the client; ensure proper disposal when the client is no longer needed.
 /// </summary>
 public sealed class EmbodiedAgent : IEmbodiedAgent
 {
     private readonly IEnvironmentManager environmentManager;
     private readonly IEthicsFramework ethics;
     private readonly ILogger<EmbodiedAgent> logger;
+    private readonly UnityMLAgentsClient? unityClient;
+    private readonly VisualProcessor? visualProcessor;
+    private readonly RLAgent? rlAgent;
+    private readonly RewardShaper? rewardShaper;
+    private readonly int maxBufferSize;
     private EnvironmentHandle? currentEnvironment;
     private SensorState? lastSensorState;
     private readonly List<EmbodiedTransition> experienceBuffer;
@@ -29,14 +37,29 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
     /// <param name="environmentManager">Environment manager for lifecycle operations</param>
     /// <param name="ethics">Ethics framework for action validation</param>
     /// <param name="logger">Logger for diagnostic output</param>
+    /// <param name="maxBufferSize">Maximum size of experience replay buffer (default: 10000)</param>
+    /// <param name="unityClient">Optional Unity ML-Agents client for environment communication</param>
+    /// <param name="visualProcessor">Optional visual processor for image observations (currently unused, reserved for future integration)</param>
+    /// <param name="rlAgent">Optional RL agent for policy-based action selection</param>
+    /// <param name="rewardShaper">Optional reward shaper for experience enhancement</param>
     public EmbodiedAgent(
         IEnvironmentManager environmentManager,
         IEthicsFramework ethics,
-        ILogger<EmbodiedAgent> logger)
+        ILogger<EmbodiedAgent> logger,
+        int maxBufferSize = 10000,
+        UnityMLAgentsClient? unityClient = null,
+        VisualProcessor? visualProcessor = null,
+        RLAgent? rlAgent = null,
+        RewardShaper? rewardShaper = null)
     {
         this.environmentManager = environmentManager ?? throw new ArgumentNullException(nameof(environmentManager));
         this.ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        this.maxBufferSize = maxBufferSize > 0 ? maxBufferSize : throw new ArgumentOutOfRangeException(nameof(maxBufferSize), "Max buffer size must be positive");
+        this.unityClient = unityClient;
+        this.visualProcessor = visualProcessor;
+        this.rlAgent = rlAgent;
+        this.rewardShaper = rewardShaper;
         this.experienceBuffer = new List<EmbodiedTransition>();
     }
 
@@ -48,6 +71,20 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
         try
         {
             this.logger.LogInformation("Initializing agent in environment: {SceneName}", environment.SceneName);
+
+            // Connect Unity client if available
+            if (this.unityClient != null)
+            {
+                var connectResult = await this.unityClient.ConnectAsync(ct);
+                if (connectResult.IsFailure)
+                {
+                    this.logger.LogWarning("Unity client connection failed: {Error}", connectResult.Error);
+                }
+                else
+                {
+                    this.logger.LogInformation("Unity ML-Agents client connected successfully");
+                }
+            }
 
             var createResult = await this.environmentManager.CreateEnvironmentAsync(environment, ct);
             if (createResult.IsFailure)
@@ -77,14 +114,25 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
                 return Result<SensorState, string>.Failure("Agent not initialized in any environment");
             }
 
-            // In a real implementation, this would query the environment for sensor data
-            // For now, we return a default state or the last known state
             this.logger.LogDebug("Perceiving sensor state in environment {Id}", this.currentEnvironment.Id);
 
-            var sensorState = SensorState.Default();
-            this.lastSensorState = sensorState;
+            // Try to get sensor state from Unity client if available
+            if (this.unityClient != null)
+            {
+                var unityStateResult = await this.unityClient.GetSensorStateAsync(ct);
+                if (unityStateResult.IsSuccess)
+                {
+                    this.lastSensorState = unityStateResult.Value;
+                    this.logger.LogDebug("Received sensor state from Unity ML-Agents");
+                    return unityStateResult;
+                }
 
-            await Task.CompletedTask; // Placeholder for async perception operation
+                this.logger.LogDebug("Unity client unavailable, using default sensor state");
+            }
+
+            // Fallback: return last known state or default
+            var sensorState = this.lastSensorState ?? SensorState.Default();
+            this.lastSensorState = sensorState;
 
             return Result<SensorState, string>.Success(sensorState);
         }
@@ -167,16 +215,52 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
                 return Result<ActionResult, string>.Failure($"Action requires human approval: {ethicsResult.Value.Reasoning}");
             }
 
-            // In a real implementation, this would send the action to the environment
-            // and receive the resulting state and reward
-            var resultingState = this.lastSensorState ?? SensorState.Default();
-            var actionResult = new ActionResult(
-                Success: true,
-                ResultingState: resultingState,
-                Reward: 0.0,
-                EpisodeTerminated: false);
+            // Execute action through Unity client if available
+            ActionResult actionResult;
+            if (this.unityClient != null)
+            {
+                var unityResult = await this.unityClient.SendActionAsync(action, ct);
+                if (unityResult.IsSuccess)
+                {
+                    actionResult = unityResult.Value;
+                    this.logger.LogDebug("Action executed via Unity ML-Agents");
+                }
+                else
+                {
+                    this.logger.LogWarning("Unity action execution failed: {Error}", unityResult.Error);
+                    // Fallback to mock result
+                    actionResult = new ActionResult(
+                        Success: true,
+                        ResultingState: this.lastSensorState ?? SensorState.Default(),
+                        Reward: 0.0,
+                        EpisodeTerminated: false);
+                }
+            }
+            else
+            {
+                // Mock result when Unity client not available
+                actionResult = new ActionResult(
+                    Success: true,
+                    ResultingState: this.lastSensorState ?? SensorState.Default(),
+                    Reward: 0.0,
+                    EpisodeTerminated: false);
+            }
 
-            await Task.CompletedTask; // Placeholder for async action execution
+            // Apply reward shaping if available
+            if (this.rewardShaper != null && this.lastSensorState != null)
+            {
+                var shapedReward = this.rewardShaper.ShapeReward(
+                    this.lastSensorState,
+                    actionResult.ResultingState,
+                    action,
+                    actionResult.Reward);
+
+                actionResult = actionResult with { Reward = shapedReward };
+                this.logger.LogDebug("Applied reward shaping: {ShapedReward:F4}", shapedReward);
+            }
+
+            // Update last sensor state
+            this.lastSensorState = actionResult.ResultingState;
 
             return Result<ActionResult, string>.Success(actionResult);
         }
@@ -196,16 +280,41 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
         {
             this.logger.LogInformation("Learning from {Count} transitions", transitions.Count);
 
-            // Add transitions to experience buffer
-            this.experienceBuffer.AddRange(transitions);
+            // Add transitions to experience buffer with FIFO eviction
+            foreach (var transition in transitions)
+            {
+                this.experienceBuffer.Add(transition);
 
-            // In a real implementation, this would:
-            // 1. Sample batches from the experience buffer
-            // 2. Compute policy gradients or Q-value updates
-            // 3. Update neural network weights
-            // 4. Log learning metrics (loss, reward, etc.)
+                // FIFO eviction when buffer exceeds max size
+                while (this.experienceBuffer.Count > this.maxBufferSize)
+                {
+                    this.experienceBuffer.RemoveAt(0);
+                    this.logger.LogTrace("Experience buffer full, removed oldest transition (FIFO eviction)");
+                }
+            }
 
-            await Task.CompletedTask; // Placeholder for async learning operation
+            this.logger.LogDebug(
+                "Experience buffer size: {Size}/{Max}",
+                this.experienceBuffer.Count,
+                this.maxBufferSize);
+
+            // If RL agent available, use it for batch training
+            if (this.rlAgent != null && this.experienceBuffer.Count >= 32)
+            {
+                var trainResult = await this.rlAgent.TrainAsync(Math.Min(32, this.experienceBuffer.Count), ct);
+                if (trainResult.IsSuccess)
+                {
+                    var metrics = trainResult.Value;
+                    this.logger.LogInformation(
+                        "RL training completed: loss={Loss:F4}, reward={Reward:F4}",
+                        metrics.PolicyLoss,
+                        metrics.AverageReward);
+                }
+                else
+                {
+                    this.logger.LogWarning("RL training failed: {Error}", trainResult.Error);
+                }
+            }
 
             this.logger.LogInformation("Learning completed successfully");
             return Result<Unit, string>.Success(Unit.Value);

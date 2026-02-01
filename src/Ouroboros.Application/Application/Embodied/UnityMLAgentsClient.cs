@@ -13,7 +13,7 @@ namespace Ouroboros.Application.Embodied;
 /// gRPC client for communicating with Unity ML-Agents environments.
 /// Handles low-level protocol communication and message serialization.
 /// </summary>
-public sealed class UnityMLAgentsClient : IDisposable
+public sealed class UnityMLAgentsClient : IAsyncDisposable
 {
     private readonly ILogger<UnityMLAgentsClient> logger;
     private readonly string serverAddress;
@@ -208,14 +208,14 @@ public sealed class UnityMLAgentsClient : IDisposable
     }
 
     /// <inheritdoc/>
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (this.disposed)
         {
             return;
         }
 
-        this.DisconnectAsync().GetAwaiter().GetResult();
+        await this.DisconnectAsync();
         this.disposed = true;
     }
 }

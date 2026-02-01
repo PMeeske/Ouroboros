@@ -162,7 +162,7 @@ public static class EmbodiedSimulationExample
     {
         Console.WriteLine("\n=== Unity ML-Agents Client Example ===\n");
 
-        using var client = new UnityMLAgentsClient(
+        await using var client = new UnityMLAgentsClient(
             "localhost",
             5005,
             NullLogger<UnityMLAgentsClient>.Instance);
@@ -209,5 +209,221 @@ public static class EmbodiedSimulationExample
         }
 
         Console.WriteLine("\n=== Client Example Complete ===");
+    }
+
+    /// <summary>
+    /// Demonstrates complete Unity ML-Agents system with all components.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation</returns>
+    public static async Task DemonstrateCompleteSystemAsync()
+    {
+        Console.WriteLine("\n=== Complete Unity ML-Agents System Example ===\n");
+
+        // Setup components
+        var environmentManager = new EnvironmentManager(NullLogger<EnvironmentManager>.Instance);
+        var ethics = EthicsFrameworkFactory.CreateDefault();
+
+        // Create Unity ML-Agents client (optional - can be null for mock mode)
+        await using var unityClient = new UnityMLAgentsClient(
+            "localhost",
+            5005,
+            NullLogger<UnityMLAgentsClient>.Instance);
+
+        // Create visual processor for image observations
+        var visualProcessor = new VisualProcessor(
+            inputWidth: 84,
+            inputHeight: 84,
+            featureDimension: 64,
+            NullLogger<VisualProcessor>.Instance);
+
+        // Create RL agent for policy learning
+        var rlAgent = new RLAgent(
+            epsilon: 0.1,
+            learningRate: 0.01,
+            discountFactor: 0.99,
+            maxBufferSize: 10000,
+            NullLogger<RLAgent>.Instance);
+
+        // Create reward shaper for experience enhancement
+        var rewardShaper = new RewardShaper(
+            distanceRewardWeight: 1.0,
+            velocityPenaltyWeight: 0.01,
+            curiosityBonusWeight: 0.1,
+            maxNoveltyBufferSize: 1000,
+            NullLogger<RewardShaper>.Instance);
+
+        // Create embodied agent with all components
+        var agent = new EmbodiedAgent(
+            environmentManager,
+            ethics,
+            NullLogger<EmbodiedAgent>.Instance,
+            maxBufferSize: 10000,
+            unityClient: unityClient,
+            visualProcessor: visualProcessor,
+            rlAgent: rlAgent,
+            rewardShaper: rewardShaper);
+
+        Console.WriteLine("1. Created agent with integrated components:");
+        Console.WriteLine("   - Unity ML-Agents Client");
+        Console.WriteLine("   - Visual Processor (84x84 -> 64D features)");
+        Console.WriteLine($"   - RL Agent (ε={rlAgent.Epsilon}, α={rlAgent.LearningRate}, γ={rlAgent.DiscountFactor})");
+        Console.WriteLine("   - Reward Shaper (distance + velocity + curiosity)");
+
+        // Define environment configuration
+        var config = new EnvironmentConfig(
+            SceneName: "AdvancedNavigation",
+            Parameters: new Dictionary<string, object>
+            {
+                ["difficulty"] = 2,
+                ["maxSteps"] = 200,
+                ["enableVisualObs"] = true
+            },
+            AvailableActions: new List<string> { "MoveForward", "MoveBackward", "TurnLeft", "TurnRight", "Jump" },
+            Type: EnvironmentType.Unity);
+
+        // Initialize agent
+        Console.WriteLine("\n2. Initializing agent in Unity environment...");
+        var initResult = await agent.InitializeInEnvironmentAsync(config);
+        if (initResult.IsSuccess)
+        {
+            Console.WriteLine("   Agent initialized successfully!");
+        }
+        else
+        {
+            Console.WriteLine($"   Initialization failed: {initResult.Error}");
+            Console.WriteLine("   (This is expected if Unity ML-Agents server is not running)");
+            return;
+        }
+
+        // Run episode with RL agent
+        Console.WriteLine("\n3. Running episode with RL-based action selection...");
+        var episodeTransitions = new List<EmbodiedTransition>();
+
+        for (int step = 0; step < 10; step++)
+        {
+            // Perceive current state
+            var perceiveResult = await agent.PerceiveAsync();
+            if (perceiveResult.IsFailure)
+            {
+                Console.WriteLine($"   Perception failed: {perceiveResult.Error}");
+                break;
+            }
+
+            var currentState = perceiveResult.Value;
+
+            // Select action using RL agent
+            var availableActions = new[]
+            {
+                EmbodiedAction.Move(new Vector3(1f, 0f, 0f), "MoveForward"),
+                EmbodiedAction.Move(new Vector3(-1f, 0f, 0f), "MoveBackward"),
+                EmbodiedAction.Rotate(new Vector3(0f, 0.1f, 0f), "TurnLeft"),
+                EmbodiedAction.Rotate(new Vector3(0f, -0.1f, 0f), "TurnRight")
+            };
+
+            var actionResult = await rlAgent.SelectActionAsync(currentState, availableActions);
+            if (actionResult.IsFailure)
+            {
+                Console.WriteLine($"   Action selection failed: {actionResult.Error}");
+                break;
+            }
+
+            var selectedAction = actionResult.Value;
+
+            // Execute action (with reward shaping applied internally)
+            var actResult = await agent.ActAsync(selectedAction);
+            if (actResult.IsFailure)
+            {
+                Console.WriteLine($"   Action execution failed: {actResult.Error}");
+                break;
+            }
+
+            var result = actResult.Value;
+            Console.WriteLine($"   Step {step + 1}: {selectedAction.ActionName} -> Reward: {result.Reward:F4}");
+
+            // Store transition for learning
+            var transition = new EmbodiedTransition(
+                StateBefore: currentState,
+                Action: selectedAction,
+                StateAfter: result.ResultingState,
+                Reward: result.Reward,
+                Terminal: result.EpisodeTerminated);
+
+            episodeTransitions.Add(transition);
+            rlAgent.StoreTransition(transition);
+
+            if (result.EpisodeTerminated)
+            {
+                Console.WriteLine("   Episode terminated");
+                break;
+            }
+
+            await Task.Delay(50); // Simulate time between steps
+        }
+
+        // Learn from experience
+        Console.WriteLine("\n4. Learning from episode experience...");
+        var learnResult = await agent.LearnFromExperienceAsync(episodeTransitions);
+        if (learnResult.IsSuccess)
+        {
+            Console.WriteLine($"   Learning completed! Experience buffer: {rlAgent.ExperienceBufferSize} transitions");
+        }
+        else
+        {
+            Console.WriteLine($"   Learning failed: {learnResult.Error}");
+        }
+
+        // Demonstrate visual processing (if visual observations available)
+        Console.WriteLine("\n5. Demonstrating visual processing...");
+
+        // Create a synthetic gradient pattern for predictable feature extraction
+        var mockPixels = new byte[84 * 84 * 3];
+        for (int y = 0; y < 84; y++)
+        {
+            for (int x = 0; x < 84; x++)
+            {
+                var pixelIndex = ((y * 84) + x) * 3;
+                // Create a horizontal gradient (darker left, brighter right)
+                var intensity = (byte)((x / 83.0) * 255);
+                mockPixels[pixelIndex] = intensity;     // R
+                mockPixels[pixelIndex + 1] = intensity; // G
+                mockPixels[pixelIndex + 2] = intensity; // B
+            }
+        }
+
+        var featureResult = await visualProcessor.ExtractFeaturesAsync(mockPixels);
+        if (featureResult.IsSuccess)
+        {
+            var features = featureResult.Value;
+            Console.WriteLine($"   Extracted {features.Length} features from 84x84 RGB gradient image");
+            Console.WriteLine($"   Feature stats: min={features.Min():F4}, max={features.Max():F4}, mean={features.Average():F4}");
+            Console.WriteLine($"   (Gradient pattern should show increasing features left to right)");
+        }
+
+        // Demonstrate Gym environment adapter
+        Console.WriteLine("\n6. Demonstrating Gym environment adapter...");
+        await using var gymAdapter = new GymEnvironmentAdapter(
+            "CartPole-v1",
+            NullLogger<GymEnvironmentAdapter>.Instance);
+
+        var gymConnectResult = await gymAdapter.ConnectAsync();
+        if (gymConnectResult.IsSuccess)
+        {
+            Console.WriteLine("   Connected to Gym environment (mock)");
+
+            var resetResult = await gymAdapter.ResetAsync();
+            if (resetResult.IsSuccess)
+            {
+                Console.WriteLine("   Environment reset successfully");
+            }
+
+            var gymAction = EmbodiedAction.Move(Vector3.UnitX, "CartPoleAction");
+            var stepResult = await gymAdapter.StepAsync(gymAction);
+            if (stepResult.IsSuccess)
+            {
+                Console.WriteLine($"   Step executed: reward={stepResult.Value.Reward:F4}");
+            }
+        }
+
+        Console.WriteLine("\n=== Complete System Example Complete ===");
     }
 }
