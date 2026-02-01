@@ -157,6 +157,10 @@ public static class OrchestratorArrows
 
     /// <summary>
     /// Creates a timeout arrow that wraps another arrow with timeout logic.
+    /// Note: This implementation creates a timeout but the cancellation token is not
+    /// automatically propagated to the arrow. The timeout will throw TimeoutException
+    /// if the arrow doesn't complete within the specified duration, but the arrow
+    /// itself will continue running unless it checks for cancellation internally.
     /// </summary>
     /// <typeparam name="TInput">Input type.</typeparam>
     /// <typeparam name="TOutput">Output type.</typeparam>

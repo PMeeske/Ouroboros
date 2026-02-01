@@ -7,6 +7,12 @@ namespace Ouroboros.Pipeline.Council.Agents;
 /// <summary>
 /// Arrow-based factory functions for agent persona operations.
 /// Replaces inheritance-based template methods with composable arrow patterns.
+/// 
+/// Note: The arrow functions in this class do not propagate CancellationToken to
+/// the underlying LLM calls. Cancellation support would require changes to the
+/// Step signature which is outside the scope of this refactoring. For operations
+/// that need cancellation, use the IAgentPersona interface methods directly which
+/// accept CancellationToken parameters.
 /// </summary>
 public static class AgentPersonaArrows
 {
