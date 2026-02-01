@@ -10,10 +10,16 @@ namespace Ouroboros.CLI.Commands;
 /// DAG (Directed Acyclic Graph) commands for pipeline branch management.
 /// Provides snapshot, show, replay, and retention operations.
 /// Uses immutable PipelineBranch event sourcing pattern for tracking epochs.
+/// 
+/// Note: This CLI infrastructure maintains session-scoped state, which is acceptable
+/// per refactoring guidelines (infrastructure code may use imperative patterns).
+/// Each CLI invocation represents a single session with one tracking branch.
 /// </summary>
 public static class DagCommands
 {
-    // Static tracking branch for CLI session - persists epochs across commands
+    // Session-scoped tracking branch - acceptable for CLI infrastructure layer
+    // Alternative approaches would require dependency injection or context passing,
+    // which adds complexity without benefit for a CLI session
     private static PipelineBranch? _trackingBranch;
 
     /// <summary>
