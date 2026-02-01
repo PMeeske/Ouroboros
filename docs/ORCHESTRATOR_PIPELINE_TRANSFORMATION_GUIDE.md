@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides examples and patterns for transforming sequential async operations in orchestrator classes to composable pipeline structures using `Bind`/`Map` composition.
+This document provides examples and patterns for transforming sequential async operations in orchestrator classes to composable pipeline structures using `Then`/`Map` composition.
 
 ## Transformation Pattern
 

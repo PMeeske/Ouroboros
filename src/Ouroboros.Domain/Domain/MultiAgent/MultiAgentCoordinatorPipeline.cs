@@ -23,10 +23,10 @@ public static class MultiAgentCoordinatorPipeline
         List<AgentId> Participants,
         IAgentRegistry AgentRegistry,
         CancellationToken CancellationToken,
-        List<AgentCapabilities> Capabilities,
-        List<string> Tasks,
+        IReadOnlyList<AgentCapabilities> Capabilities,
+        IReadOnlyList<string> Tasks,
         Dictionary<AgentId, TaskAssignment>? Assignments,
-        List<Dependency> Dependencies,
+        IReadOnlyList<Dependency> Dependencies,
         TimeSpan EstimatedDuration);
 
     /// <summary>
@@ -61,10 +61,7 @@ public static class MultiAgentCoordinatorPipeline
         CancellationToken cancellationToken) =>
         async _ =>
         {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return Result<PlanningContext, string>.Failure("Operation was cancelled");
-            }
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (string.IsNullOrWhiteSpace(goal))
             {
@@ -87,7 +84,7 @@ public static class MultiAgentCoordinatorPipeline
                 Dependencies: new List<Dependency>(),
                 EstimatedDuration: TimeSpan.Zero);
 
-            return await Task.FromResult(Result<PlanningContext, string>.Success(context));
+            return Result<PlanningContext, string>.Success(context);
         };
 
     /// <summary>
@@ -144,7 +141,7 @@ public static class MultiAgentCoordinatorPipeline
             {
                 var tasks = DecomposeGoalIntoTasks(context.Goal);
                 var updatedContext = context with { Tasks = tasks };
-                return await Task.FromResult(Result<PlanningContext, string>.Success(updatedContext));
+                return Result<PlanningContext, string>.Success(updatedContext);
             }
             catch (Exception ex)
             {
@@ -205,7 +202,7 @@ public static class MultiAgentCoordinatorPipeline
                 var assignments = context.Assignments.Values.ToList();
                 var dependencies = IdentifyDependencies(assignments);
                 var updatedContext = context with { Dependencies = dependencies };
-                return await Task.FromResult(Result<PlanningContext, string>.Success(updatedContext));
+                return Result<PlanningContext, string>.Success(updatedContext);
             }
             catch (Exception ex)
             {
@@ -236,7 +233,7 @@ public static class MultiAgentCoordinatorPipeline
                 var assignments = context.Assignments.Values.ToList();
                 var duration = EstimateDuration(assignments, context.Dependencies);
                 var updatedContext = context with { EstimatedDuration = duration };
-                return await Task.FromResult(Result<PlanningContext, string>.Success(updatedContext));
+                return Result<PlanningContext, string>.Success(updatedContext);
             }
             catch (Exception ex)
             {
@@ -265,7 +262,7 @@ public static class MultiAgentCoordinatorPipeline
         var plan = new CollaborativePlan(
             context.Goal,
             assignments,
-            context.Dependencies,
+            context.Dependencies.ToList(),
             context.EstimatedDuration);
 
         return Result<CollaborativePlan, string>.Success(plan);
@@ -286,8 +283,8 @@ public static class MultiAgentCoordinatorPipeline
     }
 
     private static Task<Result<Dictionary<AgentId, TaskAssignment>, string>> AllocateSkillBasedAsync(
-        List<string> tasks,
-        List<AgentCapabilities> agents,
+        IReadOnlyList<string> tasks,
+        IReadOnlyList<AgentCapabilities> agents,
         CancellationToken ct)
     {
         var assignments = new Dictionary<AgentId, TaskAssignment>();
@@ -301,7 +298,7 @@ public static class MultiAgentCoordinatorPipeline
         foreach (var task in tasks)
         {
             // Find agent with best skill match
-            var bestAgent = availableAgents
+            var bestMatch = availableAgents
                 .Select(a => new
                 {
                     Agent = a,
@@ -310,7 +307,14 @@ public static class MultiAgentCoordinatorPipeline
                 })
                 .OrderByDescending(x => x.Score)
                 .ThenBy(x => x.Agent.CurrentLoad)
-                .First().Agent;
+                .FirstOrDefault();
+
+            if (bestMatch == null)
+            {
+                return Task.FromResult(Result<Dictionary<AgentId, TaskAssignment>, string>.Failure("No suitable agent found for task allocation"));
+            }
+
+            var bestAgent = bestMatch.Agent;
 
             var assignment = new TaskAssignment(
                 TaskDescription: task,
@@ -353,7 +357,7 @@ public static class MultiAgentCoordinatorPipeline
         return dependencies;
     }
 
-    private static TimeSpan EstimateDuration(List<TaskAssignment> assignments, List<Dependency> dependencies)
+    private static TimeSpan EstimateDuration(List<TaskAssignment> assignments, IReadOnlyList<Dependency> dependencies)
     {
         // Simplified duration estimation
         var tasksPerAgent = assignments.GroupBy(a => a.AssignedTo).Count();

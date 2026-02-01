@@ -24,7 +24,7 @@ public static class EpisodeRunnerPipeline
         string EnvironmentName,
         IEnvironmentActor Environment,
         IPolicy Policy,
-        List<EnvironmentStep> Steps,
+        IReadOnlyList<EnvironmentStep> Steps,
         EnvironmentState CurrentState,
         double TotalReward,
         DateTime StartTime,
@@ -254,10 +254,11 @@ public static class EpisodeRunnerPipeline
                 observation,
                 DateTime.UtcNow);
 
-            context.Steps.Add(envStep);
+            var updatedSteps = new List<EnvironmentStep>(context.Steps) { envStep };
 
             var updatedContext = context with
             {
+                Steps = updatedSteps,
                 CurrentState = observation.State,
                 TotalReward = context.TotalReward + observation.Reward,
                 StepNumber = context.StepNumber + 1,

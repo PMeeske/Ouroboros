@@ -211,7 +211,7 @@ public class MultiAgentCoordinatorPipelineTests
         // Arrange
         var agents = CreateTestAgents(3);
         var goal = "Test cancellation";
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         cts.Cancel(); // Cancel immediately
 
         var pipeline = MultiAgentCoordinatorPipeline.CollaborativePlanningPipeline(
@@ -221,11 +221,10 @@ public class MultiAgentCoordinatorPipelineTests
             cts.Token);
 
         // Act
-        var result = await pipeline(Unit.Value);
+        Action act = () => pipeline(Unit.Value).GetAwaiter().GetResult();
 
         // Assert
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Contain("cancelled");
+        act.Should().Throw<OperationCanceledException>();
     }
 
     [Fact]
