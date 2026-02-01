@@ -176,7 +176,7 @@ public class EpisodicMemoryArrowsTests
     public void CreateEpisodeRetriever_ShouldReturnFactory()
     {
         // Arrange
-        var qdrantClient = new QdrantClient("localhost", 6334);
+        using var qdrantClient = new QdrantClient("localhost", 6334);
         var embeddingModel = new MockEmbeddingModel();
 
         // Act
@@ -231,14 +231,11 @@ public class EpisodicMemoryArrowsTests
     [Fact]
     public async Task ArrowComposition_MultipleEpisodicMemoryOperations_ShouldCompose()
     {
-        // Arrange
-        var branch = CreateTestBranch();
-
         // Note: This test demonstrates arrow composition without requiring Qdrant
         // In real usage, these would be connected to actual Qdrant instances
 
         // Act - Create arrows that would be composed in real usage
-        var qdrantClient = new QdrantClient("localhost", 6334);
+        using var qdrantClient = new QdrantClient("localhost", 6334);
         var embeddingModel = new MockEmbeddingModel();
 
         var retrieverFactory = EpisodicMemoryArrows.CreateEpisodeRetriever(

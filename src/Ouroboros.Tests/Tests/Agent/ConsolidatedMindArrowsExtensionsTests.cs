@@ -209,7 +209,6 @@ public class ConsolidatedMindArrowsExtensionsTests
     public void ConfiguredMindArrowSystem_CreateReasoningArrow_ShouldReturnArrow()
     {
         // Arrange
-        var specialists = CreateTestSpecialists();
         var config = MindConfig.Minimal();
         var system = ConsolidatedMindArrowsExtensions.CreateConfiguredSystem(
             "http://localhost:11434",

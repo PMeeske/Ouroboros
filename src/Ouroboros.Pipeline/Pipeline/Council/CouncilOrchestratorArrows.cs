@@ -365,12 +365,25 @@ public static class CouncilOrchestratorArrows
         CouncilConfig config,
         CancellationToken ct)
     {
+        // If no votes were produced, we cannot synthesize a meaningful decision.
+        if (votes.Count == 0)
+        {
+            return Result<CouncilDecision, string>.Failure(
+                "No votes were produced by any agents; unable to synthesize a council decision.");
+        }
+
         // Calculate weighted vote totals
         var voteGroups = votes.Values
             .GroupBy(v => v.Position.ToUpperInvariant())
             .ToDictionary(g => g.Key, g => g.Sum(v => v.Weight));
 
         var totalWeight = voteGroups.Values.Sum();
+        if (totalWeight <= 0)
+        {
+            return Result<CouncilDecision, string>.Failure(
+                "All agent votes have zero weight; unable to synthesize a council decision.");
+        }
+
         var majorityPosition = voteGroups.OrderByDescending(g => g.Value).FirstOrDefault();
 
         // Check for consensus
