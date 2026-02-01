@@ -33,7 +33,10 @@ public sealed class GitHubMcpClient : IGitHubMcpClient
         _options = options;
         _httpClient = httpClient ?? new HttpClient();
         _httpClient.BaseAddress = new Uri(_options.BaseUrl);
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.Token);
+        // GitHub API authentication - supports both Personal Access Tokens (PAT) and OAuth tokens
+        // For PATs, use scheme "token"; for OAuth tokens, use "Bearer"
+        var authScheme = _options.Token.StartsWith("gh") ? "token" : "Bearer";
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(authScheme, _options.Token);
         _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Ouroboros", "1.0"));
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         _httpClient.Timeout = _options.Timeout;

@@ -15,7 +15,14 @@ public class McpServer
     private readonly DslAssistant _dslAssistant;
     private readonly IGitHubMcpClient? _githubClient;
 
-    public McpServer(RoslynCodeTool codeTool, DslAssistant dslAssistant, IGitHubMcpClient? githubClient = null)
+    public McpServer(RoslynCodeTool codeTool, DslAssistant dslAssistant)
+    {
+        _codeTool = codeTool;
+        _dslAssistant = dslAssistant;
+        _githubClient = null;
+    }
+
+    public McpServer(RoslynCodeTool codeTool, DslAssistant dslAssistant, IGitHubMcpClient githubClient)
     {
         _codeTool = codeTool;
         _dslAssistant = dslAssistant;
