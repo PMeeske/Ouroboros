@@ -99,13 +99,23 @@ public static class OrchestratorArrows
                 throw new InvalidOperationException(firstResult.ErrorMessage ?? "First orchestrator failed");
             }
 
-            var secondResult = await second.ExecuteAsync(firstResult.Output!, tuple.context);
+            if (firstResult.Output is null)
+            {
+                throw new InvalidOperationException("First orchestrator returned null output despite reporting success");
+            }
+
+            var secondResult = await second.ExecuteAsync(firstResult.Output, tuple.context);
             if (!secondResult.Success)
             {
                 throw new InvalidOperationException(secondResult.ErrorMessage ?? "Second orchestrator failed");
             }
 
-            return secondResult.Output!;
+            if (secondResult.Output is null)
+            {
+                throw new InvalidOperationException("Second orchestrator returned null output despite reporting success");
+            }
+
+            return secondResult.Output;
         };
 
         return FromArrow(name, composedArrow, config);

@@ -167,6 +167,33 @@ public class ArrowCompositionTests
         prompt.Should().Contain("CUSTOM PREFIX");
     }
 
+    [Fact]
+    public void AgentPersonaArrows_CreateProposalArrow_ShouldAcceptCancellationToken()
+    {
+        // Arrange
+        using var cts = new CancellationTokenSource();
+        var topic = new CouncilTopic("Question", "Background", new List<string>());
+
+        // Act - Just verify the arrow can be created with CancellationToken
+        // We can't easily test actual cancellation without a real LLM,
+        // but we verify the API accepts the token
+        var arrowCreation = () =>
+        {
+            // This would normally use a real LLM, but for unit test we just verify signature
+            // The cancellation token is captured in the closure and passed to GenerateWithToolsAsync
+            var arrow = AgentPersonaArrows.CreateProposalArrow(
+                "TestAgent",
+                "System prompt",
+                AgentPersonaArrows.BuildDefaultProposalPrompt,
+                null!, // Would be real LLM in actual usage
+                cts.Token);
+            return arrow;
+        };
+
+        // Assert - No exception thrown when creating arrow with cancellation token
+        arrowCreation.Should().NotThrow();
+    }
+
     // Helper class for testing custom proposal builder
     private class TestAgentWithCustomProposal : BaseAgentPersona
     {

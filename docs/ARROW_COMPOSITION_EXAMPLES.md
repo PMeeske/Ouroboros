@@ -2,6 +2,23 @@
 
 This document demonstrates how to use the arrow-based composition patterns that replace inheritance-based template methods.
 
+## Important Notes
+
+### Cancellation Token Support
+All arrow factory functions now support `CancellationToken` for proper cancellation of long-running LLM operations. When using arrow composition directly, pass the cancellation token to the factory functions:
+
+```csharp
+// Arrow factories accept CancellationToken
+var arrow = AgentPersonaArrows.CreateProposalArrow(
+    agentName, 
+    systemPrompt, 
+    promptBuilder, 
+    llm, 
+    cancellationToken);
+```
+
+When using `BaseAgentPersona` or `IAgentPersona` interface methods, cancellation tokens are automatically propagated to the underlying arrow operations.
+
 ## Agent Persona Composition
 
 ### Before (Inheritance-Based)
@@ -41,25 +58,28 @@ public sealed class CustomAgent : BaseAgentPersona
 public static class CustomAgentArrows
 {
     public static Step<CouncilTopic, Result<AgentContribution, string>> CreateProposal(
-        ToolAwareChatModel llm)
+        ToolAwareChatModel llm,
+        CancellationToken ct = default)
     {
         return AgentPersonaArrows.CreateProposalArrow(
             "CustomAgent",
             "Custom system prompt",
             (topic, systemPrompt) => $"{systemPrompt}\n\n{topic.Question}\n\nAdditional context",
-            llm);
+            llm,
+            ct);
     }
     
-    // Compose multiple arrows
+    // Compose multiple arrows with cancellation support
     public static Step<CouncilTopic, Result<List<AgentContribution>, string>> CreateFullDebate(
-        ToolAwareChatModel llm)
+        ToolAwareChatModel llm,
+        CancellationToken ct = default)
     {
         return async topic =>
         {
             var results = new List<AgentContribution>();
             
-            // Generate proposal
-            var proposalResult = await CreateProposal(llm)(topic);
+            // Generate proposal with cancellation support
+            var proposalResult = await CreateProposal(llm, ct)(topic);
             if (!proposalResult.IsSuccess)
                 return Result<List<AgentContribution>, string>.Failure(proposalResult.Error);
             

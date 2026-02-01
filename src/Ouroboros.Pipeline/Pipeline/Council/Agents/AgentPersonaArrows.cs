@@ -7,12 +7,6 @@ namespace Ouroboros.Pipeline.Council.Agents;
 /// <summary>
 /// Arrow-based factory functions for agent persona operations.
 /// Replaces inheritance-based template methods with composable arrow patterns.
-/// 
-/// Note: The arrow functions in this class do not propagate CancellationToken to
-/// the underlying LLM calls. Cancellation support would require changes to the
-/// Step signature which is outside the scope of this refactoring. For operations
-/// that need cancellation, use the IAgentPersona interface methods directly which
-/// accept CancellationToken parameters.
 /// </summary>
 public static class AgentPersonaArrows
 {
@@ -23,18 +17,20 @@ public static class AgentPersonaArrows
     /// <param name="systemPrompt">System prompt defining agent behavior.</param>
     /// <param name="promptBuilder">Function to build the proposal prompt.</param>
     /// <param name="llm">Language model to use for generation.</param>
+    /// <param name="ct">Cancellation token.</param>
     /// <returns>A step that transforms a topic into an agent contribution.</returns>
     public static Step<CouncilTopic, Result<AgentContribution, string>> CreateProposalArrow(
         string agentName,
         string systemPrompt,
         Func<CouncilTopic, string, string> promptBuilder,
-        ToolAwareChatModel llm)
+        ToolAwareChatModel llm,
+        CancellationToken ct = default)
         => async topic =>
         {
             try
             {
                 var prompt = promptBuilder(topic, systemPrompt);
-                var (response, _) = await llm.GenerateWithToolsAsync(prompt);
+                var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
                 return Result<AgentContribution, string>.Success(new AgentContribution(agentName, response));
             }
             catch (Exception ex)
@@ -50,18 +46,20 @@ public static class AgentPersonaArrows
     /// <param name="systemPrompt">System prompt defining agent behavior.</param>
     /// <param name="promptBuilder">Function to build the challenge prompt.</param>
     /// <param name="llm">Language model to use for generation.</param>
+    /// <param name="ct">Cancellation token.</param>
     /// <returns>A step that transforms topic and proposals into an agent contribution.</returns>
     public static Step<(CouncilTopic topic, IReadOnlyList<AgentContribution> otherProposals), Result<AgentContribution, string>> CreateChallengeArrow(
         string agentName,
         string systemPrompt,
         Func<CouncilTopic, IReadOnlyList<AgentContribution>, string, string> promptBuilder,
-        ToolAwareChatModel llm)
+        ToolAwareChatModel llm,
+        CancellationToken ct = default)
         => async input =>
         {
             try
             {
                 var prompt = promptBuilder(input.topic, input.otherProposals, systemPrompt);
-                var (response, _) = await llm.GenerateWithToolsAsync(prompt);
+                var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
                 return Result<AgentContribution, string>.Success(new AgentContribution(agentName, response));
             }
             catch (Exception ex)
@@ -77,18 +75,20 @@ public static class AgentPersonaArrows
     /// <param name="systemPrompt">System prompt defining agent behavior.</param>
     /// <param name="promptBuilder">Function to build the refinement prompt.</param>
     /// <param name="llm">Language model to use for generation.</param>
+    /// <param name="ct">Cancellation token.</param>
     /// <returns>A step that transforms topic, challenges, and own proposal into an agent contribution.</returns>
     public static Step<(CouncilTopic topic, IReadOnlyList<AgentContribution> challenges, AgentContribution ownProposal), Result<AgentContribution, string>> CreateRefinementArrow(
         string agentName,
         string systemPrompt,
         Func<CouncilTopic, IReadOnlyList<AgentContribution>, AgentContribution, string, string> promptBuilder,
-        ToolAwareChatModel llm)
+        ToolAwareChatModel llm,
+        CancellationToken ct = default)
         => async input =>
         {
             try
             {
                 var prompt = promptBuilder(input.topic, input.challenges, input.ownProposal, systemPrompt);
-                var (response, _) = await llm.GenerateWithToolsAsync(prompt);
+                var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
                 return Result<AgentContribution, string>.Success(new AgentContribution(agentName, response));
             }
             catch (Exception ex)
@@ -106,6 +106,7 @@ public static class AgentPersonaArrows
     /// <param name="promptBuilder">Function to build the vote prompt.</param>
     /// <param name="voteParser">Function to parse the vote response.</param>
     /// <param name="llm">Language model to use for generation.</param>
+    /// <param name="ct">Cancellation token.</param>
     /// <returns>A step that transforms topic and transcript into an agent vote.</returns>
     public static Step<(CouncilTopic topic, IReadOnlyList<DebateRound> transcript), Result<AgentVote, string>> CreateVoteArrow(
         string agentName,
@@ -113,13 +114,14 @@ public static class AgentPersonaArrows
         double expertiseWeight,
         Func<CouncilTopic, IReadOnlyList<DebateRound>, string, string> promptBuilder,
         Func<string, string, double, AgentVote> voteParser,
-        ToolAwareChatModel llm)
+        ToolAwareChatModel llm,
+        CancellationToken ct = default)
         => async input =>
         {
             try
             {
                 var prompt = promptBuilder(input.topic, input.transcript, systemPrompt);
-                var (response, _) = await llm.GenerateWithToolsAsync(prompt);
+                var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
                 var vote = voteParser(agentName, response, expertiseWeight);
                 return Result<AgentVote, string>.Success(vote);
             }

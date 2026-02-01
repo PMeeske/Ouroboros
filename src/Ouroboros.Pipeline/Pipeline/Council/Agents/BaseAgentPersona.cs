@@ -63,7 +63,7 @@ public abstract class BaseAgentPersona : IAgentPersona
         ToolAwareChatModel llm,
         CancellationToken ct = default)
     {
-        var arrow = AgentPersonaArrows.CreateProposalArrow(Name, SystemPrompt, ProposalPromptBuilder, llm);
+        var arrow = AgentPersonaArrows.CreateProposalArrow(Name, SystemPrompt, ProposalPromptBuilder, llm, ct);
         return arrow(topic);
     }
 
@@ -74,7 +74,7 @@ public abstract class BaseAgentPersona : IAgentPersona
         ToolAwareChatModel llm,
         CancellationToken ct = default)
     {
-        var arrow = AgentPersonaArrows.CreateChallengeArrow(Name, SystemPrompt, ChallengePromptBuilder, llm);
+        var arrow = AgentPersonaArrows.CreateChallengeArrow(Name, SystemPrompt, ChallengePromptBuilder, llm, ct);
         return arrow((topic, otherProposals));
     }
 
@@ -86,7 +86,7 @@ public abstract class BaseAgentPersona : IAgentPersona
         ToolAwareChatModel llm,
         CancellationToken ct = default)
     {
-        var arrow = AgentPersonaArrows.CreateRefinementArrow(Name, SystemPrompt, RefinementPromptBuilder, llm);
+        var arrow = AgentPersonaArrows.CreateRefinementArrow(Name, SystemPrompt, RefinementPromptBuilder, llm, ct);
         return arrow((topic, challenges, ownProposal));
     }
 
@@ -97,7 +97,7 @@ public abstract class BaseAgentPersona : IAgentPersona
         ToolAwareChatModel llm,
         CancellationToken ct = default)
     {
-        var arrow = AgentPersonaArrows.CreateVoteArrow(Name, SystemPrompt, ExpertiseWeight, VotePromptBuilder, VoteParser, llm);
+        var arrow = AgentPersonaArrows.CreateVoteArrow(Name, SystemPrompt, ExpertiseWeight, VotePromptBuilder, VoteParser, llm, ct);
         return arrow((topic, transcript));
     }
 }
