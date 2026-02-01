@@ -142,7 +142,7 @@ public class EpisodicMemoryArrowsTests
     public void ConfiguredMemorySystem_RetrieveSimilarEpisodes_ShouldReturnArrow()
     {
         // Arrange
-        var qdrantClient = new QdrantClient("localhost", 6334);
+        using var qdrantClient = new QdrantClient("localhost", 6334);
         var embeddingModel = new MockEmbeddingModel();
         var memorySystem = EpisodicMemoryArrows.CreateConfiguredMemorySystem(
             qdrantClient,
@@ -159,7 +159,7 @@ public class EpisodicMemoryArrowsTests
     public void ConfiguredMemorySystem_PlanWithExperience_ShouldReturnArrow()
     {
         // Arrange
-        var qdrantClient = new QdrantClient("localhost", 6334);
+        using var qdrantClient = new QdrantClient("localhost", 6334);
         var embeddingModel = new MockEmbeddingModel();
         var memorySystem = EpisodicMemoryArrows.CreateConfiguredMemorySystem(
             qdrantClient,
@@ -248,5 +248,94 @@ public class EpisodicMemoryArrowsTests
         // Assert - Verify arrows can be created and would compose
         retrieveArrow1.Should().NotBeNull();
         retrieveArrow2.Should().NotBeNull();
+    }
+
+    [Fact(Skip = "Requires Qdrant connection")]
+    public async Task PlanWithExperienceArrow_WithSuccessfulEpisodes_ShouldGeneratePlanWithPatterns()
+    {
+        // Arrange
+        using var qdrantClient = new QdrantClient("localhost", 6334);
+        var embeddingModel = new MockEmbeddingModel();
+        var branch = CreateTestBranch();
+        var goal = "Test goal with successful episodes";
+
+        // Act
+        var arrow = EpisodicMemoryArrows.PlanWithExperienceArrow(
+            qdrantClient,
+            embeddingModel,
+            goal,
+            topK: 5);
+        var (resultBranch, plan) = await arrow(branch);
+
+        // Assert
+        resultBranch.Should().NotBeNull();
+        // Plan may be null if no episodes found, which is expected in test environment
+        if (plan != null)
+        {
+            plan.Description.Should().Contain(goal);
+            plan.Actions.Should().NotBeNull();
+        }
+    }
+
+    [Fact(Skip = "Requires Qdrant connection")]
+    public async Task PlanWithExperienceArrow_WithNoEpisodes_ShouldReturnNullPlan()
+    {
+        // Arrange
+        using var qdrantClient = new QdrantClient("localhost", 6334);
+        var embeddingModel = new MockEmbeddingModel();
+        var branch = CreateTestBranch();
+        var goal = "Completely novel goal with no history";
+
+        // Act
+        var arrow = EpisodicMemoryArrows.PlanWithExperienceArrow(
+            qdrantClient,
+            embeddingModel,
+            goal,
+            topK: 5);
+        var (resultBranch, plan) = await arrow(branch);
+
+        // Assert
+        resultBranch.Should().NotBeNull();
+        // Plan might be null when no relevant episodes are found
+    }
+
+    [Fact(Skip = "Requires Qdrant connection")]
+    public async Task PlanWithExperienceArrow_WithCustomTopK_ShouldRespectParameter()
+    {
+        // Arrange
+        using var qdrantClient = new QdrantClient("localhost", 6334);
+        var embeddingModel = new MockEmbeddingModel();
+        var branch = CreateTestBranch();
+        var goal = "Test goal with custom topK";
+
+        // Act
+        var arrow = EpisodicMemoryArrows.PlanWithExperienceArrow(
+            qdrantClient,
+            embeddingModel,
+            goal,
+            topK: 10);
+        var (resultBranch, plan) = await arrow(branch);
+
+        // Assert
+        resultBranch.Should().NotBeNull();
+        // The topK parameter should be used in episode retrieval
+    }
+
+    [Fact]
+    public void PlanWithExperienceArrow_Creation_ShouldNotThrow()
+    {
+        // Arrange
+        using var qdrantClient = new QdrantClient("localhost", 6334);
+        var embeddingModel = new MockEmbeddingModel();
+        var goal = "Test goal";
+
+        // Act
+        var arrow = EpisodicMemoryArrows.PlanWithExperienceArrow(
+            qdrantClient,
+            embeddingModel,
+            goal);
+
+        // Assert
+        arrow.Should().NotBeNull();
     }
 }

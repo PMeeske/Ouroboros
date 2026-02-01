@@ -228,7 +228,6 @@ public class ConsolidatedMindArrowsExtensionsTests
     public void ConfiguredMindArrowSystem_CreateComplexTaskArrow_ShouldReturnArrow()
     {
         // Arrange
-        var specialists = CreateTestSpecialists();
         var config = MindConfig.Minimal();
         var system = ConsolidatedMindArrowsExtensions.CreateConfiguredSystem(
             "http://localhost:11434",
@@ -248,7 +247,6 @@ public class ConsolidatedMindArrowsExtensionsTests
     public void ConfiguredMindArrowSystem_CreateProcessingFactory_ShouldReturnFactory()
     {
         // Arrange
-        var specialists = CreateTestSpecialists();
         var config = MindConfig.Minimal();
         var system = ConsolidatedMindArrowsExtensions.CreateConfiguredSystem(
             "http://localhost:11434",
@@ -271,7 +269,6 @@ public class ConsolidatedMindArrowsExtensionsTests
     public async Task ArrowComposition_MultipleConfiguredArrows_ShouldCompose()
     {
         // Arrange
-        var specialists = CreateTestSpecialists();
         var config = MindConfig.Minimal();
         var system = ConsolidatedMindArrowsExtensions.CreateConfiguredSystem(
             "http://localhost:11434",
@@ -296,7 +293,6 @@ public class ConsolidatedMindArrowsExtensionsTests
     public void ConfiguredMindArrowSystem_Properties_ShouldReturnConfiguredValues()
     {
         // Arrange
-        var specialists = CreateTestSpecialists();
         var config = new MindConfig(
             EnableThinking: true,
             EnableVerification: true,
