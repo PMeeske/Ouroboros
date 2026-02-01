@@ -175,47 +175,55 @@ public sealed class VisualProcessor
     /// <returns>Feature vector</returns>
     private float[] ComputeGridFeatures(byte[] pixels)
     {
-        // Determine grid size from feature dimension
+        // Compute grid size - must be square for this implementation
         var gridSize = (int)Math.Sqrt(this.featureDimension);
-        if (gridSize * gridSize != this.featureDimension)
+        var actualFeatures = gridSize * gridSize;
+
+        if (actualFeatures != this.featureDimension)
         {
-            // Fallback: use feature dimension directly
-            gridSize = this.featureDimension;
+            this.logger.LogWarning(
+                "Feature dimension {Dimension} is not a perfect square. Using {ActualDimension} features instead",
+                this.featureDimension,
+                actualFeatures);
         }
 
         var cellWidth = this.inputWidth / gridSize;
         var cellHeight = this.inputHeight / gridSize;
-        var features = new float[this.featureDimension];
+        var features = new float[actualFeatures];
 
         // Compute average intensity per grid cell
-        for (int i = 0; i < gridSize && i < this.featureDimension; i++)
+        for (int gridY = 0; gridY < gridSize; gridY++)
         {
-            var cellX = (i % gridSize) * cellWidth;
-            var cellY = (i / gridSize) * cellHeight;
-
-            double sum = 0.0;
-            int count = 0;
-
-            // Sample pixels in this cell
-            for (int y = cellY; y < cellY + cellHeight && y < this.inputHeight; y++)
+            for (int gridX = 0; gridX < gridSize; gridX++)
             {
-                for (int x = cellX; x < cellX + cellWidth && x < this.inputWidth; x++)
+                var featureIndex = (gridY * gridSize) + gridX;
+                var cellX = gridX * cellWidth;
+                var cellY = gridY * cellHeight;
+
+                double sum = 0.0;
+                int count = 0;
+
+                // Sample pixels in this cell
+                for (int y = cellY; y < cellY + cellHeight && y < this.inputHeight; y++)
                 {
-                    var pixelIndex = ((y * this.inputWidth) + x) * 3;
-                    if (pixelIndex + 2 < pixels.Length)
+                    for (int x = cellX; x < cellX + cellWidth && x < this.inputWidth; x++)
                     {
-                        // Average RGB values
-                        var r = pixels[pixelIndex];
-                        var g = pixels[pixelIndex + 1];
-                        var b = pixels[pixelIndex + 2];
-                        sum += (r + g + b) / 3.0;
-                        count++;
+                        var pixelIndex = ((y * this.inputWidth) + x) * 3;
+                        if (pixelIndex + 2 < pixels.Length)
+                        {
+                            // Average RGB values
+                            var r = pixels[pixelIndex];
+                            var g = pixels[pixelIndex + 1];
+                            var b = pixels[pixelIndex + 2];
+                            sum += (r + g + b) / 3.0;
+                            count++;
+                        }
                     }
                 }
-            }
 
-            // Normalize to [0, 1]
-            features[i] = count > 0 ? (float)(sum / count / 255.0) : 0.0f;
+                // Normalize to [0, 1]
+                features[featureIndex] = count > 0 ? (float)(sum / count / 255.0) : 0.0f;
+            }
         }
 
         return features;

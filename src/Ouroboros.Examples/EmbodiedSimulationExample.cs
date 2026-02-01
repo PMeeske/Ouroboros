@@ -374,15 +374,29 @@ public static class EmbodiedSimulationExample
 
         // Demonstrate visual processing (if visual observations available)
         Console.WriteLine("\n5. Demonstrating visual processing...");
-        var mockPixels = new byte[84 * 84 * 3]; // Mock RGB image
-        Random.Shared.NextBytes(mockPixels);
+
+        // Create a synthetic gradient pattern for predictable feature extraction
+        var mockPixels = new byte[84 * 84 * 3];
+        for (int y = 0; y < 84; y++)
+        {
+            for (int x = 0; x < 84; x++)
+            {
+                var pixelIndex = ((y * 84) + x) * 3;
+                // Create a horizontal gradient (darker left, brighter right)
+                var intensity = (byte)((x / 84.0) * 255);
+                mockPixels[pixelIndex] = intensity;     // R
+                mockPixels[pixelIndex + 1] = intensity; // G
+                mockPixels[pixelIndex + 2] = intensity; // B
+            }
+        }
 
         var featureResult = await visualProcessor.ExtractFeaturesAsync(mockPixels);
         if (featureResult.IsSuccess)
         {
             var features = featureResult.Value;
-            Console.WriteLine($"   Extracted {features.Length} features from 84x84 RGB image");
+            Console.WriteLine($"   Extracted {features.Length} features from 84x84 RGB gradient image");
             Console.WriteLine($"   Feature stats: min={features.Min():F4}, max={features.Max():F4}, mean={features.Average():F4}");
+            Console.WriteLine($"   (Gradient pattern should show increasing features left to right)");
         }
 
         // Demonstrate Gym environment adapter

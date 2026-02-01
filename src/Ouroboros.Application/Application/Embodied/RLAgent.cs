@@ -236,7 +236,7 @@ public sealed class RLAgent
 
             var metrics = new TrainingMetrics(
                 PolicyLoss: avgLoss,
-                ValueLoss: avgLoss, // Simplified: same as policy loss
+                ValueLoss: avgLoss, // Note: In Q-learning, TD error is used for both policy and value loss for interface compatibility
                 Entropy: this.epsilon, // Using epsilon as proxy for entropy
                 AverageReward: avgReward,
                 BatchSize: batch.Count);
@@ -358,20 +358,45 @@ public sealed class RLAgent
 
     private List<EmbodiedTransition> SampleBatch(int batchSize)
     {
-        // Use shuffling to get unique samples without replacement
-        var indices = Enumerable.Range(0, this.experienceBuffer.Count).ToList();
-        
-        // Fisher-Yates shuffle
-        for (int i = indices.Count - 1; i > 0; i--)
+        // Efficient random sampling for small batches
+        if (batchSize >= this.experienceBuffer.Count)
         {
-            int j = Random.Shared.Next(i + 1);
-            (indices[i], indices[j]) = (indices[j], indices[i]);
+            // Return all if batch size exceeds buffer
+            return new List<EmbodiedTransition>(this.experienceBuffer);
         }
 
-        // Take first batchSize indices
-        return indices.Take(batchSize)
-            .Select(i => this.experienceBuffer[i])
-            .ToList();
+        if (batchSize > this.experienceBuffer.Count / 2)
+        {
+            // Use Fisher-Yates shuffle for large batch sizes (> 50% of buffer)
+            var indices = Enumerable.Range(0, this.experienceBuffer.Count).ToList();
+
+            for (int i = indices.Count - 1; i > 0; i--)
+            {
+                int j = Random.Shared.Next(i + 1);
+                (indices[i], indices[j]) = (indices[j], indices[i]);
+            }
+
+            return indices.Take(batchSize)
+                .Select(i => this.experienceBuffer[i])
+                .ToList();
+        }
+        else
+        {
+            // Use random sampling with collision detection for small batch sizes
+            var selectedIndices = new HashSet<int>();
+            var batch = new List<EmbodiedTransition>(batchSize);
+
+            while (selectedIndices.Count < batchSize)
+            {
+                var index = Random.Shared.Next(this.experienceBuffer.Count);
+                if (selectedIndices.Add(index))
+                {
+                    batch.Add(this.experienceBuffer[index]);
+                }
+            }
+
+            return batch;
+        }
     }
 
     private string GetStateKey(SensorState state)
