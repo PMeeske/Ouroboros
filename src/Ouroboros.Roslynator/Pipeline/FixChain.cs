@@ -4,12 +4,20 @@ using Microsoft.CodeAnalysis.CodeFixes;
 namespace Ouroboros.Roslynator.Pipeline;
 
 /// <summary>
-/// Template for building a lazy fix chain. Subclasses implement DefinePipeline which composes Futures.
+/// Composable fix chain using arrow-based pipeline composition.
+/// Provides a base for building lazy fix chains using Future composition.
 /// </summary>
 public abstract class FixChain
 {
     public abstract string Title { get; }
     public abstract string EquivalenceKey { get; }
+
+    /// <summary>
+    /// Gets the pipeline builder function.
+    /// Override to provide custom pipeline composition logic.
+    /// </summary>
+    protected virtual Func<Future<FixState>, Future<FixState>> PipelineBuilder =>
+        DefinePipeline;
 
     /// <summary>
     /// Compose your pipeline here using the | operator on Future&lt;FixState&gt;.
@@ -22,15 +30,8 @@ public abstract class FixChain
     /// </summary>
     public Task RegisterAsync(CodeFixContext context)
     {
-        context.RegisterCodeFix(
-            CodeAction.Create(
-                title: Title,
-                createChangedDocument: ct => ExecuteAsync(context.Document, context.Diagnostics[0], ct),
-                equivalenceKey: EquivalenceKey
-            ),
-            context.Diagnostics);
-
-        return Task.CompletedTask;
+        var registrationFunc = FixChainArrows.CreateFixChain(Title, EquivalenceKey, PipelineBuilder);
+        return registrationFunc(context);
     }
 
     /// <summary>
@@ -43,7 +44,7 @@ public abstract class FixChain
         var initial = new FixState(document, diagnostic, root!).WithCancellation(token);
 
         var future = new Future<FixState>(_ => Task.FromResult(initial));
-        var pipeline = DefinePipeline(future);
+        var pipeline = PipelineBuilder(future);
 
         var final = await pipeline.RunAsync(token).ConfigureAwait(false);
 
