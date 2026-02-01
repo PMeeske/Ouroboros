@@ -1,5 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using LangChain.DocumentLoaders;
+using Ouroboros.Core.Monads;
 using System.Reactive.Linq;
 
 namespace Ouroboros.Pipeline.Reasoning;
@@ -424,10 +425,13 @@ public static class ReasoningArrows
         }
 
         return StreamAsync().ToObservable();
-    }    /// <summary>
-         /// Creates a streaming critique arrow that emits critique chunks in real-time.
-         /// </summary>
-    public static IObservable<(string chunk, PipelineBranch branch)> StreamingCritiqueArrow(
+    }
+
+    /// <summary>
+    /// Creates a streaming critique arrow that emits critique chunks in real-time.
+    /// Returns a Result containing the observable stream on success, or an error message on failure.
+    /// </summary>
+    public static Result<IObservable<(string chunk, PipelineBranch branch)>, string> StreamingCritiqueArrow(
         Ouroboros.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
@@ -436,11 +440,12 @@ public static class ReasoningArrows
         string query,
         int k = 8)
     {
+        ReasoningState? currentState = GetMostRecentReasoningState(inputBranch);
+        if (currentState is null)
+            return Result<IObservable<(string chunk, PipelineBranch branch)>, string>.Failure("No draft or previous improvement found to critique");
+
         async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
-            ReasoningState? currentState = GetMostRecentReasoningState(inputBranch);
-            if (currentState is null)
-                throw new InvalidOperationException("No draft or previous improvement found to critique");
 
             IReadOnlyCollection<Document> docs = await inputBranch.Store.GetSimilarDocuments(embed, query, amount: k);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
@@ -463,13 +468,14 @@ public static class ReasoningArrows
             }
         }
 
-        return StreamAsync().ToObservable();
+        return Result<IObservable<(string chunk, PipelineBranch branch)>, string>.Success(StreamAsync().ToObservable());
     }
 
     /// <summary>
     /// Creates a streaming improvement arrow that emits improvement chunks in real-time.
+    /// Returns a Result containing the observable stream on success, or an error message on failure.
     /// </summary>
-    public static IObservable<(string chunk, PipelineBranch branch)> StreamingImproveArrow(
+    public static Result<IObservable<(string chunk, PipelineBranch branch)>, string> StreamingImproveArrow(
         Ouroboros.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
@@ -478,15 +484,16 @@ public static class ReasoningArrows
         string query,
         int k = 8)
     {
+        ReasoningState? currentState = GetMostRecentReasoningState(inputBranch);
+        Critique? critique = inputBranch.Events.OfType<ReasoningStep>().Select(e => e.State).OfType<Critique>().LastOrDefault();
+
+        if (currentState is null)
+            return Result<IObservable<(string chunk, PipelineBranch branch)>, string>.Failure("No draft or previous improvement found");
+        if (critique is null)
+            return Result<IObservable<(string chunk, PipelineBranch branch)>, string>.Failure("No critique found for improvement");
+
         async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
-            ReasoningState? currentState = GetMostRecentReasoningState(inputBranch);
-            Critique? critique = inputBranch.Events.OfType<ReasoningStep>().Select(e => e.State).OfType<Critique>().LastOrDefault();
-
-            if (currentState is null)
-                throw new InvalidOperationException("No draft or previous improvement found");
-            if (critique is null)
-                throw new InvalidOperationException("No critique found for improvement");
 
             IReadOnlyCollection<Document> docs = await inputBranch.Store.GetSimilarDocuments(embed, query, amount: k);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
@@ -510,7 +517,7 @@ public static class ReasoningArrows
             }
         }
 
-        return StreamAsync().ToObservable();
+        return Result<IObservable<(string chunk, PipelineBranch branch)>, string>.Success(StreamAsync().ToObservable());
     }
 
     /// <summary>
@@ -544,13 +551,27 @@ public static class ReasoningArrows
                     .ForEachAsync(tuple => branch = tuple.branch, ct);
 
                 // Stage 3: Critique
-                await StreamingCritiqueArrow(streamingModel, tools, embed, branch, topic, query, k)
+                var critiqueResult = StreamingCritiqueArrow(streamingModel, tools, embed, branch, topic, query, k);
+                if (!critiqueResult.IsSuccess)
+                {
+                    observer.OnError(new InvalidOperationException(critiqueResult.Error));
+                    return;
+                }
+
+                await critiqueResult.Value
                     .Do(tuple => observer.OnNext(("Critique", tuple.chunk, tuple.branch)))
                     .LastAsync()
                     .ForEachAsync(tuple => branch = tuple.branch, ct);
 
                 // Stage 4: Improve
-                await StreamingImproveArrow(streamingModel, tools, embed, branch, topic, query, k)
+                var improveResult = StreamingImproveArrow(streamingModel, tools, embed, branch, topic, query, k);
+                if (!improveResult.IsSuccess)
+                {
+                    observer.OnError(new InvalidOperationException(improveResult.Error));
+                    return;
+                }
+
+                await improveResult.Value
                     .Do(tuple => observer.OnNext(("Improve", tuple.chunk, tuple.branch)))
                     .LastAsync()
                     .ForEachAsync(tuple => branch = tuple.branch, ct);
