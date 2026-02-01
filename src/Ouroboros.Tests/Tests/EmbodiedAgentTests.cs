@@ -6,6 +6,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Application.Embodied;
 using Ouroboros.Core.Monads;
+using Ouroboros.Core.Ethics;
 using Ouroboros.Domain.Embodied;
 using Ouroboros.Domain.Reinforcement;
 
@@ -18,12 +19,14 @@ namespace Ouroboros.Tests;
 public sealed class EmbodiedAgentTests
 {
     private readonly IEnvironmentManager environmentManager;
+    private readonly IEthicsFramework ethics;
     private readonly EmbodiedAgent agent;
 
     public EmbodiedAgentTests()
     {
         this.environmentManager = new EnvironmentManager(NullLogger<EnvironmentManager>.Instance);
-        this.agent = new EmbodiedAgent(this.environmentManager, NullLogger<EmbodiedAgent>.Instance);
+        this.ethics = EthicsFrameworkFactory.CreateDefault();
+        this.agent = new EmbodiedAgent(this.environmentManager, this.ethics, NullLogger<EmbodiedAgent>.Instance);
     }
 
     [Fact]
