@@ -8,7 +8,7 @@ using LangChain.Providers.Ollama;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Core.Ethics;
 using IEthicsFramework = Ouroboros.Core.Ethics.IEthicsFramework;
-using AgentGoal = Ouroboros.Agent.MetaAI.Goal;
+using Goal = Ouroboros.Agent.MetaAI.Goal;
 using AgentPlan = Ouroboros.Agent.MetaAI.Plan;
 using AgentPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
 using AgentSkill = Ouroboros.Agent.MetaAI.Skill;
@@ -370,12 +370,12 @@ public static class Phase2MetacognitionExample
         Console.WriteLine("\nTesting goal conflict detection:\n");
 
         // Add potentially conflicting goals
-        AgentGoal speedGoal = new AgentGoal(
+        Goal speedGoal = new Goal(
             "Minimize response latency to under 100ms",
             GoalType.Secondary,
             0.8);
 
-        AgentGoal qualityGoal = new AgentGoal(
+        Goal qualityGoal = new Goal(
             "Maximize response accuracy and detail",
             GoalType.Secondary,
             0.85);

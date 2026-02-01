@@ -24,8 +24,9 @@ public static class SkillExtractionTests
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var skillRegistry = new SkillRegistry();
+        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
 
-        var extractor = new SkillExtractor(chatModel, skillRegistry);
+        var extractor = new SkillExtractor(chatModel, skillRegistry, ethics);
 
         // Create a mock successful execution
         var plan = new Plan(
@@ -101,7 +102,8 @@ public static class SkillExtractionTests
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var skillRegistry = new SkillRegistry();
-        var extractor = new SkillExtractor(chatModel, skillRegistry);
+        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
+        var extractor = new SkillExtractor(chatModel, skillRegistry, ethics);
 
         var plan = new Plan(
             "Test task",
@@ -147,7 +149,8 @@ public static class SkillExtractionTests
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var skillRegistry = new SkillRegistry();
-        var extractor = new SkillExtractor(chatModel, skillRegistry);
+        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
+        var extractor = new SkillExtractor(chatModel, skillRegistry, ethics);
 
         var config = new SkillExtractionConfig(
             MinQualityThreshold: 0.7,
@@ -212,7 +215,8 @@ public static class SkillExtractionTests
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var skillRegistry = new SkillRegistry();
-        var extractor = new SkillExtractor(chatModel, skillRegistry);
+        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
+        var extractor = new SkillExtractor(chatModel, skillRegistry, ethics);
 
         var plan = new Plan(
             "Calculate mathematical sum",
@@ -275,7 +279,8 @@ public static class SkillExtractionTests
         var provider = new OllamaProvider();
         var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
         var skillRegistry = new SkillRegistry();
-        var extractor = new SkillExtractor(chatModel, skillRegistry);
+        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
+        var extractor = new SkillExtractor(chatModel, skillRegistry, ethics);
 
         var initialSkillCount = skillRegistry.GetAllSkills().Count;
 
