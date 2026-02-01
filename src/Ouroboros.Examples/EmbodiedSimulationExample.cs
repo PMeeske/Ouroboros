@@ -162,7 +162,7 @@ public static class EmbodiedSimulationExample
     {
         Console.WriteLine("\n=== Unity ML-Agents Client Example ===\n");
 
-        using var client = new UnityMLAgentsClient(
+        await using var client = new UnityMLAgentsClient(
             "localhost",
             5005,
             NullLogger<UnityMLAgentsClient>.Instance);
