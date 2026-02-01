@@ -270,7 +270,7 @@ public class MultiAgentCoordinatorPipelineTests
                 CurrentLoad: 0.5,
                 IsAvailable: true);
 
-            this.agentRegistry.RegisterAgentAsync(capabilities).Wait();
+            this.agentRegistry.RegisterAgentAsync(capabilities).GetAwaiter().GetResult();
         }
 
         return agents;
@@ -289,7 +289,7 @@ public class MultiAgentCoordinatorPipelineTests
                 new List<string> { "analyze", "data-processing" },
                 new Dictionary<string, double>(),
                 CurrentLoad: 0.3,
-                IsAvailable: true)).Wait();
+                IsAvailable: true)).GetAwaiter().GetResult();
 
         // Agent with planning skills
         var planner = new AgentId(Guid.NewGuid(), "planner");
@@ -300,7 +300,7 @@ public class MultiAgentCoordinatorPipelineTests
                 new List<string> { "plan", "strategy" },
                 new Dictionary<string, double>(),
                 CurrentLoad: 0.4,
-                IsAvailable: true)).Wait();
+                IsAvailable: true)).GetAwaiter().GetResult();
 
         // Agent with execution skills
         var executor = new AgentId(Guid.NewGuid(), "executor");
@@ -311,7 +311,7 @@ public class MultiAgentCoordinatorPipelineTests
                 new List<string> { "execute", "implementation" },
                 new Dictionary<string, double>(),
                 CurrentLoad: 0.2,
-                IsAvailable: true)).Wait();
+                IsAvailable: true)).GetAwaiter().GetResult();
 
         return agents;
     }

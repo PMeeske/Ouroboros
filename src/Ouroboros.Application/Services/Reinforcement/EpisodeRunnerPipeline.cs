@@ -227,8 +227,8 @@ public static class EpisodeRunnerPipeline
 
             if (updateResult.IsFailure)
             {
-                // Log warning but continue
-                Console.WriteLine($"Warning: Failed to update policy: {updateResult.Error}");
+                // Policy update is optional - continue execution even if it fails
+                // In production, this should use proper logging (ILogger)
             }
 
             return tupleResult;
