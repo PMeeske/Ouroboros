@@ -5,7 +5,8 @@
 namespace Ouroboros.Pipeline.Council.Agents;
 
 /// <summary>
-/// Base implementation for agent personas with common functionality.
+/// Composable agent persona using arrow-based operations.
+/// Provides default implementations using arrow composition instead of template methods.
 /// </summary>
 public abstract class BaseAgentPersona : IAgentPersona
 {
@@ -21,219 +22,82 @@ public abstract class BaseAgentPersona : IAgentPersona
     /// <inheritdoc />
     public abstract string SystemPrompt { get; }
 
+    /// <summary>
+    /// Gets the prompt builder for proposal generation.
+    /// Override to customize prompt building logic.
+    /// </summary>
+    protected virtual Func<CouncilTopic, string, string> ProposalPromptBuilder =>
+        AgentPersonaArrows.BuildDefaultProposalPrompt;
+
+    /// <summary>
+    /// Gets the prompt builder for challenge generation.
+    /// Override to customize prompt building logic.
+    /// </summary>
+    protected virtual Func<CouncilTopic, IReadOnlyList<AgentContribution>, string, string> ChallengePromptBuilder =>
+        AgentPersonaArrows.BuildDefaultChallengePrompt;
+
+    /// <summary>
+    /// Gets the prompt builder for refinement generation.
+    /// Override to customize prompt building logic.
+    /// </summary>
+    protected virtual Func<CouncilTopic, IReadOnlyList<AgentContribution>, AgentContribution, string, string> RefinementPromptBuilder =>
+        AgentPersonaArrows.BuildDefaultRefinementPrompt;
+
+    /// <summary>
+    /// Gets the prompt builder for vote generation.
+    /// Override to customize prompt building logic.
+    /// </summary>
+    protected virtual Func<CouncilTopic, IReadOnlyList<DebateRound>, string, string> VotePromptBuilder =>
+        AgentPersonaArrows.BuildDefaultVotePrompt;
+
+    /// <summary>
+    /// Gets the vote parser.
+    /// Override to customize vote parsing logic.
+    /// </summary>
+    protected virtual Func<string, string, double, AgentVote> VoteParser =>
+        AgentPersonaArrows.ParseDefaultVoteResponse;
+
     /// <inheritdoc />
-    public virtual async Task<Result<AgentContribution, string>> GenerateProposalAsync(
+    public virtual Task<Result<AgentContribution, string>> GenerateProposalAsync(
         CouncilTopic topic,
         ToolAwareChatModel llm,
         CancellationToken ct = default)
     {
-        try
-        {
-            var prompt = BuildProposalPrompt(topic);
-            var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
-            return Result<AgentContribution, string>.Success(new AgentContribution(Name, response));
-        }
-        catch (Exception ex)
-        {
-            return Result<AgentContribution, string>.Failure($"[{Name}] Proposal generation failed: {ex.Message}");
-        }
+        var arrow = AgentPersonaArrows.CreateProposalArrow(Name, SystemPrompt, ProposalPromptBuilder, llm);
+        return arrow(topic);
     }
 
     /// <inheritdoc />
-    public virtual async Task<Result<AgentContribution, string>> GenerateChallengeAsync(
+    public virtual Task<Result<AgentContribution, string>> GenerateChallengeAsync(
         CouncilTopic topic,
         IReadOnlyList<AgentContribution> otherProposals,
         ToolAwareChatModel llm,
         CancellationToken ct = default)
     {
-        try
-        {
-            var prompt = BuildChallengePrompt(topic, otherProposals);
-            var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
-            return Result<AgentContribution, string>.Success(new AgentContribution(Name, response));
-        }
-        catch (Exception ex)
-        {
-            return Result<AgentContribution, string>.Failure($"[{Name}] Challenge generation failed: {ex.Message}");
-        }
+        var arrow = AgentPersonaArrows.CreateChallengeArrow(Name, SystemPrompt, ChallengePromptBuilder, llm);
+        return arrow((topic, otherProposals));
     }
 
     /// <inheritdoc />
-    public virtual async Task<Result<AgentContribution, string>> GenerateRefinementAsync(
+    public virtual Task<Result<AgentContribution, string>> GenerateRefinementAsync(
         CouncilTopic topic,
         IReadOnlyList<AgentContribution> challenges,
         AgentContribution ownProposal,
         ToolAwareChatModel llm,
         CancellationToken ct = default)
     {
-        try
-        {
-            var prompt = BuildRefinementPrompt(topic, challenges, ownProposal);
-            var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
-            return Result<AgentContribution, string>.Success(new AgentContribution(Name, response));
-        }
-        catch (Exception ex)
-        {
-            return Result<AgentContribution, string>.Failure($"[{Name}] Refinement generation failed: {ex.Message}");
-        }
+        var arrow = AgentPersonaArrows.CreateRefinementArrow(Name, SystemPrompt, RefinementPromptBuilder, llm);
+        return arrow((topic, challenges, ownProposal));
     }
 
     /// <inheritdoc />
-    public virtual async Task<Result<AgentVote, string>> GenerateVoteAsync(
+    public virtual Task<Result<AgentVote, string>> GenerateVoteAsync(
         CouncilTopic topic,
         IReadOnlyList<DebateRound> transcript,
         ToolAwareChatModel llm,
         CancellationToken ct = default)
     {
-        try
-        {
-            var prompt = BuildVotePrompt(topic, transcript);
-            var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
-            var vote = ParseVoteResponse(response);
-            return Result<AgentVote, string>.Success(vote);
-        }
-        catch (Exception ex)
-        {
-            return Result<AgentVote, string>.Failure($"[{Name}] Vote generation failed: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Builds the prompt for generating a proposal.
-    /// </summary>
-    protected virtual string BuildProposalPrompt(CouncilTopic topic)
-    {
-        return $"""
-            {SystemPrompt}
-
-            ## Council Debate Topic
-
-            **Question**: {topic.Question}
-
-            **Background**: {topic.Background}
-
-            **Constraints**:
-            {string.Join("\n", topic.Constraints.Select(c => $"- {c}"))}
-
-            ## Your Task
-
-            As {Name}, provide your initial proposal or position on this topic.
-            Focus on your unique perspective as described above.
-            Be concise but thorough. Structure your response clearly.
-            """;
-    }
-
-    /// <summary>
-    /// Builds the prompt for generating a challenge.
-    /// </summary>
-    protected virtual string BuildChallengePrompt(CouncilTopic topic, IReadOnlyList<AgentContribution> otherProposals)
-    {
-        var proposalsText = string.Join("\n\n", otherProposals.Select(p =>
-            $"**{p.AgentName}**:\n{p.Content}"));
-
-        return $"""
-            {SystemPrompt}
-
-            ## Council Debate Topic
-
-            **Question**: {topic.Question}
-
-            ## Other Agents' Proposals
-
-            {proposalsText}
-
-            ## Your Task
-
-            As {Name}, critically analyze the proposals above from your unique perspective.
-            Identify weaknesses, gaps, or concerns. Present counterarguments where appropriate.
-            Be constructive but thorough in your critique.
-            """;
-    }
-
-    /// <summary>
-    /// Builds the prompt for generating a refinement.
-    /// </summary>
-    protected virtual string BuildRefinementPrompt(
-        CouncilTopic topic,
-        IReadOnlyList<AgentContribution> challenges,
-        AgentContribution ownProposal)
-    {
-        var challengesText = string.Join("\n\n", challenges.Select(c =>
-            $"**{c.AgentName}**:\n{c.Content}"));
-
-        return $"""
-            {SystemPrompt}
-
-            ## Council Debate Topic
-
-            **Question**: {topic.Question}
-
-            ## Your Original Proposal
-
-            {ownProposal.Content}
-
-            ## Challenges Received
-
-            {challengesText}
-
-            ## Your Task
-
-            As {Name}, revise your position considering the challenges above.
-            Address valid concerns while maintaining your core perspective.
-            Explain what you're changing and why, or defend your original position if appropriate.
-            """;
-    }
-
-    /// <summary>
-    /// Builds the prompt for generating a vote.
-    /// </summary>
-    protected virtual string BuildVotePrompt(CouncilTopic topic, IReadOnlyList<DebateRound> transcript)
-    {
-        var transcriptText = string.Join("\n\n", transcript.Select(round =>
-            $"## {round.Phase} - Round {round.RoundNumber}\n" +
-            string.Join("\n", round.Contributions.Select(c => $"**{c.AgentName}**: {c.Content}"))));
-
-        return $"""
-            {SystemPrompt}
-
-            ## Council Debate Topic
-
-            **Question**: {topic.Question}
-
-            ## Debate Transcript
-
-            {transcriptText}
-
-            ## Your Task
-
-            As {Name}, cast your final vote. Respond in the following format:
-
-            POSITION: [APPROVE/REJECT/ABSTAIN]
-            RATIONALE: [Your reasoning in 2-3 sentences]
-            """;
-    }
-
-    /// <summary>
-    /// Parses a vote response from the LLM output.
-    /// </summary>
-    protected virtual AgentVote ParseVoteResponse(string response)
-    {
-        var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        var position = "ABSTAIN";
-        var rationale = response;
-
-        foreach (var line in lines)
-        {
-            if (line.StartsWith("POSITION:", StringComparison.OrdinalIgnoreCase))
-            {
-                position = line.Replace("POSITION:", string.Empty, StringComparison.OrdinalIgnoreCase).Trim();
-            }
-            else if (line.StartsWith("RATIONALE:", StringComparison.OrdinalIgnoreCase))
-            {
-                rationale = line.Replace("RATIONALE:", string.Empty, StringComparison.OrdinalIgnoreCase).Trim();
-            }
-        }
-
-        return new AgentVote(Name, position, ExpertiseWeight, rationale);
+        var arrow = AgentPersonaArrows.CreateVoteArrow(Name, SystemPrompt, ExpertiseWeight, VotePromptBuilder, VoteParser, llm);
+        return arrow((topic, transcript));
     }
 }
