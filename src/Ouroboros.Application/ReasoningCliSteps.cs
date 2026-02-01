@@ -1,6 +1,7 @@
 using System.Reactive.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Ouroboros.Core.Monads;
 
 namespace Ouroboros.Application;
 
@@ -176,7 +177,14 @@ public static class ReasoningCliSteps
                 // Stream Critique
                 Console.WriteLine("\n[Critique]");
                 critiqueText.Clear();
-                await ReasoningArrows.StreamingCritiqueArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
+                var critiqueResult = ReasoningArrows.StreamingCritiqueArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK);
+                if (!critiqueResult.IsSuccess)
+                {
+                    Console.WriteLine($"Error: {critiqueResult.Error}");
+                    return s;
+                }
+
+                await critiqueResult.Value
                     .Do(tuple =>
                     {
                         Console.Write(tuple.chunk);
@@ -189,7 +197,14 @@ public static class ReasoningCliSteps
                 // Stream Improvement
                 Console.WriteLine("\n[Improvement]");
                 improvedText.Clear();
-                await ReasoningArrows.StreamingImproveArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
+                var improveResult = ReasoningArrows.StreamingImproveArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK);
+                if (!improveResult.IsSuccess)
+                {
+                    Console.WriteLine($"Error: {improveResult.Error}");
+                    return s;
+                }
+
+                await improveResult.Value
                     .Do(tuple =>
                     {
                         Console.Write(tuple.chunk);
@@ -306,7 +321,14 @@ public static class ReasoningCliSteps
             (string topic, string query) = CliSteps.Normalize(s);
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
 
-            await ReasoningArrows.StreamingCritiqueArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
+            var critiqueResult = ReasoningArrows.StreamingCritiqueArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK);
+            if (!critiqueResult.IsSuccess)
+            {
+                Console.WriteLine($"Error: {critiqueResult.Error}");
+                return s;
+            }
+
+            await critiqueResult.Value
                 .Do(tuple =>
                 {
                     Console.Write(tuple.chunk);
@@ -351,7 +373,14 @@ public static class ReasoningCliSteps
             (string topic, string query) = CliSteps.Normalize(s);
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
 
-            await ReasoningArrows.StreamingImproveArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK)
+            var improveResult = ReasoningArrows.StreamingImproveArrow(streamingModel, s.Tools, s.Embed, s.Branch, topic, query, s.RetrievalK);
+            if (!improveResult.IsSuccess)
+            {
+                Console.WriteLine($"Error: {improveResult.Error}");
+                return s;
+            }
+
+            await improveResult.Value
                 .Do(tuple =>
                 {
                     Console.Write(tuple.chunk);
