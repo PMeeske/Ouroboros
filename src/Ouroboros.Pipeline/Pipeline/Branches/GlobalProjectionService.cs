@@ -81,33 +81,25 @@ public sealed record ProjectionMetrics
 }
 
 /// <summary>
-/// Global projection service for managing epoch snapshots and metrics.
-/// Provides a unified view of the system's evolutionary state.
+/// Global projection service for managing epoch snapshots and metrics using immutable event sourcing.
+/// Refactored to follow the PipelineBranch event sourcing pattern - all state is tracked through events.
+/// This class now provides static methods that work with PipelineBranch instead of maintaining mutable state.
 /// </summary>
-public sealed class GlobalProjectionService
+public static class GlobalProjectionService
 {
-    private readonly List<EpochSnapshot> _epochs = [];
-    private long _nextEpochNumber = 1;
-
     /// <summary>
-    /// Gets all epochs stored in the service.
-    /// </summary>
-    public IReadOnlyList<EpochSnapshot> Epochs => _epochs.AsReadOnly();
-
-    /// <summary>
-    /// Creates a new epoch snapshot from a collection of pipeline branches.
+    /// Creates a new epoch snapshot arrow that captures branches and returns updated branch with epoch event.
     /// </summary>
     /// <param name="branches">The branches to include in the epoch.</param>
     /// <param name="metadata">Optional metadata to attach to the epoch.</param>
-    /// <returns>A Result containing the created epoch snapshot.</returns>
-    public async Task<Result<EpochSnapshot>> CreateEpochAsync(
+    /// <returns>A step that adds an epoch event to the tracking branch.</returns>
+    public static Step<PipelineBranch, PipelineBranch> CreateEpochArrow(
         IEnumerable<PipelineBranch> branches,
-        Dictionary<string, object>? metadata = null)
-    {
-        ArgumentNullException.ThrowIfNull(branches);
-
-        try
+        Dictionary<string, object>? metadata = null) =>
+        async trackingBranch =>
         {
+            ArgumentNullException.ThrowIfNull(branches);
+
             var branchList = branches.ToList();
             var snapshots = new List<BranchSnapshot>();
 
@@ -117,65 +109,125 @@ public sealed class GlobalProjectionService
                 snapshots.Add(snapshot);
             }
 
+            // Determine next epoch number from existing epochs in tracking branch
+            long epochNumber = GetNextEpochNumber(trackingBranch);
+
             var epoch = new EpochSnapshot
             {
                 EpochId = Guid.NewGuid(),
-                EpochNumber = _nextEpochNumber++,
+                EpochNumber = epochNumber,
                 CreatedAt = DateTime.UtcNow,
                 Branches = snapshots.AsReadOnly(),
                 Metadata = (metadata as IReadOnlyDictionary<string, object>) ?? new Dictionary<string, object>()
             };
 
-            _epochs.Add(epoch);
+            var epochEvent = EpochCreatedEvent.FromEpoch(epoch);
+            return trackingBranch.WithEvent(epochEvent);
+        };
 
-            return Result<EpochSnapshot>.Success(epoch);
+    /// <summary>
+    /// Creates a new epoch snapshot from a collection of pipeline branches (async version).
+    /// Returns both the created epoch and the updated tracking branch.
+    /// </summary>
+    /// <param name="trackingBranch">The branch used to track epochs.</param>
+    /// <param name="branches">The branches to include in the epoch.</param>
+    /// <param name="metadata">Optional metadata to attach to the epoch.</param>
+    /// <returns>A Result containing the created epoch and updated tracking branch.</returns>
+    public static async Task<Result<(EpochSnapshot Epoch, PipelineBranch UpdatedBranch)>> CreateEpochAsync(
+        PipelineBranch trackingBranch,
+        IEnumerable<PipelineBranch> branches,
+        Dictionary<string, object>? metadata = null)
+    {
+        ArgumentNullException.ThrowIfNull(trackingBranch);
+
+        try
+        {
+            var arrow = CreateEpochArrow(branches, metadata);
+            var updatedBranch = await arrow(trackingBranch);
+            var epoch = GetLatestEpoch(updatedBranch).Value;
+            return Result<(EpochSnapshot, PipelineBranch)>.Success((epoch, updatedBranch));
         }
         catch (Exception ex)
         {
-            return Result<EpochSnapshot>.Failure($"Failed to create epoch snapshot: {ex.Message}");
+            return Result<(EpochSnapshot, PipelineBranch)>.Failure($"Failed to create epoch snapshot: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Retrieves an epoch by its number.
+    /// Gets all epochs from a tracking branch's event stream.
     /// </summary>
+    /// <param name="trackingBranch">The branch containing epoch events.</param>
+    /// <returns>A read-only list of epoch snapshots.</returns>
+    public static IReadOnlyList<EpochSnapshot> GetEpochs(PipelineBranch trackingBranch)
+    {
+        ArgumentNullException.ThrowIfNull(trackingBranch);
+        
+        return trackingBranch.Events
+            .OfType<EpochCreatedEvent>()
+            .Select(e => e.Epoch)
+            .ToList()
+            .AsReadOnly();
+    }
+
+    /// <summary>
+    /// Retrieves an epoch by its number from a tracking branch.
+    /// </summary>
+    /// <param name="trackingBranch">The branch containing epoch events.</param>
     /// <param name="epochNumber">The epoch number to retrieve.</param>
     /// <returns>A Result containing the epoch if found.</returns>
-    public Result<EpochSnapshot> GetEpoch(long epochNumber)
+    public static Result<EpochSnapshot> GetEpoch(PipelineBranch trackingBranch, long epochNumber)
     {
-        var epoch = _epochs.FirstOrDefault(e => e.EpochNumber == epochNumber);
+        ArgumentNullException.ThrowIfNull(trackingBranch);
+        
+        var epoch = trackingBranch.Events
+            .OfType<EpochCreatedEvent>()
+            .Select(e => e.Epoch)
+            .FirstOrDefault(e => e.EpochNumber == epochNumber);
+
         return epoch is not null
             ? Result<EpochSnapshot>.Success(epoch)
             : Result<EpochSnapshot>.Failure($"Epoch {epochNumber} not found");
     }
 
     /// <summary>
-    /// Retrieves the most recent epoch.
+    /// Retrieves the most recent epoch from a tracking branch.
     /// </summary>
+    /// <param name="trackingBranch">The branch containing epoch events.</param>
     /// <returns>A Result containing the latest epoch if any exist.</returns>
-    public Result<EpochSnapshot> GetLatestEpoch()
+    public static Result<EpochSnapshot> GetLatestEpoch(PipelineBranch trackingBranch)
     {
-        var latest = _epochs.OrderByDescending(e => e.EpochNumber).FirstOrDefault();
+        ArgumentNullException.ThrowIfNull(trackingBranch);
+        
+        var latest = trackingBranch.Events
+            .OfType<EpochCreatedEvent>()
+            .Select(e => e.Epoch)
+            .OrderByDescending(e => e.EpochNumber)
+            .FirstOrDefault();
+
         return latest is not null
             ? Result<EpochSnapshot>.Success(latest)
             : Result<EpochSnapshot>.Failure("No epochs available");
     }
 
     /// <summary>
-    /// Computes metrics for the current state of the projection service.
+    /// Computes metrics for epochs in a tracking branch.
     /// </summary>
+    /// <param name="trackingBranch">The branch containing epoch events.</param>
     /// <returns>A Result containing the computed metrics.</returns>
-    public Result<ProjectionMetrics> GetMetrics()
+    public static Result<ProjectionMetrics> GetMetrics(PipelineBranch trackingBranch)
     {
+        ArgumentNullException.ThrowIfNull(trackingBranch);
+        
         try
         {
-            var totalBranches = _epochs.SelectMany(e => e.Branches).DistinctBy(b => b.Name).Count();
-            var totalEvents = _epochs.SelectMany(e => e.Branches).Sum(b => b.Events.Count);
-            var lastEpoch = _epochs.OrderByDescending(e => e.EpochNumber).FirstOrDefault();
+            var epochs = GetEpochs(trackingBranch);
+            var totalBranches = epochs.SelectMany(e => e.Branches).DistinctBy(b => b.Name).Count();
+            var totalEvents = epochs.SelectMany(e => e.Branches).Sum(b => b.Events.Count);
+            var lastEpoch = epochs.OrderByDescending(e => e.EpochNumber).FirstOrDefault();
 
             var metrics = new ProjectionMetrics
             {
-                TotalEpochs = _epochs.Count,
+                TotalEpochs = epochs.Count,
                 TotalBranches = totalBranches,
                 TotalEvents = totalEvents,
                 LastEpochAt = lastEpoch?.CreatedAt
@@ -190,27 +242,39 @@ public sealed class GlobalProjectionService
     }
 
     /// <summary>
-    /// Clears all epochs from the service.
-    /// Useful for testing or resetting the system state.
+    /// Gets epochs within a specific time range from a tracking branch.
     /// </summary>
-    public void Clear()
-    {
-        _epochs.Clear();
-        _nextEpochNumber = 1;
-    }
-
-    /// <summary>
-    /// Gets epochs within a specific time range.
-    /// </summary>
+    /// <param name="trackingBranch">The branch containing epoch events.</param>
     /// <param name="start">The start of the time range (inclusive).</param>
     /// <param name="end">The end of the time range (inclusive).</param>
     /// <returns>A list of epochs within the specified range.</returns>
-    public IReadOnlyList<EpochSnapshot> GetEpochsInRange(DateTime start, DateTime end)
+    public static IReadOnlyList<EpochSnapshot> GetEpochsInRange(
+        PipelineBranch trackingBranch,
+        DateTime start,
+        DateTime end)
     {
-        return _epochs
+        ArgumentNullException.ThrowIfNull(trackingBranch);
+        
+        return trackingBranch.Events
+            .OfType<EpochCreatedEvent>()
+            .Select(e => e.Epoch)
             .Where(e => e.CreatedAt >= start && e.CreatedAt <= end)
             .OrderBy(e => e.EpochNumber)
             .ToList()
             .AsReadOnly();
+    }
+
+    /// <summary>
+    /// Helper method to determine the next epoch number from existing epochs in a branch.
+    /// </summary>
+    private static long GetNextEpochNumber(PipelineBranch trackingBranch)
+    {
+        var maxEpochNumber = trackingBranch.Events
+            .OfType<EpochCreatedEvent>()
+            .Select(e => e.Epoch.EpochNumber)
+            .DefaultIfEmpty(0)
+            .Max();
+
+        return maxEpochNumber + 1;
     }
 }
