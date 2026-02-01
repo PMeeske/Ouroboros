@@ -9,8 +9,8 @@ using Ouroboros.Agent.MetaAI;
 using Ouroboros.Core.Ethics;
 using IEthicsFramework = Ouroboros.Core.Ethics.IEthicsFramework;
 using AgentPlan = Ouroboros.Agent.MetaAI.Plan;
-using AgentPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
-using AgentSkill = Ouroboros.Agent.MetaAI.Skill;
+using PlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using Skill = Ouroboros.Agent.MetaAI.Skill;
 
 /// <summary>
 /// Example demonstrating self-improving agent capabilities with automatic skill learning.
@@ -110,9 +110,9 @@ public static class SelfImprovingAgentExample
             "Multi-step analysis task",
             new List<PlanStep>
             {
-                new AgentPlanStep("analyze_input", new Dictionary<string, object> { ["data"] = "sample" }, "analyzed", 0.85),
-                new AgentPlanStep("process_data", new Dictionary<string, object> { ["input"] = "analyzed" }, "processed", 0.80),
-                new AgentPlanStep("generate_output", new Dictionary<string, object> { ["data"] = "processed" }, "output", 0.90),
+                new PlanStep("analyze_input", new Dictionary<string, object> { ["data"] = "sample" }, "analyzed", 0.85),
+                new PlanStep("process_data", new Dictionary<string, object> { ["input"] = "analyzed" }, "processed", 0.80),
+                new PlanStep("generate_output", new Dictionary<string, object> { ["data"] = "processed" }, "output", 0.90),
             },
             new Dictionary<string, double> { ["overall"] = 0.85 },
             DateTime.UtcNow);
@@ -134,7 +134,7 @@ public static class SelfImprovingAgentExample
             RevisedPlan: null);
 
         // Extract skill with custom config
-        Result<AgentSkill, string> result = await skillExtractor.ExtractSkillAsync(execution, verification, extractionConfig);
+        Result<Skill, string> result = await skillExtractor.ExtractSkillAsync(execution, verification, extractionConfig);
 
         result.Match(
             skill =>
@@ -282,7 +282,7 @@ public static class SelfImprovingAgentExample
 
         Console.WriteLine($"Total skills learned: {skills.Count}\n");
 
-        foreach (AgentSkill? skill in skills.Take(10))
+        foreach (Skill? skill in skills.Take(10))
         {
             Console.WriteLine($"Skill: {skill.Name}");
             Console.WriteLine($"  Description: {skill.Description}");
@@ -323,7 +323,7 @@ public static class SelfImprovingAgentExample
     {
         AgentPlan plan = new AgentPlan(
             goal,
-            new List<PlanStep> { new AgentPlanStep("action", new(), "outcome", 0.8) },
+            new List<PlanStep> { new PlanStep("action", new(), "outcome", 0.8) },
             new Dictionary<string, double>(),
             DateTime.UtcNow);
 

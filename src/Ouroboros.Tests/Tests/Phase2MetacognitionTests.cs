@@ -225,6 +225,7 @@ public static class Phase2MetacognitionTests
         var capabilityRegistry = new CapabilityRegistry(chatModel, tools);
         var router = new UncertaintyRouter(null!, 0.7);
         var safety = new SafetyGuard();
+        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
 
         var orchestrator = new MetaAIPlannerOrchestrator(
             chatModel,
@@ -232,7 +233,8 @@ public static class Phase2MetacognitionTests
             memory,
             skills,
             router,
-            safety);
+            safety,
+            ethics);
 
         var evaluator = new SelfEvaluator(
             chatModel,
@@ -392,7 +394,8 @@ public static class Phase2MetacognitionTests
             memory,
             skills,
             router,
-            safety);
+            safety,
+            ethics);
 
         var evaluator = new SelfEvaluator(
             chatModel,

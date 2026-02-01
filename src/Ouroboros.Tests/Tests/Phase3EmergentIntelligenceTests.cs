@@ -111,6 +111,7 @@ public static class Phase3EmergentIntelligenceTests
         var skills = new SkillRegistry();
         var router = new UncertaintyRouter(null!, 0.7);
         var safety = new SafetyGuard();
+        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
 
         var orchestrator = new MetaAIPlannerOrchestrator(
             chatModel,
@@ -118,9 +119,9 @@ public static class Phase3EmergentIntelligenceTests
             memory,
             skills,
             router,
-            safety);
+            safety,
+            ethics);
 
-        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
         var hypothesisEngine = new HypothesisEngine(chatModel, orchestrator, memory, ethics);
 
         // Generate hypothesis from observation
@@ -322,6 +323,7 @@ public static class Phase3EmergentIntelligenceTests
         var skills = new SkillRegistry();
         var safety = new SafetyGuard();
         var router = new UncertaintyRouter(null!, 0.7);
+        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
 
         var orchestrator = new MetaAIPlannerOrchestrator(
             chatModel,
@@ -329,10 +331,10 @@ public static class Phase3EmergentIntelligenceTests
             memory,
             skills,
             router,
-            safety);
+            safety,
+            ethics);
 
         // Create all Phase 3 components
-        var ethics = Ouroboros.Core.Ethics.EthicsFrameworkFactory.CreateDefault();
         var transferLearner = new TransferLearner(chatModel, skills, memory);
         var hypothesisEngine = new HypothesisEngine(chatModel, orchestrator, memory, ethics);
         var curiosityEngine = new CuriosityEngine(chatModel, memory, skills, safety, ethics);
