@@ -27,27 +27,19 @@ public static class VectorCompressionArrows
         CompressionMethod? method = null) =>
         async branch =>
         {
-            try
+            var result = VectorCompressionService.Compress(vector, config, method);
+
+            if (result.IsFailure)
             {
-                var result = VectorCompressionService.Compress(vector, config, method);
-
-                if (result.IsFailure)
-                {
-                    return Result<(byte[] CompressedData, PipelineBranch UpdatedBranch)>.Failure(result.Error);
-                }
-
-                // Convert VectorCompressionEvent to PipelineEvent
-                var pipelineEvent = VectorCompressionEvent.FromDomainEvent(result.Value.Event);
-                var updatedBranch = branch.WithEvent(pipelineEvent);
-
-                return Result<(byte[] CompressedData, PipelineBranch UpdatedBranch)>.Success(
-                    (result.Value.CompressedData, updatedBranch));
+                return Result<(byte[] CompressedData, PipelineBranch UpdatedBranch)>.Failure(result.Error);
             }
-            catch (Exception ex)
-            {
-                return Result<(byte[] CompressedData, PipelineBranch UpdatedBranch)>.Failure(
-                    $"Compression failed: {ex.Message}");
-            }
+
+            // Convert VectorCompressionEvent to PipelineEvent
+            var pipelineEvent = VectorCompressionEvent.FromDomainEvent(result.Value.Event);
+            var updatedBranch = branch.WithEvent(pipelineEvent);
+
+            return Result<(byte[] CompressedData, PipelineBranch UpdatedBranch)>.Success(
+                (result.Value.CompressedData, updatedBranch));
         };
 
     /// <summary>
