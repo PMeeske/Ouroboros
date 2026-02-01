@@ -170,6 +170,9 @@ public sealed class VisualProcessor
     /// <summary>
     /// Simple grid-based feature extraction.
     /// Divides image into grid and computes average intensity per cell.
+    /// Note: Uses integer division for cell dimensions. When grid size doesn't evenly divide
+    /// image dimensions, some edge pixels may not be sampled. For example, with 84x84 image
+    /// and 8x8 grid (64 features), cellWidth=10 covers pixels 0-79, leaving columns 80-83 unsampled.
     /// </summary>
     /// <param name="pixels">Raw pixel data</param>
     /// <returns>Feature vector</returns>
@@ -209,7 +212,7 @@ public sealed class VisualProcessor
                     for (int x = cellX; x < cellX + cellWidth && x < this.inputWidth; x++)
                     {
                         var pixelIndex = ((y * this.inputWidth) + x) * 3;
-                        if (pixelIndex + 2 < pixels.Length)
+                        if (pixelIndex + 2 <= pixels.Length - 1)
                         {
                             // Average RGB values
                             var r = pixels[pixelIndex];

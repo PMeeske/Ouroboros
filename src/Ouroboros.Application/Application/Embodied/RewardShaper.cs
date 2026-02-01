@@ -11,6 +11,8 @@ namespace Ouroboros.Application.Embodied;
 /// Reward shaping for embodied agents.
 /// Provides additional reward signals to guide learning through distance-based shaping,
 /// velocity penalties, and curiosity-driven exploration bonuses.
+/// Note: This class is not thread-safe. ShapeReward should be called sequentially from a single thread.
+/// Concurrent access to noveltyBuffer may result in race conditions.
 /// </summary>
 public sealed class RewardShaper
 {
@@ -36,6 +38,11 @@ public sealed class RewardShaper
         int maxNoveltyBufferSize,
         ILogger<RewardShaper> logger)
     {
+        if (maxNoveltyBufferSize <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxNoveltyBufferSize), "Max novelty buffer size must be positive");
+        }
+
         this.distanceRewardWeight = distanceRewardWeight;
         this.velocityPenaltyWeight = velocityPenaltyWeight;
         this.curiosityBonusWeight = curiosityBonusWeight;
@@ -194,10 +201,11 @@ public sealed class RewardShaper
     private string GetStateKey(SensorState state)
     {
         // Discretize position for novelty tracking (grid-based)
+        // Use Math.Floor for consistent grid alignment across positive and negative coordinates
         var gridSize = 1.0f;
-        var gridX = (int)(state.Position.X / gridSize);
-        var gridY = (int)(state.Position.Y / gridSize);
-        var gridZ = (int)(state.Position.Z / gridSize);
+        var gridX = (int)Math.Floor(state.Position.X / gridSize);
+        var gridY = (int)Math.Floor(state.Position.Y / gridSize);
+        var gridZ = (int)Math.Floor(state.Position.Z / gridSize);
         return $"{gridX},{gridY},{gridZ}";
     }
 }

@@ -14,6 +14,8 @@ namespace Ouroboros.Application.Embodied;
 /// Implementation of an embodied agent that can perceive, act, learn, and plan in simulated environments.
 /// Provides sensorimotor grounding for cognitive capabilities with Unity ML-Agents integration,
 /// visual processing, reinforcement learning, and reward shaping.
+/// Note: The caller is responsible for managing the lifecycle of the optional UnityMLAgentsClient.
+/// EmbodiedAgent does not dispose the client; ensure proper disposal when the client is no longer needed.
 /// </summary>
 public sealed class EmbodiedAgent : IEmbodiedAgent
 {
@@ -37,7 +39,7 @@ public sealed class EmbodiedAgent : IEmbodiedAgent
     /// <param name="logger">Logger for diagnostic output</param>
     /// <param name="maxBufferSize">Maximum size of experience replay buffer (default: 10000)</param>
     /// <param name="unityClient">Optional Unity ML-Agents client for environment communication</param>
-    /// <param name="visualProcessor">Optional visual processor for image observations</param>
+    /// <param name="visualProcessor">Optional visual processor for image observations (currently unused, reserved for future integration)</param>
     /// <param name="rlAgent">Optional RL agent for policy-based action selection</param>
     /// <param name="rewardShaper">Optional reward shaper for experience enhancement</param>
     public EmbodiedAgent(

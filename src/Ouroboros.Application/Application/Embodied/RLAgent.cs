@@ -12,6 +12,8 @@ namespace Ouroboros.Application.Embodied;
 /// <summary>
 /// Reinforcement learning agent with epsilon-greedy action selection and Q-learning style updates.
 /// Maintains an experience replay buffer and supports batch training.
+/// Note: This class is not thread-safe. Methods should be called sequentially from a single thread.
+/// Concurrent access to experienceBuffer or qTable may result in race conditions.
 /// </summary>
 public sealed class RLAgent
 {
@@ -236,7 +238,7 @@ public sealed class RLAgent
 
             var metrics = new TrainingMetrics(
                 PolicyLoss: avgLoss,
-                ValueLoss: avgLoss, // Note: In Q-learning, TD error is used for both policy and value loss for interface compatibility
+                ValueLoss: avgLoss, // Note: In this Q-learning implementation, TD error is used for both policy and value loss; other algorithms may report distinct values via TrainingMetrics
                 Entropy: this.epsilon, // Using epsilon as proxy for entropy
                 AverageReward: avgReward,
                 BatchSize: batch.Count);
@@ -401,7 +403,12 @@ public sealed class RLAgent
 
     private string GetStateKey(SensorState state)
     {
-        // Simple state hashing - in production, use proper feature extraction
+        // Simple state hashing with coarse discretization:
+        // positions are rounded to 2 decimal places (F2), so nearby continuous
+        // positions (e.g. 0.004 vs 0.006) are merged into the same discrete state key.
+        // This keeps the Q-table compact and encourages generalization; in production,
+        // consider using configurable precision or richer feature extraction if finer
+        // spatial distinctions are required.
         return $"p:{state.Position.X:F2},{state.Position.Y:F2},{state.Position.Z:F2}";
     }
 

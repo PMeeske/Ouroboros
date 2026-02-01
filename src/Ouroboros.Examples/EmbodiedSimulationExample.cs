@@ -383,7 +383,7 @@ public static class EmbodiedSimulationExample
             {
                 var pixelIndex = ((y * 84) + x) * 3;
                 // Create a horizontal gradient (darker left, brighter right)
-                var intensity = (byte)((x / 84.0) * 255);
+                var intensity = (byte)((x / 83.0) * 255);
                 mockPixels[pixelIndex] = intensity;     // R
                 mockPixels[pixelIndex + 1] = intensity; // G
                 mockPixels[pixelIndex + 2] = intensity; // B
