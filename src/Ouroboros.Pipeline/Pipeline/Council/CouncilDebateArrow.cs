@@ -3,16 +3,20 @@
 // </copyright>
 
 using Ouroboros.Core.Steps;
+using Ouroboros.Pipeline.Council.Agents;
 
 namespace Ouroboros.Pipeline.Council;
 
 /// <summary>
 /// Provides arrow functions for council debate operations in the pipeline.
+/// This class maintains backward compatibility while encouraging use of CouncilOrchestratorArrows
+/// for new code following the functional arrow parameterization pattern.
 /// </summary>
 public static class CouncilDebateArrow
 {
     /// <summary>
     /// Creates a council debate arrow that convenes a council and adds the decision to the pipeline.
+    /// Note: Consider using CouncilOrchestratorArrows for new code with explicit dependency parameterization.
     /// </summary>
     /// <param name="orchestrator">The council orchestrator to use.</param>
     /// <param name="topic">The topic to debate.</param>
@@ -31,6 +35,22 @@ public static class CouncilDebateArrow
                 decision => branch.WithEvent(CouncilDecisionEvent.Create(topic, decision)),
                 _ => branch.WithEvent(CouncilDecisionEvent.Create(topic, CouncilDecision.Failed("Council debate failed"))));
         };
+
+    /// <summary>
+    /// Creates a council debate arrow with explicit LLM and agents parameters.
+    /// This is the recommended arrow parameterization approach.
+    /// </summary>
+    /// <param name="llm">The language model to use for agent interactions.</param>
+    /// <param name="agents">The list of agent personas to participate.</param>
+    /// <param name="topic">The topic to debate.</param>
+    /// <param name="config">Optional configuration for the debate.</param>
+    /// <returns>A step that transforms a pipeline branch by adding a council decision event.</returns>
+    public static Step<PipelineBranch, PipelineBranch> CreateWithDependencies(
+        ToolAwareChatModel llm,
+        IReadOnlyList<IAgentPersona> agents,
+        CouncilTopic topic,
+        CouncilConfig? config = null)
+        => CouncilOrchestratorArrows.ConveneCouncilArrow(llm, agents, topic, config);
 
     /// <summary>
     /// Creates a Result-safe council debate arrow with comprehensive error handling.
