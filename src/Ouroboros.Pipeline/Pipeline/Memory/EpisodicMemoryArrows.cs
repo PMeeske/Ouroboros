@@ -7,6 +7,7 @@ using Ouroboros.Core.Steps;
 using Ouroboros.Domain.Events;
 using Ouroboros.Domain.Reinforcement;
 using Ouroboros.Domain.States;
+using Ouroboros.Pipeline.Verification;
 using Qdrant.Client;
 
 namespace Ouroboros.Pipeline.Memory;
