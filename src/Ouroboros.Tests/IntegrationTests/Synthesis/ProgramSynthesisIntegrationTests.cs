@@ -71,7 +71,7 @@ public class ProgramSynthesisIntegrationTests
 
         // Act - Phase 1: Synthesize programs
         this.output.WriteLine("Phase 1: Synthesizing programs...");
-        var programs = new List<Program>();
+        var programs = new List<SynthesisProgram>();
         foreach (var examples in tasks)
         {
             var result = await engine.SynthesizeProgramAsync(examples, dsl, TimeSpan.FromSeconds(15));
@@ -131,7 +131,7 @@ public class ProgramSynthesisIntegrationTests
         {
             this.output.WriteLine($"Sleep phase: Training on synthesized program: {wakeSynthesisResult.Value.SourceCode}");
             var task = new SynthesisTask("Double the input", examples, dsl);
-            var trainingPairs = new List<(SynthesisTask, Program)>
+            var trainingPairs = new List<(SynthesisTask, SynthesisProgram)>
             {
                 (task, wakeSynthesisResult.Value),
             };
@@ -299,10 +299,10 @@ public class ProgramSynthesisIntegrationTests
         return new DomainSpecificLanguage("Arithmetic", primitives, typeRules, new List<RewriteRule>());
     }
 
-    private static Program CreateSampleProgram(string name, DomainSpecificLanguage dsl)
+    private static SynthesisProgram CreateSampleProgram(string name, DomainSpecificLanguage dsl)
     {
         var node = new ASTNode("Primitive", name, new List<ASTNode>());
         var ast = new AbstractSyntaxTree(node, 1, 1);
-        return new Program(name, ast, dsl, -1.0);
+        return new SynthesisProgram(name, ast, dsl, -1.0);
     }
 }

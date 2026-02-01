@@ -2,13 +2,11 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Ouroboros.CLI</RootNamespace>
     <AssemblyName>Ouroboros.CLI</AssemblyName>
     <Product>LangChain Pipeline System</Product>
     <Description>Command-line interface for Ouroboros</Description>
-    <UseWindowsForms>true</UseWindowsForms>
-    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <UserSecretsId>49b81524-d310-4809-8e7f-abdcbb49329e</UserSecretsId>
   </PropertyGroup>
 

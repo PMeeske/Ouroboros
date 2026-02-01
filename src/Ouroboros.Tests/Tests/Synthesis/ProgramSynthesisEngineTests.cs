@@ -108,7 +108,7 @@ public class ProgramSynthesisEngineTests
     {
         // Arrange
         var engine = new ProgramSynthesisEngine();
-        var programs = new List<Program>();
+        var programs = new List<SynthesisProgram>();
 
         // Act
         var result = await engine.ExtractReusablePrimitivesAsync(programs, CompressionStrategy.AntiUnification);
@@ -123,7 +123,7 @@ public class ProgramSynthesisEngineTests
     {
         // Arrange
         var engine = new ProgramSynthesisEngine();
-        var programs = new List<Program>
+        var programs = new List<SynthesisProgram>
         {
             CreateTestProgram("prog1"),
             CreateTestProgram("prog2"),
@@ -142,7 +142,7 @@ public class ProgramSynthesisEngineTests
     {
         // Arrange
         var engine = new ProgramSynthesisEngine();
-        var programs = new List<Program> { CreateTestProgram("prog1") };
+        var programs = new List<SynthesisProgram> { CreateTestProgram("prog1") };
         var cts = new CancellationTokenSource();
         cts.Cancel();
 
@@ -162,7 +162,7 @@ public class ProgramSynthesisEngineTests
     {
         // Arrange
         var engine = new ProgramSynthesisEngine();
-        var pairs = new List<(SynthesisTask, Program)>();
+        var pairs = new List<(SynthesisTask, SynthesisProgram)>();
 
         // Act
         var result = await engine.TrainRecognitionModelAsync(pairs);
@@ -182,7 +182,7 @@ public class ProgramSynthesisEngineTests
             new List<InputOutputExample> { new InputOutputExample(1, 2) },
             CreateSimpleDSL());
         var program = CreateTestProgram("test");
-        var pairs = new List<(SynthesisTask, Program)> { (task, program) };
+        var pairs = new List<(SynthesisTask, SynthesisProgram)> { (task, program) };
 
         // Act
         var result = await engine.TrainRecognitionModelAsync(pairs);
@@ -199,7 +199,7 @@ public class ProgramSynthesisEngineTests
         var engine = new ProgramSynthesisEngine();
         var task = new SynthesisTask("Test", new List<InputOutputExample>(), CreateSimpleDSL());
         var program = CreateTestProgram("test");
-        var pairs = new List<(SynthesisTask, Program)> { (task, program) };
+        var pairs = new List<(SynthesisTask, SynthesisProgram)> { (task, program) };
         var cts = new CancellationTokenSource();
         cts.Cancel();
 
@@ -329,11 +329,11 @@ public class ProgramSynthesisEngineTests
         return new DomainSpecificLanguage("Complex", primitives, new List<TypeRule>(), new List<RewriteRule>());
     }
 
-    private static Program CreateTestProgram(string name)
+    private static SynthesisProgram CreateTestProgram(string name)
     {
         var node = new ASTNode("Primitive", name, new List<ASTNode>());
         var ast = new AbstractSyntaxTree(node, 1, 1);
         var dsl = CreateSimpleDSL();
-        return new Program(name, ast, dsl, -1.0);
+        return new SynthesisProgram(name, ast, dsl, -1.0);
     }
 }

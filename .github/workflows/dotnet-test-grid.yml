@@ -55,6 +55,12 @@ jobs:
           # General tests (top-level Ouroboros.Tests.Tests namespace) - Part 2: N-Z
           - category: General-Part2
             filter: "Category=Unit&FullyQualifiedName~Ouroboros.Tests.Tests.&(FullyQualifiedName~Ouroboros.Tests.Tests.N|FullyQualifiedName~Ouroboros.Tests.Tests.O|FullyQualifiedName~Ouroboros.Tests.Tests.P|FullyQualifiedName~Ouroboros.Tests.Tests.Q|FullyQualifiedName~Ouroboros.Tests.Tests.R|FullyQualifiedName~Ouroboros.Tests.Tests.S|FullyQualifiedName~Ouroboros.Tests.Tests.T|FullyQualifiedName~Ouroboros.Tests.Tests.U|FullyQualifiedName~Ouroboros.Tests.Tests.V|FullyQualifiedName~Ouroboros.Tests.Tests.W|FullyQualifiedName~Ouroboros.Tests.Tests.X|FullyQualifiedName~Ouroboros.Tests.Tests.Y|FullyQualifiedName~Ouroboros.Tests.Tests.Z)"
+          # WebApi integration tests
+          - category: WebApi
+            filter: "Category=Integration&FullyQualifiedName~Ouroboros.Tests.WebApi."
+          # CLI tests (Commands, Parsing, Integration)
+          - category: CLI
+            filter: "Category=CLI|(Category=Unit&FullyQualifiedName~Ouroboros.Tests.CLI.)|(Category=Integration&FullyQualifiedName~Ouroboros.Tests.CLI.)"
           # Remaining tests not covered by other categories (Android, MultiAgent, etc.)
           - category: Other
             filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Android.|FullyQualifiedName~Ouroboros.Tests.MultiAgent.)"
@@ -536,6 +542,8 @@ jobs:
         echo "- Governance (Governance, LawsOfForm, SelfModel, Reflection, Agent)" >> $GITHUB_STEP_SUMMARY
         echo "- General-Part1 (Top-level tests A-M)" >> $GITHUB_STEP_SUMMARY
         echo "- General-Part2 (Top-level tests N-Z)" >> $GITHUB_STEP_SUMMARY
+        echo "- WebApi (Integration tests for API endpoints)" >> $GITHUB_STEP_SUMMARY
+        echo "- CLI (Command-line interface tests)" >> $GITHUB_STEP_SUMMARY
         echo "- Other (Android, MultiAgent)" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Coverage" >> $GITHUB_STEP_SUMMARY

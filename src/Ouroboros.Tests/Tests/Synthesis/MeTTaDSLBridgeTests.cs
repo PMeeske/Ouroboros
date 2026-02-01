@@ -115,7 +115,7 @@ public class MeTTaDSLBridgeTests
         var node = new ASTNode("Primitive", "test", new List<ASTNode>());
         var ast = new AbstractSyntaxTree(node, 1, 1);
         var dsl = new DomainSpecificLanguage("Test", new List<Primitive>(), new List<TypeRule>(), new List<RewriteRule>());
-        var program = new Program("test", ast, dsl, 0.0);
+        var program = new SynthesisProgram("test", ast, dsl, 0.0);
 
         // Act
         var result = MeTTaDSLBridge.ProgramToMeTTa(program);

@@ -118,7 +118,7 @@ public class SynthesisTypesTests
         var trace = new ExecutionTrace(new List<ExecutionStep>(), new object(), TimeSpan.FromSeconds(1));
 
         // Act
-        var program = new Program("test", ast, dsl, -2.0, trace);
+        var program = new SynthesisProgram("test", ast, dsl, -2.0, trace);
 
         // Assert
         program.SourceCode.Should().Be("test");

@@ -319,3 +319,8 @@ internal sealed class MockChatModel : IChatCompletionModel
         return Task.FromResult("Mock response");
     }
 }
+
+// Make Program class accessible for WebApplicationFactory testing
+public partial class Program
+{
+}

@@ -28,3 +28,5 @@ global using Ouroboros.Providers;
 // Tools and providers
 global using Ouroboros.Tools;
 global using Ouroboros.Tools.MeTTa;
+// Resolve naming conflict: WebApi.Program vs Core.Synthesis.Program
+global using SynthesisProgram = Ouroboros.Core.Synthesis.Program;
