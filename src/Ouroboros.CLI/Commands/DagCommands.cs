@@ -215,7 +215,7 @@ public static class DagCommands
     {
         Console.WriteLine("=== DAG Validation ===");
 
-        var allEpochs = _projectionService.Epochs;
+        var allEpochs = GlobalProjectionService.GetEpochs(GetTrackingBranch());
         Console.WriteLine($"Total epochs: {allEpochs.Count}");
 
         var validationErrors = 0;
@@ -270,7 +270,7 @@ public static class DagCommands
         }
 
         // Convert epochs to snapshot metadata
-        var snapshots = _projectionService.Epochs
+        var snapshots = GlobalProjectionService.GetEpochs(GetTrackingBranch())
             .SelectMany(e => e.Branches.Select(b => new SnapshotMetadata
             {
                 Id = e.EpochId.ToString(),
