@@ -34,11 +34,9 @@ public static class GlobalProjectionArrows
 
             // Capture snapshots of all branches
             var snapshots = new List<BranchSnapshot>();
-            foreach (var b in branches)
-            {
-                var snapshot = await BranchSnapshot.Capture(b);
-                snapshots.Add(snapshot);
-            }
+            // Use Select for functional-style mapping
+            var snapshotTasks = branches.Select(b => BranchSnapshot.Capture(b));
+            snapshots.AddRange(await Task.WhenAll(snapshotTasks));
 
             // Determine epoch number from existing epochs in the branch
             long epochNumber = GetNextEpochNumber(branch);
@@ -139,27 +137,8 @@ public static class GlobalProjectionArrows
     /// <returns>A Result containing the computed metrics.</returns>
     public static Result<ProjectionMetrics> GetMetrics(PipelineBranch branch)
     {
-        try
-        {
-            var epochs = GetEpochs(branch);
-            var totalBranches = epochs.SelectMany(e => e.Branches).DistinctBy(b => b.Name).Count();
-            var totalEvents = epochs.SelectMany(e => e.Branches).Sum(b => b.Events.Count);
-            var lastEpoch = epochs.OrderByDescending(e => e.EpochNumber).FirstOrDefault();
-
-            var metrics = new ProjectionMetrics
-            {
-                TotalEpochs = epochs.Count,
-                TotalBranches = totalBranches,
-                TotalEvents = totalEvents,
-                LastEpochAt = lastEpoch?.CreatedAt
-            };
-
-            return Result<ProjectionMetrics>.Success(metrics);
-        }
-        catch (Exception ex)
-        {
-            return Result<ProjectionMetrics>.Failure($"Failed to compute metrics: {ex.Message}");
-        }
+        // Delegate to the centralized metrics computation to avoid duplication.
+        return GlobalProjectionService.GetMetrics(branch);
     }
 
     /// <summary>

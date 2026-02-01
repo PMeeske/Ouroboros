@@ -20,25 +20,34 @@ public static class VectorCompressionArrows
     /// <param name="vector">Input embedding vector.</param>
     /// <param name="config">Compression configuration.</param>
     /// <param name="method">Compression method (null = use config default).</param>
-    /// <returns>A step that returns compressed data and updated branch.</returns>
-    public static Step<PipelineBranch, (byte[] CompressedData, PipelineBranch UpdatedBranch)> CompressArrow(
+    /// <returns>A step that returns a Result containing compressed data and updated branch.</returns>
+    public static Step<PipelineBranch, Result<(byte[] CompressedData, PipelineBranch UpdatedBranch)>> CompressArrow(
         float[] vector,
         CompressionConfig config,
         CompressionMethod? method = null) =>
         async branch =>
         {
-            var result = VectorCompressionService.Compress(vector, config, method);
-
-            if (result.IsFailure)
+            try
             {
-                throw new InvalidOperationException(result.Error);
+                var result = VectorCompressionService.Compress(vector, config, method);
+
+                if (result.IsFailure)
+                {
+                    return Result<(byte[] CompressedData, PipelineBranch UpdatedBranch)>.Failure(result.Error);
+                }
+
+                // Convert VectorCompressionEvent to PipelineEvent
+                var pipelineEvent = VectorCompressionEvent.FromDomainEvent(result.Value.Event);
+                var updatedBranch = branch.WithEvent(pipelineEvent);
+
+                return Result<(byte[] CompressedData, PipelineBranch UpdatedBranch)>.Success(
+                    (result.Value.CompressedData, updatedBranch));
             }
-
-            // Convert VectorCompressionEvent to PipelineEvent
-            var pipelineEvent = VectorCompressionEvent.FromDomainEvent(result.Value.Event);
-            var updatedBranch = branch.WithEvent(pipelineEvent);
-
-            return (result.Value.CompressedData, updatedBranch);
+            catch (Exception ex)
+            {
+                return Result<(byte[] CompressedData, PipelineBranch UpdatedBranch)>.Failure(
+                    $"Compression failed: {ex.Message}");
+            }
         };
 
     /// <summary>

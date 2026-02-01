@@ -310,7 +310,8 @@ public class VectorCompressionServiceTests
             normB += b[i] * b[i];
         }
 
-        if (normA == 0 || normB == 0)
+        const double epsilon = 1e-12;
+        if (normA <= epsilon || normB <= epsilon)
             return 0;
 
         return dot / (Math.Sqrt(normA) * Math.Sqrt(normB));
