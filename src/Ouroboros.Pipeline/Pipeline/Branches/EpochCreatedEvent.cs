@@ -1,5 +1,5 @@
-// <copyright file="EpochCreatedEvent.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="EpochCreatedEvent.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Domain.Events;
