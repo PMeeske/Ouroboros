@@ -606,7 +606,7 @@ public sealed class QdrantAdminTool : ITool
                 return Result<string, string>.Failure($"Collection '{collection}' not found");
             }
 
-            var compressor = new Ouroboros.Domain.VectorCompression.VectorCompressionService(128, 0.95);
+            var compressionConfig = new Ouroboros.Domain.VectorCompression.CompressionConfig(128, 0.95);
             long totalOriginalBytes = 0;
             long totalPotentialBytes = 0;
 
@@ -635,7 +635,15 @@ public sealed class QdrantAdminTool : ITool
                     if (vectors.Count > 0)
                     {
                         // Analyze compression potential
-                        var preview = compressor.Preview(vectors[0], Ouroboros.Domain.VectorCompression.VectorCompressionService.CompressionMethod.DCT);
+                        var previewResult = Ouroboros.Domain.VectorCompression.VectorCompressionService.Preview(vectors[0], compressionConfig);
+
+                        if (previewResult.IsFailure)
+                        {
+                            sb.AppendLine($"\n### Compression Analysis Error: {previewResult.Error}");
+                            continue;
+                        }
+
+                        var preview = previewResult.Value;
 
                         sb.AppendLine($"\n### Compression Analysis (sampled {vectors.Count} vectors):");
                         sb.AppendLine($"- Original size per vector: **{preview.OriginalSizeBytes:N0} bytes**");
