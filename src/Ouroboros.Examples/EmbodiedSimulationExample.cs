@@ -316,8 +316,8 @@ public static class EmbodiedSimulationExample
             {
                 EmbodiedAction.Move(new Vector3(1f, 0f, 0f), "MoveForward"),
                 EmbodiedAction.Move(new Vector3(-1f, 0f, 0f), "MoveBackward"),
-                EmbodiedAction.Rotate(new Quaternion(0f, 0.1f, 0f, 0.9f), "TurnLeft"),
-                EmbodiedAction.Rotate(new Quaternion(0f, -0.1f, 0f, 0.9f), "TurnRight")
+                EmbodiedAction.Rotate(new Vector3(0f, 0.1f, 0f), "TurnLeft"),
+                EmbodiedAction.Rotate(new Vector3(0f, -0.1f, 0f), "TurnRight")
             };
 
             var actionResult = await rlAgent.SelectActionAsync(currentState, availableActions);

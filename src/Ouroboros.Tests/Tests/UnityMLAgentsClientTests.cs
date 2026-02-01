@@ -13,7 +13,7 @@ namespace Ouroboros.Tests;
 /// Unit tests for UnityMLAgentsClient.
 /// </summary>
 [Trait("Category", "Unit")]
-public sealed class UnityMLAgentsClientTests : IDisposable
+public sealed class UnityMLAgentsClientTests : IAsyncDisposable
 {
     private readonly UnityMLAgentsClient client;
     private bool disposed;
@@ -153,13 +153,13 @@ public sealed class UnityMLAgentsClientTests : IDisposable
     }
 
     [Fact]
-    public async Task Dispose_ShouldDisconnect()
+    public async Task DisposeAsync_ShouldDisconnect()
     {
         // Arrange
         await this.client.ConnectAsync();
 
         // Act
-        this.client.Dispose();
+        await this.client.DisposeAsync();
 
         // Assert - subsequent operations should fail
         var result = await this.client.GetSensorStateAsync();
@@ -194,14 +194,14 @@ public sealed class UnityMLAgentsClientTests : IDisposable
         postDisconnectResult.IsFailure.Should().BeTrue();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (this.disposed)
         {
             return;
         }
 
-        this.client.Dispose();
+        await this.client.DisposeAsync();
         this.disposed = true;
     }
 }
