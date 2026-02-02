@@ -402,33 +402,26 @@ public sealed class VoiceModeServiceV2 : IAsyncDisposable
                     error =>
                     {
                         // Check for rate limiting (429) or quota errors
-                        if (error.Contains("429") || error.Contains("Too many requests") ||
-                            error.Contains("quota") || error.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
+                        bool isRateLimit = error.Contains("429") || error.Contains("Too many requests") ||
+                            error.Contains("quota") || error.Contains("rate limit", StringComparison.OrdinalIgnoreCase);
+
+                        if (isRateLimit)
                         {
-                            Console.WriteLine($"  [!] Azure TTS rate limited, switching to local TTS");
-                            shouldFallback = true;
+                            Console.WriteLine($"  [!] Azure TTS rate limited, trying fallback...");
                         }
                         else
                         {
-                            _stream.PublishError($"TTS error: {error}", category: ErrorCategory.SpeechSynthesis);
+                            Console.WriteLine($"  [!] Azure TTS error: {error}");
                         }
 
+                        shouldFallback = true;
                         return Task.CompletedTask;
                     });
             }
             catch (Exception ex)
             {
-                // Also fallback on network/connection errors
-                if (ex.Message.Contains("429") || ex.Message.Contains("Too many requests"))
-                {
-                    Console.WriteLine($"  [!] Azure TTS rate limited, switching to local TTS");
-                    shouldFallback = true;
-                }
-                else
-                {
-                    _stream.PublishError(ex.Message, ex, ErrorCategory.SpeechSynthesis);
-                    shouldFallback = true; // Fallback on any primary TTS failure
-                }
+                Console.WriteLine($"  [!] Azure TTS exception: {ex.Message}");
+                shouldFallback = true;
             }
         }
         else
@@ -437,26 +430,34 @@ public sealed class VoiceModeServiceV2 : IAsyncDisposable
         }
 
         // Fallback to local TTS if needed
-        if (shouldFallback && _fallbackTts != null && _config.EnableTts)
+        if (shouldFallback && _config.EnableTts)
         {
-            try
+            if (_fallbackTts != null)
             {
-                var result = await _fallbackTts.SynthesizeAsync(text, ttsOptions, ct);
-                await result.Match(
-                    async speech =>
-                    {
-                        _stream.PublishVoiceOutput(speech.AudioData, speech.Format, speech.Duration ?? 0, isComplete: true, text: text);
-                        await AudioPlayer.PlayAsync(speech);
-                    },
-                    error =>
-                    {
-                        _stream.PublishError($"TTS fallback error: {error}", category: ErrorCategory.SpeechSynthesis);
-                        return Task.CompletedTask;
-                    });
+                try
+                {
+                    Console.WriteLine($"  [>] Using fallback TTS...");
+                    Result<SpeechResult, string> result = await _fallbackTts.SynthesizeAsync(text, ttsOptions, ct);
+                    await result.Match(
+                        async speech =>
+                        {
+                            _stream.PublishVoiceOutput(speech.AudioData, speech.Format, speech.Duration ?? 0, isComplete: true, text: text);
+                            await AudioPlayer.PlayAsync(speech);
+                        },
+                        error =>
+                        {
+                            Console.WriteLine($"  [!] Fallback TTS error: {error}");
+                            return Task.CompletedTask;
+                        });
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"  [!] Fallback TTS exception: {ex.Message}");
+                }
             }
-            catch (Exception ex)
+            else
             {
-                _stream.PublishError($"TTS fallback error: {ex.Message}", ex, ErrorCategory.SpeechSynthesis);
+                Console.WriteLine($"  [!] No fallback TTS available - voice output skipped");
             }
         }
 

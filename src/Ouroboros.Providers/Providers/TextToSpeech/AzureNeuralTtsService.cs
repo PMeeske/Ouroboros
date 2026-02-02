@@ -321,16 +321,51 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 
         try
         {
-            // For Azure, we use _voiceName directly since TtsVoice enum is for OpenAI
             var voice = _voiceName;
             var rate = options?.Speed ?? 1.0;
-            var ratePercent = (int)((rate - 1.0) * 50);
+            var isWhisper = options?.IsWhisper ?? false;
+            bool isGerman = _culture.StartsWith("de", StringComparison.OrdinalIgnoreCase);
 
-            var ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='{_culture}'>
-                <voice name='{voice}'>
-                    <prosody rate='{ratePercent:+0;-0;0}%'>{System.Security.SecurityElement.Escape(text)}</prosody>
-                </voice>
-            </speak>";
+            string ssml;
+            if (isWhisper)
+            {
+                // Cortana-style whisper: intimate, wise, slightly ethereal (for inner thoughts)
+                var whisperRate = -8 + (int)((rate - 1.0) * 50);
+                ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
+                    <voice name='{voice}'>
+                        <mstts:express-as style='whispering' styledegree='0.6'>
+                            <prosody rate='{whisperRate:+0;-0;0}%' pitch='+3%' volume='-15%'>
+                                {System.Security.SecurityElement.Escape(text)}
+                            </prosody>
+                        </mstts:express-as>
+                    </voice>
+                </speak>";
+            }
+            else
+            {
+                // Cortana-style: calm, warm, slightly ethereal, intelligent
+                var normalRate = -5 + (int)((rate - 1.0) * 50);
+                ssml = isGerman
+                    ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
+                        <voice name='{voice}'>
+                            <prosody rate='{normalRate:+0;-0;0}%' pitch='+5%' volume='+5%'>
+                                {System.Security.SecurityElement.Escape(text)}
+                            </prosody>
+                        </voice>
+                    </speak>"
+                    : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
+                        <voice name='{voice}'>
+                            <mstts:express-as style='assistant' styledegree='1.2'>
+                                <prosody rate='{normalRate:+0;-0;0}%' pitch='+5%'>
+                                    {System.Security.SecurityElement.Escape(text)}
+                                </prosody>
+                            </mstts:express-as>
+                        </voice>
+                    </speak>";
+            }
 
             using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
 
