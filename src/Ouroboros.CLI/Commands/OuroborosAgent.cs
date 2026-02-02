@@ -34,6 +34,8 @@ using Ouroboros.Application.Tools;
 using static Ouroboros.Application.Tools.AutonomousTools;
 using IEmbeddingModel = Ouroboros.Domain.IEmbeddingModel;
 using Ouroboros.Options;
+using Ouroboros.CLI.Abstractions;
+using Ouroboros.Core.EmbodiedInteraction;
 
 namespace Ouroboros.CLI.Commands;
 
@@ -56,6 +58,7 @@ public sealed record OuroborosConfig(
     string AzureSpeechRegion = "eastus",
     string TtsVoice = "en-US-AvaMultilingualNeural",
     bool VoiceChannel = false,
+    bool VoiceV2 = false,  // Enable unified Rx streaming voice mode V2
     bool Listen = false,
     bool Debug = false,
     double Temperature = 0.7,
@@ -69,6 +72,7 @@ public sealed record OuroborosConfig(
     bool EnableMind = true,
     bool EnableBrowser = true,
     bool EnableConsciousness = true,
+    bool EnableEmbodiment = true,  // Multimodal sensor/actuator embodiment
     // Autonomous/Push mode
     bool EnablePush = false,
     bool YoloMode = false,
@@ -107,10 +111,11 @@ public sealed record OuroborosConfig(
 /// - Self-improvement and curiosity
 /// - Persistent thought memory across sessions
 /// </summary>
-public sealed class OuroborosAgent : IAsyncDisposable
+public sealed partial class OuroborosAgent : IAsyncDisposable, IAgentFacade
 {
     private readonly OuroborosConfig _config;
     private readonly VoiceModeService _voice;
+    private VoiceModeServiceV2? _voiceV2;  // Unified Rx streaming voice service
 
     // Track active speech processes to kill on exit
     private static readonly ConcurrentBag<System.Diagnostics.Process> _activeSpeechProcesses = new();
@@ -211,6 +216,11 @@ public sealed class OuroborosAgent : IAsyncDisposable
     private bool _userWasPresent;
     private DateTime _lastGreetingTime = DateTime.MinValue;
 
+    // Embodied Interaction - multimodal sensors and actuators
+    private EmbodimentController? _embodimentController;
+    private VirtualSelf? _virtualSelf;
+    private BodySchema? _bodySchema;
+
     // Voice side channel - parallel audio playback for personas
     private VoiceSideChannel? _voiceSideChannel;
 
@@ -238,6 +248,16 @@ public sealed class OuroborosAgent : IAsyncDisposable
     /// Gets the voice service.
     /// </summary>
     public VoiceModeService Voice => _voice;
+
+    /// <summary>
+    /// Gets the unified Rx streaming voice service V2.
+    /// </summary>
+    public VoiceModeServiceV2? VoiceV2 => _voiceV2;
+
+    /// <summary>
+    /// Gets the interaction stream from VoiceV2 if enabled.
+    /// </summary>
+    public Ouroboros.Domain.Voice.InteractionStream? InteractionStream => _voiceV2?.Stream;
 
     /// <summary>
     /// Gets the voice side channel for fire-and-forget audio playback.
@@ -638,6 +658,12 @@ Write the integrated response:";
             await InitializeVoiceSideChannelAsync();
         }
 
+        // Initialize VoiceV2 (unified Rx streaming) if enabled
+        if (_config.VoiceV2)
+        {
+            await InitializeVoiceV2Async();
+        }
+
         // Initialize LLM (always required)
         await InitializeLlmAsync();
 
@@ -722,6 +748,16 @@ Write the integrated response:";
         else
         {
             Console.WriteLine("  ○ Consciousness: Disabled (use --no-consciousness=false to enable)");
+        }
+
+        // Initialize embodied interaction - multimodal sensors and actuators (conditionally)
+        if (_config.EnableEmbodiment)
+        {
+            await InitializeEmbodimentAsync();
+        }
+        else
+        {
+            Console.WriteLine("  ○ Embodiment: Disabled (use --no-embodiment=false to enable)");
         }
 
         // Initialize persistent thought memory (always enabled for continuity)
@@ -976,6 +1012,8 @@ OUTPUT (translation only, no explanations, no JSON, no metadata):";
         Console.WriteLine($"    {(_config.EnableMind ? "✓" : "○")} Mind         - Autonomous inner thoughts");
         Console.ForegroundColor = _config.EnableConsciousness ? ConsoleColor.Green : ConsoleColor.DarkGray;
         Console.WriteLine($"    {(_config.EnableConsciousness ? "✓" : "○")} Consciousness- ImmersivePersona self-awareness");
+        Console.ForegroundColor = _config.EnableEmbodiment ? ConsoleColor.Green : ConsoleColor.DarkGray;
+        Console.WriteLine($"    {(_config.EnableEmbodiment ? "✓" : "○")} Embodiment   - Multimodal sensors & actuators");
         Console.ForegroundColor = _config.EnablePush ? ConsoleColor.Cyan : ConsoleColor.DarkGray;
         Console.WriteLine($"    {(_config.EnablePush ? "⚡" : "○")} Push Mode    - Propose actions for approval (--push)");
         Console.ResetColor();
@@ -1038,6 +1076,94 @@ OUTPUT (translation only, no explanations, no JSON, no metadata):";
         }
 
         return Task.CompletedTask;
+    }
+
+    private async Task InitializeVoiceV2Async()
+    {
+        try
+        {
+            Console.WriteLine("  [>] Initializing Voice V2 (Unified Rx Streaming)...");
+
+            // Create VoiceModeServiceV2 with available TTS/STT services
+            var config = new VoiceModeConfigV2(
+                Persona: _config.Persona,
+                VoiceOnly: _config.VoiceOnly,
+                EnableTts: true,
+                EnableStt: true,
+                EnableVisualIndicators: true,
+                Culture: _config.Culture);
+
+            // Get Azure TTS if available for streaming
+            Ouroboros.Providers.TextToSpeech.IStreamingTtsService? streamingTts = null;
+            Ouroboros.Providers.TextToSpeech.ITextToSpeechService? fallbackTts = null;
+            Ouroboros.Providers.SpeechToText.ISpeechToTextService? fallbackStt = null;
+
+            var azureKey = _staticConfiguration?["Azure:Speech:Key"]
+                ?? Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY");
+            var azureRegion = _staticConfiguration?["Azure:Speech:Region"]
+                ?? Environment.GetEnvironmentVariable("AZURE_SPEECH_REGION");
+
+            if (!string.IsNullOrEmpty(azureKey) && !string.IsNullOrEmpty(azureRegion))
+            {
+                var azureTts = new Ouroboros.Providers.TextToSpeech.AzureNeuralTtsService(
+                    azureKey, azureRegion, _config.Persona, _config.Culture);
+                streamingTts = azureTts;
+                fallbackTts = azureTts;
+                Console.WriteLine("  [OK] Azure Neural TTS available for streaming");
+            }
+            else if (Ouroboros.Providers.TextToSpeech.LocalWindowsTtsService.IsAvailable())
+            {
+                fallbackTts = new Ouroboros.Providers.TextToSpeech.LocalWindowsTtsService(
+                    voiceName: "Microsoft Zira Desktop", rate: 1, volume: 100);
+                Console.WriteLine("  [OK] Local Windows TTS fallback available");
+            }
+
+            // Get Whisper STT if available
+            var whisperNet = Ouroboros.Providers.SpeechToText.WhisperNetService.FromModelSize("base");
+            if (await whisperNet.IsAvailableAsync())
+            {
+                fallbackStt = whisperNet;
+                Console.WriteLine("  [OK] Whisper.net STT available");
+            }
+
+            // Get streaming LLM if available
+            Ouroboros.Providers.IStreamingChatModel? streamingLlm = null;
+            if (_chatModel is Ouroboros.Providers.IStreamingChatModel streamingModel)
+            {
+                streamingLlm = streamingModel;
+                Console.WriteLine("  [OK] Streaming LLM available for voice pipeline");
+            }
+
+            _voiceV2 = new VoiceModeServiceV2(
+                config: config,
+                llm: streamingLlm,
+                tts: streamingTts,
+                stt: null, // TODO: Add streaming STT when implemented
+                fallbackTts: fallbackTts,
+                fallbackStt: fallbackStt);
+
+            await _voiceV2.InitializeAsync();
+
+            // Subscribe to interaction events for logging
+            if (_config.Debug)
+            {
+                _voiceV2.Stream.All.Subscribe(e =>
+                {
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.WriteLine($"  [V2-{e.Source}] {e.GetType().Name}");
+                    Console.ResetColor();
+                });
+            }
+
+            Console.WriteLine("  ✓ Voice V2: Unified Rx streaming enabled");
+            Console.WriteLine("    → Features: Typed streams | Barge-in | Streaming TTS");
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"  ✗ Voice V2: {ex.GetType().Name} - {ex.Message}");
+            Console.ResetColor();
+        }
     }
 
     private static async Task SpeakWithSapiAsync(string text, PersonaVoice voice, CancellationToken ct)
@@ -1816,6 +1942,92 @@ $synth.Dispose()
         Console.WriteLine($"    Self-awareness: {selfAwareness.Name} - {selfAwareness.CurrentMood}");
         Console.WriteLine($"    Identity: {_immersivePersona.Identity.Name} (uptime: {_immersivePersona.Uptime:hh\\:mm\\:ss})");
         Console.ResetColor();
+    }
+
+    /// <summary>
+    /// Initializes the embodied interaction subsystem with multimodal sensors and actuators.
+    /// Provides the agent with a virtual body schema, audio/visual perception, and voice output.
+    /// </summary>
+    private async Task InitializeEmbodimentAsync()
+    {
+        try
+        {
+            Console.WriteLine("  [>] Initializing Embodied Interaction...");
+
+            // Create VirtualSelf - the agent's embodied self-model
+            _virtualSelf = new VirtualSelf(_config.Persona);
+
+            // Create BodySchema with multimodal capabilities
+            _bodySchema = BodySchema.CreateMultimodal()
+                .WithCapability(Capability.Hearing)
+                .WithCapability(Capability.Speaking)
+                .WithCapability(Capability.Seeing)
+                .WithCapability(Capability.Reasoning)
+                .WithLimitation(new Limitation(
+                    LimitationType.ActionRestricted,
+                    "No physical manipulation",
+                    0.8)); // Severity 0.8 = significant limitation
+
+            // Create EmbodimentController
+            _embodimentController = new EmbodimentController(_virtualSelf, _bodySchema);
+
+            // Wire up perception streams to personality engine for emotional responses
+            if (_personalityEngine != null)
+            {
+                // Subscribe to unified perception events (all modalities)
+                _virtualSelf.Perceptions
+                    .Subscribe(perception =>
+                    {
+                        // Log perception events (text, audio, visual)
+                        System.Diagnostics.Debug.WriteLine($"[Embodiment] Perception: {perception.Modality} id={perception.Id}");
+                    });
+            }
+
+            // Wire up fused perceptions to global workspace if available
+            if (_globalWorkspace != null)
+            {
+                _virtualSelf.FusedPerceptions
+                    .Subscribe(fused =>
+                    {
+                        // Fused multimodal perception can be broadcast to global workspace
+                        System.Diagnostics.Debug.WriteLine($"[Embodiment] Fused perception: confidence={fused.Confidence:F2}, modalities={fused.DominantModality}");
+                    });
+            }
+
+            // Log unified perceptions in debug mode
+            if (_config.Debug)
+            {
+                _embodimentController.Perceptions
+                    .Subscribe(perception =>
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        Console.WriteLine($"  [Perception] {perception.Modality}: source={perception.Source}");
+                        Console.ResetColor();
+                    });
+            }
+
+            // Start the embodiment controller
+            var startResult = await _embodimentController.StartAsync();
+            startResult.Match(
+                _ => Console.WriteLine($"  ✓ Embodiment: VirtualSelf '{_config.Persona}' with {_bodySchema.Capabilities.Count} capabilities"),
+                error => Console.WriteLine($"  ⚠ Embodiment start warning: {error}"));
+
+            // Print body schema summary
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine($"    Capabilities: {string.Join(", ", _bodySchema.Capabilities)}");
+            Console.WriteLine($"    Sensors: {_bodySchema.Sensors.Count} | Actuators: {_bodySchema.Actuators.Count}");
+            Console.ResetColor();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  ⚠ Embodiment initialization failed: {ex.Message}");
+            if (_config.Debug)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkRed;
+                Console.WriteLine($"    → {ex.GetType().Name}: {ex.Message}");
+                Console.ResetColor();
+            }
+        }
     }
 
     private async Task InitializePersistentThoughtsAsync()
@@ -4536,13 +4748,18 @@ No quotes around the response. Just the greeting itself.";
 
     private async Task<string> QueryMeTTaAsync(string query)
     {
-        if (_mettaEngine == null)
-            return "MeTTa symbolic reasoning isn't available.";
-
-        var result = await _mettaEngine.ExecuteQueryAsync(query, CancellationToken.None);
+        var result = await QueryMeTTaResultAsync(query);
         return result.Match(
             success => $"MeTTa result: {success}",
             error => $"Query error: {error}");
+    }
+
+    private async Task<Result<string, string>> QueryMeTTaResultAsync(string query)
+    {
+        if (_mettaEngine == null)
+            return Result<string, string>.Failure("MeTTa symbolic reasoning isn't available.");
+
+        return await _mettaEngine.ExecuteQueryAsync(query, CancellationToken.None);
     }
 
     // ================================================================
@@ -4554,90 +4771,68 @@ No quotes around the response. Just the greeting itself.";
     /// </summary>
     private async Task<string> AskAsync(string question)
     {
-        if (string.IsNullOrWhiteSpace(question))
-            return "What would you like to ask?";
-
-        try
-        {
-            var askOpts = new AskOptions
-            {
-                Question = question,
-                Model = "llama3",
-                Temperature = 0.7,
-                MaxTokens = 2048,
-                TimeoutSeconds = 120,
-                Stream = false,
-                Culture = Thread.CurrentThread.CurrentCulture.Name,
-                Voice = false,
-                Agent = true,
-                Rag = false,
-                Router = "none",
-                Debug = false,
-                StrictModel = false
-            };
-
-            var originalOut = Console.Out;
-            try
-            {
-                using (var writer = new StringWriter())
-                {
-                    Console.SetOut(writer);
-                    await AskCommands.RunAskAsync(askOpts);
-                    return writer.ToString();
-                }
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
-        }
-        catch (Exception ex)
-        {
-            return $"Error asking question: {ex.Message}";
-        }
+        var result = await AskResultAsync(question);
+        return result.Match(success => success, error => $"Error asking question: {error}");
     }
+
+    private async Task<Result<string, string>> AskResultAsync(string question)
+    {
+        if (string.IsNullOrWhiteSpace(question))
+            return Result<string, string>.Failure("What would you like to ask?");
+
+        var askOpts = new AskOptions
+        {
+            Question = question,
+            Model = "llama3",
+            Temperature = 0.7,
+            MaxTokens = 2048,
+            TimeoutSeconds = 120,
+            Stream = false,
+            Culture = Thread.CurrentThread.CurrentCulture.Name,
+            Voice = false,
+            Agent = true,
+            Rag = false,
+            Router = "none",
+            Debug = false,
+            StrictModel = false
+        };
+
+        return await CaptureConsoleOutAsync(() => AskCommands.RunAskAsync(askOpts));
+    }
+
+    // IAgentFacade explicit implementations for monadic operations
+    Task<Result<string, string>> IAgentFacade.AskResultAsync(string question) => AskResultAsync(question);
+    Task<Result<string, string>> IAgentFacade.RunPipelineResultAsync(string dsl) => RunPipelineResultAsync(dsl);
+    Task<Result<string, string>> IAgentFacade.RunMeTTaExpressionResultAsync(string expression) => RunMeTTaExpressionResultAsync(expression);
+    Task<Result<string, string>> IAgentFacade.QueryMeTTaResultAsync(string query) => QueryMeTTaResultAsync(query);
 
     /// <summary>
     /// Run a DSL pipeline expression (routes to PipelineCommands CLI handler).
     /// </summary>
     private async Task<string> RunPipelineAsync(string dsl)
     {
+        var result = await RunPipelineResultAsync(dsl);
+        return result.Match(success => success, error => $"Pipeline error: {error}");
+    }
+
+    private async Task<Result<string, string>> RunPipelineResultAsync(string dsl)
+    {
         if (string.IsNullOrWhiteSpace(dsl))
-            return "Please provide a DSL expression. Example: 'pipeline draft → critique → final'";
+            return Result<string, string>.Failure("Please provide a DSL expression. Example: 'pipeline draft → critique → final'");
 
-        try
+        var pipelineOpts = new PipelineOptions
         {
-            var pipelineOpts = new PipelineOptions
-            {
-                Dsl = dsl,
-                Model = "llama3",
-                Temperature = 0.7,
-                MaxTokens = 4096,
-                TimeoutSeconds = 120,
-                Voice = false,
-                Culture = Thread.CurrentThread.CurrentCulture.Name,
-                Debug = false
-            };
+            Dsl = dsl,
+            Model = "llama3",
+            Temperature = 0.7,
+            MaxTokens = 4096,
+            TimeoutSeconds = 120,
+            Voice = false,
+            Culture = Thread.CurrentThread.CurrentCulture.Name,
+            Debug = false
+        };
 
-            var originalOut = Console.Out;
-            try
-            {
-                using (var writer = new StringWriter())
-                {
-                    Console.SetOut(writer);
-                    await PipelineCommands.RunPipelineAsync(pipelineOpts);
-                    return writer.ToString();
-                }
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
-        }
-        catch (Exception ex)
-        {
-            return $"Pipeline error: {ex.Message}";
-        }
+        return await CaptureConsoleOutAsync(() => PipelineCommands.RunPipelineAsync(pipelineOpts));
     }
 
     /// <summary>
@@ -4645,39 +4840,236 @@ No quotes around the response. Just the greeting itself.";
     /// </summary>
     private async Task<string> RunMeTTaExpressionAsync(string expression)
     {
-        if (string.IsNullOrWhiteSpace(expression))
-            return "Please provide a MeTTa expression. Example: '!(+ 1 2)' or '(= (greet $x) (Hello $x))'";
+        var result = await RunMeTTaExpressionResultAsync(expression);
+        return result.Match(success => success, error => $"MeTTa execution failed: {error}");
+    }
 
+    private async Task<Result<string, string>> RunMeTTaExpressionResultAsync(string expression)
+    {
+        if (string.IsNullOrWhiteSpace(expression))
+            return Result<string, string>.Failure("Please provide a MeTTa expression. Example: '!(+ 1 2)' or '(= (greet $x) (Hello $x))'");
+
+        var mettaOpts = new MeTTaOptions
+        {
+            Goal = expression,
+            Voice = false,
+            Culture = Thread.CurrentThread.CurrentCulture.Name,
+            Debug = false
+        };
+
+        return await CaptureConsoleOutAsync(() => MeTTaCommands.RunMeTTaAsync(mettaOpts));
+    }
+
+    // Helper to capture CLI command output and return as Result
+    private static async Task<Result<string, string>> CaptureConsoleOutAsync(Func<Task> action)
+    {
+        var originalOut = Console.Out;
         try
         {
-            var mettaOpts = new MeTTaOptions
-            {
-                Goal = expression,
-                Voice = false,
-                Culture = Thread.CurrentThread.CurrentCulture.Name,
-                Debug = false
-            };
-
-            var originalOut = Console.Out;
+            using var writer = new StringWriter();
+            Console.SetOut(writer);
             try
             {
-                using (var writer = new StringWriter())
-                {
-                    Console.SetOut(writer);
-                    await MeTTaCommands.RunMeTTaAsync(mettaOpts);
-                    return writer.ToString();
-                }
+                await action();
+                return Result<string, string>.Success(writer.ToString());
             }
-            finally
+            catch (Exception ex)
             {
-                Console.SetOut(originalOut);
+                return Result<string, string>.Failure(ex.Message);
             }
         }
-        catch (Exception ex)
+        finally
         {
-            return $"MeTTa execution failed: {ex.Message}";
+            Console.SetOut(originalOut);
         }
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MONADIC STEP CONSTRUCTS (for functional composition)
+    // ═══════════════════════════════════════════════════════════════════════════
+    // These expose core actions as Step<string, Result<string,string>> so they can
+    // be composed using Pipeline/Step combinators across the system.
+
+    /// <summary>
+    /// Functional step to ask a question. Input: question string. Output: Result text.
+    /// </summary>
+    public Step<string, Result<string, string>> AskStep()
+        => async question => await AskResultAsync(question);
+
+    /// <summary>
+    /// Functional step to run a Pipeline DSL expression. Input: DSL string. Output: Result text.
+    /// </summary>
+    public Step<string, Result<string, string>> PipelineStep()
+        => async dsl => await RunPipelineResultAsync(dsl);
+
+    /// <summary>
+    /// Functional step to execute a MeTTa expression directly. Input: expression. Output: Result text.
+    /// </summary>
+    public Step<string, Result<string, string>> MeTTaExpressionStep()
+        => async expression => await RunMeTTaExpressionResultAsync(expression);
+
+    /// <summary>
+    /// Functional step to query the MeTTa engine. Input: query string. Output: Result text.
+    /// </summary>
+    public Step<string, Result<string, string>> MeTTaQueryStep()
+        => async query => await QueryMeTTaResultAsync(query);
+
+    /// <summary>
+    /// Functional step to orchestrate a multi-step goal. Input: goal. Output: Result text.
+    /// </summary>
+    public Step<string, Result<string, string>> OrchestrateStep()
+        => async goal =>
+        {
+            try
+            {
+                var text = await OrchestrateAsync(goal);
+                return Result<string, string>.Success(text);
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure(ex.Message);
+            }
+        };
+
+    /// <summary>
+    /// Functional step to produce a plan for a goal. Input: goal. Output: Result text.
+    /// </summary>
+    public Step<string, Result<string, string>> PlanStep()
+        => async goal =>
+        {
+            try
+            {
+                var text = await PlanAsync(goal);
+                return Result<string, string>.Success(text);
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure(ex.Message);
+            }
+        };
+
+    /// <summary>
+    /// Functional step to execute a goal with planning. Input: goal. Output: Result text.
+    /// </summary>
+    public Step<string, Result<string, string>> ExecuteStep()
+        => async goal =>
+        {
+            try
+            {
+                var text = await ExecuteAsync(goal);
+                return Result<string, string>.Success(text);
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure(ex.Message);
+            }
+        };
+
+    /// <summary>
+    /// Functional step to fetch research (arXiv). Input: query. Output: Result text.
+    /// </summary>
+    public Step<string, Result<string, string>> FetchResearchStep()
+        => async query =>
+        {
+            try
+            {
+                var text = await FetchResearchAsync(query);
+                return Result<string, string>.Success(text);
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure(ex.Message);
+            }
+        };
+
+    /// <summary>
+    /// Functional step to process large input via divide-and-conquer. Input: text-or-filepath. Output: Result text.
+    /// </summary>
+    public Step<string, Result<string, string>> ProcessLargeInputStep()
+        => async input =>
+        {
+            try
+            {
+                var text = await ProcessLargeInputAsync(input);
+                return Result<string, string>.Success(text);
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure(ex.Message);
+            }
+        };
+
+    /// <summary>
+    /// Functional step to remember information. Input: info. Output: Result text.
+    /// </summary>
+    public Step<string, Result<string, string>> RememberStep()
+        => async info =>
+        {
+            try
+            {
+                var text = await RememberAsync(info);
+                return Result<string, string>.Success(text);
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure(ex.Message);
+            }
+        };
+
+    /// <summary>
+    /// Functional step to recall information. Input: topic. Output: Result text.
+    /// </summary>
+    public Step<string, Result<string, string>> RecallStep()
+        => async topic =>
+        {
+            try
+            {
+                var text = await RecallAsync(topic);
+                return Result<string, string>.Success(text);
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure(ex.Message);
+            }
+        };
+
+    /// <summary>
+    /// Functional step to run a named skill. Input: skill name. Output: Result text.
+    /// </summary>
+    public Step<string, Result<string, string>> RunSkillStep()
+        => async skillName =>
+        {
+            try
+            {
+                var text = await RunSkillAsync(skillName);
+                return Result<string, string>.Success(text);
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure(ex.Message);
+            }
+        };
+
+    /// <summary>
+    /// Functional step factory to invoke a specific tool. The returned step takes the tool input string.
+    /// </summary>
+    public Step<string, Result<string, string>> UseToolStep(string toolName)
+        => async toolInput =>
+        {
+            try
+            {
+                var tool = _tools.Get(toolName) ?? _tools.All.FirstOrDefault(t => t.Name.Equals(toolName, StringComparison.OrdinalIgnoreCase));
+                if (tool is null)
+                    return Result<string, string>.Failure($"Tool not found: {toolName}");
+
+                Result<string, string> result = await tool.InvokeAsync(toolInput ?? string.Empty);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure(ex.Message);
+            }
+        };
 
     /// <summary>
     /// Orchestrate a complex multi-step task (routes to OrchestratorCommands CLI handler).
@@ -5498,10 +5890,24 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
             _presenceDetector.Dispose();
         }
 
+        // Dispose embodiment controller (stops sensors and actuators)
+        if (_embodimentController != null)
+        {
+            await _embodimentController.StopAsync();
+            _embodimentController.Dispose();
+        }
+        _virtualSelf?.Dispose();
+
         // Dispose voice side channel (drains queue)
         if (_voiceSideChannel != null)
         {
             await _voiceSideChannel.DisposeAsync();
+        }
+
+        // Dispose VoiceV2 (unified Rx streaming)
+        if (_voiceV2 != null)
+        {
+            await _voiceV2.DisposeAsync();
         }
 
         // Kill any remaining speech processes
@@ -6110,7 +6516,7 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
 
                 _autonomousCoordinator.MeTTaAddFactFunction = async (fact, ct) =>
                 {
-                    Result<Unit, string> result = await _mettaEngine.AddFactAsync(fact, ct);
+                    Result<Ouroboros.Tools.MeTTa.Unit, string> result = await _mettaEngine.AddFactAsync(fact, ct);
                     return result.IsSuccess;
                 };
 
