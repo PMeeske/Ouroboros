@@ -133,24 +133,40 @@ $synth.GetInstalledVoices() | ForEach-Object { $_.VoiceInfo.Name }
             // Use SSML for enhanced prosody if enabled
             string speechContent;
             string speakMethod;
+            string script;
+
             if (_useEnhancedProsody)
             {
                 string ssml = BuildEnhancedSsml(text, effectiveRate);
-                speechContent = ssml.Replace("'", "''").Replace("`", "``").Replace("$", "`$");
-                speakMethod = "SpeakSsml";
+                // Use PowerShell here-string (@' ... '@) for SSML to avoid escaping issues
+                // Here-strings preserve content literally without interpretation
+                script = $@"
+Add-Type -AssemblyName System.Speech
+$synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
+{voiceSelection}
+$synth.Rate = {effectiveRate}
+$synth.Volume = {_volume}
+$synth.SetOutputToWaveFile('{tempFile}')
+$ssmlContent = @'
+{ssml}
+'@
+$synth.SpeakSsml($ssmlContent)
+$synth.SetOutputToNull()
+$synth.Dispose()
+Write-Output 'OK'
+";
             }
             else
             {
-                // Escape text for PowerShell
+                // Escape text for PowerShell single-quoted string
                 speechContent = text
                     .Replace("'", "''")
                     .Replace("`", "``")
                     .Replace("$", "`$")
                     .Replace("\"", "`\"");
                 speakMethod = "Speak";
-            }
 
-            string script = $@"
+                script = $@"
 Add-Type -AssemblyName System.Speech
 $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
 {voiceSelection}
@@ -162,6 +178,7 @@ $synth.SetOutputToNull()
 $synth.Dispose()
 Write-Output 'OK'
 ";
+            }
 
             var runResult = await RunPowerShellAsync(script, ct);
 
@@ -225,7 +242,8 @@ Write-Output 'OK'
             .Replace("&", "&amp;")
             .Replace("<", "&lt;")
             .Replace(">", "&gt;")
-            .Replace("\"", "&quot;");
+            .Replace("\"", "&quot;")
+            .Replace("'", "&apos;"); // Also escape apostrophes for XML/PowerShell safety
 
         // Add slight pauses after punctuation for more natural rhythm
         text = PeriodPauseRegex().Replace(text, ". <break time='400ms'/>");

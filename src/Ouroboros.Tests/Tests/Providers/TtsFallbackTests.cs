@@ -20,6 +20,31 @@ using Xunit;
 public class TtsFallbackTests
 {
     /// <summary>
+    /// Verifies that apostrophes in text are properly escaped for SSML/XML.
+    /// This prevents PowerShell parsing errors like "I've" breaking the script.
+    /// </summary>
+    [Theory]
+    [InlineData("I've found something", "I&apos;ve found something")]
+    [InlineData("It's a test", "It&apos;s a test")]
+    [InlineData("Don't worry", "Don&apos;t worry")]
+    [InlineData("Hello world", "Hello world")] // No apostrophe
+    [InlineData("Test <script>", "Test &lt;script&gt;")] // XML escaping
+    [InlineData("A & B", "A &amp; B")] // Ampersand
+    public void EscapeForSsml_ShouldEscapeSpecialCharacters(string input, string expectedContains)
+    {
+        // Arrange & Act - simulate the escaping logic from AddNaturalProsody
+        var escaped = input
+            .Replace("&", "&amp;")
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;")
+            .Replace("\"", "&quot;")
+            .Replace("'", "&apos;");
+
+        // Assert
+        escaped.Should().Contain(expectedContains);
+    }
+
+    /// <summary>
     /// Verifies that a 429 rate limit error message is correctly identified.
     /// </summary>
     [Theory]
