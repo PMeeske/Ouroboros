@@ -6,9 +6,9 @@ namespace Ouroboros.Tests;
 
 using LangChain.Databases;
 using LangChain.DocumentLoaders;
-using LangChain.Providers.Ollama;
 using Ouroboros.Application;
 using Ouroboros.Providers;
+using Ouroboros.Tests.Infrastructure;
 
 /// <summary>
 /// Comprehensive end-to-end tests for all CLI commands and their variations.
@@ -68,13 +68,11 @@ public static class CliEndToEndTests
         Console.WriteLine("Testing ask command (basic)...");
 
         // Simulate basic ask without RAG - verify adapter pattern works
-        var provider = new OllamaProvider();
-        var chat = new OllamaChatModel(provider, "llama3");
-        var adapter = new OllamaChatAdapter(chat);
+        var chatModel = TestModelFactory.CreateChatModel();
 
         try
         {
-            var response = await adapter.GenerateTextAsync("Hello", CancellationToken.None);
+            var response = await chatModel.GenerateTextAsync("Hello", CancellationToken.None);
             if (string.IsNullOrWhiteSpace(response))
             {
                 throw new Exception("Basic ask should return non-empty response");
@@ -101,8 +99,7 @@ public static class CliEndToEndTests
         Console.WriteLine("Testing ask command with RAG...");
 
         // Test RAG setup
-        var provider = new OllamaProvider();
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        var embedModel = TestModelFactory.CreateEmbeddingModel();
         var store = new TrackedVectorStore();
 
         // Seed with test documents
@@ -139,8 +136,7 @@ public static class CliEndToEndTests
         Console.WriteLine("Testing ask command with agent mode...");
 
         // Test agent factory and tool registry
-        var provider = new OllamaProvider();
-        var chat = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        var chat = TestModelFactory.CreateChatModel();
         var tools = new ToolRegistry();
         tools = tools
             .WithFunction("echo", "Echo input", s => s)
@@ -166,8 +162,7 @@ public static class CliEndToEndTests
     {
         Console.WriteLine("Testing ask command with different agent modes...");
 
-        var provider = new OllamaProvider();
-        var chat = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        var chat = TestModelFactory.CreateChatModel();
         var tools = new ToolRegistry().WithFunction("test", "Test tool", s => s);
 
         // Test all agent modes
@@ -189,11 +184,10 @@ public static class CliEndToEndTests
     {
         Console.WriteLine("Testing ask command with multi-model router...");
 
-        var provider = new OllamaProvider();
         var modelMap = new Dictionary<string, IChatCompletionModel>(StringComparer.OrdinalIgnoreCase)
         {
-            ["general"] = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3")),
-            ["coder"] = new OllamaChatAdapter(new OllamaChatModel(provider, "deepseek-coder:33b")),
+            ["general"] = TestModelFactory.CreateChatModel("[mock-general]"),
+            ["coder"] = TestModelFactory.CreateChatModel("[mock-coder]"),
         };
 
         var router = new MultiModelRouter(modelMap, "general");
@@ -373,9 +367,8 @@ public static class CliEndToEndTests
         }
 
         // Test directory ingestion step
-        var provider = new OllamaProvider();
-        var embed = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
-        var chat = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        var embed = TestModelFactory.CreateEmbeddingModel();
+        var chat = TestModelFactory.CreateChatModel();
         var tools = new ToolRegistry();
         var llm = new ToolAwareChatModel(chat, tools);
         var store = new TrackedVectorStore();
@@ -428,9 +421,8 @@ public static class CliEndToEndTests
         Console.WriteLine("Testing complete refinement loop...");
 
         // Setup test environment
-        var provider = new OllamaProvider();
-        var embed = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
-        var chat = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        var embed = TestModelFactory.CreateEmbeddingModel();
+        var chat = TestModelFactory.CreateChatModel();
         var tools = new ToolRegistry();
         var llm = new ToolAwareChatModel(chat, tools);
         var store = new TrackedVectorStore();
@@ -511,9 +503,8 @@ public static class CliEndToEndTests
         Console.WriteLine("Testing pipeline command with trace...");
 
         // Test trace on/off steps
-        var provider = new OllamaProvider();
-        var embed = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
-        var chat = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        var embed = TestModelFactory.CreateEmbeddingModel();
+        var chat = TestModelFactory.CreateChatModel();
         var tools = new ToolRegistry();
         var llm = new ToolAwareChatModel(chat, tools);
         var store = new TrackedVectorStore();

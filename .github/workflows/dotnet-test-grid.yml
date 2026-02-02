@@ -61,6 +61,9 @@ jobs:
           # CLI tests (Commands, Parsing, Integration)
           - category: CLI
             filter: "Category=CLI|(Category=Unit&FullyQualifiedName~Ouroboros.Tests.CLI.)|(Category=Integration&FullyQualifiedName~Ouroboros.Tests.CLI.)"
+          # Database tests (Storage, HealthCheck, Models)
+          - category: Database
+            filter: "Category=Database|(Category=Unit&FullyQualifiedName~Ouroboros.Tests.Database.)"
           # Remaining tests not covered by other categories (Android, MultiAgent, etc.)
           - category: Other
             filter: "Category=Unit&(FullyQualifiedName~Ouroboros.Tests.Android.|FullyQualifiedName~Ouroboros.Tests.MultiAgent.)"

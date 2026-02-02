@@ -1,7 +1,7 @@
 using System.Reactive.Linq;
 using LangChain.DocumentLoaders;
-using LangChain.Providers.Ollama;
 using Ouroboros.Application;
+using Ouroboros.Tests.Infrastructure;
 
 namespace Ouroboros.Tests;
 
@@ -457,13 +457,11 @@ public static class StreamingEngineTests
 
     private static CliPipelineState CreateTestState()
     {
-        var provider = new OllamaProvider();
-        var chat = new OllamaChatModel(provider, "llama3");
-        var adapter = new OllamaChatAdapter(chat);
-        var embed = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
-        
+        var chat = TestModelFactory.CreateChatModel();
+        var embed = TestModelFactory.CreateEmbeddingModel();
+
         var tools = new ToolRegistry();
-        var llm = new ToolAwareChatModel(adapter, tools);
+        var llm = new ToolAwareChatModel(chat, tools);
         var store = new TrackedVectorStore();
         var branch = new PipelineBranch("test", store, DataSource.FromPath(Environment.CurrentDirectory));
 

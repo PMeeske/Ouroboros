@@ -5,9 +5,9 @@
 namespace Ouroboros.Tests;
 
 using LangChain.DocumentLoaders;
-using LangChain.Providers.Ollama;
 using Ouroboros.Application;
 using Ouroboros.Application.Tools;
+using Ouroboros.Tests.Infrastructure;
 
 /// <summary>
 /// Tests for meta-AI capabilities where the pipeline can reason about and modify its own execution.
@@ -23,9 +23,8 @@ public static class MetaAiTests
     {
         Console.WriteLine("=== Testing Pipeline Steps as Tools ===");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        var chatModel = TestModelFactory.CreateChatModel();
+        var embedModel = TestModelFactory.CreateEmbeddingModel();
 
         var tools = new ToolRegistry();
         var branch = new PipelineBranch("test", new TrackedVectorStore(), DataSource.FromPath("/tmp"));
@@ -82,9 +81,8 @@ public static class MetaAiTests
     {
         Console.WriteLine("\n=== Testing Selective Pipeline Step Registration ===");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        var chatModel = TestModelFactory.CreateChatModel();
+        var embedModel = TestModelFactory.CreateEmbeddingModel();
 
         var tools = new ToolRegistry();
         var branch = new PipelineBranch("test", new TrackedVectorStore(), DataSource.FromPath("/tmp"));
@@ -128,9 +126,8 @@ public static class MetaAiTests
     {
         Console.WriteLine("\n=== Testing Pipeline Step Tool Schemas ===");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        var chatModel = TestModelFactory.CreateChatModel();
+        var embedModel = TestModelFactory.CreateEmbeddingModel();
 
         var tools = new ToolRegistry();
         var branch = new PipelineBranch("test", new TrackedVectorStore(), DataSource.FromPath("/tmp"));
@@ -177,9 +174,8 @@ public static class MetaAiTests
         Console.WriteLine("\n=== Testing Meta-AI Integration ===");
         Console.WriteLine("This test demonstrates how the LLM can use pipeline step tools to build upon itself.");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
-        var embedModel = new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, "nomic-embed-text"));
+        var chatModel = TestModelFactory.CreateChatModel();
+        var embedModel = TestModelFactory.CreateEmbeddingModel();
 
         var tools = new ToolRegistry();
         var branch = new PipelineBranch("meta-ai-test", new TrackedVectorStore(), DataSource.FromPath("/tmp"));

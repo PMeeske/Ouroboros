@@ -49,6 +49,9 @@ public sealed class OuroborosOptions
     [Option("voice-channel", Required = false, HelpText = "Enable parallel voice side channel for persona-specific audio", Default = false)]
     public bool VoiceChannel { get; set; }
 
+    [Option("voice-v2", Required = false, HelpText = "Enable unified Rx streaming voice mode V2 (typed streams, barge-in, streaming TTS)", Default = false)]
+    public bool VoiceV2 { get; set; }
+
     [Option("listen", Required = false, HelpText = "Enable voice input (speech-to-text) on startup", Default = false)]
     public bool Listen { get; set; }
 

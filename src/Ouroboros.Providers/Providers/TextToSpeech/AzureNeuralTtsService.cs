@@ -2,6 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using System.Reactive.Linq;
 using Microsoft.CognitiveServices.Speech;
 
 namespace Ouroboros.Providers.TextToSpeech;
@@ -9,9 +10,12 @@ namespace Ouroboros.Providers.TextToSpeech;
 /// <summary>
 /// Azure Cognitive Services Neural TTS service.
 /// Provides high-quality, natural-sounding voices including Jenny (Cortana-like).
+/// Implements streaming TTS for real-time voice synthesis.
 /// </summary>
-public sealed class AzureNeuralTtsService : ITextToSpeechService, IDisposable
+public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 {
+    private volatile bool _isSynthesizing;
+    private CancellationTokenSource? _currentSynthesisCts;
     private readonly string _subscriptionKey;
     private readonly string _region;
     private string _voiceName;
@@ -332,11 +336,177 @@ public sealed class AzureNeuralTtsService : ITextToSpeechService, IDisposable
         return Result<string, string>.Failure(result.Error ?? "Unknown error");
     }
 
+    // ========================================================================
+    // IStreamingTtsService Implementation
+    // ========================================================================
+
+    /// <inheritdoc/>
+    public bool IsSynthesizing => _isSynthesizing;
+
+    /// <inheritdoc/>
+    public bool SupportsStreaming => true;
+
+    /// <inheritdoc/>
+    public IObservable<SpeechChunk> StreamSynthesis(
+        IObservable<string> textStream,
+        TextToSpeechOptions? options = null,
+        CancellationToken ct = default)
+    {
+        return textStream
+            .BufferIntoSentences()
+            .SelectMany(sentence => Observable.FromAsync<SpeechChunk?>(async token =>
+            {
+                var result = await SynthesizeChunkAsync(sentence, options, token);
+                return result.IsSuccess ? result.Value : null;
+            }))
+            .Where(chunk => chunk != null)
+            .Select(chunk => chunk!);
+    }
+
+    /// <inheritdoc/>
+    public IObservable<SpeechChunk> StreamSynthesisIncremental(
+        string text,
+        TextToSpeechOptions? options = null,
+        CancellationToken ct = default)
+    {
+        return Observable.Create<SpeechChunk>(async (observer, token) =>
+        {
+            var linkedCt = CancellationTokenSource.CreateLinkedTokenSource(ct, token).Token;
+            _currentSynthesisCts = CancellationTokenSource.CreateLinkedTokenSource(linkedCt);
+
+            try
+            {
+                _isSynthesizing = true;
+                var sentences = StreamingTtsExtensions.SplitIntoSentences(text).ToList();
+
+                for (int i = 0; i < sentences.Count; i++)
+                {
+                    if (_currentSynthesisCts.Token.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    var sentence = sentences[i];
+                    var isLast = i == sentences.Count - 1;
+
+                    var result = await SynthesizeChunkAsync(sentence, options, _currentSynthesisCts.Token);
+
+                    if (result.IsSuccess)
+                    {
+                        var chunk = result.Value;
+                        var finalChunk = new SpeechChunk(
+                            chunk.AudioData,
+                            chunk.Format,
+                            chunk.DurationSeconds,
+                            chunk.Text,
+                            IsSentenceEnd: true,
+                            IsComplete: isLast);
+                        observer.OnNext(finalChunk);
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Azure TTS] Chunk synthesis error: {result.Error}");
+                    }
+                }
+
+                observer.OnCompleted();
+            }
+            catch (OperationCanceledException)
+            {
+                observer.OnCompleted();
+            }
+            catch (Exception ex)
+            {
+                observer.OnError(ex);
+            }
+            finally
+            {
+                _isSynthesizing = false;
+            }
+        });
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<SpeechChunk, string>> SynthesizeChunkAsync(
+        string text,
+        TextToSpeechOptions? options = null,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return Result<SpeechChunk, string>.Failure("Text cannot be empty");
+        }
+
+        if (_synthesizer == null) InitializeSynthesizer();
+
+        try
+        {
+            _isSynthesizing = true;
+            var voice = _voiceName;
+            var rate = options?.Speed ?? 1.0;
+            var ratePercent = (int)((rate - 1.0) * 50);
+
+            var ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
+                <voice name='{voice}'>
+                    <mstts:express-as style='assistant' styledegree='1.0'>
+                        <prosody rate='{ratePercent:+0;-0;0}%'>{System.Security.SecurityElement.Escape(text)}</prosody>
+                    </mstts:express-as>
+                </voice>
+            </speak>";
+
+            using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
+
+            if (result.Reason == ResultReason.SynthesizingAudioCompleted)
+            {
+                return Result<SpeechChunk, string>.Success(new SpeechChunk(
+                    result.AudioData,
+                    "audio/wav",
+                    result.AudioDuration.TotalSeconds,
+                    Text: text,
+                    IsSentenceEnd: true,
+                    IsComplete: false));
+            }
+
+            if (result.Reason == ResultReason.Canceled)
+            {
+                var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
+                return Result<SpeechChunk, string>.Failure($"Speech synthesis canceled: {cancellation.ErrorDetails}");
+            }
+
+            return Result<SpeechChunk, string>.Failure("Speech synthesis failed");
+        }
+        catch (Exception ex)
+        {
+            return Result<SpeechChunk, string>.Failure($"Azure TTS error: {ex.Message}");
+        }
+        finally
+        {
+            _isSynthesizing = false;
+        }
+    }
+
+    /// <inheritdoc/>
+    public void InterruptSynthesis()
+    {
+        try
+        {
+            _currentSynthesisCts?.Cancel();
+            _isSynthesizing = false;
+        }
+        catch (ObjectDisposedException)
+        {
+            // Already disposed
+        }
+    }
+
     /// <inheritdoc/>
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
+        _currentSynthesisCts?.Cancel();
+        _currentSynthesisCts?.Dispose();
         _synthesizer?.Dispose();
         _synthesizer = null;
     }

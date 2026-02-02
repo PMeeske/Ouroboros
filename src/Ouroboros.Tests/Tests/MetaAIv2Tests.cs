@@ -4,9 +4,9 @@
 
 namespace Ouroboros.Tests;
 
-using LangChain.Providers.Ollama;
 using Ouroboros.Agent;
 using Ouroboros.Agent.MetaAI;
+using Ouroboros.Tests.Infrastructure;
 
 /// <summary>
 /// Tests for Meta-AI v2 planner/executor/verifier orchestrator.
@@ -21,8 +21,7 @@ public static class MetaAIv2Tests
     {
         Console.WriteLine("=== Test: Meta-AI v2 Orchestrator Creation ===");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        var chatModel = TestModelFactory.CreateChatModel();
         var tools = ToolRegistry.CreateDefault();
 
         var orchestrator = MetaAIBuilder.CreateDefault()
@@ -52,8 +51,7 @@ public static class MetaAIv2Tests
     {
         Console.WriteLine("=== Test: Plan Generation ===");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        var chatModel = TestModelFactory.CreateChatModel();
         var tools = ToolRegistry.CreateDefault();
 
         var orchestrator = MetaAIBuilder.CreateDefault()
@@ -321,8 +319,7 @@ public static class MetaAIv2Tests
     {
         Console.WriteLine("=== Test: Evaluation Harness ===");
 
-        var provider = new OllamaProvider();
-        var chatModel = new OllamaChatAdapter(new OllamaChatModel(provider, "llama3"));
+        var chatModel = TestModelFactory.CreateChatModel();
         var tools = ToolRegistry.CreateDefault();
 
         var orchestrator = MetaAIBuilder.CreateDefault()

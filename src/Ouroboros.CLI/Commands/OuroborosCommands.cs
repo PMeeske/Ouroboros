@@ -72,6 +72,7 @@ public static class OuroborosCommands
                 AzureSpeechRegion: opts.AzureSpeechRegion,
                 TtsVoice: opts.TtsVoice,
                 VoiceChannel: opts.VoiceChannel,
+                VoiceV2: opts.VoiceV2,
                 Listen: opts.Listen,
                 Debug: opts.Debug,
                 Temperature: opts.Temperature,
