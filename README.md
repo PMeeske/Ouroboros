@@ -5,12 +5,11 @@
 <h1 align="center">Ouroboros</h1>
 
 <p align="center">
-  <a href="https://github.com/PMeeske/Ouroboros"><img src="https://img.shields.io/badge/build-passing-brightgreen" alt="Build Status"></a>
+  <a href="https://github.com/PMeeske/Ouroboros/actions/workflows/dotnet-test-grid.yml"><img src="https://github.com/PMeeske/Ouroboros/actions/workflows/dotnet-test-grid.yml/badge.svg" alt="Test Grid"></a>
+  <a href="https://github.com/PMeeske/Ouroboros/actions/workflows/dotnet-coverage.yml"><img src="https://github.com/PMeeske/Ouroboros/actions/workflows/dotnet-coverage.yml/badge.svg" alt="Coverage"></a>
+  <a href="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml"><img src="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml/badge.svg" alt="Mutation Testing"></a>
   <a href="https://dotnet.microsoft.com/download/dotnet/10.0"><img src="https://img.shields.io/badge/.NET-10.0-blue" alt=".NET Version"></a>
   <a href="https://www.nuget.org/packages/LangChain/"><img src="https://img.shields.io/badge/LangChain-0.17.0-purple" alt="LangChain"></a>
-  <a href="TEST_COVERAGE_REPORT.md"><img src="https://img.shields.io/badge/coverage-0%25-red" alt="Coverage"></a>
-  <a href="src/Ouroboros.Tests"><img src="https://img.shields.io/badge/tests-1455%20passing%2C%206%20failing-red" alt="Tests"></a>
-  <a href="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml"><img src="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml/badge.svg" alt="Mutation Testing"></a>
 </p>
 
 A **sophisticated functional programming-based AI pipeline system** (YET EXPERIMENTAL) built on LangChain, implementing category theory principles, monadic composition, and functional programming patterns to create robust, self-improving AI agents.
