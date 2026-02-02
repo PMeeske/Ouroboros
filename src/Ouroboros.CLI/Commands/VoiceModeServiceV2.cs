@@ -362,18 +362,29 @@ public sealed class VoiceModeServiceV2 : IAsyncDisposable
     /// </summary>
     /// <param name="text">The text to speak.</param>
     /// <param name="ct">Cancellation token.</param>
-    public async Task SayAsync(string text, CancellationToken ct = default)
+    /// <param name="isWhisper">If true, uses a soft whispering style for inner thoughts.</param>
+    public async Task SayAsync(string text, CancellationToken ct = default, bool isWhisper = false)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
 
-        _stream.SetPresenceState(AgentPresenceState.Speaking, "Speaking");
+        _stream.SetPresenceState(AgentPresenceState.Speaking, isWhisper ? "Thinking aloud" : "Speaking");
 
         // Display text
         if (!_config.VoiceOnly)
         {
-            Console.WriteLine($"\n  [{_persona.Name}] {text}");
+            if (isWhisper)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"\n  💭 [{_persona.Name}] {text}");
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.WriteLine($"\n  [{_persona.Name}] {text}");
+            }
         }
 
+        var ttsOptions = isWhisper ? new TextToSpeechOptions(IsWhisper: true) : null;
         bool shouldFallback = false;
 
         // Try primary TTS (Azure Neural)
@@ -381,7 +392,7 @@ public sealed class VoiceModeServiceV2 : IAsyncDisposable
         {
             try
             {
-                var result = await ((ITextToSpeechService)_tts).SynthesizeAsync(text, ct: ct);
+                var result = await ((ITextToSpeechService)_tts).SynthesizeAsync(text, ttsOptions, ct);
                 await result.Match(
                     async speech =>
                     {
@@ -430,7 +441,7 @@ public sealed class VoiceModeServiceV2 : IAsyncDisposable
         {
             try
             {
-                var result = await _fallbackTts.SynthesizeAsync(text, ct: ct);
+                var result = await _fallbackTts.SynthesizeAsync(text, ttsOptions, ct);
                 await result.Match(
                     async speech =>
                     {
@@ -451,6 +462,14 @@ public sealed class VoiceModeServiceV2 : IAsyncDisposable
 
         _stream.SetPresenceState(AgentPresenceState.Idle, "Finished speaking");
     }
+
+    /// <summary>
+    /// Speaks an inner thought using soft whispering style.
+    /// </summary>
+    /// <param name="thought">The thought to speak.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public Task SayThoughtAsync(string thought, CancellationToken ct = default)
+        => SayAsync(thought, ct, isWhisper: true);
 
     /// <summary>
     /// Listens for voice input and returns transcribed text.

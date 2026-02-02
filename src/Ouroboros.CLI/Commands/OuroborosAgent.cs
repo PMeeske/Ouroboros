@@ -3247,17 +3247,36 @@ No markdown, no technical details, just the key insight:
     /// <summary>
     /// Speaks text using VoiceV2 if enabled, otherwise falls back to old voice service.
     /// </summary>
-    private async Task SayWithVoiceAsync(string text, CancellationToken ct = default)
+    /// <param name="text">The text to speak.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <param name="isWhisper">If true, uses soft whispering style for inner thoughts.</param>
+    private async Task SayWithVoiceAsync(string text, CancellationToken ct = default, bool isWhisper = false)
     {
         if (_config.VoiceV2 && _voiceV2 != null)
         {
-            await _voiceV2.SayAsync(text, ct);
+            await _voiceV2.SayAsync(text, ct, isWhisper);
         }
         else
         {
-            await _voice.SayAsync(text);
+            // Old voice service - use WhisperAsync for inner thoughts
+            if (isWhisper)
+            {
+                await _voice.WhisperAsync(text);
+            }
+            else
+            {
+                await _voice.SayAsync(text);
+            }
         }
     }
+
+    /// <summary>
+    /// Speaks an inner thought using soft whispering style.
+    /// </summary>
+    /// <param name="thought">The thought to speak.</param>
+    /// <param name="ct">Cancellation token.</param>
+    private Task SayThoughtWithVoiceAsync(string thought, CancellationToken ct = default)
+        => SayWithVoiceAsync(thought, ct, isWhisper: true);
 
     /// <summary>
     /// Gets input using VoiceV2 if enabled, otherwise falls back to old voice service.
