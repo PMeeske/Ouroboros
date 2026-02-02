@@ -5,6 +5,7 @@
 using System.Reactive.Linq;
 using Microsoft.CognitiveServices.Speech;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Retry;
 
 namespace Ouroboros.Providers.TextToSpeech;
@@ -27,12 +28,40 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
     private SpeechConfig? _config;
     private bool _disposed;
 
+    // Circuit breaker state - shared across all instances for global rate limit protection
+    private static readonly ResiliencePipeline CircuitBreakerPipeline = new ResiliencePipelineBuilder()
+        .AddCircuitBreaker(new CircuitBreakerStrategyOptions
+        {
+            FailureRatio = 0.5,
+            SamplingDuration = TimeSpan.FromSeconds(30),
+            MinimumThroughput = 2,
+            BreakDuration = TimeSpan.FromSeconds(60),
+            OnOpened = args =>
+            {
+                IsCircuitOpen = true;
+                Console.WriteLine($"  [TTS] Circuit OPEN - Azure TTS disabled for 60s due to rate limiting");
+                return default;
+            },
+            OnClosed = args =>
+            {
+                IsCircuitOpen = false;
+                Console.WriteLine($"  [TTS] Circuit CLOSED - Azure TTS re-enabled");
+                return default;
+            },
+            OnHalfOpened = args =>
+            {
+                Console.WriteLine($"  [TTS] Circuit HALF-OPEN - Testing Azure TTS...");
+                return default;
+            },
+        })
+        .Build();
+
     // Polly retry policy for 429 rate limiting with exponential backoff
     private static readonly ResiliencePipeline RetryPipeline = new ResiliencePipelineBuilder()
         .AddRetry(new RetryStrategyOptions
         {
             MaxRetryAttempts = 3,
-            Delay = TimeSpan.FromSeconds(1),
+            Delay = TimeSpan.FromSeconds(2),
             BackoffType = DelayBackoffType.Exponential,
             UseJitter = true,
             OnRetry = args =>
@@ -42,6 +71,11 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
             },
         })
         .Build();
+
+    /// <summary>
+    /// Gets whether the circuit breaker is currently open (Azure TTS disabled).
+    /// </summary>
+    public static bool IsCircuitOpen { get; private set; }
 
     /// <summary>
     /// Gets or sets the culture for voice selection and language.
@@ -207,29 +241,38 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
                     </voice>
                 </speak>";
 
-            // Use Polly retry with exponential backoff for 429 rate limiting
-            await RetryPipeline.ExecuteAsync(async token =>
+            // Use circuit breaker + retry with exponential backoff for 429 rate limiting
+            await CircuitBreakerPipeline.ExecuteAsync(async _ =>
             {
-                using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
-
-                if (result.Reason == ResultReason.Canceled)
+                await RetryPipeline.ExecuteAsync(async token =>
                 {
-                    var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
-                    var errorDetails = cancellation.ErrorDetails ?? string.Empty;
+                    using SpeechSynthesisResult result = await _synthesizer!.SpeakSsmlAsync(ssml);
 
-                    // Throw on 429 to trigger retry
-                    if (errorDetails.Contains("429") || errorDetails.Contains("Too many requests"))
+                    if (result.Reason == ResultReason.Canceled)
                     {
-                        throw new HttpRequestException($"Rate limited: {errorDetails}");
-                    }
+                        SpeechSynthesisCancellationDetails cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
+                        string errorDetails = cancellation.ErrorDetails ?? string.Empty;
 
-                    Console.WriteLine($"  [!] Azure TTS canceled: {cancellation.Reason} - {errorDetails}");
-                }
-                else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[Azure TTS] Audio synthesis completed, {result.AudioData.Length} bytes");
-                }
+                        // Throw on 429 to trigger retry and circuit breaker
+                        if (errorDetails.Contains("429") || errorDetails.Contains("Too many requests"))
+                        {
+                            throw new HttpRequestException($"Rate limited: {errorDetails}");
+                        }
+
+                        Console.WriteLine($"  [!] Azure TTS canceled: {cancellation.Reason} - {errorDetails}");
+                    }
+                    else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Azure TTS] Audio synthesis completed, {result.AudioData.Length} bytes");
+                    }
+                }, ct);
             }, ct);
+        }
+        catch (BrokenCircuitException)
+        {
+            // Circuit is open - skip Azure TTS entirely
+            Console.WriteLine($"  [!] Azure TTS circuit open - using fallback");
+            throw;
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("Rate limited"))
         {
@@ -326,29 +369,38 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
                     </speak>";
             }
 
-            // Use Polly retry with exponential backoff for 429 rate limiting
-            await RetryPipeline.ExecuteAsync(async token =>
+            // Use circuit breaker + retry with exponential backoff for 429 rate limiting
+            await CircuitBreakerPipeline.ExecuteAsync(async _ =>
             {
-                using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
-
-                if (result.Reason == ResultReason.Canceled)
+                await RetryPipeline.ExecuteAsync(async token =>
                 {
-                    var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
-                    var errorDetails = cancellation.ErrorDetails ?? string.Empty;
+                    using SpeechSynthesisResult result = await _synthesizer!.SpeakSsmlAsync(ssml);
 
-                    // Throw on 429 to trigger retry
-                    if (errorDetails.Contains("429") || errorDetails.Contains("Too many requests"))
+                    if (result.Reason == ResultReason.Canceled)
                     {
-                        throw new HttpRequestException($"Rate limited: {errorDetails}");
-                    }
+                        SpeechSynthesisCancellationDetails cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
+                        string errorDetails = cancellation.ErrorDetails ?? string.Empty;
 
-                    Console.WriteLine($"  [!] Azure TTS canceled: {cancellation.Reason} - {errorDetails}");
-                }
-                else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[Azure TTS] Audio synthesis completed, {result.AudioData.Length} bytes");
-                }
+                        // Throw on 429 to trigger retry and circuit breaker
+                        if (errorDetails.Contains("429") || errorDetails.Contains("Too many requests"))
+                        {
+                            throw new HttpRequestException($"Rate limited: {errorDetails}");
+                        }
+
+                        Console.WriteLine($"  [!] Azure TTS canceled: {cancellation.Reason} - {errorDetails}");
+                    }
+                    else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Azure TTS] Audio synthesis completed, {result.AudioData.Length} bytes");
+                    }
+                }, ct);
             }, ct);
+        }
+        catch (BrokenCircuitException)
+        {
+            // Circuit is open - skip Azure TTS entirely
+            Console.WriteLine($"  [!] Azure TTS circuit open - using fallback");
+            throw;
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("Rate limited"))
         {
