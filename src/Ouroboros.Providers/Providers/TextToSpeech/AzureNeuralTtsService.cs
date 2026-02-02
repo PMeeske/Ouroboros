@@ -16,6 +16,7 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 {
     private volatile bool _isSynthesizing;
     private CancellationTokenSource? _currentSynthesisCts;
+    private readonly SemaphoreSlim _speechLock = new(1, 1);
     private readonly string _subscriptionKey;
     private readonly string _region;
     private string _voiceName;
@@ -127,15 +128,44 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
         => Task.FromResult(!string.IsNullOrEmpty(_subscriptionKey) && !string.IsNullOrEmpty(_region));
 
     /// <summary>
+    /// Stops any currently playing speech.
+    /// </summary>
+    public async Task StopSpeakingAsync()
+    {
+        if (_isSynthesizing && _synthesizer != null)
+        {
+            try
+            {
+                _currentSynthesisCts?.Cancel();
+                await _synthesizer.StopSpeakingAsync();
+            }
+            catch
+            {
+                // Ignore errors during stop
+            }
+        }
+    }
+
+    /// <summary>
     /// Speaks text directly to the default audio output (blocking until complete).
+    /// Cancels any previous speech to prevent overlapping.
     /// </summary>
     public async Task SpeakAsync(string text, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
-        if (_synthesizer == null) InitializeSynthesizer();
 
+        // Cancel any ongoing speech first
+        await StopSpeakingAsync();
+
+        // Use semaphore to ensure only one speech at a time
+        await _speechLock.WaitAsync(ct);
         try
         {
+            _isSynthesizing = true;
+            _currentSynthesisCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+            if (_synthesizer == null) InitializeSynthesizer();
+
             bool isGerman = _culture.StartsWith("de", StringComparison.OrdinalIgnoreCase);
 
             // Cortana-style: calm, warm, slightly ethereal, intelligent
@@ -171,10 +201,18 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
         {
             System.Diagnostics.Debug.WriteLine($"[Azure TTS Exception] {ex.Message}");
         }
+        finally
+        {
+            _isSynthesizing = false;
+            _currentSynthesisCts?.Dispose();
+            _currentSynthesisCts = null;
+            _speechLock.Release();
+        }
     }
 
     /// <summary>
     /// Speaks text directly to the default audio output with optional whisper style.
+    /// Cancels any previous speech to prevent overlapping.
     /// </summary>
     /// <param name="text">The text to speak.</param>
     /// <param name="isWhisper">If true, uses a whispering/soft style for inner thoughts.</param>
@@ -182,10 +220,19 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
     public async Task SpeakAsync(string text, bool isWhisper, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
-        if (_synthesizer == null) InitializeSynthesizer();
 
+        // Cancel any ongoing speech first
+        await StopSpeakingAsync();
+
+        // Use semaphore to ensure only one speech at a time
+        await _speechLock.WaitAsync(ct);
         try
         {
+            _isSynthesizing = true;
+            _currentSynthesisCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+            if (_synthesizer == null) InitializeSynthesizer();
+
             bool isGerman = _culture.StartsWith("de", StringComparison.OrdinalIgnoreCase);
             string ssml;
 
@@ -249,6 +296,13 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Azure TTS Exception] {ex.Message}");
+        }
+        finally
+        {
+            _isSynthesizing = false;
+            _currentSynthesisCts?.Dispose();
+            _currentSynthesisCts = null;
+            _speechLock.Release();
         }
     }
 
@@ -509,5 +563,6 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
         _currentSynthesisCts?.Dispose();
         _synthesizer?.Dispose();
         _synthesizer = null;
+        _speechLock.Dispose();
     }
 }
