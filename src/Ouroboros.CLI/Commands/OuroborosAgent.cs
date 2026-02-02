@@ -255,9 +255,15 @@ public sealed partial class OuroborosAgent : IAsyncDisposable, IAgentFacade
     public VoiceModeServiceV2? VoiceV2 => _voiceV2;
 
     /// <summary>
-    /// Gets the interaction stream from VoiceV2 if enabled.
+    /// Gets the unified Rx interaction stream for all voice events.
+    /// Available from VoiceModeService with Rx streaming.
     /// </summary>
-    public Ouroboros.Domain.Voice.InteractionStream? InteractionStream => _voiceV2?.Stream;
+    public Ouroboros.Domain.Voice.InteractionStream InteractionStream => _voice.Stream;
+
+    /// <summary>
+    /// Gets the agent presence controller for state management and barge-in.
+    /// </summary>
+    public Ouroboros.Domain.Voice.AgentPresenceController PresenceController => _voice.Presence;
 
     /// <summary>
     /// Gets the voice side channel for fire-and-forget audio playback.
@@ -3245,28 +3251,21 @@ No markdown, no technical details, just the key insight:
     }
 
     /// <summary>
-    /// Speaks text using VoiceV2 if enabled, otherwise falls back to old voice service.
+    /// Speaks text using the unified voice service with Rx streaming and Cortana-style voice.
     /// </summary>
     /// <param name="text">The text to speak.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <param name="isWhisper">If true, uses soft whispering style for inner thoughts.</param>
     private async Task SayWithVoiceAsync(string text, CancellationToken ct = default, bool isWhisper = false)
     {
-        if (_config.VoiceV2 && _voiceV2 != null)
+        // Unified VoiceModeService with Rx streaming - use WhisperAsync for inner thoughts
+        if (isWhisper)
         {
-            await _voiceV2.SayAsync(text, ct, isWhisper);
+            await _voice.WhisperAsync(text);
         }
         else
         {
-            // Old voice service - use WhisperAsync for inner thoughts
-            if (isWhisper)
-            {
-                await _voice.WhisperAsync(text);
-            }
-            else
-            {
-                await _voice.SayAsync(text);
-            }
+            await _voice.SayAsync(text);
         }
     }
 
@@ -3279,18 +3278,11 @@ No markdown, no technical details, just the key insight:
         => SayWithVoiceAsync(thought, ct, isWhisper: true);
 
     /// <summary>
-    /// Gets input using VoiceV2 if enabled, otherwise falls back to old voice service.
+    /// Gets input using the unified voice service with Rx streaming.
     /// </summary>
     private async Task<string> GetInputWithVoiceAsync(string prompt, CancellationToken ct = default)
     {
-        if (_config.VoiceV2 && _voiceV2 != null)
-        {
-            return await _voiceV2.GetInputAsync(prompt, ct) ?? string.Empty;
-        }
-        else
-        {
-            return await _voice.GetInputAsync(prompt) ?? string.Empty;
-        }
+        return await _voice.GetInputAsync(prompt, ct) ?? string.Empty;
     }
 
     /// <summary>

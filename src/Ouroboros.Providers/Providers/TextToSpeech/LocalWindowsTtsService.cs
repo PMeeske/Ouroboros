@@ -398,15 +398,8 @@ Write-Output 'OK'
             rate = Math.Clamp(rate, -10, 10);
             volume = Math.Clamp(volume, 0, 100);
 
-            // Escape for PowerShell double-quoted string
-            // Order matters: escape backticks FIRST, then use backticks to escape other chars
-            string speechContent = text
-                .Replace("`", "``")      // Escape existing backticks first
-                .Replace("\"", "`\"")    // Then escape double quotes
-                .Replace("$", "`$");     // Then escape dollar signs
-
-            // Use SAPI COM object which is more reliable than System.Speech in PowerShell
-            // Select English voice explicitly to avoid using system default (which may be German)
+            // Use PowerShell here-string (@' ... '@) to avoid escaping issues with apostrophes
+            // Here-strings preserve content literally without interpretation
             string script = $@"
 $synth = New-Object -ComObject SAPI.SpVoice
 $voices = $synth.GetVoices()
@@ -418,7 +411,10 @@ foreach ($v in $voices) {{
 }}
 $synth.Rate = {rate}
 $synth.Volume = {volume}
-$synth.Speak(""{speechContent}"")
+$speechText = @'
+{text}
+'@
+$synth.Speak($speechText)
 ";
 
             var result = await RunPowerShellAsync(script, ct);

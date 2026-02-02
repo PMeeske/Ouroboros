@@ -2,7 +2,9 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using Ouroboros.Domain.Voice;
 using Ouroboros.Providers.SpeechToText;
 using Ouroboros.Providers.TextToSpeech;
 using Ouroboros.Speech;
@@ -62,6 +64,9 @@ public sealed class VoiceModeService : IDisposable
     private readonly PersonaDefinition _persona;
     private readonly string _currentMood;
     private readonly string _activeTraits;
+    private readonly InteractionStream _stream;
+    private readonly AgentPresenceController _presence;
+    private readonly CompositeDisposable _disposables = new();
 
     private ITextToSpeechService? _ttsService;
     private LocalWindowsTtsService? _localTts;
@@ -72,6 +77,7 @@ public sealed class VoiceModeService : IDisposable
     private bool _isSpeaking;
     private bool _isInitialized;
     private bool _disposed;
+    private bool _enableVisualIndicators = true;
 
     /// <summary>
     /// Gets whether TTS is available.
@@ -94,6 +100,35 @@ public sealed class VoiceModeService : IDisposable
     public PersonaDefinition ActivePersona => _persona;
 
     /// <summary>
+    /// Gets the unified Rx interaction stream for all voice events.
+    /// </summary>
+    public InteractionStream Stream => _stream;
+
+    /// <summary>
+    /// Gets the presence state controller (for barge-in and state management).
+    /// </summary>
+    public AgentPresenceController Presence => _presence;
+
+    /// <summary>
+    /// Gets the current presence state as an observable.
+    /// </summary>
+    public IObservable<AgentPresenceState> PresenceStateObservable => _presence.State;
+
+    /// <summary>
+    /// Gets the current presence state.
+    /// </summary>
+    public AgentPresenceState PresenceState => _presence.CurrentState;
+
+    /// <summary>
+    /// Gets or sets whether visual presence indicators are enabled.
+    /// </summary>
+    public bool EnableVisualIndicators
+    {
+        get => _enableVisualIndicators;
+        set => _enableVisualIndicators = value;
+    }
+
+    /// <summary>
     /// Gets the current mood.
     /// </summary>
     public string CurrentMood => _currentMood;
@@ -105,10 +140,16 @@ public sealed class VoiceModeService : IDisposable
     {
         _config = config;
         _persona = Personas.GetValueOrDefault(config.Persona) ?? Personas["Ouroboros"];
+        _stream = new InteractionStream();
+        _presence = new AgentPresenceController(_stream);
 
         var random = new Random();
         _currentMood = _persona.Moods[random.Next(_persona.Moods.Length)];
         _activeTraits = string.Join(", ", _persona.Traits.OrderBy(_ => random.Next()).Take(3));
+
+        // Set up Rx pipelines for display and presence indicators
+        SetupDisplayPipeline();
+        SetupPresenceIndicators();
     }
 
     /// <summary>
@@ -153,15 +194,22 @@ public sealed class VoiceModeService : IDisposable
             }
         }
 
-        // If LocalTts preference is set, try local TTS before cloud
-        if (_ttsService == null && _config.LocalTts && hasLocalTts)
+        // Always initialize local TTS as fallback when available
+        if (hasLocalTts && _localTts == null)
         {
             try
             {
                 // Use Microsoft Zira (female voice) by default
                 _localTts = new LocalWindowsTtsService(voiceName: "Microsoft Zira Desktop", rate: 1, volume: 100, useEnhancedProsody: true);
-                _ttsService = _localTts;
-                Console.WriteLine("  [OK] TTS initialized (Windows SAPI - Microsoft Zira)");
+                if (_ttsService == null)
+                {
+                    _ttsService = _localTts;
+                    Console.WriteLine("  [OK] TTS initialized (Windows SAPI - Microsoft Zira)");
+                }
+                else
+                {
+                    Console.WriteLine("  [OK] Local TTS fallback ready (Windows SAPI - Microsoft Zira)");
+                }
             }
             catch (Exception ex)
             {
@@ -169,6 +217,7 @@ public sealed class VoiceModeService : IDisposable
             }
         }
 
+        // Cloud TTS (OpenAI) as alternative
         if (_ttsService == null && hasCloudTts)
         {
             try
@@ -179,21 +228,6 @@ public sealed class VoiceModeService : IDisposable
             catch (Exception ex)
             {
                 Console.WriteLine($"  [!] Cloud TTS failed: {ex.Message}");
-            }
-        }
-
-        // Final fallback: try local TTS even without --local-tts flag
-        if (_ttsService == null && hasLocalTts)
-        {
-            try
-            {
-                _localTts = new LocalWindowsTtsService(voiceName: "Microsoft Zira Desktop", rate: 1, volume: 100, useEnhancedProsody: true);
-                _ttsService = _localTts;
-                Console.WriteLine("  [OK] TTS initialized (Windows SAPI fallback - Microsoft Zira)");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"  [!] Local TTS fallback failed: {ex.Message}");
             }
         }
 
@@ -322,11 +356,17 @@ public sealed class VoiceModeService : IDisposable
 
     /// <summary>
     /// Internal speech method - does the actual TTS work.
+    /// Uses Rx streaming for presence state and voice output events.
     /// </summary>
     private async Task SpeakInternalAsync(string sanitized, bool isWhisper = false)
     {
         _isSpeaking = true;
         _speechDetector?.NotifySelfSpeechStarted();
+
+        // Set presence state to Speaking (or Thinking for whisper/inner thoughts)
+        _stream.SetPresenceState(
+            isWhisper ? AgentPresenceState.Speaking : AgentPresenceState.Speaking,
+            isWhisper ? "Thinking aloud" : "Speaking");
 
         try
         {
@@ -344,27 +384,60 @@ public sealed class VoiceModeService : IDisposable
                 }
             }
 
+            // Publish the response event to Rx stream
+            _stream.PublishResponse(sanitized, isComplete: true, isSentenceEnd: true);
+
             // Priority: Azure Neural TTS > Local SAPI > Cloud TTS
+            // With automatic fallback on rate limiting (429) or other errors
+            bool ttsSucceeded = false;
+
             if (_azureTts != null)
             {
                 if (!_config.VoiceOnly) Console.WriteLine(sanitized);
-                System.Diagnostics.Debug.WriteLine($"[TTS] Using Azure Neural TTS for: {sanitized[..Math.Min(50, sanitized.Length)]}...");
-                await _azureTts.SpeakAsync(sanitized, isWhisper);
+                try
+                {
+                    await _azureTts.SpeakAsync(sanitized, isWhisper);
+                    ttsSucceeded = true;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"  [!] Azure TTS failed: {ex.Message}, trying fallback...");
+                }
             }
-            else if (_localTts != null)
+
+            // Fallback to local TTS if Azure failed or not available
+            if (!ttsSucceeded && _localTts != null)
             {
-                System.Diagnostics.Debug.WriteLine($"[TTS] Using Local SAPI TTS for: {sanitized[..Math.Min(50, sanitized.Length)]}...");
-                await SpeakWithLocalTtsAsync(sanitized, isWhisper);
+                try
+                {
+                    if (_azureTts == null && !_config.VoiceOnly) Console.WriteLine(sanitized);
+                    await SpeakWithLocalTtsAsync(sanitized, isWhisper);
+                    ttsSucceeded = true;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"  [!] Local TTS failed: {ex.Message}");
+                }
             }
-            else if (_ttsService != null)
+
+            // Fallback to cloud TTS (OpenAI)
+            if (!ttsSucceeded && _ttsService != null && _ttsService != _azureTts && _ttsService != _localTts)
             {
-                System.Diagnostics.Debug.WriteLine($"[TTS] Using Cloud TTS for: {sanitized[..Math.Min(50, sanitized.Length)]}...");
-                await SpeakWithCloudTtsAsync(sanitized);
+                try
+                {
+                    if (_azureTts == null && _localTts == null && !_config.VoiceOnly) Console.WriteLine(sanitized);
+                    await SpeakWithCloudTtsAsync(sanitized);
+                    ttsSucceeded = true;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"  [!] Cloud TTS failed: {ex.Message}");
+                }
             }
-            else if (!_config.VoiceOnly)
+
+            if (!ttsSucceeded)
             {
-                System.Diagnostics.Debug.WriteLine("[TTS] No TTS available, text only");
-                Console.WriteLine(sanitized);
+                Console.WriteLine("  [!] All TTS services failed - voice output skipped");
             }
         }
         finally
@@ -372,16 +445,23 @@ public sealed class VoiceModeService : IDisposable
             await Task.Delay(300);
             _isSpeaking = false;
             _speechDetector?.NotifySelfSpeechEnded(cooldownMs: 400);
+
+            // Return to Idle state
+            _stream.SetPresenceState(AgentPresenceState.Idle, "Finished speaking");
         }
     }
 
     /// <summary>
     /// Listens for voice input using STT.
+    /// Uses Rx streaming for presence state and voice input events.
     /// </summary>
     public async Task<string?> ListenAsync(CancellationToken ct = default)
     {
         if (_sttService == null) return null;
         if (_isSpeaking) return null;
+
+        // Set presence state to Listening
+        _stream.SetPresenceState(AgentPresenceState.Listening, "Listening for voice input");
 
         try
         {
@@ -397,6 +477,9 @@ public sealed class VoiceModeService : IDisposable
 
             if (audioFile != null && File.Exists(audioFile))
             {
+                // Set presence state to Processing while transcribing
+                _stream.SetPresenceState(AgentPresenceState.Processing, "Transcribing speech");
+
                 try
                 {
                     var transcribeResult = await _sttService.TranscribeFileAsync(audioFile, null, ct);
@@ -405,7 +488,13 @@ public sealed class VoiceModeService : IDisposable
 
                     if (!string.IsNullOrWhiteSpace(transcript))
                     {
-                        return transcript.Trim();
+                        var trimmed = transcript.Trim();
+
+                        // Publish voice input event to Rx stream
+                        _stream.PublishVoiceInput(trimmed, confidence: 1.0);
+                        _stream.SetPresenceState(AgentPresenceState.Idle, "Voice input received");
+
+                        return trimmed;
                     }
                 }
                 finally
@@ -414,12 +503,17 @@ public sealed class VoiceModeService : IDisposable
                 }
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            _stream.SetPresenceState(AgentPresenceState.Idle, "Listening cancelled");
+        }
         catch (Exception ex)
         {
             Console.WriteLine($"  [!] Listen error: {ex.Message}");
+            _stream.PublishError(ex.Message, ex, ErrorCategory.SpeechRecognition);
         }
 
+        _stream.SetPresenceState(AgentPresenceState.Idle, "No voice input detected");
         return null;
     }
 
@@ -740,11 +834,96 @@ SPEAK NATURALLY:
         }
     }
 
+    /// <summary>
+    /// Sets up the Rx display pipeline for colored console output.
+    /// </summary>
+    private void SetupDisplayPipeline()
+    {
+        // Display text output events with styling
+        _disposables.Add(
+            _stream.TextOutputs
+                .Subscribe(e =>
+                {
+                    var color = e.Style switch
+                    {
+                        OutputStyle.Thinking => ConsoleColor.DarkGray,
+                        OutputStyle.Emphasis => ConsoleColor.Cyan,
+                        OutputStyle.Whisper => ConsoleColor.DarkMagenta,
+                        OutputStyle.System => ConsoleColor.Yellow,
+                        OutputStyle.Error => ConsoleColor.Red,
+                        OutputStyle.UserInput => ConsoleColor.Green,
+                        _ => Console.ForegroundColor,
+                    };
+
+                    Console.ForegroundColor = color;
+                    if (e.Append)
+                    {
+                        Console.Write(e.Text);
+                    }
+                    else
+                    {
+                        Console.WriteLine(e.Text);
+                    }
+
+                    Console.ResetColor();
+                }));
+
+        // Display errors
+        _disposables.Add(
+            _stream.Errors
+                .Subscribe(e =>
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"\n  [!] {e.Category}: {e.Message}");
+                    Console.ResetColor();
+                }));
+    }
+
+    /// <summary>
+    /// Sets up visual presence state indicators.
+    /// </summary>
+    private void SetupPresenceIndicators()
+    {
+        // Show visual state indicators [ ]/[*]/[...]/[>]
+        _disposables.Add(
+            _presence.State
+                .DistinctUntilChanged()
+                .Subscribe(state =>
+                {
+                    if (!_enableVisualIndicators || _config.VoiceOnly) return;
+
+                    var indicator = state switch
+                    {
+                        AgentPresenceState.Idle => "[ ]",
+                        AgentPresenceState.Listening => "[*]",
+                        AgentPresenceState.Processing => "[...]",
+                        AgentPresenceState.Speaking => "[>]",
+                        AgentPresenceState.Interrupted => "[!]",
+                        AgentPresenceState.Paused => "[-]",
+                        _ => "[ ]",
+                    };
+
+                    Console.Write($"\r{indicator} ");
+                }));
+
+        // Subscribe to barge-in events
+        _presence.BargeInDetected += (_, e) =>
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"\n  [Interrupted] {e.UserInput?[..Math.Min(30, e.UserInput?.Length ?? 0)]}...");
+            Console.ResetColor();
+        };
+    }
+
     /// <inheritdoc/>
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
+
+        _disposables.Dispose();
+        _presence.Dispose();
+        _stream.Dispose();
         _speechDetector?.Dispose();
     }
 }

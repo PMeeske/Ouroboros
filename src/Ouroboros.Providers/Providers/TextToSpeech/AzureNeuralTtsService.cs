@@ -4,6 +4,8 @@
 
 using System.Reactive.Linq;
 using Microsoft.CognitiveServices.Speech;
+using Polly;
+using Polly.Retry;
 
 namespace Ouroboros.Providers.TextToSpeech;
 
@@ -24,6 +26,22 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
     private SpeechSynthesizer? _synthesizer;
     private SpeechConfig? _config;
     private bool _disposed;
+
+    // Polly retry policy for 429 rate limiting with exponential backoff
+    private static readonly ResiliencePipeline RetryPipeline = new ResiliencePipelineBuilder()
+        .AddRetry(new RetryStrategyOptions
+        {
+            MaxRetryAttempts = 3,
+            Delay = TimeSpan.FromSeconds(1),
+            BackoffType = DelayBackoffType.Exponential,
+            UseJitter = true,
+            OnRetry = args =>
+            {
+                Console.WriteLine($"  [TTS] Rate limited, retrying in {args.RetryDelay.TotalSeconds:F1}s (attempt {args.AttemptNumber + 1}/3)...");
+                return default;
+            },
+        })
+        .Build();
 
     /// <summary>
     /// Gets or sets the culture for voice selection and language.
@@ -189,17 +207,40 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
                     </voice>
                 </speak>";
 
-            using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
-
-            if (result.Reason == ResultReason.Canceled)
+            // Use Polly retry with exponential backoff for 429 rate limiting
+            await RetryPipeline.ExecuteAsync(async token =>
             {
-                var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
-                System.Diagnostics.Debug.WriteLine($"[Azure TTS Error] {cancellation.Reason}: {cancellation.ErrorDetails}");
-            }
+                using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
+
+                if (result.Reason == ResultReason.Canceled)
+                {
+                    var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
+                    var errorDetails = cancellation.ErrorDetails ?? string.Empty;
+
+                    // Throw on 429 to trigger retry
+                    if (errorDetails.Contains("429") || errorDetails.Contains("Too many requests"))
+                    {
+                        throw new HttpRequestException($"Rate limited: {errorDetails}");
+                    }
+
+                    Console.WriteLine($"  [!] Azure TTS canceled: {cancellation.Reason} - {errorDetails}");
+                }
+                else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Azure TTS] Audio synthesis completed, {result.AudioData.Length} bytes");
+                }
+            }, ct);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("Rate limited"))
+        {
+            // All retries exhausted - re-throw so fallback TTS can handle
+            Console.WriteLine($"  [!] Azure TTS rate limit exceeded after retries");
+            throw;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Azure TTS Exception] {ex.Message}");
+            Console.WriteLine($"  [!] Azure TTS exception: {ex.Message}");
+            throw;
         }
         finally
         {
@@ -285,17 +326,40 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
                     </speak>";
             }
 
-            using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
-
-            if (result.Reason == ResultReason.Canceled)
+            // Use Polly retry with exponential backoff for 429 rate limiting
+            await RetryPipeline.ExecuteAsync(async token =>
             {
-                var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
-                System.Diagnostics.Debug.WriteLine($"[Azure TTS Error] {cancellation.Reason}: {cancellation.ErrorDetails}");
-            }
+                using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
+
+                if (result.Reason == ResultReason.Canceled)
+                {
+                    var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
+                    var errorDetails = cancellation.ErrorDetails ?? string.Empty;
+
+                    // Throw on 429 to trigger retry
+                    if (errorDetails.Contains("429") || errorDetails.Contains("Too many requests"))
+                    {
+                        throw new HttpRequestException($"Rate limited: {errorDetails}");
+                    }
+
+                    Console.WriteLine($"  [!] Azure TTS canceled: {cancellation.Reason} - {errorDetails}");
+                }
+                else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Azure TTS] Audio synthesis completed, {result.AudioData.Length} bytes");
+                }
+            }, ct);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("Rate limited"))
+        {
+            // All retries exhausted - re-throw so fallback TTS can handle
+            Console.WriteLine($"  [!] Azure TTS rate limit exceeded after retries");
+            throw;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Azure TTS Exception] {ex.Message}");
+            Console.WriteLine($"  [!] Azure TTS exception: {ex.Message}");
+            throw;
         }
         finally
         {
