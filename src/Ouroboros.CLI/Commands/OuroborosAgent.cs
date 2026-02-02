@@ -3155,7 +3155,7 @@ No markdown, no technical details, just the key insight:
         if (!_config.NoGreeting)
         {
             var greeting = await GetGreetingAsync();
-            await _voice.SayAsync(greeting);
+            await SayWithVoiceAsync(greeting);
         }
 
         _isInConversationLoop = true;
@@ -3163,7 +3163,7 @@ No markdown, no technical details, just the key insight:
         int interactionsSinceSnapshot = 0;
         while (running)
         {
-            var input = await _voice.GetInputAsync("\n  You: ");
+            var input = await GetInputWithVoiceAsync("\n  You: ");
             if (string.IsNullOrWhiteSpace(input)) continue;
 
             // Track conversation
@@ -3176,7 +3176,7 @@ No markdown, no technical details, just the key insight:
             // Check for exit
             if (IsExitCommand(input))
             {
-                await _voice.SayAsync(GetLocalizedString("Until next time! I'll keep learning while you're away."));
+                await SayWithVoiceAsync(GetLocalizedString("Until next time! I'll keep learning while you're away."));
                 running = false;
                 continue;
             }
@@ -3190,7 +3190,7 @@ No markdown, no technical details, just the key insight:
                 var voiceResponse = StripToolResults(response);
                 if (!string.IsNullOrWhiteSpace(voiceResponse))
                 {
-                    await _voice.SayAsync(voiceResponse);
+                    await SayWithVoiceAsync(voiceResponse);
                 }
 
                 // Also speak on side channel if enabled (non-blocking)
@@ -3218,8 +3218,38 @@ No markdown, no technical details, just the key insight:
             }
             catch (Exception ex)
             {
-                await _voice.SayAsync($"Hmm, something went wrong: {ex.Message}");
+                await SayWithVoiceAsync($"Hmm, something went wrong: {ex.Message}");
             }
+        }
+    }
+
+    /// <summary>
+    /// Speaks text using VoiceV2 if enabled, otherwise falls back to old voice service.
+    /// </summary>
+    private async Task SayWithVoiceAsync(string text, CancellationToken ct = default)
+    {
+        if (_config.VoiceV2 && _voiceV2 != null)
+        {
+            await _voiceV2.SayAsync(text, ct);
+        }
+        else
+        {
+            await _voice.SayAsync(text);
+        }
+    }
+
+    /// <summary>
+    /// Gets input using VoiceV2 if enabled, otherwise falls back to old voice service.
+    /// </summary>
+    private async Task<string> GetInputWithVoiceAsync(string prompt, CancellationToken ct = default)
+    {
+        if (_config.VoiceV2 && _voiceV2 != null)
+        {
+            return await _voiceV2.GetInputAsync(prompt, ct) ?? string.Empty;
+        }
+        else
+        {
+            return await _voice.GetInputAsync(prompt) ?? string.Empty;
         }
     }
 
@@ -6006,7 +6036,7 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
     public async Task ProcessGoalAsync(string goal)
     {
         var response = await ExecuteAsync(goal);
-        await _voice.SayAsync(response);
+        await SayWithVoiceAsync(response);
         Say(response);  // Side channel
         _conversationHistory.Add($"Goal: {goal}");
         _conversationHistory.Add($"Ouroboros: {response}");
@@ -6018,7 +6048,7 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
     public async Task ProcessQuestionAsync(string question)
     {
         var response = await ChatAsync(question);
-        await _voice.SayAsync(response);
+        await SayWithVoiceAsync(response);
         Say(response);  // Side channel
         _conversationHistory.Add($"User: {question}");
         _conversationHistory.Add($"Ouroboros: {response}");
@@ -6114,12 +6144,12 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
                 if (lastReasoning != null)
                 {
                     Console.WriteLine($"\n{lastReasoning.State.Text}");
-                    await _voice.SayAsync(lastReasoning.State.Text);
+                    await SayWithVoiceAsync(lastReasoning.State.Text);
                 }
                 else if (!string.IsNullOrEmpty(state.Output))
                 {
                     Console.WriteLine($"\n{state.Output}");
-                    await _voice.SayAsync(state.Output);
+                    await SayWithVoiceAsync(state.Output);
                 }
             }
             else
