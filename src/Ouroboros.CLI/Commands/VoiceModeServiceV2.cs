@@ -358,7 +358,7 @@ public sealed class VoiceModeServiceV2 : IAsyncDisposable
     }
 
     /// <summary>
-    /// Speaks text using TTS.
+    /// Speaks text using TTS with automatic fallback on rate limits or errors.
     /// </summary>
     /// <param name="text">The text to speak.</param>
     /// <param name="ct">Cancellation token.</param>
@@ -374,7 +374,9 @@ public sealed class VoiceModeServiceV2 : IAsyncDisposable
             Console.WriteLine($"\n  [{_persona.Name}] {text}");
         }
 
-        // Synthesize and play
+        bool shouldFallback = false;
+
+        // Try primary TTS (Azure Neural)
         if (_tts != null && _config.EnableTts)
         {
             try
@@ -388,16 +390,43 @@ public sealed class VoiceModeServiceV2 : IAsyncDisposable
                     },
                     error =>
                     {
-                        _stream.PublishError($"TTS error: {error}", category: ErrorCategory.SpeechSynthesis);
+                        // Check for rate limiting (429) or quota errors
+                        if (error.Contains("429") || error.Contains("Too many requests") ||
+                            error.Contains("quota") || error.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Console.WriteLine($"  [!] Azure TTS rate limited, switching to local TTS");
+                            shouldFallback = true;
+                        }
+                        else
+                        {
+                            _stream.PublishError($"TTS error: {error}", category: ErrorCategory.SpeechSynthesis);
+                        }
+
                         return Task.CompletedTask;
                     });
             }
             catch (Exception ex)
             {
-                _stream.PublishError(ex.Message, ex, ErrorCategory.SpeechSynthesis);
+                // Also fallback on network/connection errors
+                if (ex.Message.Contains("429") || ex.Message.Contains("Too many requests"))
+                {
+                    Console.WriteLine($"  [!] Azure TTS rate limited, switching to local TTS");
+                    shouldFallback = true;
+                }
+                else
+                {
+                    _stream.PublishError(ex.Message, ex, ErrorCategory.SpeechSynthesis);
+                    shouldFallback = true; // Fallback on any primary TTS failure
+                }
             }
         }
-        else if (_fallbackTts != null && _config.EnableTts)
+        else
+        {
+            shouldFallback = true; // No primary TTS, use fallback
+        }
+
+        // Fallback to local TTS if needed
+        if (shouldFallback && _fallbackTts != null && _config.EnableTts)
         {
             try
             {
@@ -410,13 +439,13 @@ public sealed class VoiceModeServiceV2 : IAsyncDisposable
                     },
                     error =>
                     {
-                        _stream.PublishError($"TTS error: {error}", category: ErrorCategory.SpeechSynthesis);
+                        _stream.PublishError($"TTS fallback error: {error}", category: ErrorCategory.SpeechSynthesis);
                         return Task.CompletedTask;
                     });
             }
             catch (Exception ex)
             {
-                _stream.PublishError(ex.Message, ex, ErrorCategory.SpeechSynthesis);
+                _stream.PublishError($"TTS fallback error: {ex.Message}", ex, ErrorCategory.SpeechSynthesis);
             }
         }
 

@@ -413,7 +413,8 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel
 
         _client = new HttpClient
         {
-            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute)
+            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute),
+            Timeout = TimeSpan.FromMinutes(10) // Large models like DeepSeek 671B need longer timeouts
         };
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;

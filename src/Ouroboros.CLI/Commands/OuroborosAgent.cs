@@ -1110,7 +1110,7 @@ OUTPUT (translation only, no explanations, no JSON, no metadata):";
                     var azureTts = new Ouroboros.Providers.TextToSpeech.AzureNeuralTtsService(
                         azureKey, azureRegion, _config.Persona, _config.Culture);
                     streamingTts = azureTts;
-                    fallbackTts = azureTts;
+                    // Don't set as fallback - we want local TTS as fallback for rate limits
                     Console.WriteLine("  [OK] Azure Neural TTS available for streaming");
                 }
                 catch (Exception ex)
@@ -1119,14 +1119,14 @@ OUTPUT (translation only, no explanations, no JSON, no metadata):";
                 }
             }
 
-            // Always try local TTS as fallback if no streaming TTS available
-            if (fallbackTts == null && Ouroboros.Providers.TextToSpeech.LocalWindowsTtsService.IsAvailable())
+            // Always try local TTS as fallback (handles Azure rate limits gracefully)
+            if (Ouroboros.Providers.TextToSpeech.LocalWindowsTtsService.IsAvailable())
             {
                 try
                 {
                     fallbackTts = new Ouroboros.Providers.TextToSpeech.LocalWindowsTtsService(
                         voiceName: "Microsoft Zira Desktop", rate: 1, volume: 100);
-                    Console.WriteLine("  [OK] Local Windows TTS fallback available");
+                    Console.WriteLine("  [OK] Local Windows TTS fallback available (for rate limit recovery)");
                 }
                 catch (Exception ex)
                 {
@@ -1134,7 +1134,7 @@ OUTPUT (translation only, no explanations, no JSON, no metadata):";
                 }
             }
 
-            if (fallbackTts == null)
+            if (streamingTts == null && fallbackTts == null)
             {
                 Console.WriteLine("  [!] No TTS available - voice output disabled");
             }
