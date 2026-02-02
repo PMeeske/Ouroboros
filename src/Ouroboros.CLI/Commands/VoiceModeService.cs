@@ -71,6 +71,7 @@ public sealed class VoiceModeService : IDisposable
     private ITextToSpeechService? _ttsService;
     private LocalWindowsTtsService? _localTts;
     private AzureNeuralTtsService? _azureTts;
+    private EdgeTtsService? _edgeTts;
     private ISpeechToTextService? _sttService;
     private AdaptiveSpeechDetector? _speechDetector;
 
@@ -194,7 +195,22 @@ public sealed class VoiceModeService : IDisposable
             }
         }
 
-        // Always initialize local TTS as fallback when available
+        // Initialize Edge TTS as first fallback (neural quality, free, no rate limits)
+        try
+        {
+            // Select voice based on culture
+            string edgeVoice = (_config.Culture?.StartsWith("de", StringComparison.OrdinalIgnoreCase) ?? false)
+                ? EdgeTtsService.Voices.KatjaNeural
+                : EdgeTtsService.Voices.JennyNeural;
+            _edgeTts = new EdgeTtsService(edgeVoice);
+            Console.WriteLine($"  [OK] Edge TTS fallback ready (Microsoft Neural - free, no rate limits)");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  [!] Edge TTS init failed: {ex.Message}");
+        }
+
+        // Initialize local TTS as offline fallback when available
         if (hasLocalTts && _localTts == null)
         {
             try
@@ -405,12 +421,36 @@ public sealed class VoiceModeService : IDisposable
                 }
             }
 
-            // Fallback to local TTS if Azure failed or not available
+            // Fallback to Edge TTS (neural quality, free, no rate limits)
+            if (!ttsSucceeded && _edgeTts != null)
+            {
+                try
+                {
+                    Console.WriteLine($"  [>] Trying Edge TTS (neural, free)...");
+                    TextToSpeechOptions? options = isWhisper ? new TextToSpeechOptions(IsWhisper: true) : null;
+                    Result<SpeechResult, string> edgeResult = await _edgeTts.SynthesizeAsync(sanitized, options);
+                    if (edgeResult.IsSuccess)
+                    {
+                        await AudioPlayer.PlayAsync(edgeResult.Value);
+                        ttsSucceeded = true;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"  [!] Edge TTS failed: {edgeResult.Error}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"  [!] Edge TTS failed: {ex.Message}");
+                }
+            }
+
+            // Fallback to local TTS if Edge also failed (offline fallback)
             if (!ttsSucceeded && _localTts != null)
             {
                 try
                 {
-                    if (_azureTts == null && !_config.VoiceOnly) Console.WriteLine(sanitized);
+                    Console.WriteLine($"  [>] Trying Windows SAPI (offline fallback)...");
                     await SpeakWithLocalTtsAsync(sanitized, isWhisper);
                     ttsSucceeded = true;
                 }
