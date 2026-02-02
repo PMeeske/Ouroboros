@@ -153,6 +153,7 @@ public sealed class VoiceModeService : IDisposable
             }
         }
 
+        // If LocalTts preference is set, try local TTS before cloud
         if (_ttsService == null && _config.LocalTts && hasLocalTts)
         {
             try
@@ -178,6 +179,21 @@ public sealed class VoiceModeService : IDisposable
             catch (Exception ex)
             {
                 Console.WriteLine($"  [!] Cloud TTS failed: {ex.Message}");
+            }
+        }
+
+        // Final fallback: try local TTS even without --local-tts flag
+        if (_ttsService == null && hasLocalTts)
+        {
+            try
+            {
+                _localTts = new LocalWindowsTtsService(voiceName: "Microsoft Zira Desktop", rate: 1, volume: 100, useEnhancedProsody: true);
+                _ttsService = _localTts;
+                Console.WriteLine("  [OK] TTS initialized (Windows SAPI fallback - Microsoft Zira)");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  [!] Local TTS fallback failed: {ex.Message}");
             }
         }
 

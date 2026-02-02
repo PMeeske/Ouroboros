@@ -1105,17 +1105,38 @@ OUTPUT (translation only, no explanations, no JSON, no metadata):";
 
             if (!string.IsNullOrEmpty(azureKey) && !string.IsNullOrEmpty(azureRegion))
             {
-                var azureTts = new Ouroboros.Providers.TextToSpeech.AzureNeuralTtsService(
-                    azureKey, azureRegion, _config.Persona, _config.Culture);
-                streamingTts = azureTts;
-                fallbackTts = azureTts;
-                Console.WriteLine("  [OK] Azure Neural TTS available for streaming");
+                try
+                {
+                    var azureTts = new Ouroboros.Providers.TextToSpeech.AzureNeuralTtsService(
+                        azureKey, azureRegion, _config.Persona, _config.Culture);
+                    streamingTts = azureTts;
+                    fallbackTts = azureTts;
+                    Console.WriteLine("  [OK] Azure Neural TTS available for streaming");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"  [!] Azure TTS init failed: {ex.Message}");
+                }
             }
-            else if (Ouroboros.Providers.TextToSpeech.LocalWindowsTtsService.IsAvailable())
+
+            // Always try local TTS as fallback if no streaming TTS available
+            if (fallbackTts == null && Ouroboros.Providers.TextToSpeech.LocalWindowsTtsService.IsAvailable())
             {
-                fallbackTts = new Ouroboros.Providers.TextToSpeech.LocalWindowsTtsService(
-                    voiceName: "Microsoft Zira Desktop", rate: 1, volume: 100);
-                Console.WriteLine("  [OK] Local Windows TTS fallback available");
+                try
+                {
+                    fallbackTts = new Ouroboros.Providers.TextToSpeech.LocalWindowsTtsService(
+                        voiceName: "Microsoft Zira Desktop", rate: 1, volume: 100);
+                    Console.WriteLine("  [OK] Local Windows TTS fallback available");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"  [!] Local TTS init failed: {ex.Message}");
+                }
+            }
+
+            if (fallbackTts == null)
+            {
+                Console.WriteLine("  [!] No TTS available - voice output disabled");
             }
 
             // Get Whisper STT if available
