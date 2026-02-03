@@ -105,7 +105,7 @@ jobs:
           echo "✓ MAUI workload installation complete"
 
     - name: Cache NuGet packages
-      uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319  # v4.0.1
+      uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-test-grid-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
