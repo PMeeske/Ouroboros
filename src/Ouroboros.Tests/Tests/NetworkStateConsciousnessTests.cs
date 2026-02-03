@@ -106,7 +106,7 @@ public class NetworkStateConsciousnessTests
         dagLinear.AddNode(node2);
         dagLinear.AddNode(node3);
         
-        // Only linear connections: A -> B -> C (2 edges out of 3 possible)
+        // Only linear connections: A -> B -> C (2 edges, less connected)
         var edge1 = TransitionEdge.CreateSimple(node1.Id, node2.Id, "Process", new { });
         var edge2 = TransitionEdge.CreateSimple(node2.Id, node3.Id, "Process", new { });
         dagLinear.AddEdge(edge1);
@@ -134,7 +134,8 @@ public class NetworkStateConsciousnessTests
         var integrationSelfRef = MeasureIntegration(dagSelfRef);
 
         // Assert - Self-referential structure should have higher integration
-        // Linear: 2/3 = 0.667, Fully connected: 3/3 = 1.0
+        // Linear chain: 2 edges / 3 max = 0.667, Fully connected: 3 edges / 3 max = 1.0
+        // Note: Integration formula treats DAG as undirected for connectivity measurement
         integrationSelfRef.Should().BeGreaterThan(integrationLinear,
             "self-referential structure should have higher integration (Φ proxy)");
     }
@@ -295,8 +296,9 @@ public class NetworkStateConsciousnessTests
 
     /// <summary>
     /// Helper method: Measures integration (Φ proxy) as connectivity ratio in the DAG.
-    /// Integration = (number of edges) / (maximum possible edges for n nodes) = edges / (n * (n-1) / 2).
-    /// Higher values indicate more integrated (interconnected) structure.
+    /// Integration = (number of edges) / (maximum possible edges for n nodes).
+    /// Formula uses n*(n-1)/2, treating the directed DAG as undirected for connectivity measurement.
+    /// This provides a proxy for integrated information (Φ) - higher values indicate more interconnected structure.
     /// </summary>
     /// <param name="dag">The Merkle DAG to measure.</param>
     /// <returns>The integration metric (0.0 to 1.0).</returns>
@@ -310,6 +312,8 @@ public class NetworkStateConsciousnessTests
         }
 
         var edgeCount = dag.EdgeCount;
+        
+        // Treat DAG as undirected for integration measurement (Φ proxy)
         var maxPossibleEdges = nodeCount * (nodeCount - 1) / 2.0;
         
         return edgeCount / maxPossibleEdges;
