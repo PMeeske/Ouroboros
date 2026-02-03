@@ -53,7 +53,7 @@
 - [x] 10. terraform-tests.yml - Terraform validation & testing
 
 ### Automation
-- [x] 11. update-coverage-badges.yml - Badge automation
+- [x] 11. dotnet-test-grid.yml - Badge automation (unified with test grid)
 - [x] 12. copilot-automated-development-cycle.yml - Copilot automation
 - [x] 13. copilot-agent-solver.yml - Copilot issue solver
 

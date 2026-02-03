@@ -226,7 +226,7 @@ restore-keys: |
 10. ✅ `terraform-tests.yml` - Terraform testing (324 lines)
 
 #### Automation
-11. ✅ `update-coverage-badges.yml` - Badge automation (270 lines)
+11. ✅ `dotnet-test-grid.yml` - Badge automation (unified with test grid)
 12. ✅ `copilot-automated-development-cycle.yml` - Copilot automation (554 lines)
 13. ✅ `copilot-agent-solver.yml` - Copilot solver (126 lines)
 
