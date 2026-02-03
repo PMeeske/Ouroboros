@@ -1,0 +1,95 @@
+# Reusable workflow for .NET setup with caching
+# This workflow handles .NET SDK installation, NuGet package caching, and dependency restoration
+# Call this from other workflows to ensure consistent .NET environment setup
+
+name: Reusable .NET Setup
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-version:
+        description: '.NET SDK version to install'
+        required: false
+        type: string
+        default: '10.0.x'
+      cache-key-prefix:
+        description: 'Prefix for cache key (e.g., "test", "build", "android")'
+        required: false
+        type: string
+        default: 'default'
+      include-maui:
+        description: 'Install MAUI workloads'
+        required: false
+        type: boolean
+        default: false
+      restore-dependencies:
+        description: 'Run dotnet restore'
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      cache-hit:
+        description: 'Whether NuGet cache was hit'
+        value: ${{ jobs.setup.outputs.cache-hit }}
+
+jobs:
+  setup:
+    name: Setup .NET Environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    outputs:
+      cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3  # v4.0.0
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Install MAUI workloads
+        if: inputs.include-maui
+        uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: |
+            echo "Installing MAUI workloads..."
+            dotnet workload install maui-android maui-tizen --skip-sign-check --verbosity detailed
+            echo "Verifying installation..."
+            dotnet workload list
+            echo "✓ MAUI workload installation complete"
+
+      - name: Cache NuGet packages
+        id: cache
+        uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319  # v4.0.1
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ inputs.cache-key-prefix }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-${{ inputs.cache-key-prefix }}-
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        if: inputs.restore-dependencies
+        uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: dotnet restore --verbosity normal
+
+      - name: Display cache status
+        run: |
+          if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ]; then
+            echo "✓ NuGet packages restored from cache"
+          else
+            echo "✓ NuGet packages downloaded and cached"
+          fi
+          echo "Cache key: ${{ steps.cache.outputs.cache-primary-key }}"

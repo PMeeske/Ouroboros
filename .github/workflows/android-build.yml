@@ -20,6 +20,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DOTNET_VERSION: '10.0.x'
+
 jobs:
   check-android-project:
     name: Check if Android project exists
@@ -30,7 +33,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
     
     - name: Check for Android project
       id: check
@@ -57,7 +60,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
         fetch-depth: 0
     
@@ -89,12 +92,12 @@ jobs:
         cat build-info/build-metadata.json
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3  # v4.0.0
       with:
-        dotnet-version: '10.0.x'
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Install MAUI workload
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 15
         max_attempts: 3
@@ -107,7 +110,7 @@ jobs:
           echo "Workload installation complete."
 
     - name: Cache NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319  # v4.0.1
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-android-${{ hashFiles('**/Ouroboros.Android.csproj') }}
@@ -116,7 +119,7 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies (Core libraries)
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 10
         max_attempts: 3
@@ -132,7 +135,7 @@ jobs:
           dotnet restore Ouroboros.Agent/Ouroboros.Agent.csproj
 
     - name: Restore Android project dependencies
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 10
         max_attempts: 3
@@ -192,7 +195,7 @@ jobs:
     
     - name: Upload test results
       if: steps.smoke-tests.outputs.smoke_tests_passed != 'skipped'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       continue-on-error: true
       with:
         name: android-test-results
@@ -216,7 +219,7 @@ jobs:
 
     - name: Upload APK artifact
       if: success()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       continue-on-error: true
       with:
         name: monadic-pipeline-android-apk
@@ -226,7 +229,7 @@ jobs:
     
     - name: Upload build metadata
       if: success()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       continue-on-error: true
       with:
         name: build-metadata
@@ -307,7 +310,7 @@ jobs:
 
     - name: Send email notification with APK download link
       if: success()
-      uses: dawidd6/action-send-mail@v3
+      uses: dawidd6/action-send-mail@2cea9617b09d79a095a8136fe5e4c1d8d481af1b  # v3.12.0
       continue-on-error: true
       timeout-minutes: 5
       with:

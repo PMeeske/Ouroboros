@@ -23,6 +23,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DOTNET_VERSION: '10.0.x'
+
 jobs:
   github-models-integration:
     name: GitHub Models Integration Tests
@@ -33,17 +36,17 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
         fetch-depth: 0
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3  # v4.0.0
       with:
-        dotnet-version: '10.0.x'
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Cache NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319  # v4.0.1
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
@@ -51,7 +54,7 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 10
         max_attempts: 3
@@ -67,7 +70,7 @@ jobs:
 
     - name: Test 1 - GitHub Models API Connectivity
       if: ${{ secrets.MODEL_TOKEN != '' }}
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       env:
         MODEL_TOKEN: ${{ secrets.MODEL_TOKEN }}
       with:
@@ -89,7 +92,7 @@ jobs:
 
     - name: Test 2 - Pipeline DSL with GitHub Models
       if: ${{ secrets.MODEL_TOKEN != '' }}
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       env:
         MODEL_TOKEN: ${{ secrets.MODEL_TOKEN }}
       with:
@@ -111,7 +114,7 @@ jobs:
 
     - name: Test 3 - Different Model Selection
       if: ${{ secrets.MODEL_TOKEN != '' }}
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       env:
         MODEL_TOKEN: ${{ secrets.MODEL_TOKEN }}
       with:
@@ -145,7 +148,7 @@ jobs:
         echo "### Environment" >> $GITHUB_STEP_SUMMARY
         echo "- **Runner**: ubuntu-latest" >> $GITHUB_STEP_SUMMARY
         echo "- **Models**: gpt-4o-mini, gpt-4o" >> $GITHUB_STEP_SUMMARY
-        echo "- **.NET Version**: 10.0.x" >> $GITHUB_STEP_SUMMARY
+        echo "- **.NET Version**: ${{ env.DOTNET_VERSION }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         if [ -n "${{ secrets.MODEL_TOKEN }}" ]; then
           echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY

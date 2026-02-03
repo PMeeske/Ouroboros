@@ -15,6 +15,7 @@ on:
       - '.github/workflows/dotnet-test-grid.yml'
   workflow_dispatch:
 
+# Minimal permissions following security best practices
 permissions:
   contents: write
   pull-requests: write
@@ -24,6 +25,12 @@ permissions:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1'
+  DOTNET_NOLOGO: '1'
 
 jobs:
   unit-tests:
@@ -75,31 +82,39 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
         fetch-depth: 0
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3  # v4.0.0
       with:
-        dotnet-version: '10.0.x'
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Install .NET MAUI workloads
-      run: dotnet workload install maui-tizen android
-
-    - name: Restore .NET workloads
-      run: dotnet workload restore
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
+      with:
+        timeout_minutes: 15
+        max_attempts: 3
+        retry_wait_seconds: 30
+        command: |
+          echo "Installing MAUI workloads..."
+          dotnet workload install maui-android maui-tizen --skip-sign-check --verbosity detailed
+          echo "Verifying installation..."
+          dotnet workload list
+          echo "✓ MAUI workload installation complete"
 
     - name: Cache NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319  # v4.0.1
       with:
         path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        key: ${{ runner.os }}-nuget-test-grid-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
         restore-keys: |
+          ${{ runner.os }}-nuget-test-grid-
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 10
         max_attempts: 3
@@ -128,7 +143,7 @@ jobs:
 
     - name: Run Unit Tests (${{ matrix.category }})
       id: run-tests
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 10
         max_attempts: 2
@@ -181,7 +196,7 @@ jobs:
         fi
 
     - name: Upload test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       if: always()
       continue-on-error: true
       with:
@@ -190,7 +205,7 @@ jobs:
         retention-days: 30
 
     - name: Upload coverage results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       if: always()
       continue-on-error: true
       with:
@@ -199,7 +214,7 @@ jobs:
         retention-days: 30
 
     - name: Publish test results
-      uses: EnricoMi/publish-unit-test-result-action@v2
+      uses: EnricoMi/publish-unit-test-result-action@30eadd5010312f995f0d3b3cff7fe2984f69409e  # v2.16.1
       if: always()
       continue-on-error: true
       with:
@@ -231,14 +246,14 @@ jobs:
 
     steps:
     - name: Download all coverage artifacts
-      uses: actions/download-artifact@v4.1.8
+      uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85  # v4.1.8
       with:
         pattern: coverage-*
         path: TestResults
         merge-multiple: true
 
     - name: Install ReportGenerator
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 5
         max_attempts: 3
@@ -286,7 +301,7 @@ jobs:
         fi
 
     - name: Upload coverage reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       if: always()
       continue-on-error: true
       with:
@@ -295,7 +310,7 @@ jobs:
         retention-days: 30
 
     - name: Code Coverage Summary Report
-      uses: irongut/CodeCoverageSummary@v1.3.0
+      uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95  # v1.3.0
       if: github.event_name == 'pull_request'
       continue-on-error: true
       with:
@@ -310,7 +325,7 @@ jobs:
         thresholds: '50 70'
 
     - name: Add Coverage PR Comment
-      uses: marocchino/sticky-pull-request-comment@v2
+      uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31  # v2.9.0
       if: github.event_name == 'pull_request'
       continue-on-error: true
       with:
@@ -318,7 +333,7 @@ jobs:
         path: code-coverage-results.md
 
     - name: Upload coverage to Codecov (optional)
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@54bcd8715eee62d40e33596ef5e8f0f48dbbccab  # v4.1.0
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       continue-on-error: true
       with:
@@ -337,13 +352,13 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Download all test results
-      uses: actions/download-artifact@v4.1.8
+      uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85  # v4.1.8
       continue-on-error: true
       with:
         pattern: unit-test-results-*
@@ -376,7 +391,7 @@ jobs:
         echo "Total tests: Passed=$TOTAL_PASSED, Failed=$TOTAL_FAILED"
 
     - name: Download coverage report
-      uses: actions/download-artifact@v4.1.8
+      uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85  # v4.1.8
       continue-on-error: true
       with:
         name: coverage-report
@@ -524,7 +539,7 @@ jobs:
 
     steps:
     - name: Download all test results
-      uses: actions/download-artifact@v4.1.8
+      uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85  # v4.1.8
       continue-on-error: true
       with:
         pattern: unit-test-results-*
