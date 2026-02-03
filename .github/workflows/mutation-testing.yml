@@ -89,25 +89,15 @@ jobs:
       run: |
         # Set mutation level from input or use default
         ML="${{ github.event.inputs.mutation_level || 'Standard' }}"
-        VERBOSITY="${{ github.event.inputs.verbosity || 'info' }}"
 
-        echo "Running mutation tests with level: ${ML}, verbosity: ${VERBOSITY}"
+        echo "Running mutation tests with level: ${ML}"
 
-        # Check if stryker config exists
-        if [ ! -f "stryker-config.json" ]; then
-          echo "⚠️ Warning: stryker-config.json not found, using default configuration"
-          # Run with basic default configuration
-          dotnet stryker \
-            --mutation-level "${ML}" \
-            --verbosity "${VERBOSITY}" \
-            --reporter Html --reporter Progress --reporter Json --reporter ClearText
+        # Run Stryker with configuration file as single source of truth
+        # Override mutation level only if provided as workflow input
+        if [ -n "${{ github.event.inputs.mutation_level }}" ]; then
+          dotnet stryker --config-file stryker-config.json --mutation-level "${ML}"
         else
-          # Run Stryker with configuration
-          dotnet stryker \
-            --config-file stryker-config.json \
-            --mutation-level "${ML}" \
-            --verbosity "${VERBOSITY}" \
-            --reporter Html --reporter Progress --reporter Json --reporter ClearText
+          dotnet stryker --config-file stryker-config.json
         fi
 
     - name: Extract mutation score
