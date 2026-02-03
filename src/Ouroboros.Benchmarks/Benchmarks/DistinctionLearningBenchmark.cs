@@ -4,10 +4,12 @@
 
 using BenchmarkDotNet.Attributes;
 using Ouroboros.Application.Learning;
+using Ouroboros.Core.DistinctionLearning;
 using Ouroboros.Core.Learning;
 using Ouroboros.Core.LawsOfForm;
 using Ouroboros.Core.Monads;
 using Ouroboros.Domain;
+using Ouroboros.Domain.DistinctionLearning;
 
 namespace Ouroboros.Benchmarks.Benchmarks;
 
@@ -36,7 +38,8 @@ public class DistinctionLearningBenchmark
     public void Setup()
     {
         var embeddingModel = new MockEmbeddingModel();
-        this.learner = new DistinctionLearner();
+        var mockStorage = new MockDistinctionWeightStorage();
+        this.learner = new DistinctionLearner(mockStorage);
         this.embeddingService = new DistinctionEmbeddingService(embeddingModel);
         
         this.initialState = DistinctionState.Void();
@@ -60,8 +63,10 @@ public class DistinctionLearningBenchmark
         
         foreach (var observation in patternObservations)
         {
-            // Progress through dream stages
-            foreach (DreamStage stage in Enum.GetValues<DreamStage>())
+            // Progress through dream stages - use string stage names
+            var stages = new[] { "Distinction", "Recognition", "WorldCrystallizes", "Dissolution" };
+            
+            foreach (var stage in stages)
             {
                 var result = await this.learner.UpdateFromDistinctionAsync(state, observation, stage);
                 if (result.IsSuccess)
@@ -70,7 +75,7 @@ public class DistinctionLearningBenchmark
                 }
 
                 // Apply recognition at Recognition stage
-                if (stage == DreamStage.Recognition)
+                if (stage == "Recognition")
                 {
                     var recognitionResult = await this.learner.RecognizeAsync(state, observation.Content);
                     if (recognitionResult.IsSuccess)
@@ -80,13 +85,11 @@ public class DistinctionLearningBenchmark
                 }
 
                 // Apply dissolution at Dissolution stage
-                if (stage == DreamStage.Dissolution)
+                if (stage == "Dissolution")
                 {
                     var dissolutionResult = await this.learner.DissolveAsync(state, DissolutionStrategy.FitnessThreshold);
-                    if (dissolutionResult.IsSuccess)
-                    {
-                        state = dissolutionResult.Value;
-                    }
+                    // DissolveAsync returns Result<Unit, string>, not Result<DistinctionState, string>
+                    // So we don't update state from dissolution result
                 }
             }
         }
@@ -95,7 +98,7 @@ public class DistinctionLearningBenchmark
         foreach (var testObs in this.CreateARCTestObservations())
         {
             // Check if learned distinctions help identify the pattern
-            var hasRelevantDistinctions = state.ActiveDistinctions.Any(d => 
+            var hasRelevantDistinctions = state.ActiveDistinctionNames.Any(d => 
                 testObs.Content.Contains(d, StringComparison.OrdinalIgnoreCase));
             
             if (hasRelevantDistinctions)
@@ -124,7 +127,7 @@ public class DistinctionLearningBenchmark
             var result = await this.learner.UpdateFromDistinctionAsync(
                 state, 
                 observation, 
-                DreamStage.Distinction);
+                "Distinction");
             
             if (result.IsSuccess)
             {
@@ -136,7 +139,7 @@ public class DistinctionLearningBenchmark
         var totalFitness = 0.0;
         var distinctionCount = 0;
 
-        foreach (var distinction in state.ActiveDistinctions)
+        foreach (var distinction in state.ActiveDistinctionNames)
         {
             var fitnessResult = await this.learner.EvaluateDistinctionFitnessAsync(
                 distinction, 
@@ -172,7 +175,7 @@ public class DistinctionLearningBenchmark
             var result = await this.learner.UpdateFromDistinctionAsync(
                 state, 
                 observation, 
-                DreamStage.Questioning); // Questioning creates uncertainty
+                "Questioning"); // Questioning creates uncertainty
             
             if (result.IsSuccess)
             {
@@ -191,7 +194,7 @@ public class DistinctionLearningBenchmark
             var result = await this.learner.UpdateFromDistinctionAsync(
                 state, 
                 observation, 
-                DreamStage.WorldCrystallizes); // Crystallizing creates certainty
+                "WorldCrystallizes"); // Crystallizing creates certainty
             
             if (result.IsSuccess)
             {
@@ -221,31 +224,28 @@ public class DistinctionLearningBenchmark
         foreach (var obs in taskAObservations)
         {
             var result = await this.learner.UpdateFromDistinctionAsync(
-                state, obs, DreamStage.WorldCrystallizes);
+                state, obs, "WorldCrystallizes");
             if (result.IsSuccess)
             {
                 state = result.Value;
             }
         }
 
-        var taskADistinctions = new HashSet<string>(state.ActiveDistinctions);
+        var taskADistinctions = new HashSet<string>(state.ActiveDistinctionNames);
 
         // Apply selective dissolution before Task B
         var dissolutionResult = await this.learner.DissolveAsync(
             state, 
             DissolutionStrategy.FitnessThreshold);
         
-        if (dissolutionResult.IsSuccess)
-        {
-            state = dissolutionResult.Value;
-        }
+        // DissolveAsync doesn't return updated state, just success/failure
 
         // Learn Task B
         var taskBObservations = this.CreateTaskBObservations();
         foreach (var obs in taskBObservations)
         {
             var result = await this.learner.UpdateFromDistinctionAsync(
-                state, obs, DreamStage.WorldCrystallizes);
+                state, obs, "WorldCrystallizes");
             if (result.IsSuccess)
             {
                 state = result.Value;
@@ -253,7 +253,7 @@ public class DistinctionLearningBenchmark
         }
 
         // Check retention of important Task A distinctions
-        var retainedTaskA = state.ActiveDistinctions
+        var retainedTaskA = state.ActiveDistinctionNames
             .Count(d => taskADistinctions.Contains(d));
         
         var retentionRate = taskADistinctions.Count > 0 
@@ -287,7 +287,7 @@ public class DistinctionLearningBenchmark
         {
             // First questioning (doubt)
             var questionResult = await this.learner.UpdateFromDistinctionAsync(
-                state, observation, DreamStage.Questioning);
+                state, observation, "Questioning");
             
             if (questionResult.IsSuccess)
             {
@@ -304,7 +304,7 @@ public class DistinctionLearningBenchmark
                 
                 // Check if incorrect assumption was dissolved or fitness reduced
                 var incorrectFitness = state.FitnessScores.GetValueOrDefault("incorrect_assumption", 0.0);
-                if (incorrectFitness < 0.5 || !state.ActiveDistinctions.Contains("incorrect_assumption"))
+                if (incorrectFitness < 0.5 || !state.ActiveDistinctionNames.Contains("incorrect_assumption"))
                 {
                     correctionsMade++;
                 }
@@ -430,5 +430,59 @@ internal class MockEmbeddingModel : IEmbeddingModel
         }
 
         return Task.FromResult(embedding);
+    }
+}
+
+/// <summary>
+/// Mock distinction weight storage for benchmarking (avoids I/O).
+/// </summary>
+internal class MockDistinctionWeightStorage : IDistinctionWeightStorage
+{
+    private readonly Dictionary<string, byte[]> storage = new();
+    private readonly Dictionary<string, DistinctionWeightMetadata> metadata = new();
+
+    public Task<Result<string, string>> StoreWeightsAsync(
+        string id,
+        byte[] weights,
+        DistinctionWeightMetadata metadata,
+        CancellationToken ct = default)
+    {
+        storage[id] = weights;
+        this.metadata[id] = metadata;
+        return Task.FromResult(Result<string, string>.Success($"mock://{id}"));
+    }
+
+    public Task<Result<byte[], string>> LoadWeightsAsync(
+        string id,
+        CancellationToken ct = default)
+    {
+        if (storage.TryGetValue(id, out var weights))
+        {
+            return Task.FromResult(Result<byte[], string>.Success(weights));
+        }
+
+        return Task.FromResult(Result<byte[], string>.Failure($"Weight {id} not found"));
+    }
+
+    public Task<Result<List<DistinctionWeightMetadata>, string>> ListWeightsAsync(
+        CancellationToken ct = default)
+    {
+        return Task.FromResult(Result<List<DistinctionWeightMetadata>, string>.Success(
+            metadata.Values.ToList()));
+    }
+
+    public Task<Result<Unit, string>> DissolveWeightsAsync(
+        string path,
+        CancellationToken ct = default)
+    {
+        // Mark as dissolved (no-op for mock)
+        return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+    }
+
+    public Task<Result<long, string>> GetTotalStorageSizeAsync(
+        CancellationToken ct = default)
+    {
+        var totalSize = storage.Values.Sum(w => w.Length);
+        return Task.FromResult(Result<long, string>.Success((long)totalSize));
     }
 }
