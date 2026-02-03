@@ -431,10 +431,11 @@ verbosity:
 
 ### Automation
 
-#### 11. ✅ update-coverage-badges.yml
-**Purpose:** Automated README badge updates
+#### 11. ✅ dotnet-test-grid.yml (Badge Automation)
+**Purpose:** Automated README badge updates (unified with test grid)
 
 **Key Changes:**
+- Badge update functionality consolidated into `dotnet-test-grid.yml` update-readme job
 - All actions pinned to SHA
 - Workflow run artifact downloads
 - Robust TRX parsing with grep -P detection
