@@ -9,6 +9,7 @@ using Ouroboros.Diagnostics;
 using Xunit;
 
 [Trait("Category", "Unit")]
+[Collection("TracingTests")]
 public class DistributedTracingTests
 {
     public DistributedTracingTests()

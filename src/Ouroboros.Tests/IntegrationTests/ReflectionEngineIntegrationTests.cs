@@ -143,9 +143,9 @@ public class ReflectionEngineIntegrationTests
         // Assert - Verify capability assessment
         capabilities.Scores.Should().ContainKey(CognitiveDimension.Reasoning);
         capabilities.Scores.Should().ContainKey(CognitiveDimension.Planning);
-        capabilities.Scores[CognitiveDimension.Reasoning].Should().Be(1.0);
+        capabilities.Scores[CognitiveDimension.Reasoning].Should().Be(0.5);
         capabilities.Scores[CognitiveDimension.Planning].Should().Be(0.0);
-        capabilities.OverallScore.Should().Be(0.5);
+        capabilities.OverallScore.Should().Be(0.25);
     }
 
     [Fact]

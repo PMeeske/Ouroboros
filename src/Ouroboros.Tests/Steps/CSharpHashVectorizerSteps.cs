@@ -73,10 +73,10 @@ public class CSharpHashVectorizerSteps
     /// <summary>Creates the primary vectorizer with dimension and lowercase option.</summary>
     /// <param name="dimension">Power-of-two dimension.</param>
     /// <param name="lowercase">Whether to lowercase tokens.</param>
-    [Given(@"a vectorizer with dimension (.*) and lowercase (true|false)")]
-    public void GivenAVectorizerWithDimensionAndLowercase(int dimension, bool lowercase)
+    [Given(@"a vectorizer with dimension (.*) and lowercase true")]
+    public void GivenAVectorizerWithDimensionAndLowercaseTrue(int dimension)
     {
-        _vectorizerPrimary = new CSharpHashVectorizer(dimension, lowercase: lowercase);
+        _vectorizerPrimary = new CSharpHashVectorizer(dimension, lowercase: true);
     }
 
     /// <summary>Adds a C# code sample for transformation.</summary>

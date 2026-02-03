@@ -72,7 +72,7 @@ public class ToolRegistrySteps
         _registry = new ToolRegistry();
     }
 
-    [When(@"I add a tool named ""(.*)""")]
+    [When(@"I add a tool named ""([^""]*)""(?!.*with description)")]
     public void WhenIAddAToolNamed(string toolName)
     {
         _registry.Should().NotBeNull();
@@ -207,13 +207,13 @@ public class ToolRegistrySteps
     [Then(@"the registry count should be (.*)")]
     public void ThenTheRegistryCountShouldBe(int expected)
     {
-        if (_registry != null)
-        {
-            _registry.Count.Should().Be(expected);
-        }
-        else if (_newRegistry != null)
+        if (_newRegistry != null)
         {
             _newRegistry.Count.Should().Be(expected);
+        }
+        else if (_registry != null)
+        {
+            _registry.Count.Should().Be(expected);
         }
     }
 

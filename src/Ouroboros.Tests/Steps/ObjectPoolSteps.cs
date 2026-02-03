@@ -105,8 +105,17 @@ public class ObjectPoolSteps
     }
 
     [When("I return all objects")]
+    public void WhenIReturnAllObjects()
+    {
+        _pool.Should().NotBeNull();
+        foreach (var obj in _rentedObjects)
+        {
+            _pool!.Return(obj);
+        }
+    }
+
     [When("I return all {int} objects")]
-    public void WhenIReturnAllObjects(int? count = null)
+    public void WhenIReturnAllObjectsWithCount(int count)
     {
         _pool.Should().NotBeNull();
         foreach (var obj in _rentedObjects)
