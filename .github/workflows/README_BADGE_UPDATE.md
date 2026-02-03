@@ -26,7 +26,8 @@ This job runs after all test matrix jobs and coverage report generation. It:
 6. Commits if changed
 
 ### When It Runs
-- Only on push to `main` branch
+- On push to `main` branch
+- On manual workflow dispatch when targeting `main` branch
 - Only after successful test and coverage jobs
 - Part of the comprehensive test grid workflow
 
