@@ -6,7 +6,6 @@
 
 <p align="center">
   <a href="https://github.com/PMeeske/Ouroboros/actions/workflows/dotnet-test-grid.yml"><img src="https://github.com/PMeeske/Ouroboros/actions/workflows/dotnet-test-grid.yml/badge.svg" alt="Test Grid"></a>
-  <a href="https://github.com/PMeeske/Ouroboros/actions/workflows/dotnet-coverage.yml"><img src="https://github.com/PMeeske/Ouroboros/actions/workflows/dotnet-coverage.yml/badge.svg" alt="Coverage"></a>
   <a href="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml"><img src="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml/badge.svg" alt="Mutation Testing"></a>
   <img src="https://img.shields.io/badge/tests-1956%20passing%2C%2036%20failing-red" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-2.9%25-red" alt="Coverage">
