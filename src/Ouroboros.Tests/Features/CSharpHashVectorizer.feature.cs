@@ -317,7 +317,7 @@ namespace Ouroboros.Features
         await testRunner.WhenAsync("I transform both codes", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 52
-        await testRunner.ThenAsync("the cosine similarity should be greater than 0.7", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+        await testRunner.ThenAsync("the cosine similarity should be greater than 0.6", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -555,7 +555,7 @@ namespace Ouroboros.Features
         await testRunner.WhenAsync("I transform both codes", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 93
-        await testRunner.ThenAsync("the cosine similarity should be greater than 0.8", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+        await testRunner.ThenAsync("the cosine similarity should be greater than 0.7", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();

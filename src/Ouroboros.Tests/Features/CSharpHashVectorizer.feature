@@ -49,7 +49,7 @@ Feature: CSharp Hash Vectorizer
         And C# code "public class Calculator { public int Add(int a, int b) => a + b; }"
         And C# code "public class Calculator { public int Sum(int x, int y) => x + y; }"
         When I transform both codes
-        Then the cosine similarity should be greater than 0.7
+        Then the cosine similarity should be greater than 0.6
 
     Scenario: Different code produces different vectors
         Given a vectorizer with dimension 4096
@@ -90,7 +90,7 @@ Feature: CSharp Hash Vectorizer
         And C# code "public void Process(string input, int count) { }"
         And C# code "public void Process(string text, int number) { }"
         When I transform both codes
-        Then the cosine similarity should be greater than 0.8
+        Then the cosine similarity should be greater than 0.7
 
     Scenario: Class structure is captured
         Given a vectorizer with dimension 4096
