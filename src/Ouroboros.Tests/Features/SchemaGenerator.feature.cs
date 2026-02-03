@@ -26,7 +26,7 @@ namespace Ouroboros.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static readonly global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Schema Generator", "    As a developer\n    I want to generate JSON schemas from C# types\n    So that " +
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Schema Generator", "    As a developer\n    I want to generate JSON schemas from C# types\n    So that " +
                 "I can validate tool arguments and provide API documentation", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;

@@ -26,7 +26,7 @@ namespace Ouroboros.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static readonly global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Tracked Vector Store", "    As a developer\n    I want to store and retrieve vectors with similarity searc" +
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Tracked Vector Store", "    As a developer\n    I want to store and retrieve vectors with similarity searc" +
                 "h\n    So that I can implement semantic search functionality", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;

@@ -26,7 +26,7 @@ namespace Ouroboros.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static readonly global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Vector Store Factory", "    As a developer\n    I want to create vector stores using a factory pattern\n   " +
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Vector Store Factory", "    As a developer\n    I want to create vector stores using a factory pattern\n   " +
                 " So that I can support multiple vector store backends", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;

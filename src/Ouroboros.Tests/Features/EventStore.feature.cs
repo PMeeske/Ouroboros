@@ -26,7 +26,7 @@ namespace Ouroboros.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static readonly global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Event Store", "    As a developer\n    I want to store and retrieve pipeline events\n    So that I" +
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Event Store", "    As a developer\n    I want to store and retrieve pipeline events\n    So that I" +
                 " can replay branch executions and maintain event history", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
