@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <!-- Configuration for Coverlet Code Coverage -->
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <!-- Match and format for coverage output -->
+          <Format>cobertura,json,lcov</Format>
+          
+          <!-- Specify assemblies to include -->
+          <!-- Include all Ouroboros assemblies -->
+          <Include>[Ouroboros.*]*,[LangChainPipeline]*</Include>
+          
+          <!-- Exclude test assemblies and specific types -->
+          <Exclude>
+            [Ouroboros.Tests]*,
+            [Ouroboros.Benchmarks]*,
+            [*Tests]*,
+            [*]*.Generated.*,
+            [*]*.Designer,
+            [*]*.g.cs,
+            [*]*.g.i.cs,
+            [*]*Migrations.*
+          </Exclude>
+          
+          <!-- Exclude files by pattern -->
+          <ExcludeByFile>
+            **/obj/**,
+            **/bin/**,
+            **/*Designer.cs,
+            **/*.g.cs,
+            **/*.g.i.cs,
+            **/Migrations/**,
+            **/*Generated*.cs
+          </ExcludeByFile>
+          
+          <!-- Exclude by attributes -->
+          <ExcludeByAttribute>
+            Obsolete,
+            GeneratedCodeAttribute,
+            CompilerGeneratedAttribute,
+            ExcludeFromCodeCoverageAttribute,
+            DebuggerNonUserCodeAttribute
+          </ExcludeByAttribute>
+          
+          <!-- Include test assembly in coverage (set to false) -->
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+          
+          <!-- Single hit coverage (faster) -->
+          <SingleHit>false</SingleHit>
+          
+          <!-- Skip auto props -->
+          <SkipAutoProps>true</SkipAutoProps>
+          
+          <!-- Use source link for better coverage reporting -->
+          <UseSourceLink>false</UseSourceLink>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+  
+  <!-- Test runner settings -->
+  <RunConfiguration>
+    <!-- Parallel test execution -->
+    <MaxCpuCount>0</MaxCpuCount>
+    
+    <!-- Results directory -->
+    <ResultsDirectory>./TestResults</ResultsDirectory>
+    
+    <!-- Target platform and framework -->
+    <TargetPlatform>x64</TargetPlatform>
+    <TargetFrameworkVersion>net10.0</TargetFrameworkVersion>
+    
+    <!-- Disable app domains for better performance -->
+    <DisableAppDomain>true</DisableAppDomain>
+    
+    <!-- Disable parallelization at the assembly level -->
+    <DisableParallelization>false</DisableParallelization>
+  </RunConfiguration>
+  
+  <!-- xUnit specific settings -->
+  <xUnit>
+    <!-- Maximum parallel threads -->
+    <MaxParallelThreads>-1</MaxParallelThreads>
+    
+    <!-- Parallel execution -->
+    <ParallelizeAssembly>true</ParallelizeAssembly>
+    <ParallelizeTestCollections>true</ParallelizeTestCollections>
+  </xUnit>
+  
+  <!-- LoggerRunSettings -->
+  <LoggerRunSettings>
+    <Loggers>
+      <Logger friendlyName="trx" />
+      <Logger friendlyName="console">
+        <Configuration>
+          <Verbosity>normal</Verbosity>
+        </Configuration>
+      </Logger>
+    </Loggers>
+  </LoggerRunSettings>
+</RunSettings>

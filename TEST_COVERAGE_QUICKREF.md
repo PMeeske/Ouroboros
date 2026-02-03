@@ -4,9 +4,24 @@
 
 ### Generate Coverage Report
 ```bash
-# One-line command to generate coverage
+# Recommended: Use runsettings file for proper configuration
+dotnet test --collect:"XPlat Code Coverage" --settings coverlet.runsettings && \
+  reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:"TestCoverageReport" -reporttypes:"Html;MarkdownSummaryGithub"
+
+# Alternative: One-line command (uses default settings)
 dotnet test --collect:"XPlat Code Coverage" && \
   reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:"TestCoverageReport" -reporttypes:"Html;MarkdownSummaryGithub"
+```
+
+### Using the Coverage Script
+```bash
+# Easiest way: Use the provided script
+./scripts/run-coverage.sh
+
+# Options:
+./scripts/run-coverage.sh --no-clean    # Skip cleaning previous results
+./scripts/run-coverage.sh --no-open     # Don't open report in browser
+./scripts/run-coverage.sh --minimal     # Generate only text summary
 ```
 
 ### View Coverage Report
@@ -202,6 +217,29 @@ reportgenerator \
 
 ## Troubleshooting
 
+### Coverage Shows 0% or Very Low Percentage
+
+**Solution**: Ensure you're using the `coverlet.runsettings` configuration file:
+
+```bash
+# Correct: Use runsettings file
+dotnet test --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+
+# Incorrect: Without runsettings (may include test assemblies and generated code)
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+**Why it matters**:
+- Without runsettings: Coverage includes test assemblies, generated files, designer files
+- With runsettings: Properly filters to only production code
+- Result: 0.2% coverage without config → 6.2%+ with proper configuration
+
+**Configuration Details** (`coverlet.runsettings`):
+- ✅ Includes: `[Ouroboros.*]*`, `[LangChainPipeline]*`
+- ❌ Excludes: Test assemblies, generated code, designer files
+- ❌ Excludes by attribute: `GeneratedCodeAttribute`, `CompilerGeneratedAttribute`
+- ✅ Formats: Cobertura, JSON, LCOV
+
 ### Coverage Not Generated
 ```bash
 # Ensure coverlet.collector is installed
@@ -246,6 +284,7 @@ dotnet build --no-incremental
 
 ---
 
-**Last Updated:** October 5, 2025
+**Last Updated:** February 3, 2026
 **Coverage Tool:** Coverlet + ReportGenerator
 **Test Framework:** xUnit 2.6.6
+**Coverage Configuration:** coverlet.runsettings (required for accurate results)
