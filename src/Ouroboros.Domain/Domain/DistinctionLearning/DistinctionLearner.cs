@@ -167,7 +167,8 @@ public sealed class DistinctionLearner : IDistinctionLearner
                 return Result<double, string>.Success(0.0);
             }
 
-            // Calculate fitness based on how many observations contain the distinction
+            // Calculate fitness based on match rate and weighted certainty:
+            // Fitness = (proportion of observations containing distinction) * (average certainty of matching observations)
             var matchCount = 0;
             var totalCertainty = 0.0;
 
