@@ -56,7 +56,7 @@ Key configuration is stored in `stryker-config.json`:
 - `project` / `testProject`: `src/Ouroboros.Tests/Ouroboros.Tests.csproj`
 - `mutationLevel`: `Standard`
 - `coverageAnalysis`: `perTest`
-- `reporters`: `Html`, `Progress`, `ClearText`, `Dashboard`
+- `reporters`: `Html`, `Progress`, `Json`, `ClearText`
 - `thresholds`: high 80, low 60, break 50
 - `mutate`: all source files under `src/` excluding generated artifacts and tests
 - `ignoreMethods`: skips mutations for `ToString`, `GetHashCode`, and `Equals`
