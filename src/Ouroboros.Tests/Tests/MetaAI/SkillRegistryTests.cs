@@ -153,7 +153,7 @@ public sealed class SkillRegistryTests
     }
 
     [Fact]
-    public void RecordSkillExecution_WithNonExistentSkill_ShouldThrow()
+    public void RecordSkillExecution_WithNonExistentSkill_ShouldThrowException()
     {
         // Arrange
         var registry = new SkillRegistry();

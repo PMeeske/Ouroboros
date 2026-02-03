@@ -283,7 +283,7 @@ public sealed class MetaAIPlannerOrchestratorTests
     }
 
     [Fact]
-    public async Task PlanAsync_WithPreCancelledToken_ShouldHandleGracefully()
+    public async Task PlanAsync_WithPreCancelledToken_ShouldCompleteQuickly()
     {
         // Arrange
         var cts = new CancellationTokenSource();
@@ -291,10 +291,13 @@ public sealed class MetaAIPlannerOrchestratorTests
 
         var orchestrator = CreateOrchestrator();
 
-        // Act & Assert - the orchestrator may or may not throw depending on timing
-        // Just verify it doesn't hang and completes
-        var task = orchestrator.PlanAsync("Test goal", ct: cts.Token);
-        await task; // If it throws, that's acceptable behavior too
+        // Act
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var result = await orchestrator.PlanAsync("Test goal", ct: cts.Token);
+        sw.Stop();
+
+        // Assert - Operation should complete quickly even with cancelled token
+        sw.ElapsedMilliseconds.Should().BeLessThan(5000); // Should complete within 5 seconds
     }
 
     [Fact]

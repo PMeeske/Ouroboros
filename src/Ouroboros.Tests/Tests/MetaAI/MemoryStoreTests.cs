@@ -201,7 +201,7 @@ public sealed class MemoryStoreTests
     }
 
     [Fact]
-    public async Task StoreExperienceAsync_WithCancellationToken_ShouldRespectCancellation()
+    public async Task StoreExperienceAsync_WithPreCancelledToken_ShouldCompleteQuickly()
     {
         // Arrange
         var store = new MemoryStore();
@@ -209,9 +209,13 @@ public sealed class MemoryStoreTests
         var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        // Act - depending on implementation, may or may not throw
-        var task = store.StoreExperienceAsync(experience, cts.Token);
-        await task; // If it completes immediately, that's fine too
+        // Act
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        await store.StoreExperienceAsync(experience, cts.Token);
+        sw.Stop();
+
+        // Assert - Operation should complete quickly (memory operations are synchronous)
+        sw.ElapsedMilliseconds.Should().BeLessThan(1000);
     }
 
     private static Experience CreateTestExperience(string goal, bool success, double quality = 0.8)
