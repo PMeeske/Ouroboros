@@ -23,6 +23,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DOTNET_VERSION: '10.0.x'
+
 jobs:
   ollama-integration:
     name: Ollama Integration Tests
@@ -31,17 +34,17 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
         fetch-depth: 0
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3  # v4.0.0
       with:
-        dotnet-version: '10.0.x'
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Cache NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319  # v4.0.1
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
@@ -49,7 +52,7 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 10
         max_attempts: 3
@@ -64,7 +67,7 @@ jobs:
       timeout-minutes: 15
 
     - name: Setup Ollama
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 10
         max_attempts: 3
@@ -93,7 +96,7 @@ jobs:
           done
 
     - name: Pull Ollama models
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 20
         max_attempts: 3
@@ -109,7 +112,7 @@ jobs:
           ollama list
 
     - name: Test 1 - Basic Ollama Connectivity
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 5
         max_attempts: 2
@@ -127,7 +130,7 @@ jobs:
           echo "✓ Basic connectivity test passed"
 
     - name: Test 2 - Pipeline DSL Execution
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 5
         max_attempts: 2
@@ -145,7 +148,7 @@ jobs:
           echo "✓ Pipeline DSL test passed"
 
     - name: Test 3 - Memory-Efficient Reverse Engineering
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 10
         max_attempts: 2
@@ -170,7 +173,7 @@ jobs:
           echo "✓ Reverse engineering test passed"
 
     - name: Test 4 - RAG with Embeddings
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 10
         max_attempts: 2
@@ -212,7 +215,7 @@ jobs:
         echo "### Environment" >> $GITHUB_STEP_SUMMARY
         echo "- **Runner**: ubuntu-latest" >> $GITHUB_STEP_SUMMARY
         echo "- **Models**: llama3:8b, nomic-embed-text" >> $GITHUB_STEP_SUMMARY
-        echo "- **.NET Version**: 10.0.x" >> $GITHUB_STEP_SUMMARY
+        echo "- **.NET Version**: ${{ env.DOTNET_VERSION }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
         echo "1. ✅ Basic Ollama Connectivity" >> $GITHUB_STEP_SUMMARY
@@ -226,7 +229,7 @@ jobs:
         echo "- Timeout: 30 minutes" >> $GITHUB_STEP_SUMMARY
 
     - name: Upload Test Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       if: always()
       continue-on-error: true
       with:
