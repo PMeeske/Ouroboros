@@ -7,8 +7,8 @@
 <p align="center">
   <a href="https://github.com/PMeeske/Ouroboros/actions/workflows/dotnet-test-grid.yml"><img src="https://github.com/PMeeske/Ouroboros/actions/workflows/dotnet-test-grid.yml/badge.svg" alt="Test Grid"></a>
   <a href="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml"><img src="https://github.com/PMeeske/Ouroboros/actions/workflows/mutation-testing.yml/badge.svg" alt="Mutation Testing"></a>
-  <img src="https://img.shields.io/badge/tests-2432%20passing%2C%2039%20failing-red" alt="Tests">
-  <img src="https://img.shields.io/badge/coverage-8.9%25-red" alt="Coverage">
+  <img src="https://img.shields.io/badge/tests-2401%20passing%2C%2019%20failing-red" alt="Tests">
+  <img src="https://img.shields.io/badge/coverage-8.8%25-red" alt="Coverage">
   <a href="https://dotnet.microsoft.com/download/dotnet/10.0"><img src="https://img.shields.io/badge/.NET-10.0-blue" alt=".NET Version"></a>
   <a href="https://www.nuget.org/packages/LangChain/"><img src="https://img.shields.io/badge/LangChain-0.17.0-purple" alt="LangChain"></a>
 </p>
