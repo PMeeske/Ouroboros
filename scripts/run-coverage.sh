@@ -62,6 +62,7 @@ echo -e "${GREEN}Running tests with code coverage...${NC}"
 dotnet test \
   src/Ouroboros.Tests/Ouroboros.Tests.csproj \
   --collect:"XPlat Code Coverage" \
+  --settings coverlet.runsettings \
   --verbosity quiet \
   --nologo
 
