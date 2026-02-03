@@ -348,7 +348,7 @@ jobs:
     name: Update README Badges
     runs-on: ubuntu-latest
     needs: [unit-tests, test-coverage]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
 
     steps:
     - name: Checkout code
@@ -567,6 +567,6 @@ jobs:
         echo "### Coverage" >> $GITHUB_STEP_SUMMARY
         echo "Coverage report has been generated and uploaded as an artifact." >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+        if ([ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]) && [ "${{ github.ref }}" = "refs/heads/main" ]; then
           echo "README badges have been updated with the latest test and coverage results." >> $GITHUB_STEP_SUMMARY
         fi
