@@ -5,6 +5,7 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using Polly;
 
 namespace Ouroboros.Providers.TextToSpeech;
 
@@ -12,6 +13,7 @@ namespace Ouroboros.Providers.TextToSpeech;
 /// Free neural TTS service using Microsoft Edge's TTS API.
 /// Provides high-quality neural voices (same as Azure) without API keys.
 /// Requires internet connection but no billing/subscription.
+/// NOTE: Microsoft may block this unofficial API (403 errors) - use Azure TTS for production.
 /// </summary>
 public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
 {
@@ -21,6 +23,33 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
     private readonly string _voice;
     private readonly string _outputFormat;
     private bool _disposed;
+
+    // Circuit breaker - if Edge TTS is blocked, don't spam retries
+    private static readonly ResiliencePipeline CircuitBreakerPipeline = new ResiliencePipelineBuilder()
+        .AddCircuitBreaker(new Polly.CircuitBreaker.CircuitBreakerStrategyOptions
+        {
+            FailureRatio = 0.5,
+            SamplingDuration = TimeSpan.FromSeconds(60),
+            MinimumThroughput = 2,
+            BreakDuration = TimeSpan.FromMinutes(5), // Stay broken for 5 min if blocked
+            OnOpened = args =>
+            {
+                IsCircuitOpen = true;
+                Console.WriteLine($"  [TTS] Edge TTS circuit OPEN - disabled for 5 minutes (likely blocked by Microsoft)");
+                return default;
+            },
+            OnClosed = args =>
+            {
+                IsCircuitOpen = false;
+                return default;
+            },
+        })
+        .Build();
+
+    /// <summary>
+    /// Gets whether the Edge TTS circuit breaker is open (service blocked/unavailable).
+    /// </summary>
+    public static bool IsCircuitOpen { get; private set; }
 
     /// <summary>
     /// Available Edge TTS neural voices.
@@ -92,7 +121,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
 
     /// <inheritdoc/>
     public Task<bool> IsAvailableAsync(CancellationToken ct = default)
-        => Task.FromResult(true); // Always available (requires internet but no API key)
+        => Task.FromResult(!IsCircuitOpen); // Not available if circuit is open (blocked)
 
     /// <inheritdoc/>
     public async Task<Result<SpeechResult, string>> SynthesizeAsync(
@@ -105,9 +134,17 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
             return Result<SpeechResult, string>.Failure("Text cannot be empty");
         }
 
+        // Fast-fail if circuit is open
+        if (IsCircuitOpen)
+        {
+            return Result<SpeechResult, string>.Failure("Edge TTS temporarily unavailable (circuit open)");
+        }
+
         try
         {
-            byte[] audioData = await SynthesizeInternalAsync(text, options, ct);
+            byte[] audioData = await CircuitBreakerPipeline.ExecuteAsync(
+                async token => await SynthesizeInternalAsync(text, options, token),
+                ct);
             return Result<SpeechResult, string>.Success(new SpeechResult(audioData, "mp3"));
         }
         catch (Exception ex)

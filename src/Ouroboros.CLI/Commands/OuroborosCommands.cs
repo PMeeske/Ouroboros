@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Ouroboros.Application.Tools;
 using Ouroboros.Options;
+using Ouroboros.Providers;
 
 namespace Ouroboros.CLI.Commands;
 
@@ -26,6 +27,9 @@ public static class OuroborosCommands
 
         // Set configuration for API key provider (used by Firecrawl, etc.)
         ApiKeyProvider.SetConfiguration(configuration);
+
+        // Set configuration for ChatConfig (used for Anthropic, GitHub Models, etc.)
+        ChatConfig.SetConfiguration(configuration);
 
         // Set configuration for Azure Speech TTS
         OuroborosAgent.SetConfiguration(configuration);
@@ -63,6 +67,7 @@ public static class OuroborosCommands
                 EmbedEndpoint: opts.EmbedEndpoint,
                 QdrantEndpoint: opts.QdrantEndpoint,
                 ApiKey: opts.ApiKey ?? Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY"),
+                EndpointType: opts.EndpointType,
                 // Voice is disabled in push/yolo mode by default unless --push-voice is used
                 Voice: (opts.Push || opts.Yolo) ? opts.PushVoice : (opts.Voice && !opts.TextOnly),
                 VoiceOnly: opts.VoiceOnly,
@@ -111,7 +116,11 @@ public static class OuroborosCommands
                 JsonOutput: opts.JsonOutput,
                 NoGreeting: opts.NoGreeting || opts.Pipe || !string.IsNullOrWhiteSpace(opts.BatchFile) || !string.IsNullOrWhiteSpace(opts.Exec),
                 ExitOnError: opts.ExitOnError,
-                ExecCommand: opts.Exec
+                ExecCommand: opts.Exec,
+                // Cost tracking & efficiency
+                ShowCosts: opts.ShowCosts,
+                CostAware: opts.CostAware,
+                CostSummary: opts.CostSummary
             );
 
             // Create the unified Ouroboros agent

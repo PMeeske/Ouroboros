@@ -16,7 +16,7 @@ namespace Ouroboros.Options;
 /// - Multi-model orchestration
 /// </summary>
 [Verb("ouroboros", isDefault: true, HelpText = "Run the unified Ouroboros AI agent with full capabilities. Just run 'ouroboros' for maximum experience.")]
-public sealed class OuroborosOptions
+public sealed class OuroborosOptions : IVoiceOptions
 {
     // ═══════════════════════════════════════════════════════════════════════════
     // VOICE & INTERACTION
@@ -55,6 +55,9 @@ public sealed class OuroborosOptions
     [Option("listen", Required = false, HelpText = "Enable voice input (speech-to-text) on startup", Default = false)]
     public bool Listen { get; set; }
 
+    [Option("voice-loop", Required = false, HelpText = "Continue voice conversation in loop", Default = true)]
+    public bool VoiceLoop { get; set; } = true;
+
     [Option("persona", Required = false, HelpText = "Persona: Ouroboros, Aria, Echo, Sage, Atlas", Default = "Ouroboros")]
     public string Persona { get; set; } = "Ouroboros";
 
@@ -74,7 +77,7 @@ public sealed class OuroborosOptions
     [Option("api-key", Required = false, HelpText = "API key for remote endpoint")]
     public string? ApiKey { get; set; }
 
-    [Option("endpoint-type", Required = false, HelpText = "Endpoint type: auto|openai|ollama-cloud|litellm|github-models")]
+    [Option("endpoint-type", Required = false, HelpText = "Endpoint type: auto|openai|ollama-cloud|litellm|github-models|anthropic")]
     public string? EndpointType { get; set; }
 
     [Option("temperature", Required = false, HelpText = "Sampling temperature", Default = 0.7)]
@@ -229,4 +232,17 @@ public sealed class OuroborosOptions
 
     [Option("stream", Required = false, HelpText = "Stream responses as generated", Default = true)]
     public bool Stream { get; set; } = true;
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // COST TRACKING & EFFICIENCY
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    [Option("show-costs", Required = false, HelpText = "Display token counts and API costs after each response", Default = false)]
+    public bool ShowCosts { get; set; }
+
+    [Option("cost-aware", Required = false, HelpText = "Inject cost-awareness guidelines into system prompt (encourages concise responses)", Default = false)]
+    public bool CostAware { get; set; }
+
+    [Option("cost-summary", Required = false, HelpText = "Show session cost summary on exit", Default = true)]
+    public bool CostSummary { get; set; } = true;
 }

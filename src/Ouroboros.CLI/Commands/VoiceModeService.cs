@@ -422,7 +422,8 @@ public sealed class VoiceModeService : IDisposable
             }
 
             // Fallback to Edge TTS (neural quality, free, no rate limits)
-            if (!ttsSucceeded && _edgeTts != null)
+            // Skip if circuit is open (Microsoft blocking the unofficial API)
+            if (!ttsSucceeded && _edgeTts != null && !EdgeTtsService.IsCircuitOpen)
             {
                 try
                 {

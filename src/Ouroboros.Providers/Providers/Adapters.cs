@@ -3,7 +3,9 @@ using System.Net.Http.Json;
 using System.Text;
 using LangChain.Providers.Ollama;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Retry;
+using Polly.Wrap;
 using System.Reactive.Linq;
 using System.Text.RegularExpressions;
 
@@ -117,6 +119,17 @@ public interface IStreamingThinkingChatModel : IThinkingChatModel, IStreamingCha
     /// <param name="ct">Cancellation token.</param>
     /// <returns>An observable that emits (isThinking, chunk) tuples.</returns>
     IObservable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default);
+}
+
+/// <summary>
+/// Contract for models that support cost tracking.
+/// </summary>
+public interface ICostAwareChatModel : IChatCompletionModel
+{
+    /// <summary>
+    /// Gets the cost tracker for this model instance.
+    /// </summary>
+    LlmCostTracker? CostTracker { get; }
 }
 
 /// <summary>
@@ -399,14 +412,20 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
 /// Includes Polly exponential backoff retry policy to handle rate limiting.
 /// Supports thinking mode for models like DeepSeek R1 that emit &lt;think&gt; tags.
 /// </summary>
-public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel
+public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwareChatModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
     private readonly ChatRuntimeSettings _settings;
-    private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
+    private readonly AsyncPolicyWrap<HttpResponseMessage> _resiliencePolicy;
+    private readonly LlmCostTracker? _costTracker;
 
-    public OllamaCloudChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null)
+    /// <summary>
+    /// Gets the cost tracker for this model instance.
+    /// </summary>
+    public LlmCostTracker? CostTracker => _costTracker;
+
+    public OllamaCloudChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null, LlmCostTracker? costTracker = null)
     {
         if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
         if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
@@ -419,24 +438,61 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;
         _settings = settings ?? new ChatRuntimeSettings();
+        _costTracker = costTracker ?? new LlmCostTracker(model);
 
-        // Create Polly retry policy with exponential backoff for rate limiting (429) and server errors (5xx)
-        _retryPolicy = Policy
+        // === ENHANCED POLLY RESILIENCE POLICY ===
+
+        // 1. Retry policy with exponential backoff + jitter for rate limiting and server errors
+        var retryPolicy = Policy
             .HandleResult<HttpResponseMessage>(r =>
-                (int)r.StatusCode == 429 || // Too Many Requests
-                (int)r.StatusCode >= 500)   // Server errors
+                (int)r.StatusCode == 429 ||    // Too Many Requests
+                (int)r.StatusCode == 503 ||    // Service Unavailable (explicitly)
+                (int)r.StatusCode >= 500)      // All server errors
+            .Or<HttpRequestException>()        // Network failures
+            .Or<TaskCanceledException>()       // Timeouts
             .WaitAndRetryAsync(
-                retryCount: 3,
-                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                retryCount: 5,  // Increased from 3 for cloud instability
+                sleepDurationProvider: retryAttempt =>
+                {
+                    // Exponential backoff with jitter to avoid thundering herd
+                    var baseDelay = TimeSpan.FromSeconds(Math.Pow(2, retryAttempt));
+                    var jitter = TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000));
+                    return baseDelay + jitter;
+                },
                 onRetry: (outcome, timespan, retryCount, context) =>
                 {
-                    Console.WriteLine($"[OllamaCloudChatModel] Retry {retryCount} after {timespan.TotalSeconds}s due to {outcome.Result?.StatusCode}");
+                    var reason = outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString() ?? "Unknown";
+                    Console.WriteLine($"[OllamaCloudChatModel] Retry {retryCount}/5 after {timespan.TotalSeconds:F1}s due to {reason}");
                 });
+
+        // 2. Circuit breaker - fail fast if service is consistently down
+        var circuitBreakerPolicy = Policy
+            .HandleResult<HttpResponseMessage>(r => (int)r.StatusCode >= 500)
+            .Or<HttpRequestException>()
+            .CircuitBreakerAsync(
+                handledEventsAllowedBeforeBreaking: 5,  // Open circuit after 5 consecutive failures
+                durationOfBreak: TimeSpan.FromSeconds(30),  // Stay open for 30s before trying again
+                onBreak: (outcome, breakDelay) =>
+                {
+                    Console.WriteLine($"[OllamaCloudChatModel] ⚡ Circuit OPEN for {breakDelay.TotalSeconds}s - service appears down");
+                },
+                onReset: () =>
+                {
+                    Console.WriteLine($"[OllamaCloudChatModel] ✓ Circuit CLOSED - service recovered");
+                },
+                onHalfOpen: () =>
+                {
+                    Console.WriteLine($"[OllamaCloudChatModel] ○ Circuit HALF-OPEN - testing service...");
+                });
+
+        // Combine: Retry wraps Circuit Breaker (retry outside, circuit breaker inside)
+        _resiliencePolicy = Policy.WrapAsync(retryPolicy, circuitBreakerPolicy);
     }
 
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
+        _costTracker?.StartRequest();
         try
         {
             // Use Ollama's native /api/generate endpoint and JSON format
@@ -452,7 +508,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel
                 }
             };
 
-            HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
+            HttpResponseMessage response = await _resiliencePolicy.ExecuteAsync(async () =>
             {
                 // Create fresh JsonContent for each retry attempt (content can only be used once)
                 using JsonContent payload = JsonContent.Create(payloadObject);
@@ -470,14 +526,27 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel
             using var doc = System.Text.Json.JsonDocument.Parse(rawContent);
             if (doc.RootElement.TryGetProperty("response", out var responseElement))
             {
+                // Extract token counts from Ollama response if available
+                int promptTokens = 0, outputTokens = 0;
+                if (doc.RootElement.TryGetProperty("prompt_eval_count", out var promptEval))
+                    promptTokens = promptEval.GetInt32();
+                if (doc.RootElement.TryGetProperty("eval_count", out var evalCount))
+                    outputTokens = evalCount.GetInt32();
+
+                _costTracker?.EndRequest(promptTokens, outputTokens);
                 return responseElement.GetString() ?? "";
             }
 
             Console.WriteLine($"[OllamaCloudChatModel] No 'response' field in: {rawContent}");
         }
+        catch (BrokenCircuitException)
+        {
+            // Circuit is open - service is down, fail fast without spamming logs
+            // The circuit will auto-reset after 30s and try again
+        }
         catch (Exception ex)
         {
-            // Log the actual error for debugging
+            // Log other errors for debugging (but not BrokenCircuitException)
             Console.WriteLine($"[OllamaCloudChatModel] Error: {ex.GetType().Name}: {ex.Message}");
         }
         return $"[ollama-cloud-fallback:{_model}] {prompt}";
@@ -509,7 +578,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel
                     }
                 });
 
-                HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
+                HttpResponseMessage response = await _resiliencePolicy.ExecuteAsync(async () =>
                 {
                     return await _client.PostAsync("/api/generate", payload, token).ConfigureAwait(false);
                 }).ConfigureAwait(false);
@@ -589,6 +658,11 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel
 
                 observer.OnCompleted();
             }
+            catch (BrokenCircuitException)
+            {
+                // Circuit is open - complete gracefully without error
+                observer.OnCompleted();
+            }
             catch (Exception ex)
             {
                 observer.OnError(ex);
@@ -615,7 +689,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel
                     }
                 });
 
-                HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
+                HttpResponseMessage response = await _resiliencePolicy.ExecuteAsync(async () =>
                 {
                     return await _client.PostAsync("/api/generate", payload, token).ConfigureAwait(false);
                 }).ConfigureAwait(false);
@@ -655,6 +729,11 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel
                     }
                 }
 
+                observer.OnCompleted();
+            }
+            catch (BrokenCircuitException)
+            {
+                // Circuit is open - complete gracefully without error
                 observer.OnCompleted();
             }
             catch (Exception ex)
