@@ -419,8 +419,8 @@ The MeTTa orchestrator:
 Process documents and contexts that exceed model limits using adaptive chunking:
 
 ```csharp
-using LangChainPipeline.Core.Processing;
-using LangChainPipeline.Core.Monads;
+using Ouroboros.Core.Processing;
+using Ouroboros.Core.Monads;
 
 // Define how to process each chunk
 Func<string, Task<Result<string>>> processChunk = async chunk =>
@@ -873,7 +873,7 @@ See [Troubleshooting Guide](TROUBLESHOOTING.md) for more solutions.
 ### Essential Guides
 - **[Quick Start Guide](QUICKSTART.md)** - Get up and running in 5 minutes
 - **[Deployment Guide](DEPLOYMENT.md)** - Production deployment instructions
-- **[Configuration Guide](CONFIGURATION.md)** - detailed configuration options
+- **[Configuration & Security Guide](CONFIGURATION_AND_SECURITY.md)** - Configuration and security options
 - **[Contributing Guide](CONTRIBUTING.md)** - Guidelines for contributors
 
 ### Technical Documentation
