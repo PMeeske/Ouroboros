@@ -200,8 +200,10 @@ public sealed class FormStateMachine<TState>
         }
 
         // Use sine wave based on phase and time step
+        // Use a small epsilon to handle floating-point precision at boundary values
         var sampleValue = Math.Sin((this.oscillationPhase + timeStep) * 2 * Math.PI);
-        return sampleValue > 0 ? state1 : state2;
+        const double epsilon = 1e-10;
+        return sampleValue > epsilon ? state1 : state2;
     }
 
     /// <summary>

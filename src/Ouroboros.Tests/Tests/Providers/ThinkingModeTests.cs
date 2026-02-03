@@ -253,7 +253,7 @@ public class ThinkingModeTests
             "Let me think about using the math tool...",
             "Result: [TOOL:math 2+2]"
         );
-        var registry = new ToolRegistry().WithTool(new MathTool());
+        var registry = new ToolRegistry().WithTool(new SimpleMathToolForThinking());
         var toolAwareModel = new ToolAwareChatModel(thinkingModel, registry);
 
         // Act
@@ -275,7 +275,7 @@ public class ThinkingModeTests
             "I could use [TOOL:math 1+1] here but I won't",
             "The answer is 2"
         );
-        var registry = new ToolRegistry().WithTool(new MathTool());
+        var registry = new ToolRegistry().WithTool(new SimpleMathToolForThinking());
         var toolAwareModel = new ToolAwareChatModel(thinkingModel, registry);
 
         // Act
@@ -336,9 +336,10 @@ internal class MockThinkingChatModel : IThinkingChatModel
 }
 
 /// <summary>
-/// Simple math tool for testing.
+/// Simple math tool for testing thinking mode.
+/// Note: This is intentionally a minimal mock that only handles specific expressions.
 /// </summary>
-internal class MathTool : ITool
+internal class SimpleMathToolForThinking : ITool
 {
     public string Name => "math";
     public string Description => "Performs basic math operations";

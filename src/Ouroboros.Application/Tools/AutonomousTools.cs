@@ -611,7 +611,7 @@ public static class AutonomousTools
         public string Name => "web_research";
 
         /// <inheritdoc/>
-        public string Description => "Deep web research using Firecrawl. PREFERRED for any web search or research task. Input: search query or URL to research.";
+        public string Description => "Deep web Research using Firecrawl. PREFERRED for any web search or research task. Input: search query or URL to research.";
 
         /// <inheritdoc/>
         public string? JsonSchema => """{"type":"object","properties":{"query":{"type":"string","description":"Search query or URL to research"},"scrapeFirst":{"type":"boolean","description":"If true and input is a URL, scrape it directly"}},"required":["query"]}""";
