@@ -2,7 +2,22 @@
   "permissions": {
     "allow": [
       "Bash(dotnet build:*)",
-      "Bash(dotnet restore:*)"
+      "Bash(dotnet restore:*)",
+      "Bash(tree:*)",
+      "Bash(ls:*)",
+      "Bash(du:*)",
+      "Bash(cd:*)",
+      "Bash(dir:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(wc:*)",
+      "Read(//d/**)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:deepwiki.com)",
+      "Bash(git rm:*)",
+      "Bash(dotnet user-secrets:*)"
     ]
   }
 }

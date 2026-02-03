@@ -3,6 +3,7 @@
 // </copyright>
 
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Reactive.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -36,8 +37,375 @@ using IEmbeddingModel = Ouroboros.Domain.IEmbeddingModel;
 using Ouroboros.Options;
 using Ouroboros.CLI.Abstractions;
 using Ouroboros.Core.EmbodiedInteraction;
+using Ouroboros.Pipeline.Learning;
+using Ouroboros.Pipeline.Metacognition;
+using Ouroboros.Pipeline.Council;
+using Ouroboros.Pipeline.WorldModel;
+using Ouroboros.Pipeline.MultiAgent;
+using Ouroboros.Pipeline.Planning;
+using PipelineReasoningStep = Ouroboros.Domain.Events.ReasoningStep;
+// Type aliases to resolve ambiguities between Agent.MetaAI and Pipeline namespaces
+using PipelineExperience = Ouroboros.Pipeline.Learning.Experience;
+using PipelineGoal = Ouroboros.Pipeline.Planning.Goal;
+using PipelineTaskStatus = Ouroboros.Pipeline.MultiAgent.TaskStatus;
+using PipelineAgentCapability = Ouroboros.Pipeline.MultiAgent.AgentCapability;
+using PipelineAgentStatus = Ouroboros.Pipeline.MultiAgent.AgentStatus;
+using WorldModelCapability = Ouroboros.Pipeline.WorldModel.Capability;
+// Keep MetaAI types accessible with explicit names for existing code
+using MetaAgentStatus = Ouroboros.Agent.MetaAI.AgentStatus;
+using MetaAgentCapability = Ouroboros.Agent.MetaAI.AgentCapability;
 
 namespace Ouroboros.CLI.Commands;
+
+#region Runtime Prompt Optimization System
+
+/// <summary>
+/// Tracks the effectiveness of prompt patterns and learns what works.
+/// </summary>
+public sealed class PromptPattern
+{
+    public string Id { get; init; } = Guid.NewGuid().ToString("N")[..8];
+    public string Name { get; init; } = "";
+    public string Template { get; init; } = "";
+    public int UsageCount { get; set; }
+    public int SuccessCount { get; set; } // Tool was called when expected
+    public int FailureCount { get; set; } // Tool should have been called but wasn't
+    public double SuccessRate => UsageCount > 0 ? (double)SuccessCount / UsageCount : 0.5;
+    public DateTime LastUsed { get; set; } = DateTime.UtcNow;
+    public List<string> SuccessfulVariants { get; init; } = new();
+    public List<string> FailedVariants { get; init; } = new();
+}
+
+/// <summary>
+/// Interaction outcome for learning.
+/// </summary>
+public sealed record InteractionOutcome(
+    string UserInput,
+    string AgentResponse,
+    List<string> ExpectedTools,
+    List<string> ActualToolCalls,
+    bool WasSuccessful,
+    TimeSpan ResponseTime,
+    string? UserFeedback = null);
+
+/// <summary>
+/// Runtime prompt optimizer that learns from interaction outcomes.
+/// Uses multi-armed bandit approach to balance exploration vs exploitation.
+/// </summary>
+public sealed class PromptOptimizer
+{
+    private readonly ConcurrentDictionary<string, PromptPattern> _patterns = new();
+    private readonly ConcurrentQueue<InteractionOutcome> _recentOutcomes = new();
+    private readonly Random _random = new();
+    private const int MaxOutcomeHistory = 100;
+    private const double ExplorationRate = 0.15; // 15% exploration
+
+    // Learned effectiveness weights
+    private double _toolSyntaxEmphasisWeight = 1.0;
+    private double _exampleDensityWeight = 1.0;
+    private double _warningEmphasisWeight = 1.0;
+    private double _contextInjectionWeight = 1.0;
+
+    public PromptOptimizer()
+    {
+        InitializeDefaultPatterns();
+    }
+
+    private void InitializeDefaultPatterns()
+    {
+        // Different instruction styles to test
+        _patterns["tool_syntax_basic"] = new PromptPattern
+        {
+            Name = "Basic Tool Syntax",
+            Template = "To use a tool, write [TOOL:toolname input]"
+        };
+
+        _patterns["tool_syntax_emphatic"] = new PromptPattern
+        {
+            Name = "Emphatic Tool Syntax",
+            Template = "⚠️ CRITICAL: You MUST use exact syntax [TOOL:toolname input] - no exceptions!"
+        };
+
+        _patterns["tool_syntax_example_heavy"] = new PromptPattern
+        {
+            Name = "Example-Heavy Tool Syntax",
+            Template = @"Tool syntax: [TOOL:name args]
+Example 1: [TOOL:search_my_code WorldModel]
+Example 2: [TOOL:read_my_file src/file.cs]
+Example 3: [TOOL:calculator 2+2]
+ALWAYS follow this exact pattern."
+        };
+
+        _patterns["mandatory_rule"] = new PromptPattern
+        {
+            Name = "Mandatory Rule Pattern",
+            Template = @"MANDATORY: Questions about code/architecture REQUIRE tool usage.
+NEVER answer from memory. ALWAYS [TOOL:search_my_code X] first."
+        };
+
+        _patterns["action_trigger_sparse"] = new PromptPattern
+        {
+            Name = "Sparse Action Triggers",
+            Template = "'search X' → [TOOL:search_my_code X]"
+        };
+
+        _patterns["action_trigger_detailed"] = new PromptPattern
+        {
+            Name = "Detailed Action Triggers",
+            Template = @"TRIGGERS: When user says 'search/find/look for X' you MUST output [TOOL:search_my_code X]
+When user asks 'is there a X' you MUST output [TOOL:search_my_code X]
+When user says 'read file X' you MUST output [TOOL:read_my_file X]"
+        };
+    }
+
+    /// <summary>
+    /// Records an interaction outcome for learning.
+    /// </summary>
+    public void RecordOutcome(InteractionOutcome outcome)
+    {
+        _recentOutcomes.Enqueue(outcome);
+        while (_recentOutcomes.Count > MaxOutcomeHistory)
+            _recentOutcomes.TryDequeue(out _);
+
+        // Update pattern statistics based on what was in the prompt
+        foreach (var pattern in _patterns.Values.Where(p => p.LastUsed > DateTime.UtcNow.AddMinutes(-5)))
+        {
+            pattern.UsageCount++;
+            if (outcome.WasSuccessful)
+            {
+                pattern.SuccessCount++;
+                if (outcome.ActualToolCalls.Count > 0)
+                    pattern.SuccessfulVariants.Add(string.Join(",", outcome.ActualToolCalls));
+            }
+            else
+            {
+                pattern.FailureCount++;
+                pattern.FailedVariants.Add($"Expected: {string.Join(",", outcome.ExpectedTools)} Got: {string.Join(",", outcome.ActualToolCalls)}");
+            }
+        }
+
+        // Adaptive weight learning
+        UpdateWeights(outcome);
+    }
+
+    private void UpdateWeights(InteractionOutcome outcome)
+    {
+        double learningRate = 0.1;
+
+        // If tools were called successfully, increase relevant weights
+        if (outcome.ActualToolCalls.Count > 0 && outcome.WasSuccessful)
+        {
+            _toolSyntaxEmphasisWeight = Math.Min(2.0, _toolSyntaxEmphasisWeight + learningRate);
+        }
+        // If tools should have been called but weren't, we need stronger emphasis
+        else if (outcome.ExpectedTools.Count > 0 && outcome.ActualToolCalls.Count == 0)
+        {
+            _warningEmphasisWeight = Math.Min(3.0, _warningEmphasisWeight + learningRate * 2);
+            _exampleDensityWeight = Math.Min(2.0, _exampleDensityWeight + learningRate);
+        }
+    }
+
+    /// <summary>
+    /// Selects the best prompt variant using Thompson Sampling.
+    /// </summary>
+    public PromptPattern SelectBestPattern(string category)
+    {
+        var relevantPatterns = _patterns.Values
+            .Where(p => p.Name.Contains(category, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (relevantPatterns.Count == 0)
+            return _patterns.Values.First();
+
+        // Exploration: random selection
+        if (_random.NextDouble() < ExplorationRate)
+        {
+            var selected = relevantPatterns[_random.Next(relevantPatterns.Count)];
+            selected.LastUsed = DateTime.UtcNow;
+            return selected;
+        }
+
+        // Exploitation: Thompson Sampling using Beta distribution
+        var bestPattern = relevantPatterns
+            .Select(p => new
+            {
+                Pattern = p,
+                // Sample from Beta(success+1, failure+1)
+                Score = SampleBeta(p.SuccessCount + 1, p.FailureCount + 1)
+            })
+            .OrderByDescending(x => x.Score)
+            .First()
+            .Pattern;
+
+        bestPattern.LastUsed = DateTime.UtcNow;
+        return bestPattern;
+    }
+
+    private double SampleBeta(int alpha, int beta)
+    {
+        // Approximation of Beta distribution sampling
+        double x = SampleGamma(alpha);
+        double y = SampleGamma(beta);
+        return x / (x + y);
+    }
+
+    private double SampleGamma(int shape)
+    {
+        // Marsaglia and Tsang's method approximation
+        if (shape < 1) return SampleGamma(shape + 1) * Math.Pow(_random.NextDouble(), 1.0 / shape);
+
+        double d = shape - 1.0 / 3.0;
+        double c = 1.0 / Math.Sqrt(9.0 * d);
+
+        while (true)
+        {
+            double x, v;
+            do
+            {
+                x = NextGaussian();
+                v = 1.0 + c * x;
+            } while (v <= 0);
+
+            v = v * v * v;
+            double u = _random.NextDouble();
+
+            if (u < 1 - 0.0331 * (x * x) * (x * x)) return d * v;
+            if (Math.Log(u) < 0.5 * x * x + d * (1 - v + Math.Log(v))) return d * v;
+        }
+    }
+
+    private double NextGaussian()
+    {
+        double u1 = 1.0 - _random.NextDouble();
+        double u2 = 1.0 - _random.NextDouble();
+        return Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2.0 * Math.PI * u2);
+    }
+
+    /// <summary>
+    /// Generates an optimized tool instruction based on learned patterns.
+    /// </summary>
+    public string GenerateOptimizedToolInstruction(List<string> availableTools, string userInput)
+    {
+        var sb = new StringBuilder();
+
+        // Select best patterns for each category
+        var syntaxPattern = SelectBestPattern("syntax");
+        var mandatoryPattern = SelectBestPattern("mandatory");
+        var triggerPattern = SelectBestPattern("trigger");
+
+        // Apply learned weights
+        if (_warningEmphasisWeight > 1.5)
+        {
+            sb.AppendLine("🚨 ABSOLUTE REQUIREMENT: USE TOOLS, DON'T JUST TALK ABOUT THEM 🚨");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine(syntaxPattern.Template);
+        sb.AppendLine();
+
+        if (_exampleDensityWeight > 1.3)
+        {
+            // Add more examples when learning shows they help
+            sb.AppendLine("CONCRETE EXAMPLES (use these patterns exactly):");
+            foreach (var tool in availableTools.Take(5))
+            {
+                sb.AppendLine($"  [TOOL:{tool} your_input_here]");
+            }
+            sb.AppendLine();
+        }
+
+        sb.AppendLine(mandatoryPattern.Template);
+        sb.AppendLine();
+        sb.AppendLine(triggerPattern.Template);
+
+        // Add dynamic anti-pattern based on recent failures
+        var recentFailures = _recentOutcomes
+            .Where(o => !o.WasSuccessful && o.ExpectedTools.Count > 0)
+            .TakeLast(3)
+            .ToList();
+
+        if (recentFailures.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("❌ RECENT MISTAKES TO AVOID:");
+            foreach (var failure in recentFailures)
+            {
+                sb.AppendLine($"  - User asked '{failure.UserInput.Substring(0, Math.Min(50, failure.UserInput.Length))}...' but you didn't call {string.Join(", ", failure.ExpectedTools)}");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Gets optimization statistics for introspection.
+    /// </summary>
+    public string GetStatistics()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("=== Prompt Optimization Statistics ===");
+        sb.AppendLine($"Total interactions tracked: {_recentOutcomes.Count}");
+        sb.AppendLine($"Learned weights:");
+        sb.AppendLine($"  Tool Syntax Emphasis: {_toolSyntaxEmphasisWeight:F2}");
+        sb.AppendLine($"  Example Density: {_exampleDensityWeight:F2}");
+        sb.AppendLine($"  Warning Emphasis: {_warningEmphasisWeight:F2}");
+        sb.AppendLine($"  Context Injection: {_contextInjectionWeight:F2}");
+        sb.AppendLine();
+        sb.AppendLine("Pattern Performance:");
+        foreach (var pattern in _patterns.Values.OrderByDescending(p => p.SuccessRate))
+        {
+            sb.AppendLine($"  {pattern.Name}: {pattern.SuccessRate:P0} ({pattern.SuccessCount}/{pattern.UsageCount})");
+        }
+
+        var successRate = _recentOutcomes.Count > 0
+            ? (double)_recentOutcomes.Count(o => o.WasSuccessful) / _recentOutcomes.Count
+            : 0;
+        sb.AppendLine();
+        sb.AppendLine($"Overall Success Rate: {successRate:P0}");
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Detects expected tools based on user input patterns.
+    /// </summary>
+    public List<string> DetectExpectedTools(string userInput)
+    {
+        var expected = new List<string>();
+        var inputLower = userInput.ToLowerInvariant();
+
+        if (inputLower.Contains("search") || inputLower.Contains("find") || inputLower.Contains("is there"))
+            expected.Add("search_my_code");
+        if (inputLower.Contains("read") || inputLower.Contains("show") || inputLower.Contains("cat "))
+            expected.Add("read_my_file");
+        if (inputLower.Contains("modify") || inputLower.Contains("change") || inputLower.Contains("edit") || inputLower.Contains("save"))
+            expected.Add("modify_my_code");
+        if (inputLower.Contains("calculate") || inputLower.Contains("math") || Regex.IsMatch(inputLower, @"\d+\s*[+\-*/]\s*\d+"))
+            expected.Add("calculator");
+        if (inputLower.Contains("web") || inputLower.Contains("search online") || inputLower.Contains("look up"))
+            expected.Add("web_research");
+        if (inputLower.Contains("world model") || inputLower.Contains("architecture") || inputLower.Contains("how does"))
+            expected.Add("search_my_code");
+
+        return expected;
+    }
+
+    /// <summary>
+    /// Extracts actual tool calls from agent response.
+    /// </summary>
+    public List<string> ExtractToolCalls(string response)
+    {
+        var calls = new List<string>();
+        var matches = Regex.Matches(response, @"\[TOOL:([^\s\]]+)");
+        foreach (Match match in matches)
+        {
+            calls.Add(match.Groups[1].Value);
+        }
+        return calls;
+    }
+}
+
+#endregion
 
 /// <summary>
 /// Configuration for the unified Ouroboros agent.
@@ -50,6 +418,7 @@ public sealed record OuroborosConfig(
     string EmbedEndpoint = "http://localhost:11434",
     string QdrantEndpoint = "http://localhost:6334",
     string? ApiKey = null,
+    string? EndpointType = null,  // auto|openai|ollama-cloud|litellm|github-models|anthropic
     bool Voice = false,
     bool VoiceOnly = false,
     bool LocalTts = true,
@@ -99,7 +468,11 @@ public sealed record OuroborosConfig(
     bool JsonOutput = false,
     bool NoGreeting = false,
     bool ExitOnError = false,
-    string? ExecCommand = null);
+    string? ExecCommand = null,
+    // Cost tracking & efficiency
+    bool ShowCosts = false,
+    bool CostAware = false,
+    bool CostSummary = true);
 
 /// <summary>
 /// Unified Ouroboros agent that integrates all capabilities:
@@ -147,6 +520,11 @@ public sealed partial class OuroborosAgent : IAsyncDisposable, IAgentFacade
     private ToolAwareChatModel? _llm;
     private IEmbeddingModel? _embedding;
     private ToolRegistry _tools = new();
+
+    // Runtime Prompt Optimization - learns what instruction styles work best
+    private readonly PromptOptimizer _promptOptimizer = new();
+    private string? _lastUserInput; // Track for outcome recording
+    private DateTime _lastInteractionStart;
 
     // Agent capabilities
     private ISkillRegistry? _skills;
@@ -223,6 +601,28 @@ public sealed partial class OuroborosAgent : IAsyncDisposable, IAgentFacade
 
     // Voice side channel - parallel audio playback for personas
     private VoiceSideChannel? _voiceSideChannel;
+
+    // LLM Cost Tracking - monitors tokens, costs, and timing across providers
+    private LlmCostTracker? _costTracker;
+
+    // AGI Continuous Learning Components
+    private ContinuouslyLearningAgent? _learningAgent;
+    private AdaptiveMetaLearner? _metaLearner;
+    private ExperienceBuffer? _experienceBuffer;
+
+    // AGI Metacognition Components
+    private RealtimeCognitiveMonitor? _cognitiveMonitor;
+    private BayesianSelfAssessor? _selfAssessor;
+    private CognitiveIntrospector? _introspector;
+
+    // AGI Multi-Agent Debate/Council
+    private CouncilOrchestrator? _councilOrchestrator;
+    private AgentCoordinator? _agentCoordinator;
+
+    // AGI World Model Components
+    private WorldState? _worldState;
+    private SmartToolSelector? _smartToolSelector;
+    private ToolCapabilityMatcher? _toolCapabilityMatcher;
 
     // Speech recognition for voice input
     private CancellationTokenSource? _listeningCts;
@@ -464,6 +864,34 @@ Write the integrated response:";
         Console.ForegroundColor = ConsoleColor.DarkYellow;
         Console.WriteLine(GetLocalizedString("listening_stop"));
         Console.ResetColor();
+    }
+
+    /// <summary>
+    /// Adds a tool to the registry and refreshes the LLM to use the updated tools.
+    /// This ensures dynamically created tools are immediately available for use.
+    /// </summary>
+    /// <param name="tool">The tool to add.</param>
+    private void AddToolAndRefreshLlm(ITool tool)
+    {
+        _tools = _tools.WithTool(tool);
+
+        // Recreate ToolAwareChatModel with updated tools
+        if (_chatModel != null)
+        {
+            _llm = new ToolAwareChatModel(_chatModel, _tools);
+            System.Diagnostics.Debug.WriteLine($"[Tools] Refreshed _llm with {_tools.Count} tools after adding {tool.Name}");
+        }
+
+        // Also update the smart tool selector if available
+        if (_smartToolSelector != null && _worldState != null && _toolCapabilityMatcher != null)
+        {
+            _toolCapabilityMatcher = new ToolCapabilityMatcher(_tools);
+            _smartToolSelector = new SmartToolSelector(
+                _worldState,
+                _tools,
+                _toolCapabilityMatcher,
+                _smartToolSelector.Configuration);
+        }
     }
 
     /// <summary>
@@ -801,6 +1229,9 @@ Write the integrated response:";
 
         // Initialize presence detection for proactive interactions
         await InitializePresenceDetectorAsync();
+
+        // Initialize AGI continuous learning and metacognition subsystems
+        await InitializeAgiSubsystemsAsync();
 
         _isInitialized = true;
 
@@ -1394,45 +1825,70 @@ $synth.Dispose()
         try
         {
             var settings = new ChatRuntimeSettings(_config.Temperature, _config.MaxTokens, 120, false);
-            var endpoint = _config.Endpoint.TrimEnd('/');
+            // Use ChatConfig to resolve endpoint, API key, and type
+            var (resolvedEndpoint, resolvedApiKey, resolvedEndpointType) = ChatConfig.ResolveWithOverrides(
+                _config.Endpoint,
+                _config.ApiKey,
+                _config.EndpointType);
 
-            // Determine API key - check config, then environment variables
-            var apiKey = _config.ApiKey
-                ?? Environment.GetEnvironmentVariable("CHAT_API_KEY")
-                ?? Environment.GetEnvironmentVariable("OLLAMA_API_KEY")
-                ?? Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY")
-                ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+            var endpoint = (resolvedEndpoint ?? _config.Endpoint).TrimEnd('/');
+            var apiKey = resolvedApiKey;
 
-            // Check endpoint type
-            bool isOllamaCloud = endpoint.Contains("api.ollama.com", StringComparison.OrdinalIgnoreCase);
-            bool isDeepSeek = endpoint.Contains("deepseek.com", StringComparison.OrdinalIgnoreCase);
+            // Initialize cost tracker for this model
+            _costTracker = new LlmCostTracker(_config.Model);
+
+            // Create model based on resolved endpoint type
+            switch (resolvedEndpointType)
+            {
+                case ChatEndpointType.Anthropic:
+                    if (string.IsNullOrWhiteSpace(apiKey))
+                    {
+                        throw new InvalidOperationException("Anthropic API key is required. Set ANTHROPIC_API_KEY or use --api-key.");
+                    }
+                    _chatModel = new AnthropicChatModel(apiKey, _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ Anthropic");
+                    break;
+
+                case ChatEndpointType.OllamaCloud:
+                    _chatModel = new OllamaCloudChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ Ollama Cloud");
+                    break;
+
+                case ChatEndpointType.GitHubModels:
+                    _chatModel = new GitHubModelsChatModel(apiKey ?? "", _config.Model, endpoint, settings);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ GitHub Models");
+                    break;
+
+                case ChatEndpointType.LiteLLM:
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ LiteLLM");
+                    break;
+
+                case ChatEndpointType.OpenAiCompatible:
+                    _chatModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey ?? "", _config.Model, settings);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ {endpoint}");
+                    break;
+
+                case ChatEndpointType.Auto:
+                default:
+                    // Auto-detect based on endpoint URL
+                    bool autoDetectLocal = endpoint.Contains("localhost", StringComparison.OrdinalIgnoreCase)
+                                        || endpoint.Contains("127.0.0.1");
+                    if (autoDetectLocal)
+                    {
+                        _chatModel = new OllamaCloudChatModel(endpoint, "ollama", _config.Model, settings);
+                        Console.WriteLine($"  ✓ LLM: {_config.Model} @ {endpoint} (local)");
+                    }
+                    else
+                    {
+                        _chatModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey ?? "", _config.Model, settings);
+                        Console.WriteLine($"  ✓ LLM: {_config.Model} @ {endpoint}");
+                    }
+                    break;
+            }
+
             bool isLocalOllama = endpoint.Contains("localhost", StringComparison.OrdinalIgnoreCase)
                               || endpoint.Contains("127.0.0.1");
-
-            if (isOllamaCloud)
-            {
-                // Ollama Cloud - uses OllamaCloudChatModel with API key
-                _chatModel = new OllamaCloudChatModel(endpoint, apiKey ?? "", _config.Model, settings);
-                Console.WriteLine($"  ✓ LLM: {_config.Model} @ Ollama Cloud");
-            }
-            else if (isDeepSeek)
-            {
-                // DeepSeek API - OpenAI compatible
-                _chatModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey ?? "", _config.Model, settings);
-                Console.WriteLine($"  ✓ LLM: {_config.Model} @ DeepSeek");
-            }
-            else if (isLocalOllama)
-            {
-                // Local Ollama
-                _chatModel = new OllamaCloudChatModel(endpoint, "ollama", _config.Model, settings);
-                Console.WriteLine($"  ✓ LLM: {_config.Model} @ {endpoint} (local)");
-            }
-            else
-            {
-                // Generic OpenAI-compatible API
-                _chatModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey ?? "", _config.Model, settings);
-                Console.WriteLine($"  ✓ LLM: {_config.Model} @ {endpoint}");
-            }
 
             // Test connection
             var testResponse = await _chatModel.GenerateTextAsync("Respond with just: OK");
@@ -1759,6 +2215,11 @@ $synth.Dispose()
                     _tools = _tools.WithTool(tool);
                 }
                 Console.WriteLine($"  ✓ Roslyn: analyze_csharp_code, create_csharp_class, etc. registered");
+
+                // CRITICAL: Recreate _llm with ALL tools now that registration is complete
+                // The ToolRegistry is immutable, so _llm needs the final snapshot
+                _llm = new ToolAwareChatModel(_chatModel, _tools);
+                System.Diagnostics.Debug.WriteLine($"[Tools] Final _llm created with {_tools.Count} tools");
             }
             else
             {
@@ -1986,10 +2447,10 @@ $synth.Dispose()
 
             // Create BodySchema with multimodal capabilities
             _bodySchema = BodySchema.CreateMultimodal()
-                .WithCapability(Capability.Hearing)
-                .WithCapability(Capability.Speaking)
-                .WithCapability(Capability.Seeing)
-                .WithCapability(Capability.Reasoning)
+                .WithCapability(Ouroboros.Core.EmbodiedInteraction.Capability.Hearing)
+                .WithCapability(Ouroboros.Core.EmbodiedInteraction.Capability.Speaking)
+                .WithCapability(Ouroboros.Core.EmbodiedInteraction.Capability.Seeing)
+                .WithCapability(Ouroboros.Core.EmbodiedInteraction.Capability.Reasoning)
                 .WithLimitation(new Limitation(
                     LimitationType.ActionRestricted,
                     "No physical manipulation",
@@ -2512,6 +2973,104 @@ $synth.Dispose()
         catch (Exception ex)
         {
             Console.WriteLine($"  ⚠ Presence Detection: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Initializes AGI continuous learning and metacognition subsystems.
+    /// These provide real-time performance tracking, self-assessment, and adaptive behavior.
+    /// </summary>
+    private async Task InitializeAgiSubsystemsAsync()
+    {
+        try
+        {
+            Console.WriteLine("\n  ═══ AGI Subsystems ═══");
+
+            // 1. Continuous Learning Agent - tracks performance and adapts
+            _learningAgent = new ContinuouslyLearningAgent(
+                agentId: Guid.NewGuid(),
+                config: AdaptiveAgentConfig.Default,
+                bufferCapacity: 10000);
+            Console.WriteLine("  ✓ Continuous Learning Agent: Active (EMA tracking, adaptive strategies)");
+
+            // 2. Meta-Learner - learns how to learn, optimizes hyperparameters
+            _metaLearner = new AdaptiveMetaLearner(
+                explorationWeight: 0.2,
+                historyLimit: 100);
+            Console.WriteLine("  ✓ Meta-Learner: Active (UCB exploration, Bayesian optimization)");
+
+            // 3. Experience Buffer - prioritized experience replay
+            _experienceBuffer = new ExperienceBuffer(capacity: 10000);
+            Console.WriteLine("  ✓ Experience Buffer: Active (10K capacity, prioritized replay)");
+
+            // 4. Cognitive Monitor - real-time cognitive health monitoring
+            _cognitiveMonitor = new RealtimeCognitiveMonitor(
+                maxBufferSize: 1000,
+                slidingWindowDuration: TimeSpan.FromMinutes(5));
+
+            // Subscribe to critical alerts
+            _cognitiveMonitor.Subscribe(alert =>
+            {
+                if (alert.Priority >= 7)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"  ⚠ Cognitive Alert: {alert.Message}");
+                    Console.ResetColor();
+                }
+            });
+            Console.WriteLine("  ✓ Cognitive Monitor: Active (anomaly detection, health tracking)");
+
+            // 5. Bayesian Self-Assessor - probabilistic self-evaluation
+            _selfAssessor = new BayesianSelfAssessor();
+            Console.WriteLine("  ✓ Self-Assessor: Active (6-dimension Bayesian evaluation)");
+
+            // 6. Cognitive Introspector - deep self-analysis and reflection
+            _introspector = new CognitiveIntrospector(maxHistorySize: 100);
+            Console.WriteLine("  ✓ Introspector: Active (state capture, pattern detection)");
+
+            // 7. Council Orchestrator - multi-agent debate for complex decisions
+            if (_llm != null)
+            {
+                _councilOrchestrator = CouncilOrchestrator.CreateWithDefaultAgents(_llm);
+                Console.WriteLine("  ✓ Council Orchestrator: Active (5 debate agents, Round Table protocol)");
+            }
+
+            // 8. World State - environment and capability tracking
+            _worldState = WorldState.Empty();
+            Console.WriteLine("  ✓ World State: Active (environment tracking, observations)");
+
+            // 9. Tool Capability Matcher - semantic tool matching
+            if (_tools != null)
+            {
+                _toolCapabilityMatcher = new ToolCapabilityMatcher(_tools);
+                Console.WriteLine("  ✓ Tool Capability Matcher: Active (goal-tool relevance scoring)");
+
+                // 10. Smart Tool Selector - AI-powered tool selection
+                _smartToolSelector = new SmartToolSelector(
+                    _worldState,
+                    _tools,
+                    _toolCapabilityMatcher,
+                    SelectionConfig.Default);
+                Console.WriteLine("  ✓ Smart Tool Selector: Active (balanced optimization strategy)");
+            }
+
+            // 11. Agent Coordinator - multi-agent task coordination
+            var team = AgentTeam.Empty
+                .AddAgent(AgentIdentity.Create("primary", AgentRole.Analyst)
+                    .WithCapability(PipelineAgentCapability.Create("reasoning", "Logical reasoning and analysis")))
+                .AddAgent(AgentIdentity.Create("critic", AgentRole.Reviewer)
+                    .WithCapability(PipelineAgentCapability.Create("evaluation", "Critical evaluation")))
+                .AddAgent(AgentIdentity.Create("researcher", AgentRole.Specialist)
+                    .WithCapability(PipelineAgentCapability.Create("research", "Information gathering")));
+            var messageBus = new InMemoryMessageBus();
+            _agentCoordinator = new AgentCoordinator(team, messageBus);
+            Console.WriteLine("  ✓ Agent Coordinator: Active (3 agents, round-robin delegation)");
+
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  ⚠ AGI Subsystems: {ex.Message}");
         }
     }
 
@@ -3213,6 +3772,15 @@ No markdown, no technical details, just the key insight:
             {
                 var response = await ProcessInputWithPipingAsync(input);
 
+                // Display cost info after each response if enabled
+                if (_config.ShowCosts && _costTracker != null)
+                {
+                    var costString = _costTracker.GetCostString();
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.WriteLine($"  [{costString}]");
+                    Console.ResetColor();
+                }
+
                 // Strip tool results for voice output (full response shown in console)
                 var voiceResponse = StripToolResults(response);
                 if (!string.IsNullOrWhiteSpace(voiceResponse))
@@ -3632,6 +4200,19 @@ No markdown, no technical details, just the key insight:
             ActionType.ReadMyCode => await ReadMyCodeCommandAsync(action.Argument),
             ActionType.SearchMyCode => await SearchMyCodeCommandAsync(action.Argument),
             ActionType.AnalyzeCode => await AnalyzeCodeCommandAsync(action.Argument),
+            // Index commands
+            ActionType.Reindex => await ReindexFullAsync(),
+            ActionType.ReindexIncremental => await ReindexIncrementalAsync(),
+            ActionType.IndexSearch => await IndexSearchAsync(action.Argument),
+            ActionType.IndexStats => await GetIndexStatsAsync(),
+            // AGI subsystem commands
+            ActionType.AgiStatus => GetAgiStatus(),
+            ActionType.AgiCouncil => await RunCouncilDebateAsync(action.Argument),
+            ActionType.AgiIntrospect => GetIntrospectionReport(),
+            ActionType.AgiWorld => GetWorldModelStatus(),
+            ActionType.AgiCoordinate => await RunAgentCoordinationAsync(action.Argument),
+            ActionType.AgiExperience => GetExperienceBufferStatus(),
+            ActionType.PromptOptimize => GetPromptOptimizerStatus(),
             ActionType.Chat => await ChatAsync(input),
             _ => await ChatAsync(input)
         };
@@ -3655,11 +4236,16 @@ No markdown, no technical details, just the key insight:
     {
         var lower = input.ToLowerInvariant().Trim();
 
-        // Handle thought input prefixed with [💭] - track and acknowledge
+        // Handle thought input prefixed with [💭] - track, execute tools if needed, and acknowledge
         if (input.TrimStart().StartsWith("[💭]"))
         {
             var thought = input.TrimStart()[4..].Trim(); // Remove [💭] prefix
             TrackLastThought(thought);
+
+            // === KEY INSIGHT: Auto-execute tools from thoughts ===
+            // This is why auto-tool works: DIRECT invocation, not waiting for LLM
+            _ = Task.Run(async () => await ExecuteToolsFromThought(thought));
+
             return (ActionType.SaveThought, thought, null);
         }
 
@@ -3916,6 +4502,61 @@ No markdown, no technical details, just the key insight:
             else if (lower.StartsWith("find in code ")) arg = input[13..].Trim();
             return (ActionType.SearchMyCode, arg, null);
         }
+
+        // === INDEX COMMANDS (Code indexing with Qdrant) ===
+
+        // Reindex commands: "reindex", "reindex full", "reindex incremental"
+        if (lower == "reindex" || lower == "reindex full" || lower == "/reindex")
+            return (ActionType.Reindex, "", null);
+
+        if (lower == "reindex incremental" || lower == "reindex inc" || lower == "/reindex inc")
+            return (ActionType.ReindexIncremental, "", null);
+
+        // Index search: "index search <query>"
+        if (lower.StartsWith("index search ") || lower.StartsWith("/index search "))
+        {
+            var arg = lower.StartsWith("/index search ") ? input[14..].Trim() : input[13..].Trim();
+            return (ActionType.IndexSearch, arg, null);
+        }
+
+        // Index stats: "index stats"
+        if (lower is "index stats" or "/index stats" or "index status")
+            return (ActionType.IndexStats, "", null);
+
+        // === AGI SUBSYSTEM COMMANDS ===
+        if (lower is "agi status" or "/agi status" or "agi" or "/agi" or "agi stats")
+            return (ActionType.AgiStatus, "", null);
+
+        // Council debate: "council <topic>" or "debate <topic>"
+        if (lower.StartsWith("council ") || lower.StartsWith("/council ") || lower.StartsWith("debate "))
+        {
+            var arg = lower.StartsWith("/council ") ? input[9..].Trim() :
+                      lower.StartsWith("council ") ? input[8..].Trim() : input[7..].Trim();
+            return (ActionType.AgiCouncil, arg, null);
+        }
+
+        // Introspection: "introspect" - deep self-analysis
+        if (lower is "introspect" or "/introspect" or "agi introspect" or "self analyze" or "self-analyze")
+            return (ActionType.AgiIntrospect, "", null);
+
+        // World model: "world" - show world state
+        if (lower is "world" or "/world" or "world state" or "world model" or "agi world")
+            return (ActionType.AgiWorld, "", null);
+
+        // Coordinate: "coordinate <goal>" - multi-agent task coordination
+        if (lower.StartsWith("coordinate ") || lower.StartsWith("/coordinate "))
+        {
+            var arg = lower.StartsWith("/coordinate ") ? input[12..].Trim() : input[11..].Trim();
+            return (ActionType.AgiCoordinate, arg, null);
+        }
+
+        // Experience: "experience" or "replay" - show experience buffer
+        if (lower is "experience" or "/experience" or "replay" or "experience buffer" or "agi experience")
+            return (ActionType.AgiExperience, "", null);
+
+        // Prompt optimization: view and manage runtime prompt learning
+        if (lower is "prompt" or "/prompt" or "prompt stats" or "prompt optimize" or "prompts")
+            return (ActionType.PromptOptimize, "", null);
 
         // === PUSH MODE COMMANDS (Ouroboros proposes actions) ===
 
@@ -4235,6 +4876,21 @@ No quotes around the response. Just the greeting itself.";
 ║   cmd1 | cmd2       - Pipe output of cmd1 to cmd2            ║
 ║   cmd $PIPE         - Use $PIPE/$_ for previous output       ║
 ║   Example: ask what is AI | summarize | remember as AI-def   ║
+║                                                              ║
+║ CODE INDEX (Semantic Search with Qdrant)                     ║
+║   reindex            - Full reindex of workspace             ║
+║   reindex incremental - Update changed files only            ║
+║   index search X     - Semantic search of codebase           ║
+║   index stats        - Show index statistics                 ║
+║                                                              ║
+║ AGI SUBSYSTEMS (Learning & Metacognition)                    ║
+║   agi status         - Show all AGI subsystem status         ║
+║   council <topic>    - Multi-agent debate on topic           ║
+║   debate <topic>     - Alias for council                     ║
+║   introspect         - Deep self-analysis report             ║
+║   world              - World model and observations          ║
+║   coordinate <goal>  - Multi-agent task coordination         ║
+║   experience         - Experience replay buffer status       ║
 ║                                                              ║{pushModeHelp}
 ║ SYSTEM                                                       ║
 ║   status            - Show current system state              ║
@@ -4308,7 +4964,7 @@ No quotes around the response. Just the greeting itself.";
                     success =>
                     {
                         sb.AppendLine($"\n🔧 {(success.WasCreated ? "Created new" : "Found existing")} tool: '{success.Tool.Name}'");
-                        _tools = _tools.WithTool(success.Tool);
+                        AddToolAndRefreshLlm(success.Tool);
                     },
                     error => sb.AppendLine($"⚠ Tool creation: {error}"));
             }
@@ -4424,7 +5080,7 @@ No quotes around the response. Just the greeting itself.";
             return result.Match(
                 tool =>
                 {
-                    _tools = _tools.WithTool(tool);
+                    AddToolAndRefreshLlm(tool);
                     return $"Done! I created a '{toolName}' tool. You can now use it.";
                 },
                 error => $"I couldn't create that tool: {error}");
@@ -5532,10 +6188,536 @@ No quotes around the response. Just the greeting itself.";
         return $"Unknown test: {testSpec}. Try 'test llm', 'test metta', 'test embedding', or 'test all'.";
     }
 
+    /// <summary>
+    /// Automatically detects knowledge-seeking questions and executes relevant tools pre-emptively.
+    /// This ensures the LLM has actual code context instead of relying on it to call tools.
+    /// </summary>
+    private async Task<string> TryAutoToolExecution(string input)
+    {
+        var results = new List<string>();
+        var inputLower = input.ToLowerInvariant();
+
+        // Pattern matching for knowledge-seeking questions about code/architecture
+        var codePatterns = new[]
+        {
+            ("world model", "WorldModel"),
+            ("worldmodel", "WorldModel"),
+            ("introspection", "Introspection"),
+            ("memory", "MemoryIntegration OR TrackedVectorStore"),
+            ("tool system", "ITool OR ToolRegistry"),
+            ("architecture", "OuroborosAgent"),
+            ("how does", inputLower.Replace("how does ", "").Replace(" work", "").Trim()),
+            ("is there a", inputLower.Replace("is there a ", "").Replace("?", "").Trim()),
+            ("do we have", inputLower.Replace("do we have ", "").Replace("?", "").Trim()),
+            ("what is the", inputLower.Replace("what is the ", "").Replace("?", "").Trim()),
+            ("show me", inputLower.Replace("show me ", "").Replace("the ", "").Trim()),
+            ("where is", inputLower.Replace("where is ", "").Replace("?", "").Trim()),
+            ("find", inputLower.Replace("find ", "").Trim()),
+        };
+
+        string? searchTerm = null;
+        foreach (var (pattern, term) in codePatterns)
+        {
+            if (inputLower.Contains(pattern))
+            {
+                searchTerm = term;
+                break;
+            }
+        }
+
+        // Also trigger on "recent changes", "upgrade", "what changed"
+        if (inputLower.Contains("upgrade") || inputLower.Contains("what changed") || inputLower.Contains("recent changes"))
+        {
+            searchTerm = "// TODO OR // HACK OR DateTime.Now"; // Look for recent markers
+        }
+
+        if (string.IsNullOrEmpty(searchTerm))
+            return string.Empty;
+
+        // Execute search_my_code tool automatically
+        var searchTool = _tools.All.FirstOrDefault(t => t.Name == "search_my_code");
+        if (searchTool != null)
+        {
+            try
+            {
+                System.Console.ForegroundColor = ConsoleColor.DarkCyan;
+                System.Console.WriteLine($"[Auto-Tool] Searching codebase for: {searchTerm}");
+                System.Console.ResetColor();
+
+                var searchResultResult = await searchTool.InvokeAsync(searchTerm, CancellationToken.None);
+                var searchResult = searchResultResult.Match(ok => ok, err => null);
+                if (!string.IsNullOrEmpty(searchResult))
+                {
+                    results.Add($"Search results for '{searchTerm}':\n{searchResult}");
+
+                    // If search found specific files, read the first one for detailed context
+                    var fileMatch = System.Text.RegularExpressions.Regex.Match(searchResult, @"([\w/\\]+\.cs)");
+                    if (fileMatch.Success)
+                    {
+                        var readTool = _tools.All.FirstOrDefault(t => t.Name == "read_my_file");
+                        if (readTool != null)
+                        {
+                            try
+                            {
+                                System.Console.ForegroundColor = ConsoleColor.DarkCyan;
+                                System.Console.WriteLine($"[Auto-Tool] Reading file: {fileMatch.Value}");
+                                System.Console.ResetColor();
+
+                                var fileContentResult = await readTool.InvokeAsync(fileMatch.Value, CancellationToken.None);
+                                var fileContent = fileContentResult.Match(ok => ok, err => null);
+                                if (!string.IsNullOrEmpty(fileContent) && fileContent.Length < 5000)
+                                {
+                                    results.Add($"File content ({fileMatch.Value}):\n{fileContent}");
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Auto-Tool] Error: {ex.Message}");
+            }
+        }
+
+        return string.Join("\n\n", results);
+    }
+
+    /// <summary>
+    /// Executes tools directly based on thought content patterns.
+    /// KEY INSIGHT: This works because we DIRECTLY invoke tools instead of waiting for LLM.
+    /// The LLM ignores [TOOL:...] syntax instructions, but direct invocation always works.
+    /// </summary>
+    private async Task ExecuteToolsFromThought(string thought)
+    {
+        var thoughtLower = thought.ToLowerInvariant();
+
+        try
+        {
+            // Pattern: "search for X" / "find X" / "look up X" in code
+            if (thoughtLower.Contains("search") || thoughtLower.Contains("find") || thoughtLower.Contains("look"))
+            {
+                // Extract the search target
+                var searchTarget = ExtractSearchTarget(thought);
+                if (!string.IsNullOrEmpty(searchTarget))
+                {
+                    var searchTool = _tools.All.FirstOrDefault(t => t.Name == "search_my_code");
+                    if (searchTool != null)
+                    {
+                        System.Console.ForegroundColor = ConsoleColor.Magenta;
+                        System.Console.WriteLine($"[Thought→Action] Searching: {searchTarget}");
+                        System.Console.ResetColor();
+
+                        var result = await searchTool.InvokeAsync(searchTarget, CancellationToken.None);
+                        var content = result.Match(ok => ok, err => null);
+                        if (!string.IsNullOrEmpty(content))
+                        {
+                            // Store result for next response context
+                            _lastThoughtContent = $"Search results for '{searchTarget}': {TruncateText(content, 500)}";
+                        }
+                    }
+                }
+            }
+
+            // Pattern: "read file X" / "check file X" / "look at X.cs"
+            if (thoughtLower.Contains("read") || thoughtLower.Contains("check") || thoughtLower.Contains("look at"))
+            {
+                var fileMatch = Regex.Match(thought, @"([\w/\\]+\.(?:cs|json|md|txt|yaml|yml))", RegexOptions.IgnoreCase);
+                if (fileMatch.Success)
+                {
+                    var readTool = _tools.All.FirstOrDefault(t => t.Name == "read_my_file");
+                    if (readTool != null)
+                    {
+                        System.Console.ForegroundColor = ConsoleColor.Magenta;
+                        System.Console.WriteLine($"[Thought→Action] Reading: {fileMatch.Value}");
+                        System.Console.ResetColor();
+
+                        var result = await readTool.InvokeAsync(fileMatch.Value, CancellationToken.None);
+                        var content = result.Match(ok => ok, err => null);
+                        if (!string.IsNullOrEmpty(content))
+                        {
+                            _lastThoughtContent = $"File content ({fileMatch.Value}): {TruncateText(content, 500)}";
+                        }
+                    }
+                }
+            }
+
+            // Pattern: "calculate X" / "compute X" / math expressions
+            if (thoughtLower.Contains("calculate") || thoughtLower.Contains("compute") || Regex.IsMatch(thought, @"\d+\s*[+\-*/]\s*\d+"))
+            {
+                var mathMatch = Regex.Match(thought, @"[\d\s+\-*/().]+");
+                if (mathMatch.Success && mathMatch.Value.Trim().Length > 2)
+                {
+                    var calcTool = _tools.All.FirstOrDefault(t => t.Name == "calculator");
+                    if (calcTool != null)
+                    {
+                        System.Console.ForegroundColor = ConsoleColor.Magenta;
+                        System.Console.WriteLine($"[Thought→Action] Calculating: {mathMatch.Value.Trim()}");
+                        System.Console.ResetColor();
+
+                        var result = await calcTool.InvokeAsync(mathMatch.Value.Trim(), CancellationToken.None);
+                        var content = result.Match(ok => ok, err => null);
+                        if (!string.IsNullOrEmpty(content))
+                        {
+                            _lastThoughtContent = $"Calculation result: {content}";
+                        }
+                    }
+                }
+            }
+
+            // Pattern: "fetch URL" / "get page" / URLs in thought
+            var urlMatch = Regex.Match(thought, @"https?://[^\s""'<>]+", RegexOptions.IgnoreCase);
+            if (urlMatch.Success)
+            {
+                var fetchTool = _tools.All.FirstOrDefault(t => t.Name == "fetch_url");
+                if (fetchTool != null)
+                {
+                    System.Console.ForegroundColor = ConsoleColor.Magenta;
+                    System.Console.WriteLine($"[Thought→Action] Fetching: {urlMatch.Value}");
+                    System.Console.ResetColor();
+
+                    var result = await fetchTool.InvokeAsync(urlMatch.Value, CancellationToken.None);
+                    var content = result.Match(ok => ok, err => null);
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        _lastThoughtContent = $"Fetched content from {urlMatch.Value}: {TruncateText(content, 500)}";
+                    }
+                }
+            }
+
+            // Pattern: "web search" / "research online" / "look up online"
+            if (thoughtLower.Contains("web search") || thoughtLower.Contains("research online") ||
+                thoughtLower.Contains("search online") || thoughtLower.Contains("look up online"))
+            {
+                var searchTarget = ExtractSearchTarget(thought);
+                if (!string.IsNullOrEmpty(searchTarget))
+                {
+                    var webTool = _tools.All.FirstOrDefault(t => t.Name == "web_research")
+                               ?? _tools.All.FirstOrDefault(t => t.Name == "duckduckgo_search");
+                    if (webTool != null)
+                    {
+                        System.Console.ForegroundColor = ConsoleColor.Magenta;
+                        System.Console.WriteLine($"[Thought→Action] Web research: {searchTarget}");
+                        System.Console.ResetColor();
+
+                        var result = await webTool.InvokeAsync(searchTarget, CancellationToken.None);
+                        var content = result.Match(ok => ok, err => null);
+                        if (!string.IsNullOrEmpty(content))
+                        {
+                            _lastThoughtContent = $"Web research results for '{searchTarget}': {TruncateText(content, 500)}";
+                        }
+                    }
+                }
+            }
+
+            // Pattern: mentions "qdrant" / "memory" / "vector store"
+            if (thoughtLower.Contains("qdrant") || thoughtLower.Contains("memory status") || thoughtLower.Contains("vector store"))
+            {
+                var qdrantTool = _tools.All.FirstOrDefault(t => t.Name == "qdrant_admin");
+                if (qdrantTool != null)
+                {
+                    System.Console.ForegroundColor = ConsoleColor.Magenta;
+                    System.Console.WriteLine($"[Thought→Action] Checking Qdrant status");
+                    System.Console.ResetColor();
+
+                    var result = await qdrantTool.InvokeAsync("{\"command\":\"status\"}", CancellationToken.None);
+                    var content = result.Match(ok => ok, err => null);
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        _lastThoughtContent = $"Qdrant status: {TruncateText(content, 500)}";
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Thought→Action] Error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Extracts the search target from a thought containing search-related phrases.
+    /// </summary>
+    private static string ExtractSearchTarget(string thought)
+    {
+        // Try to extract quoted content first
+        var quotedMatch = Regex.Match(thought, @"[""']([^""']+)[""']");
+        if (quotedMatch.Success)
+            return quotedMatch.Groups[1].Value;
+
+        // Try patterns like "search for X", "find X", "look up X"
+        var patterns = new[]
+        {
+            @"search(?:\s+for)?\s+(.+?)(?:\s+in|\s+to|\.|$)",
+            @"find\s+(.+?)(?:\s+in|\s+to|\.|$)",
+            @"look(?:\s+up)?\s+(.+?)(?:\s+in|\s+to|\.|$)",
+            @"check\s+(.+?)(?:\s+in|\s+to|\.|$)",
+        };
+
+        foreach (var pattern in patterns)
+        {
+            var match = Regex.Match(thought, pattern, RegexOptions.IgnoreCase);
+            if (match.Success && match.Groups[1].Value.Length > 2)
+            {
+                var target = match.Groups[1].Value.Trim();
+                // Remove common noise words
+                target = Regex.Replace(target, @"^(the|a|an|my|our)\s+", "", RegexOptions.IgnoreCase);
+                if (target.Length > 2)
+                    return target;
+            }
+        }
+
+        // Fallback: extract key noun phrases
+        var words = thought.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 3 && !IsCommonWord(w))
+            .Take(3);
+        return string.Join(" ", words);
+    }
+
+    private static bool IsCommonWord(string word)
+    {
+        var common = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "the", "and", "for", "that", "this", "with", "from", "have", "been",
+            "will", "would", "could", "should", "about", "into", "than", "then",
+            "there", "their", "they", "what", "when", "where", "which", "while",
+            "being", "these", "those", "some", "such", "only", "also", "just",
+            "search", "find", "look", "check", "need", "want", "think", "know"
+        };
+        return common.Contains(word);
+    }
+
+    /// <summary>
+    /// Post-processes LLM response to execute tools when LLM TALKS about using them but doesn't.
+    /// KEY INSIGHT: Apply the same direct-invocation pattern that works for thoughts.
+    /// When LLM says "I searched the code" without [TOOL:...], we execute the search ourselves.
+    /// </summary>
+    private async Task<(string EnhancedResponse, List<ToolExecution> ExecutedTools)> PostProcessResponseForTools(string response, string originalInput)
+    {
+        var executedTools = new List<ToolExecution>();
+        var responseLower = response.ToLowerInvariant();
+        var enhancedParts = new List<string>();
+        bool needsEnhancement = false;
+
+        try
+        {
+            // Pattern: LLM says "I searched" / "searching" / "looked through" / "found" / "checked" but didn't call tool
+            // EXPANDED patterns to catch more LLM evasion phrases
+            bool claimsSearch = responseLower.Contains("i searched") ||
+                               responseLower.Contains("searching") ||
+                               responseLower.Contains("looked through") ||
+                               responseLower.Contains("checking the code") ||
+                               responseLower.Contains("looking at the") ||
+                               responseLower.Contains("i found") ||
+                               responseLower.Contains("when i searched") ||
+                               responseLower.Contains("i checked") ||
+                               responseLower.Contains("i looked") ||
+                               responseLower.Contains("found references") ||
+                               responseLower.Contains("found some") ||
+                               responseLower.Contains("found the") ||
+                               responseLower.Contains("search showed") ||
+                               responseLower.Contains("examining") ||
+                               responseLower.Contains("looking for") ||
+                               responseLower.Contains("tried to find") ||
+                               responseLower.Contains("no direct matches") ||
+                               responseLower.Contains("couldn't find") ||
+                               responseLower.Contains("doesn't exist") ||
+                               responseLower.Contains("isn't where") ||
+                               responseLower.Contains("file path") ||
+                               responseLower.Contains("looking at") ||
+                               (responseLower.Contains("found") && responseLower.Contains("codebase"));
+
+            if (claimsSearch && !responseLower.Contains("[tool:"))
+            {
+                // Extract what they claim to have searched for
+                var searchTarget = ExtractClaimedSearchTarget(response, originalInput);
+                if (!string.IsNullOrEmpty(searchTarget))
+                {
+                    var searchTool = _tools.All.FirstOrDefault(t => t.Name == "search_my_code");
+                    if (searchTool != null)
+                    {
+                        System.Console.ForegroundColor = ConsoleColor.Yellow;
+                        System.Console.WriteLine($"[Post-Process] LLM claimed to search - actually searching: {searchTarget}");
+                        System.Console.ResetColor();
+
+                        var result = await searchTool.InvokeAsync(searchTarget, CancellationToken.None);
+                        var content = result.Match(ok => ok, err => $"Error: {err}");
+
+                        executedTools.Add(new ToolExecution("search_my_code", searchTarget, content, DateTime.UtcNow));
+                        enhancedParts.Add($"\n\n📎 **Actual search results for '{searchTarget}':**\n{TruncateText(content, 1000)}");
+                        needsEnhancement = true;
+                    }
+                }
+            }
+
+            // Pattern: LLM says "reading the file" / "looking at file X" but didn't call tool
+            if ((responseLower.Contains("reading") || responseLower.Contains("looking at") ||
+                 responseLower.Contains("checking file") || responseLower.Contains("in the file")) &&
+                !responseLower.Contains("[tool:"))
+            {
+                var fileMatch = Regex.Match(response, @"([\w/\\]+\.(?:cs|json|md|txt|yaml|yml))", RegexOptions.IgnoreCase);
+                if (fileMatch.Success)
+                {
+                    var readTool = _tools.All.FirstOrDefault(t => t.Name == "read_my_file");
+                    if (readTool != null)
+                    {
+                        System.Console.ForegroundColor = ConsoleColor.Yellow;
+                        System.Console.WriteLine($"[Post-Process] LLM mentioned file - actually reading: {fileMatch.Value}");
+                        System.Console.ResetColor();
+
+                        var result = await readTool.InvokeAsync(fileMatch.Value, CancellationToken.None);
+                        var content = result.Match(ok => ok, err => $"Error: {err}");
+
+                        if (!content.StartsWith("Error"))
+                        {
+                            executedTools.Add(new ToolExecution("read_my_file", fileMatch.Value, content, DateTime.UtcNow));
+                            enhancedParts.Add($"\n\n📄 **Actual file content ({fileMatch.Value}):**\n```\n{TruncateText(content, 800)}\n```");
+                            needsEnhancement = true;
+                        }
+                    }
+                }
+            }
+
+            // Pattern: LLM talks about calculations without actually doing them
+            var mathMatch = Regex.Match(response, @"(\d+(?:\.\d+)?)\s*([+\-*/])\s*(\d+(?:\.\d+)?)");
+            if (mathMatch.Success && responseLower.Contains("calculat"))
+            {
+                var calcTool = _tools.All.FirstOrDefault(t => t.Name == "calculator");
+                if (calcTool != null)
+                {
+                    var expr = mathMatch.Value;
+                    System.Console.ForegroundColor = ConsoleColor.Yellow;
+                    System.Console.WriteLine($"[Post-Process] LLM mentioned calculation - actually calculating: {expr}");
+                    System.Console.ResetColor();
+
+                    var result = await calcTool.InvokeAsync(expr, CancellationToken.None);
+                    var content = result.Match(ok => ok, err => $"Error: {err}");
+
+                    executedTools.Add(new ToolExecution("calculator", expr, content, DateTime.UtcNow));
+                    enhancedParts.Add($"\n\n🔢 **Calculation result:** {expr} = {content}");
+                    needsEnhancement = true;
+                }
+            }
+
+            // Pattern: LLM mentions URLs but didn't fetch
+            var urlMatch = Regex.Match(response, @"https?://[^\s""'<>]+", RegexOptions.IgnoreCase);
+            if (urlMatch.Success && (responseLower.Contains("fetch") || responseLower.Contains("check") ||
+                                      responseLower.Contains("visit") || responseLower.Contains("see")))
+            {
+                var fetchTool = _tools.All.FirstOrDefault(t => t.Name == "fetch_url");
+                if (fetchTool != null && !urlMatch.Value.Contains("example.com"))
+                {
+                    System.Console.ForegroundColor = ConsoleColor.Yellow;
+                    System.Console.WriteLine($"[Post-Process] LLM mentioned URL - actually fetching: {urlMatch.Value}");
+                    System.Console.ResetColor();
+
+                    var result = await fetchTool.InvokeAsync(urlMatch.Value, CancellationToken.None);
+                    var content = result.Match(ok => ok, err => $"Error: {err}");
+
+                    if (!content.StartsWith("Error"))
+                    {
+                        executedTools.Add(new ToolExecution("fetch_url", urlMatch.Value, content, DateTime.UtcNow));
+                        enhancedParts.Add($"\n\n🌐 **Fetched content from {urlMatch.Value}:**\n{TruncateText(content, 500)}");
+                        needsEnhancement = true;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Post-Process] Error: {ex.Message}");
+        }
+
+        if (needsEnhancement)
+        {
+            return (response + string.Join("", enhancedParts), executedTools);
+        }
+
+        return (response, executedTools);
+    }
+
+    /// <summary>
+    /// Extracts what the LLM claims to have searched for based on context.
+    /// </summary>
+    private static string ExtractClaimedSearchTarget(string response, string originalInput)
+    {
+        // Try to find quoted terms in response (highest priority)
+        var quotedMatch = Regex.Match(response, @"[""']([^""']+)[""']");
+        if (quotedMatch.Success && quotedMatch.Groups[1].Value.Length > 2 && quotedMatch.Groups[1].Value.Length < 50)
+            return quotedMatch.Groups[1].Value;
+
+        // Look for specific file/class names mentioned (e.g., "ModelsCommand.cs", "AgentManager")
+        var fileClassMatch = Regex.Match(response, @"(\b[A-Z][a-zA-Z]+(?:Command|Manager|Service|Agent|Config|Tool|Engine)(?:\.cs)?)\b");
+        if (fileClassMatch.Success)
+            return fileClassMatch.Groups[1].Value.Replace(".cs", "");
+
+        // Look for hyphenated terms (e.g., "test-qwen", "sub-agent")
+        var hyphenMatch = Regex.Match(response, @"\b([a-z]+-[a-z]+(?:-[a-z]+)?)\b", RegexOptions.IgnoreCase);
+        if (hyphenMatch.Success && hyphenMatch.Groups[1].Value.Length > 4)
+            return hyphenMatch.Groups[1].Value;
+
+        // Try to extract from patterns like "searched for X" or "looking for X"
+        var patterns = new[]
+        {
+            @"search(?:ed|ing)?\s+(?:for\s+)?[""']?(.+?)[""']?(?:\s+and|\s+in|\s+but|\.|,|$)",
+            @"look(?:ed|ing)?\s+(?:for|at|through)\s+[""']?(.+?)[""']?(?:\s+and|\s+in|\s+but|\.|,|$)",
+            @"found\s+(?:references?\s+to\s+)?[""']?(.+?)[""']?(?:\s+in|\s+that|\s+scattered|\.|,|$)",
+            @"check(?:ed|ing)?\s+(?:for\s+)?[""']?(.+?)[""']?(?:\s+and|\s+in|\s+but|\.|,|$)",
+            @"the\s+(?:actual\s+)?(\w+(?:Command|Manager|Config|\.cs))",
+            @"(\w+\.cs)\s+(?:file|doesn't|isn't|was)",
+        };
+
+        foreach (var pattern in patterns)
+        {
+            var match = Regex.Match(response, pattern, RegexOptions.IgnoreCase);
+            if (match.Success && match.Groups[1].Value.Length > 2 && match.Groups[1].Value.Length < 50)
+            {
+                var target = match.Groups[1].Value.Trim();
+                // Clean up common artifacts
+                target = Regex.Replace(target, @"^(the|a|an|my|your|our|some|any)\s+", "", RegexOptions.IgnoreCase);
+                target = target.TrimEnd('.', ',', '!', '?');
+                if (target.Length > 2 && !target.Contains(" there ") && !target.Contains(" was "))
+                    return target;
+            }
+        }
+
+        // Fall back to extracting key terms from original input
+        var inputLower = originalInput.ToLowerInvariant();
+        if (inputLower.Contains("world model")) return "WorldModel";
+        if (inputLower.Contains("sub-agent") || inputLower.Contains("subagent")) return "SubAgent";
+        if (inputLower.Contains("qwen")) return "qwen";
+        if (inputLower.Contains("model")) return "ModelConfig OR ModelsCommand";
+        if (inputLower.Contains("tool")) return "ITool";
+        if (inputLower.Contains("memory")) return "MemoryIntegration";
+        if (inputLower.Contains("architecture")) return "OuroborosAgent";
+        if (inputLower.Contains("troubleshoot")) return "error OR exception";
+
+        // Extract key words from input
+        var words = originalInput.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 4 && char.IsLetter(w[0]))
+            .Take(2);
+        return string.Join(" ", words);
+    }
+
     private async Task<string> ChatAsync(string input)
     {
         if (_llm == null)
             return "I need an LLM connection to chat. Check if Ollama is running.";
+
+        // === PRE-PROCESS: Auto-inject tool calls for knowledge-seeking questions ===
+        string autoToolResult = await TryAutoToolExecution(input);
+        string injectedContext = "";
+        if (!string.IsNullOrEmpty(autoToolResult))
+        {
+            injectedContext = $@"
+[AUTOMATICALLY RETRIEVED CONTEXT]
+{autoToolResult}
+[END AUTO CONTEXT]
+
+Use this actual code information to answer the user's question accurately.
+";
+        }
 
         // Build context-aware prompt
         string context = string.Join("\n", _conversationHistory.TakeLast(6));
@@ -5562,6 +6744,13 @@ If you are not confident about translating something to {languageName}, still re
 ";
         }
 
+        // Add cost-awareness prompt if enabled
+        string costAwarenessPrompt = string.Empty;
+        if (_config.CostAware)
+        {
+            costAwarenessPrompt = LlmCostTracker.GetCostAwarenessPrompt(_config.Model) + "\n\n";
+        }
+
         // CRITICAL: Tool availability statement - must come before personality
         string toolAvailabilityStatement = _tools.Count > 0
             ? $@"
@@ -5581,7 +6770,50 @@ DO NOT claim tools are offline, unavailable, playing hide-and-seek, or under mai
         string toolInstruction = string.Empty;
         if (_tools.Count > 0)
         {
-            List<string> simpleTools = _tools.All
+            // === SMART TOOL SELECTION ===
+            // Use AGI smart tool selector to pick relevant tools for this input
+            List<ITool> relevantTools = new();
+            string toolSelectionReasoning = "";
+
+            if (_smartToolSelector != null && _toolCapabilityMatcher != null)
+            {
+                try
+                {
+                    // Create a goal from user input for tool matching
+                    var goal = PipelineGoal.Atomic(input, _ => true);
+                    var selectionResult = await _smartToolSelector.SelectForGoalAsync(goal);
+
+                    if (selectionResult.IsSuccess && selectionResult.Value.HasTools)
+                    {
+                        relevantTools = selectionResult.Value.SelectedTools.ToList();
+                        toolSelectionReasoning = selectionResult.Value.Reasoning;
+                        System.Diagnostics.Debug.WriteLine($"[SmartToolSelector] Selected {relevantTools.Count} tools: {string.Join(", ", relevantTools.Select(t => t.Name))}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SmartToolSelector] Error: {ex.Message}");
+                }
+            }
+
+            // Fall back to all tools if smart selection found nothing
+            if (relevantTools.Count == 0)
+            {
+                relevantTools = _tools.All.ToList();
+            }
+
+            // Always include critical self-modification tools regardless of selection
+            var criticalToolNames = new HashSet<string> { "modify_my_code", "read_my_file", "search_my_code", "rebuild_self" };
+            foreach (var criticalName in criticalToolNames)
+            {
+                var criticalTool = _tools.All.FirstOrDefault(t => t.Name == criticalName);
+                if (criticalTool != null && !relevantTools.Any(t => t.Name == criticalName))
+                {
+                    relevantTools.Add(criticalTool);
+                }
+            }
+
+            List<string> simpleTools = relevantTools
                 .Where(t => t.Name != "playwright")
                 .Select(t => $"{t.Name} ({t.Description})")
                 .ToList();
@@ -5655,11 +6887,52 @@ CORRECT (actual values):
 [TOOL:playwright {{""action"":""click"",""ref"":""e5""}}]
 [TOOL:modify_my_code {{""file"":""src/Ouroboros.CLI/Commands/OuroborosAgent.cs"",""search"":""public void SelfEvaluate(PlanningResult result)\\n{{\\n    var weaknesses = AnalyzeWeaknesses(result);\\n    LogWeaknesses(weaknesses);"",""replace"":""public void SelfEvaluate(PlanningResult result)\\n{{\\n    var weaknesses = AnalyzeWeaknesses(result);\\n    LogWeaknesses(weaknesses);\\n    GenerateImprovementExercise(weaknesses);""}}]
 
-If you don't have a real value, ask the user or skip the tool call.";
+If you don't have a real value, ask the user or skip the tool call.
 
+⚠️ MANDATORY TOOL USAGE RULE ⚠️
+When answering questions about CODE, ARCHITECTURE, FILES, or IMPLEMENTATION:
+1. FIRST use [TOOL:search_my_code keyword] to find relevant code
+2. THEN use [TOOL:read_my_file path] to read the actual content
+3. ONLY THEN provide your analysis based on ACTUAL code, not assumptions
+
+NEVER answer questions about 'my code', 'the architecture', 'how X works', 'is there a Y'
+WITHOUT first using search_my_code or read_my_file. Your memory may be outdated - CHECK THE CODE.
+
+ACTION TRIGGERS - If user says ANY of these, IMMEDIATELY use the corresponding tool:
+- 'search for X' / 'look up X' / 'find info' → [TOOL:web_research X] or [TOOL:duckduckgo_search X]
+- 'read file X' / 'show file X' / 'cat X' → [TOOL:read_my_file X]
+- 'find in code X' / 'search code X' / 'grep X' → [TOOL:search_my_code X]
+- 'modify X' / 'change X' / 'edit X' / 'save X' → [TOOL:modify_my_code ...]
+- 'calculate X' / 'what is X+Y' → [TOOL:calculator X]
+- 'fetch URL' / 'get page' → [TOOL:fetch_url URL]
+- 'qdrant status' / 'memory status' → [TOOL:qdrant_admin {{""command"":""status""}}]
+- 'is there a X' / 'do we have X' / 'world model' / 'architecture' → [TOOL:search_my_code X]
+- 'what changed' / 'upgrade' / 'recent changes' → [TOOL:search_my_code recent] then read relevant files";
+
+            // Add smart tool selection hint if we used it
+            if (!string.IsNullOrEmpty(toolSelectionReasoning) && relevantTools.Count < _tools.Count)
+            {
+                toolInstruction += $@"
+
+🎯 SMART TOOL RECOMMENDATION:
+Based on your query, these tools are most relevant: {string.Join(", ", relevantTools.Select(t => t.Name))}
+Reasoning: {toolSelectionReasoning}
+Use these tools FIRST before considering others.";
+            }
+
+            // === RUNTIME PROMPT OPTIMIZATION ===
+            // Append optimized instructions learned from past interactions
+            string optimizedSection = _promptOptimizer.GenerateOptimizedToolInstruction(
+                relevantTools.Select(t => t.Name).ToList(),
+                input);
+            toolInstruction += $"\n\n{optimizedSection}";
         }
 
-        string prompt = $"{languageDirective}{toolAvailabilityStatement}{personalityPrompt}{persistentThoughtContext}{toolInstruction}\n\nRecent conversation:\n{context}\n\nUser: {input}\n\n{_voice.ActivePersona.Name}:";
+        // Track interaction timing for optimizer
+        _lastUserInput = input;
+        _lastInteractionStart = DateTime.UtcNow;
+
+        string prompt = $"{languageDirective}{costAwarenessPrompt}{toolAvailabilityStatement}{personalityPrompt}{persistentThoughtContext}{toolInstruction}{injectedContext}\n\nRecent conversation:\n{context}\n\nUser: {input}\n\n{_voice.ActivePersona.Name}:";
 
         try
         {
@@ -5681,6 +6954,47 @@ If you don't have a real value, ask the user or skip the tool call.";
             }
 
             (string response, List<ToolExecution> tools) = await _llm.GenerateWithToolsAsync(prompt);
+
+            // === POST-PROCESS: Execute tools when LLM TALKS about using them but doesn't ===
+            // KEY INSIGHT: LLM often says "I searched..." or "Let me check..." without calling tools
+            // Apply the same direct-invocation pattern that works for thoughts
+            if (tools.Count == 0)
+            {
+                var (enhancedResponse, executedTools) = await PostProcessResponseForTools(response, input);
+                if (executedTools.Count > 0)
+                {
+                    response = enhancedResponse;
+                    tools = executedTools;
+                }
+            }
+
+            // === RECORD OUTCOME FOR PROMPT OPTIMIZER ===
+            var expectedTools = _promptOptimizer.DetectExpectedTools(input);
+            var actualToolCalls = _promptOptimizer.ExtractToolCalls(response);
+            // Also count tools that were actually executed
+            actualToolCalls.AddRange(tools.Select(t => t.ToolName).Where(n => !actualToolCalls.Contains(n)));
+
+            var wasSuccessful = expectedTools.Count == 0 || actualToolCalls.Count > 0;
+            var outcome = new InteractionOutcome(
+                input,
+                response,
+                expectedTools,
+                actualToolCalls.Distinct().ToList(),
+                wasSuccessful,
+                DateTime.UtcNow - _lastInteractionStart);
+
+            _promptOptimizer.RecordOutcome(outcome);
+
+            if (!wasSuccessful && expectedTools.Count > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PromptOptimizer] Expected tools {string.Join(",", expectedTools)} but got none - learning from failure");
+            }
+
+            // AGI: Record interaction for continuous learning
+            RecordInteractionForLearning(input, response);
+
+            // AGI: Record cognitive event for monitoring
+            RecordCognitiveEvent(input, response, tools);
 
             // Persist an observation thought about this interaction
             if (!string.IsNullOrWhiteSpace(response))
@@ -5893,6 +7207,19 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
         if (_disposed) return;
         _disposed = true;
 
+        // Display cost summary if enabled
+        if (_config.CostSummary && _costTracker != null)
+        {
+            var metrics = _costTracker.GetSessionMetrics();
+            if (metrics.TotalRequests > 0)
+            {
+                Console.WriteLine();
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine(_costTracker.FormatSessionSummary());
+                Console.ResetColor();
+            }
+        }
+
         // Save personality snapshot before shutdown
         if (_personalityEngine != null)
         {
@@ -6059,7 +7386,21 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
         SaveThought,
         ReadMyCode,
         SearchMyCode,
-        AnalyzeCode
+        AnalyzeCode,
+        // Index commands
+        Reindex,
+        ReindexIncremental,
+        IndexSearch,
+        IndexStats,
+        // AGI subsystem commands
+        AgiStatus,
+        AgiCouncil,
+        AgiIntrospect,
+        AgiWorld,
+        AgiCoordinate,
+        AgiExperience,
+        // Prompt optimization command
+        PromptOptimize
     }
 
     /// <summary>
@@ -6172,7 +7513,7 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
                 Console.ResetColor();
 
                 // Get last reasoning output
-                var lastReasoning = state.Branch.Events.OfType<ReasoningStep>().LastOrDefault();
+                var lastReasoning = state.Branch.Events.OfType<PipelineReasoningStep>().LastOrDefault();
                 if (lastReasoning != null)
                 {
                     Console.WriteLine($"\n{lastReasoning.State.Text}");
@@ -6322,7 +7663,7 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
                 "ouroboros-primary",
                 _config.Persona,
                 selfCapabilities,
-                AgentStatus.Available,
+                MetaAgentStatus.Available,
                 DateTime.UtcNow);
             _distributedOrchestrator.RegisterAgent(selfAgent);
 
@@ -6358,45 +7699,45 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
                 _capabilityRegistry = new CapabilityRegistry(_chatModel, _tools);
 
                 // Register core capabilities
-                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                _capabilityRegistry.RegisterCapability(new MetaAgentCapability(
                     "natural_language", "Natural language understanding and generation",
                     new List<string>(), 0.95, 0.5, new List<string>(), 100,
                     DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
 
-                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                _capabilityRegistry.RegisterCapability(new MetaAgentCapability(
                     "planning", "Task decomposition and multi-step planning",
                     new List<string> { "orchestrator" }, 0.85, 1.0, new List<string>(), 50,
                     DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
 
-                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                _capabilityRegistry.RegisterCapability(new MetaAgentCapability(
                     "tool_use", "Dynamic tool creation and invocation",
                     new List<string>(), 0.90, 0.8, new List<string>(), 75,
                     DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
 
-                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                _capabilityRegistry.RegisterCapability(new MetaAgentCapability(
                     "symbolic_reasoning", "MeTTa symbolic reasoning and queries",
                     new List<string> { "metta" }, 0.80, 0.5, new List<string>(), 30,
                     DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
 
-                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                _capabilityRegistry.RegisterCapability(new MetaAgentCapability(
                     "memory_management", "Persistent memory storage and retrieval",
                     new List<string>(), 0.92, 0.3, new List<string>(), 60,
                     DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
 
                 // Pipeline execution capability
-                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                _capabilityRegistry.RegisterCapability(new MetaAgentCapability(
                     "pipeline_execution", "DSL pipeline construction and execution with reification",
                     new List<string> { "dsl", "network" }, 0.88, 0.7, new List<string>(), 40,
                     DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
 
                 // Self-improvement capability
-                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                _capabilityRegistry.RegisterCapability(new MetaAgentCapability(
                     "self_improvement", "Autonomous learning, evaluation, and capability enhancement",
                     new List<string> { "evaluator" }, 0.75, 2.0, new List<string>(), 20,
                     DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
 
                 // Coding capability
-                _capabilityRegistry.RegisterCapability(new AgentCapability(
+                _capabilityRegistry.RegisterCapability(new MetaAgentCapability(
                     "coding", "Code generation, analysis, and debugging",
                     new List<string>(), 0.82, 1.5, new List<string>(), 45,
                     DateTime.UtcNow, DateTime.UtcNow, new Dictionary<string, object>()));
@@ -6975,7 +8316,7 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
         _networkTracker?.UpdateBranch(state.Branch);
 
         // Extract output
-        var lastReasoning = state.Branch.Events.OfType<ReasoningStep>().LastOrDefault();
+        var lastReasoning = state.Branch.Events.OfType<PipelineReasoningStep>().LastOrDefault();
         return lastReasoning?.State.Text ?? state.Output ?? "Pipeline completed without output.";
     }
 
@@ -7167,7 +8508,7 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
 
             var capabilities = _capabilityRegistry != null
                 ? await _capabilityRegistry.GetCapabilitiesAsync()
-                : new List<AgentCapability>();
+                : new List<MetaAgentCapability>();
             var capSummary = string.Join(", ", capabilities.Take(5).Select(c => $"{c.Name}({c.SuccessRate:P0})"));
 
             // Add language directive for thoughts if culture is specified
@@ -7334,7 +8675,7 @@ Example: [Learn] I should consolidate my understanding of the recent coding task
             _networkTracker?.UpdateBranch(state.Branch);
 
             // Extract result
-            var result = state.Branch.Events.OfType<ReasoningStep>().LastOrDefault()?.State.Text
+            var result = state.Branch.Events.OfType<PipelineReasoningStep>().LastOrDefault()?.State.Text
                 ?? state.Output
                 ?? "Action completed";
 
@@ -7533,9 +8874,9 @@ Commands:
             {
                 var statusIcon = agent.Status switch
                 {
-                    AgentStatus.Available => "✓",
-                    AgentStatus.Busy => "⏳",
-                    AgentStatus.Offline => "✗",
+                    MetaAgentStatus.Available => "✓",
+                    MetaAgentStatus.Busy => "⏳",
+                    MetaAgentStatus.Offline => "✗",
                     _ => "?"
                 };
                 sb.AppendLine($"  {statusIcon} {agent.Name} ({agent.AgentId})");
@@ -7592,7 +8933,7 @@ Commands:
             agentId,
             agentName,
             capabilities,
-            AgentStatus.Available,
+            MetaAgentStatus.Available,
             DateTime.UtcNow);
 
         _distributedOrchestrator.RegisterAgent(agent);
@@ -8723,6 +10064,1009 @@ Examples:
         {
             return $"❌ Code analysis failed: {ex.Message}";
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // INDEX COMMANDS (Code Indexing with Qdrant)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Performs a full reindex of all configured paths.
+    /// </summary>
+    private async Task<string> ReindexFullAsync()
+    {
+        if (_selfIndexer == null)
+        {
+            return "❌ Self-indexer not available. Qdrant may not be running.";
+        }
+
+        try
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("\n  [~] Starting full workspace reindex...");
+            Console.ResetColor();
+
+            var result = await _selfIndexer.FullReindexAsync();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("✅ **Full Reindex Complete**\n");
+            sb.AppendLine($"  • Processed files: {result.ProcessedFiles}");
+            sb.AppendLine($"  • Indexed chunks: {result.IndexedChunks}");
+            sb.AppendLine($"  • Skipped files: {result.SkippedFiles}");
+            sb.AppendLine($"  • Errors: {result.ErrorFiles}");
+            sb.AppendLine($"  • Duration: {result.Elapsed.TotalSeconds:F1}s");
+
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"❌ Reindex failed: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Performs an incremental reindex (changed files only).
+    /// </summary>
+    private async Task<string> ReindexIncrementalAsync()
+    {
+        if (_selfIndexer == null)
+        {
+            return "❌ Self-indexer not available. Qdrant may not be running.";
+        }
+
+        try
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("\n  [~] Starting incremental reindex (changed files only)...");
+            Console.ResetColor();
+
+            var result = await _selfIndexer.IncrementalIndexAsync();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("✅ **Incremental Reindex Complete**\n");
+            sb.AppendLine($"  • Updated files: {result.ProcessedFiles}");
+            sb.AppendLine($"  • Indexed chunks: {result.IndexedChunks}");
+            sb.AppendLine($"  • Duration: {result.Elapsed.TotalSeconds:F1}s");
+
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"❌ Incremental reindex failed: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Searches the code index for a query.
+    /// </summary>
+    private async Task<string> IndexSearchAsync(string query)
+    {
+        if (_selfIndexer == null)
+        {
+            return "❌ Self-indexer not available. Qdrant may not be running.";
+        }
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return @"🔍 **Index Search - Semantic Code Search**
+
+Usage: `index search <query>`
+
+Examples:
+  `index search how is TTS initialized`
+  `index search error handling patterns`
+  `index search tool registration`";
+        }
+
+        try
+        {
+            var results = await _selfIndexer.SearchAsync(query, limit: 5);
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"🔍 **Index Search Results for:** \"{query}\"\n");
+
+            if (results.Count == 0)
+            {
+                sb.AppendLine("No results found. Try running `reindex` to update the index.");
+            }
+            else
+            {
+                foreach (var result in results)
+                {
+                    sb.AppendLine($"**{result.FilePath}** (score: {result.Score:F2})");
+                    sb.AppendLine($"```");
+                    sb.AppendLine(result.Content.Length > 500 ? result.Content[..500] + "..." : result.Content);
+                    sb.AppendLine($"```\n");
+                }
+            }
+
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"❌ Index search failed: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Gets the current index statistics.
+    /// </summary>
+    private async Task<string> GetIndexStatsAsync()
+    {
+        if (_selfIndexer == null)
+        {
+            return "❌ Self-indexer not available. Qdrant may not be running.";
+        }
+
+        try
+        {
+            var stats = await _selfIndexer.GetStatsAsync();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("📊 **Code Index Statistics**\n");
+            sb.AppendLine($"  • Collection: {stats.CollectionName}");
+            sb.AppendLine($"  • Total vectors: {stats.TotalVectors}");
+            sb.AppendLine($"  • Indexed files: {stats.IndexedFiles}");
+            sb.AppendLine($"  • Vector size: {stats.VectorSize}");
+
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"❌ Failed to get index stats: {ex.Message}";
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AGI SUBSYSTEM METHODS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Records an interaction for continuous learning.
+    /// Called after every chat response to enable the learning agent to track performance.
+    /// </summary>
+    private void RecordInteractionForLearning(string input, string response)
+    {
+        if (string.IsNullOrWhiteSpace(input) || string.IsNullOrWhiteSpace(response))
+            return;
+
+        try
+        {
+            // Estimate quality based on response length and content indicators
+            double quality = EstimateResponseQuality(input, response);
+
+            // 1. Record to Learning Agent
+            if (_learningAgent != null)
+            {
+                var result = _learningAgent.RecordInteraction(input, response, quality);
+                if (result.IsSuccess && _learningAgent.ShouldAdapt())
+                {
+                    var adaptResult = _learningAgent.Adapt();
+                    if (adaptResult.IsSuccess)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[AGI:Learning] Adaptation performed: {adaptResult.Value.EventType}");
+                    }
+                }
+            }
+
+            // 2. Record to Experience Buffer for replay learning
+            if (_experienceBuffer != null)
+            {
+                var experience = PipelineExperience.Create(
+                    state: input,
+                    action: response,
+                    reward: quality,
+                    nextState: "", // Will be populated with next interaction
+                    priority: Math.Abs(quality) + 0.1); // Higher priority for extreme outcomes
+                _experienceBuffer.Add(experience);
+            }
+
+            // 3. Update Introspection state
+            if (_introspector != null)
+            {
+                // Track cognitive load based on input complexity
+                double estimatedLoad = Math.Min(input.Length / 500.0, 1.0);
+                _introspector.SetCognitiveLoad(estimatedLoad);
+
+                // Update valence based on interaction quality
+                _introspector.SetValence(quality * 0.5);
+
+                // Add to working memory (recent topics)
+                var topic = ExtractTopicFromInput(input);
+                if (!string.IsNullOrEmpty(topic))
+                {
+                    _introspector.SetCurrentFocus(topic);
+                }
+            }
+
+            // 4. Update World State with observation
+            if (_worldState != null)
+            {
+                _worldState = _worldState.WithObservation(
+                    $"interaction_{DateTime.UtcNow.Ticks}",
+                    Ouroboros.Pipeline.WorldModel.Observation.Create($"User: {TruncateText(input, 50)}", 1.0));
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AGI:Learning] Error recording interaction: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Extracts a topic from user input for focus tracking.
+    /// </summary>
+    private static string ExtractTopicFromInput(string input)
+    {
+        // Simple topic extraction - get first few meaningful words
+        var words = input.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 3)
+            .Take(3);
+        return string.Join(" ", words);
+    }
+
+    /// <summary>
+    /// Records a cognitive event for monitoring.
+    /// Called after every chat response to enable real-time cognitive health tracking.
+    /// </summary>
+    private void RecordCognitiveEvent(string input, string response, List<ToolExecution>? tools)
+    {
+        if (_cognitiveMonitor == null)
+            return;
+
+        try
+        {
+            // Create appropriate cognitive event based on interaction
+            var eventType = DetermineCognitiveEventType(input, response, tools);
+            var cognitiveEvent = CreateCognitiveEvent(eventType, input, response, tools);
+
+            var result = _cognitiveMonitor.RecordEvent(cognitiveEvent);
+            if (result.IsFailure)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AGI:Cognitive] Failed to record event: {result.Error}");
+            }
+
+            // Update self-assessor with the interaction
+            if (_selfAssessor != null)
+            {
+                UpdateSelfAssessment(input, response, tools);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AGI:Cognitive] Error recording cognitive event: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Estimates the quality of a response for learning purposes.
+    /// Returns a value between -1.0 (poor) and 1.0 (excellent).
+    /// </summary>
+    private static double EstimateResponseQuality(string input, string response)
+    {
+        double quality = 0.5; // Baseline
+
+        // Length appropriateness (not too short, not excessive)
+        int responseLen = response.Length;
+        int inputLen = input.Length;
+        double lengthRatio = (double)responseLen / Math.Max(inputLen, 1);
+
+        if (lengthRatio >= 1 && lengthRatio <= 10)
+            quality += 0.1; // Good length ratio
+        else if (lengthRatio < 0.5 || lengthRatio > 50)
+            quality -= 0.2; // Too short or excessively long
+
+        // Content indicators
+        if (response.Contains("I don't know") || response.Contains("I'm not sure"))
+            quality -= 0.1; // Uncertainty penalty (small - it's okay to be honest)
+
+        if (response.Contains("```") || response.Contains("[TOOL:"))
+            quality += 0.15; // Code/tool usage indicates substantive response
+
+        if (response.Contains("Error") || response.Contains("failed") || response.Contains("❌"))
+            quality -= 0.15; // Error indicators
+
+        if (response.Contains("✓") || response.Contains("✅") || response.Contains("successfully"))
+            quality += 0.1; // Success indicators
+
+        // Question handling
+        if (input.Contains("?") && response.Length > 50)
+            quality += 0.1; // Answered a question with substance
+
+        return Math.Clamp(quality, -1.0, 1.0);
+    }
+
+    /// <summary>
+    /// Determines the appropriate cognitive event type based on interaction.
+    /// </summary>
+    private static CognitiveEventType DetermineCognitiveEventType(
+        string input, string response, List<ToolExecution>? tools)
+    {
+        if (tools?.Any() == true)
+            return CognitiveEventType.DecisionMade; // Tool use = decision
+
+        if (response.Contains("Error") || response.Contains("❌") || response.Contains("failed"))
+            return CognitiveEventType.ErrorDetected;
+
+        if (response.Contains("I'm not sure") || response.Contains("uncertain") || response.Contains("might"))
+            return CognitiveEventType.Uncertainty;
+
+        if (response.Contains("I understand") || response.Contains("insight") || response.Contains("realized"))
+            return CognitiveEventType.InsightGained;
+
+        if (input.Contains("?"))
+            return CognitiveEventType.GoalActivated; // Question = goal to answer
+
+        return CognitiveEventType.ThoughtGenerated;
+    }
+
+    /// <summary>
+    /// Creates a cognitive event from interaction data.
+    /// </summary>
+    private static CognitiveEvent CreateCognitiveEvent(
+        CognitiveEventType eventType, string input, string response, List<ToolExecution>? tools)
+    {
+        var context = ImmutableDictionary<string, object>.Empty
+            .Add("input_length", input.Length)
+            .Add("response_length", response.Length)
+            .Add("tools_used", tools?.Count ?? 0);
+
+        var description = eventType switch
+        {
+            CognitiveEventType.DecisionMade => $"Made decision using {tools?.Count ?? 0} tool(s)",
+            CognitiveEventType.ErrorDetected => "Error detected in processing",
+            CognitiveEventType.Uncertainty => "Uncertainty expressed in response",
+            CognitiveEventType.InsightGained => "New insight or understanding achieved",
+            CognitiveEventType.GoalActivated => $"Processing query: {TruncateText(input, 50)}",
+            _ => $"Generated response: {TruncateText(response, 50)}"
+        };
+
+        return new CognitiveEvent(
+            Id: Guid.NewGuid(),
+            EventType: eventType,
+            Description: description,
+            Timestamp: DateTime.UtcNow,
+            Severity: eventType == CognitiveEventType.ErrorDetected ? Severity.Warning : Severity.Info,
+            Context: context);
+    }
+
+    /// <summary>
+    /// Updates the Bayesian self-assessor with interaction data.
+    /// </summary>
+    private void UpdateSelfAssessment(string input, string response, List<ToolExecution>? tools)
+    {
+        if (_selfAssessor == null)
+            return;
+
+        // Update each capability based on interaction characteristics
+        double responseQuality = EstimateResponseQuality(input, response);
+
+        // Accuracy - based on tool success rate
+        if (tools?.Any() == true)
+        {
+            double toolSuccessRate = tools.Count(t => !t.Output.Contains("Error") && !t.Output.Contains("failed")) / (double)tools.Count;
+            _selfAssessor.UpdateBelief("tool_accuracy", toolSuccessRate);
+        }
+
+        // Response quality as a capability
+        _selfAssessor.UpdateBelief("response_quality", Math.Max(0, (responseQuality + 1.0) / 2.0)); // Normalize to [0,1]
+
+        // Coherence - basic heuristic based on response structure
+        double coherence = response.Contains("\n") || response.Length > 100 ? 0.7 : 0.5;
+        _selfAssessor.UpdateBelief("coherence", coherence);
+    }
+
+    /// <summary>
+    /// Helper to truncate text for display.
+    /// </summary>
+    private static string TruncateText(string text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
+            return text;
+        return text[..maxLength] + "...";
+    }
+
+    /// <summary>
+    /// Gets the AGI subsystems status.
+    /// </summary>
+    private string GetAgiStatus()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("🧠 **AGI Subsystems Status**\n");
+
+        // Learning Agent
+        sb.AppendLine("═══ Continuous Learning ═══");
+        if (_learningAgent != null)
+        {
+            var perf = _learningAgent.GetPerformance();
+            sb.AppendLine($"  ✓ Status: Active");
+            sb.AppendLine($"  • Total interactions: {perf.TotalInteractions}");
+            sb.AppendLine($"  • Success rate: {perf.SuccessRate:P1}");
+            sb.AppendLine($"  • Avg quality: {perf.AverageResponseQuality:F3}");
+            sb.AppendLine($"  • Performance trend: {perf.CalculateTrend():+0.000;-0.000;0.000}");
+            sb.AppendLine($"  • Stagnating: {(perf.IsStagnating() ? "Yes ⚠" : "No")}");
+            sb.AppendLine($"  • Adaptations: {_learningAgent.GetAdaptationHistory().Count}");
+        }
+        else
+        {
+            sb.AppendLine("  ✗ Not initialized");
+        }
+
+        // Meta-Learner
+        sb.AppendLine("\n═══ Meta-Learning ═══");
+        if (_metaLearner != null)
+        {
+            sb.AppendLine($"  ✓ Status: Active");
+            sb.AppendLine($"  • Strategy: Bayesian-inspired UCB exploration");
+            sb.AppendLine($"  • Auto-adapts hyperparameters based on performance");
+        }
+        else
+        {
+            sb.AppendLine("  ✗ Not initialized");
+        }
+
+        // Cognitive Monitor
+        sb.AppendLine("\n═══ Cognitive Monitoring ═══");
+        if (_cognitiveMonitor != null)
+        {
+            var health = _cognitiveMonitor.GetHealth();
+            sb.AppendLine($"  ✓ Status: Active");
+            sb.AppendLine($"  • Health: {health.Status} ({health.HealthScore:P0})");
+            sb.AppendLine($"  • Error rate: {health.ErrorRate:P1}");
+            sb.AppendLine($"  • Efficiency: {health.ProcessingEfficiency:P0}");
+            sb.AppendLine($"  • Active alerts: {health.ActiveAlerts.Count}");
+            var recentEvents = _cognitiveMonitor.GetRecentEvents(5);
+            if (recentEvents.Count > 0)
+            {
+                sb.AppendLine($"  • Recent events: {string.Join(", ", recentEvents.Select(e => e.EventType.ToString()))}");
+            }
+        }
+        else
+        {
+            sb.AppendLine("  ✗ Not initialized");
+        }
+
+        // Self-Assessor
+        sb.AppendLine("\n═══ Self-Assessment ═══");
+        if (_selfAssessor != null)
+        {
+            sb.AppendLine($"  ✓ Status: Active");
+            var beliefs = _selfAssessor.GetAllBeliefs();
+            sb.AppendLine($"  • Tracked capabilities: {beliefs.Count}");
+            foreach (var belief in beliefs.Take(4))
+            {
+                sb.AppendLine($"    - {belief.Key}: {belief.Value.Proficiency:P0} (±{belief.Value.Uncertainty:P0})");
+            }
+        }
+        else
+        {
+            sb.AppendLine("  ✗ Not initialized");
+        }
+
+        // Council Orchestrator
+        sb.AppendLine("\n═══ Multi-Agent Council ═══");
+        if (_councilOrchestrator != null)
+        {
+            sb.AppendLine($"  ✓ Status: Active");
+            sb.AppendLine($"  • Agents: {_councilOrchestrator.Agents.Count}");
+            sb.AppendLine($"  • Debate protocol: Round Table (5 phases)");
+            sb.AppendLine($"  • Use: `council <topic>` to start a debate");
+        }
+        else
+        {
+            sb.AppendLine("  ✗ Not initialized (requires LLM)");
+        }
+
+        // Experience Buffer
+        sb.AppendLine("\n═══ Experience Replay ═══");
+        if (_experienceBuffer != null)
+        {
+            sb.AppendLine($"  ✓ Status: Active");
+            sb.AppendLine($"  • Buffer size: {_experienceBuffer.Count}/{_experienceBuffer.Capacity}");
+            sb.AppendLine($"  • Supports: Uniform & prioritized sampling");
+        }
+        else
+        {
+            sb.AppendLine("  ✗ Not initialized");
+        }
+
+        // Cognitive Introspector
+        sb.AppendLine("\n═══ Introspection Engine ═══");
+        if (_introspector != null)
+        {
+            sb.AppendLine($"  ✓ Status: Active");
+            var stateResult = _introspector.CaptureState();
+            if (stateResult.IsSuccess)
+            {
+                var state = stateResult.Value;
+                sb.AppendLine($"  • Processing mode: {state.Mode}");
+                sb.AppendLine($"  • Cognitive load: {state.CognitiveLoad:P0}");
+                sb.AppendLine($"  • Active goals: {state.ActiveGoals.Count}");
+                sb.AppendLine($"  • Working memory: {state.WorkingMemoryItems.Count} items");
+            }
+            sb.AppendLine($"  • Use: `introspect` for deep self-analysis");
+        }
+        else
+        {
+            sb.AppendLine("  ✗ Not initialized");
+        }
+
+        // World State
+        sb.AppendLine("\n═══ World Model ═══");
+        if (_worldState != null)
+        {
+            sb.AppendLine($"  ✓ Status: Active");
+            sb.AppendLine($"  • Observations: {_worldState.Observations.Count}");
+            sb.AppendLine($"  • Capabilities: {_worldState.Capabilities.Count}");
+            sb.AppendLine($"  • Environment tracking enabled");
+        }
+        else
+        {
+            sb.AppendLine("  ✗ Not initialized");
+        }
+
+        // Smart Tool Selector
+        sb.AppendLine("\n═══ Smart Tool Selection ═══");
+        if (_smartToolSelector != null)
+        {
+            sb.AppendLine($"  ✓ Status: Active");
+            sb.AppendLine($"  • Strategy: {_smartToolSelector.Configuration.OptimizeFor}");
+            sb.AppendLine($"  • Max tools: {_smartToolSelector.Configuration.MaxTools}");
+            sb.AppendLine($"  • Min confidence: {_smartToolSelector.Configuration.MinConfidence:P0}");
+        }
+        else
+        {
+            sb.AppendLine("  ✗ Not initialized");
+        }
+
+        // Agent Coordinator
+        sb.AppendLine("\n═══ Agent Coordination ═══");
+        if (_agentCoordinator != null)
+        {
+            sb.AppendLine($"  ✓ Status: Active");
+            sb.AppendLine($"  • Team size: {_agentCoordinator.Team.Count} agents");
+            var agents = _agentCoordinator.Team.GetAllAgents();
+            foreach (var agent in agents.Take(3))
+            {
+                sb.AppendLine($"    - {agent.Identity.Name} ({agent.Identity.Role})");
+            }
+            sb.AppendLine($"  • Use: `coordinate <goal>` for multi-agent tasks");
+        }
+        else
+        {
+            sb.AppendLine("  ✗ Not initialized");
+        }
+
+        // Commands summary
+        sb.AppendLine("\n═══ AGI Commands ═══");
+        sb.AppendLine("  • `agi status` - This status report");
+        sb.AppendLine("  • `council <topic>` - Multi-agent debate");
+        sb.AppendLine("  • `introspect` - Deep self-analysis");
+        sb.AppendLine("  • `world` - World model state");
+        sb.AppendLine("  • `coordinate <goal>` - Multi-agent coordination");
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Runs a multi-agent council debate on a topic.
+    /// Uses the Round Table protocol with 5 debate phases.
+    /// </summary>
+    private async Task<string> RunCouncilDebateAsync(string topic)
+    {
+        if (_councilOrchestrator == null)
+        {
+            return "❌ Council Orchestrator not available. LLM may not be initialized.";
+        }
+
+        if (string.IsNullOrWhiteSpace(topic))
+        {
+            return @"🏛️ **Multi-Agent Council Debate**
+
+Usage: `council <topic>` or `debate <topic>`
+
+The Council uses the Round Table Protocol with 5 phases:
+  1. Opening statements from each agent
+  2. Cross-examination and challenges
+  3. Rebuttals and counter-arguments
+  4. Synthesis of viewpoints
+  5. Final consensus or dissent
+
+Examples:
+  `council Should we prioritize code quality over speed?`
+  `debate What is the best approach to handle errors in this system?`
+  `council How should we balance user experience with security?`";
+        }
+
+        try
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"\n🏛️ Initiating Council Debate on: {topic}\n");
+            Console.ResetColor();
+
+            // Create topic and start the debate
+            var councilTopic = CouncilTopic.Simple(topic);
+            var result = await _councilOrchestrator.ConveneCouncilAsync(councilTopic);
+
+            if (result.IsFailure)
+            {
+                return $"❌ Council debate failed: {result.Error}";
+            }
+
+            var decision = result.Value;
+            var sb = new StringBuilder();
+            sb.AppendLine($"🏛️ **Council Deliberation: {TruncateText(topic, 50)}**\n");
+
+            // Show debate transcript summary
+            sb.AppendLine("═══ Debate Transcript ═══");
+            foreach (var round in decision.Transcript.Take(3))
+            {
+                sb.AppendLine($"\n**{round.Phase}**:");
+                foreach (var contrib in round.Contributions.Take(3))
+                {
+                    sb.AppendLine($"  • {contrib.AgentName}: {TruncateText(contrib.Content, 150)}");
+                }
+            }
+
+            // Show votes
+            sb.AppendLine("\n═══ Agent Votes ═══");
+            foreach (var vote in decision.Votes.Values)
+            {
+                sb.AppendLine($"  • {vote.AgentName}: {vote.Position} (weight: {vote.Weight:F2})");
+                sb.AppendLine($"    Rationale: {TruncateText(vote.Rationale, 100)}");
+            }
+
+            // Show final decision
+            sb.AppendLine("\n═══ Council Decision ═══");
+            sb.AppendLine($"**Conclusion**: {decision.Conclusion}");
+            sb.AppendLine($"**Confidence**: {decision.Confidence:P0}");
+            sb.AppendLine($"**Consensus**: {(decision.IsConsensus ? "Yes ✓" : "No")}");
+
+            if (decision.MinorityOpinions.Count > 0)
+            {
+                sb.AppendLine($"\n**Minority Opinions** ({decision.MinorityOpinions.Count}):");
+                foreach (var minority in decision.MinorityOpinions.Take(2))
+                {
+                    sb.AppendLine($"  • {minority.AgentName}: {TruncateText(minority.Rationale, 100)}");
+                }
+            }
+
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"❌ Council debate failed: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Gets a detailed introspection report showing current cognitive state and analysis.
+    /// </summary>
+    private string GetIntrospectionReport()
+    {
+        if (_introspector == null)
+        {
+            return "❌ Introspection Engine not initialized.";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("🔍 **Deep Introspection Report**\n");
+
+        // Capture current state
+        var stateResult = _introspector.CaptureState();
+        if (stateResult.IsFailure)
+        {
+            return $"❌ Failed to capture cognitive state: {stateResult.Error}";
+        }
+
+        var state = stateResult.Value;
+        sb.AppendLine("═══ Current Cognitive State ═══");
+        sb.AppendLine($"  • Processing Mode: {state.Mode}");
+        sb.AppendLine($"  • Cognitive Load: {state.CognitiveLoad:P0}");
+        sb.AppendLine($"  • Emotional Valence: {state.EmotionalValence:+0.00;-0.00;0.00}");
+        sb.AppendLine($"  • Current Focus: {state.CurrentFocus}");
+
+        if (state.ActiveGoals.Count > 0)
+        {
+            sb.AppendLine($"\n═══ Active Goals ({state.ActiveGoals.Count}) ═══");
+            foreach (var goal in state.ActiveGoals.Take(5))
+            {
+                sb.AppendLine($"  • {goal}");
+            }
+        }
+
+        if (state.WorkingMemoryItems.Count > 0)
+        {
+            sb.AppendLine($"\n═══ Working Memory ({state.WorkingMemoryItems.Count} items) ═══");
+            foreach (var item in state.WorkingMemoryItems.Take(5))
+            {
+                sb.AppendLine($"  • {TruncateText(item, 60)}");
+            }
+        }
+
+        if (state.AttentionDistribution.Count > 0)
+        {
+            sb.AppendLine($"\n═══ Attention Distribution ═══");
+            foreach (var (area, weight) in state.AttentionDistribution.OrderByDescending(x => x.Value).Take(5))
+            {
+                sb.AppendLine($"  • {area}: {weight:P0}");
+            }
+        }
+
+        // Analyze the state
+        var analysisResult = _introspector.Analyze(state);
+        if (analysisResult.IsSuccess)
+        {
+            var report = analysisResult.Value;
+            if (report.Observations.Count > 0)
+            {
+                sb.AppendLine($"\n═══ Observations ═══");
+                foreach (var obs in report.Observations.Take(5))
+                {
+                    sb.AppendLine($"  • {obs}");
+                }
+            }
+
+            if (report.Anomalies.Count > 0)
+            {
+                sb.AppendLine($"\n═══ ⚠ Anomalies Detected ═══");
+                foreach (var anomaly in report.Anomalies)
+                {
+                    sb.AppendLine($"  ⚠ {anomaly}");
+                }
+            }
+
+            if (report.Recommendations.Count > 0)
+            {
+                sb.AppendLine($"\n═══ Recommendations ═══");
+                foreach (var rec in report.Recommendations.Take(3))
+                {
+                    sb.AppendLine($"  → {rec}");
+                }
+            }
+
+            sb.AppendLine($"\n═══ Self-Assessment Score: {report.SelfAssessmentScore:P0} ═══");
+        }
+
+        // Get state history patterns
+        var historyResult = _introspector.GetStateHistory();
+        if (historyResult.IsSuccess && historyResult.Value.Count > 1)
+        {
+            sb.AppendLine($"\n═══ State History ({historyResult.Value.Count} snapshots) ═══");
+            var patternResult = _introspector.IdentifyPatterns(historyResult.Value);
+            if (patternResult.IsSuccess && patternResult.Value.Count > 0)
+            {
+                sb.AppendLine("Detected Patterns:");
+                foreach (var pattern in patternResult.Value.Take(3))
+                {
+                    sb.AppendLine($"  • {pattern}");
+                }
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Gets the current world model state.
+    /// </summary>
+    private string GetWorldModelStatus()
+    {
+        if (_worldState == null)
+        {
+            return "❌ World State not initialized.";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("🌍 **World Model State**\n");
+
+        sb.AppendLine("═══ Environment Observations ═══");
+        if (_worldState.Observations.Count == 0)
+        {
+            sb.AppendLine("  No observations recorded yet.");
+        }
+        else
+        {
+            foreach (var (key, obs) in _worldState.Observations.Take(10))
+            {
+                sb.AppendLine($"  • {key}: {obs.Value} (confidence: {obs.Confidence:P0}, {FormatTimeAgo(obs.Timestamp)})");
+            }
+        }
+
+        sb.AppendLine($"\n═══ Known Capabilities ({_worldState.Capabilities.Count}) ═══");
+        if (_worldState.Capabilities.Count == 0)
+        {
+            sb.AppendLine("  No capabilities registered.");
+        }
+        else
+        {
+            foreach (var cap in _worldState.Capabilities.Take(10))
+            {
+                sb.AppendLine($"  • {cap.Name}: {cap.Description}");
+                if (cap.RequiredTools.Count > 0)
+                {
+                    sb.AppendLine($"    Tools: {string.Join(", ", cap.RequiredTools)}");
+                }
+            }
+        }
+
+        // Smart tool selector info
+        if (_smartToolSelector != null)
+        {
+            sb.AppendLine($"\n═══ Smart Tool Selection ═══");
+            sb.AppendLine($"  • Optimization: {_smartToolSelector.Configuration.OptimizeFor}");
+            sb.AppendLine($"  • Max tools per goal: {_smartToolSelector.Configuration.MaxTools}");
+            sb.AppendLine($"  • Min confidence: {_smartToolSelector.Configuration.MinConfidence:P0}");
+            sb.AppendLine($"  • Parallel execution: {(_smartToolSelector.Configuration.AllowParallelExecution ? "Yes" : "No")}");
+        }
+
+        // Tool capability matcher
+        if (_toolCapabilityMatcher != null && _tools != null)
+        {
+            sb.AppendLine($"\n═══ Tool Capability Index ═══");
+            sb.AppendLine($"  • Indexed tools: {_tools.Count}");
+            sb.AppendLine($"  • Ready for goal-based tool selection");
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Runs multi-agent coordination on a goal.
+    /// </summary>
+    private async Task<string> RunAgentCoordinationAsync(string goalDescription)
+    {
+        if (_agentCoordinator == null)
+        {
+            return "❌ Agent Coordinator not initialized.";
+        }
+
+        if (string.IsNullOrWhiteSpace(goalDescription))
+        {
+            return @"🤝 **Multi-Agent Coordination**
+
+Usage: `coordinate <goal>`
+
+The Agent Coordinator decomposes complex goals and distributes tasks
+across a team of specialized agents.
+
+Team Members:
+  • Primary - Main reasoning and analysis
+  • Critic - Critical evaluation of solutions
+  • Researcher - Information gathering
+
+Examples:
+  `coordinate Analyze the performance of this codebase`
+  `coordinate Create a comprehensive test plan`
+  `coordinate Identify potential security vulnerabilities`";
+        }
+
+        try
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"\n🤝 Coordinating agents for: {TruncateText(goalDescription, 50)}\n");
+            Console.ResetColor();
+
+            var goal = PipelineGoal.Atomic(goalDescription);
+            var result = await _agentCoordinator.ExecuteAsync(goal);
+
+            if (result.IsFailure)
+            {
+                return $"❌ Coordination failed: {result.Error}";
+            }
+
+            var coordination = result.Value;
+            var sb = new StringBuilder();
+            sb.AppendLine($"🤝 **Coordination Result**\n");
+            sb.AppendLine($"═══ Summary ═══");
+            sb.AppendLine($"  • Goal: {TruncateText(goalDescription, 60)}");
+            sb.AppendLine($"  • Status: {(coordination.IsSuccess ? "✓ Success" : "✗ Failed")}");
+            sb.AppendLine($"  • Duration: {coordination.TotalDuration.TotalSeconds:F2}s");
+            sb.AppendLine($"  • Tasks: {coordination.CompletedTaskCount}/{coordination.Tasks.Count} completed");
+            sb.AppendLine($"  • Agents: {coordination.ParticipatingAgents.Count} participated");
+
+            if (coordination.Tasks.Count > 0)
+            {
+                sb.AppendLine($"\n═══ Tasks ═══");
+                foreach (var task in coordination.Tasks.Take(5))
+                {
+                    var statusIcon = task.Status switch
+                    {
+                        PipelineTaskStatus.Completed => "✓",
+                        PipelineTaskStatus.Failed => "✗",
+                        PipelineTaskStatus.InProgress => "⟳",
+                        _ => "○"
+                    };
+                    sb.AppendLine($"  {statusIcon} {task.Goal.Description}");
+                    if (task.Result.HasValue)
+                    {
+                        sb.AppendLine($"    Result: {TruncateText(task.Result.Value ?? "", 80)}");
+                    }
+                }
+            }
+
+            sb.AppendLine($"\n═══ Final Summary ═══");
+            sb.AppendLine($"  {coordination.Summary}");
+
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"❌ Coordination failed: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Gets the experience buffer status and recent experiences.
+    /// </summary>
+    private string GetExperienceBufferStatus()
+    {
+        if (_experienceBuffer == null)
+        {
+            return "❌ Experience Buffer not initialized.";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("💾 **Experience Replay Buffer**\n");
+
+        sb.AppendLine("═══ Buffer Status ═══");
+        sb.AppendLine($"  • Size: {_experienceBuffer.Count}/{_experienceBuffer.Capacity}");
+        sb.AppendLine($"  • Fill rate: {(double)_experienceBuffer.Count / _experienceBuffer.Capacity:P0}");
+        sb.AppendLine($"  • Sampling modes: Uniform, Prioritized (α=0.6)");
+
+        // Sample some recent experiences
+        if (_experienceBuffer.Count > 0)
+        {
+            var samples = _experienceBuffer.Sample(Math.Min(5, _experienceBuffer.Count));
+            sb.AppendLine($"\n═══ Recent Experiences (sample of {samples.Count}) ═══");
+            foreach (var exp in samples)
+            {
+                var rewardIcon = exp.Reward > 0.5 ? "✓" : exp.Reward < -0.2 ? "✗" : "○";
+                sb.AppendLine($"  {rewardIcon} [{exp.Timestamp:HH:mm:ss}] Reward: {exp.Reward:+0.00;-0.00;0.00}");
+                sb.AppendLine($"    State: {TruncateText(exp.State, 40)}");
+                sb.AppendLine($"    Action: {TruncateText(exp.Action, 40)}");
+            }
+        }
+
+        sb.AppendLine($"\n═══ Usage ═══");
+        sb.AppendLine("  Experiences are automatically recorded during interactions.");
+        sb.AppendLine("  Used for replay-based learning and performance optimization.");
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Gets the prompt optimizer status and learned patterns.
+    /// </summary>
+    private string GetPromptOptimizerStatus()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("🧠 **Runtime Prompt Optimization System**\n");
+        sb.AppendLine(_promptOptimizer.GetStatistics());
+
+        sb.AppendLine("\n═══ How It Works ═══");
+        sb.AppendLine("  • Tracks whether tools are called when expected");
+        sb.AppendLine("  • Uses Thompson Sampling (multi-armed bandit) to select best patterns");
+        sb.AppendLine("  • Adapts instruction emphasis based on success/failure rates");
+        sb.AppendLine("  • Learns from recent failures to avoid repeating mistakes");
+
+        sb.AppendLine("\n═══ Self-Optimization ═══");
+        sb.AppendLine("  The prompt system automatically optimizes itself by:");
+        sb.AppendLine("  1. Detecting expected tools from user input patterns");
+        sb.AppendLine("  2. Comparing actual tool calls in responses");
+        sb.AppendLine("  3. Adjusting weights when tools aren't called");
+        sb.AppendLine("  4. Adding anti-pattern examples from recent failures");
+
+        return sb.ToString();
+    }
+
+    private static string FormatTimeAgo(DateTime timestamp)
+    {
+        var elapsed = DateTime.UtcNow - timestamp;
+        if (elapsed.TotalSeconds < 60) return "just now";
+        if (elapsed.TotalMinutes < 60) return $"{elapsed.TotalMinutes:F0}m ago";
+        if (elapsed.TotalHours < 24) return $"{elapsed.TotalHours:F0}h ago";
+        return $"{elapsed.TotalDays:F0}d ago";
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

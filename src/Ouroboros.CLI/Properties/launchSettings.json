@@ -1,0 +1,20 @@
+{
+  "profiles": {
+    "Ouroboros": {
+      "commandName": "Project",
+      "commandLineArgs": "ouroboros --text-only"
+    },
+    "Ouroboros-Voice": {
+      "commandName": "Project",
+      "commandLineArgs": "ouroboros --voice"
+    },
+    "Ouroboros-Claude": {
+      "commandName": "Project",
+      "commandLineArgs": "ouroboros --text-only --endpoint-type anthropic --model claude-sonnet-4-20250514"
+    },
+    "Pipeline": {
+      "commandName": "Project",
+      "commandLineArgs": "pipeline --dsl \"SetPrompt('Hello world') | UseOutput\""
+    }
+  }
+}
