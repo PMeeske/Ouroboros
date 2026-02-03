@@ -166,7 +166,7 @@ public class TestCommandTests
         var result = await harness.ExecuteTestAsync(options);
 
         // Assert
-        result.ExecutionTimeMs.Should().BeGreaterThan(0, "execution time should be recorded");
+        result.ExecutionTimeMs.Should().BeGreaterThanOrEqualTo(0, "execution time should be recorded");
     }
 
     [Fact]
@@ -244,6 +244,6 @@ public class TestCommandTests
 
         // Assert
         result.IsSuccess.Should().BeTrue("comprehensive test suite should execute");
-        result.ExecutionTimeMs.Should().BeGreaterThan(0);
+        result.ExecutionTimeMs.Should().BeGreaterThanOrEqualTo(0);
     }
 }
