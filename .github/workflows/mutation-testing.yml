@@ -85,7 +85,6 @@ jobs:
 
     - name: Run mutation tests
       id: mutation-test
-      continue-on-error: true
       timeout-minutes: 90
       run: |
         # Set mutation level from input or use default
@@ -221,10 +220,10 @@ jobs:
     - name: Check mutation threshold
       if: steps.mutation-test.outcome == 'failure'
       run: |
-        echo "::warning::Mutation testing failed or threshold not met"
+        echo "::error::Mutation testing failed or threshold not met"
         echo "Review the artifacts to identify areas needing better"
         echo "test coverage."
-        exit 0  # Don't fail the workflow, just warn
+        exit 1  # Fail the workflow when mutation tests fail
 
     - name: Job summary
       if: always()
