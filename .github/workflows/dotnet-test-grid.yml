@@ -7,12 +7,14 @@ on:
       - 'src/**'
       - '**.csproj'
       - '.github/workflows/dotnet-test-grid.yml'
+      - '!README.md'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'src/**'
       - '**.csproj'
       - '.github/workflows/dotnet-test-grid.yml'
+      - '!README.md'
   workflow_dispatch:
 
 # Minimal permissions following security best practices
