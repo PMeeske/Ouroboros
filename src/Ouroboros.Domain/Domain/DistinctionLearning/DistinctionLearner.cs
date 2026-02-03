@@ -151,6 +151,56 @@ public sealed class DistinctionLearner : IDistinctionLearner
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<Result<double, string>> EvaluateDistinctionFitnessAsync(
+        string distinction,
+        IEnumerable<Observation> observations,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        try
+        {
+            var observationList = observations.ToList();
+            if (!observationList.Any())
+            {
+                return Result<double, string>.Success(0.0);
+            }
+
+            // Calculate fitness based on how many observations contain the distinction
+            var matchCount = 0;
+            var totalCertainty = 0.0;
+
+            foreach (var obs in observationList)
+            {
+                if (obs.Content.Contains(distinction, StringComparison.OrdinalIgnoreCase))
+                {
+                    matchCount++;
+                    totalCertainty += obs.PriorCertainty;
+                }
+            }
+
+            // Fitness = (match rate * average certainty)
+            var matchRate = (double)matchCount / observationList.Count;
+            var avgCertainty = matchCount > 0 ? totalCertainty / matchCount : 0.0;
+            var fitness = matchRate * avgCertainty;
+
+            _logger?.LogDebug(
+                "Evaluated fitness for distinction '{Distinction}': {Fitness} (matches: {Matches}/{Total})",
+                distinction,
+                fitness,
+                matchCount,
+                observationList.Count);
+
+            return Result<double, string>.Success(fitness);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to evaluate distinction fitness");
+            return Result<double, string>.Failure($"Fitness evaluation failed: {ex.Message}");
+        }
+    }
+
     private static double CalculateFitness(Observation observation, string stage)
     {
         // Base fitness on content length and prior certainty
