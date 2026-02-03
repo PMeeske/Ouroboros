@@ -4,12 +4,14 @@ on:
   push:
     branches: [ main, develop ]
     paths:
+      - '!README.md'
       - 'src/**'
       - '**.csproj'
       - '.github/workflows/dotnet-test-grid.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
+      - '!README.md'
       - 'src/**'
       - '**.csproj'
       - '.github/workflows/dotnet-test-grid.yml'
