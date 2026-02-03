@@ -233,7 +233,7 @@ jobs:
           soft_fail: true
 
       - name: Run Checkov
-        uses: bridgecrewio/checkov-action@0e82f6e5b47081c9f8f93a717c3811dee602c18a  # v12.2867.0
+        uses: bridgecrewio/checkov-action@v12.2867.0
         continue-on-error: true
         with:
           directory: terraform
