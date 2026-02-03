@@ -100,14 +100,14 @@ jobs:
           dotnet stryker \
             --mutation-level "${ML}" \
             --verbosity "${VERBOSITY}" \
-            --reporters "html" "progress" "json" "cleartext"
+            --reporter html --reporter progress --reporter json --reporter cleartext
         else
           # Run Stryker with configuration
           dotnet stryker \
             --config-file stryker-config.json \
             --mutation-level "${ML}" \
             --verbosity "${VERBOSITY}" \
-            --reporter "html" "progress" "json" "cleartext"
+            --reporter html --reporter progress --reporter json --reporter cleartext
         fi
 
     - name: Extract mutation score
