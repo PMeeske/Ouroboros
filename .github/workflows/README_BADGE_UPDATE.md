@@ -4,60 +4,14 @@ This document describes the automated badge update system for the Ouroboros proj
 
 ## Overview
 
-The repository has two workflows that update test and coverage badges in `README.md`:
+The test and coverage badges in `README.md` are automatically updated by the `.NET Test Grid` workflow:
 
-1. **Standalone Workflow**: `.github/workflows/update-coverage-badges.yml`
-2. **Integrated Workflow**: `.github/workflows/dotnet-test-grid.yml` (update-readme job)
+- **Workflow file**: `.github/workflows/dotnet-test-grid.yml`
+- **Job**: `update-readme`
 
-## Standalone Workflow: update-coverage-badges.yml
+This unified approach ensures badges are updated after the comprehensive test matrix completes.
 
-### Purpose
-A dedicated workflow that runs tests, generates coverage reports, and updates README badges in a single run.
-
-### Triggers
-1. **Push to main** - When code changes are pushed to main branch (specifically `src/**` or `**.csproj` files)
-2. **After test workflows** - Automatically runs after `.NET Test Grid` or `.NET Integration Tests` complete successfully
-3. **Manual dispatch** - Can be manually triggered from GitHub Actions UI
-
-### What It Does
-1. Runs all unit tests with coverage collection
-2. Generates coverage report using ReportGenerator
-3. Parses test results from TRX files
-4. Extracts line coverage percentage from reports
-5. Updates README.md badges with correct URLs and colors
-6. Commits changes only if badges actually changed
-7. Uses `[skip ci]` to prevent infinite loops
-
-### Badge Color Logic
-
-#### Test Badge
-- **Green**: All tests passing
-- **Red**: Any tests failing
-- **Light Grey**: No tests found
-
-Badge format: `tests-{PASSED}%20passing-{COLOR}` or `tests-{PASSED}%20passing%2C%20{FAILED}%20failing-{COLOR}`
-
-#### Coverage Badge
-- **Green**: ≥80% line coverage
-- **Yellow**: ≥50% line coverage
-- **Orange**: ≥20% line coverage
-- **Red**: <20% line coverage
-
-Badge format: `coverage-{PERCENTAGE}%25-{COLOR}`
-
-### Manual Execution
-
-To manually update badges:
-
-1. Go to Actions tab in GitHub
-2. Select "Update Coverage Badges" workflow
-3. Click "Run workflow"
-4. Select branch (usually `main`)
-5. Click "Run workflow" button
-
-The workflow will run tests, update badges, and commit if needed.
-
-## Integrated Workflow: dotnet-test-grid.yml
+## Workflow: dotnet-test-grid.yml
 
 ### Purpose
 The main test workflow that runs tests across multiple categories and updates badges as a final step.
@@ -124,7 +78,7 @@ The `[skip ci]` tag prevents the commit from triggering CI workflows, avoiding i
 
 ### Debugging
 
-Both workflows include extensive logging:
+The workflow includes extensive logging:
 - Lists files being processed
 - Shows extracted values
 - Displays before/after badge URLs
@@ -133,8 +87,6 @@ Both workflows include extensive logging:
 Check the workflow logs for detailed information about what's happening.
 
 ## Badge Requirements Summary
-
-From the original requirements:
 
 ### Coverage Badge
 - URL: `https://img.shields.io/badge/coverage-{PERCENTAGE}%25-{COLOR}`
@@ -157,18 +109,17 @@ From the original requirements:
 
 ## Files Modified
 
-- `.github/workflows/update-coverage-badges.yml` - New standalone workflow
-- `.github/workflows/dotnet-test-grid.yml` - Enhanced existing workflow (update-readme job)
-- `README.md` - Badges are automatically updated at lines 11-12
+- `.github/workflows/dotnet-test-grid.yml` - Unified workflow with badge update job
+- `README.md` - Badges are automatically updated (tests and coverage shields.io badges)
 
 ## Current Status
 
-As of the implementation:
-- **Current README badges**: coverage-0%, tests-1656 passing, 8 failing (outdated)
-- **Actual metrics**: 8.4% coverage, 111 tests passing (from TEST_COVERAGE_REPORT.md)
-- **Expected after workflow runs**: coverage-8.4% (red), tests-111 passing (green)
+The unified workflow in `dotnet-test-grid.yml`:
+1. Runs the full test matrix across all categories
+2. Aggregates coverage from all test runs
+3. Updates README badges with actual test counts and coverage percentage
+4. Commits changes only when values change
 
-The workflows are now in place and will automatically update badges on the next:
-- Push to main branch
-- Test workflow completion
+Badges are updated on:
+- Push to `main` branch
 - Manual workflow dispatch
