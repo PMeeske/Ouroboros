@@ -26,7 +26,7 @@ namespace Ouroboros.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Object Pool", "    As a developer\n    I want to use object pools for efficient resource manageme" +
+        private static readonly global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Object Pool", "    As a developer\n    I want to use object pools for efficient resource manageme" +
                 "nt\n    So that I can reduce allocations and garbage collection pressure", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;

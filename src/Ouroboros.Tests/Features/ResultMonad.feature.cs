@@ -26,7 +26,7 @@ namespace Ouroboros.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Result Monad", "    As a developer\n    I want to handle computation results with explicit success" +
+        private static readonly global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Result Monad", "    As a developer\n    I want to handle computation results with explicit success" +
                 " or failure states\n    So that I can write robust error-handling code following " +
                 "monadic principles", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         

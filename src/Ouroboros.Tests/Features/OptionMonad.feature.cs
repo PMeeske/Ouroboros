@@ -26,7 +26,7 @@ namespace Ouroboros.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Option Monad", "    As a developer\n    I want to handle optional values safely without null refer" +
+        private static readonly global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Option Monad", "    As a developer\n    I want to handle optional values safely without null refer" +
                 "ence exceptions\n    So that I can write robust null-safe code following monadic " +
                 "principles", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         

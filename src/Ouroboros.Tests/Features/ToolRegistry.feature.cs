@@ -26,7 +26,7 @@ namespace Ouroboros.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Tool Registry", "    As a developer\n    I want to register and retrieve tools in an immutable regi" +
+        private static readonly global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Tool Registry", "    As a developer\n    I want to register and retrieve tools in an immutable regi" +
                 "stry\n    So that I can manage tool collections safely in a functional programmin" +
                 "g style", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags);
         
