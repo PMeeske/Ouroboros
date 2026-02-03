@@ -34,7 +34,7 @@ Pass additional arguments directly after the configuration path:
 
 ```powershell
 # Example: run without the HTML reporter
-./scripts/run-mutation-tests.ps1 -ConfigurationPath stryker-config.json --reporters progress
+./scripts/run-mutation-tests.ps1 -ConfigurationPath stryker-config.json --reporter Progress
 ```
 
 ```bash
@@ -56,7 +56,7 @@ Key configuration is stored in `stryker-config.json`:
 - `project` / `testProject`: `src/Ouroboros.Tests/Ouroboros.Tests.csproj`
 - `mutationLevel`: `Standard`
 - `coverageAnalysis`: `perTest`
-- `reporters`: `html`, `progress`, `cleartext`, `dashboard`
+- `reporters`: `Html`, `Progress`, `Json`, `ClearText`
 - `thresholds`: high 80, low 60, break 50
 - `mutate`: all source files under `src/` excluding generated artifacts and tests
 - `ignoreMethods`: skips mutations for `ToString`, `GetHashCode`, and `Equals`
@@ -122,7 +122,7 @@ To integrate mutation testing into other workflows, add these steps:
   run: |
     dotnet stryker \
       --config-file stryker-config.json \
-      --reporters "html" "progress" "json"
+      --reporter Html --reporter Progress --reporter Json
 ```
 
 Consider running mutation tests on a nightly build or gated branch to balance runtime with coverage benefits.

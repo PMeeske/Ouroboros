@@ -8,10 +8,10 @@
     "coverage-analysis": "perTest",
     "mutation-level": "Standard",
     "reporters": [
-      "html",
-      "progress",
-      "json",
-      "cleartext"
+      "Html",
+      "Progress",
+      "Json",
+      "ClearText"
     ],
     "thresholds": {
       "high": 80,
