@@ -223,17 +223,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Run tfsec
-        uses: aquasecurity/tfsec-action@v1.0.3
+        uses: aquasecurity/tfsec-action@b466648d6e39e7c75324f25d83891162a721f2d6  # v1.0.3
         continue-on-error: true
         with:
           working_directory: terraform
           soft_fail: true
 
       - name: Run Checkov
-        uses: bridgecrewio/checkov-action@v12
+        uses: bridgecrewio/checkov-action@0e82f6e5b47081c9f8f93a717c3811dee602c18a  # v12.2867.0
         continue-on-error: true
         with:
           directory: terraform

@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Run Gemini CLI for issue analysis
-        uses: google-github-actions/run-gemini-cli@v0.1.15
+        uses: google-github-actions/run-gemini-cli@4cd2e3d9bfb87ac8a5be939321a01fef0401d233  # v0.1.15
         continue-on-error: true
         if: secrets.GOOGLE_CREDENTIALS != ''
         with:

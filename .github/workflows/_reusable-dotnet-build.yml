@@ -33,7 +33,7 @@ jobs:
     timeout-minutes: 20
     
     outputs:
-      status: ${{ steps.build.outcome }}
+      status: ${{ steps.set-status.outputs.status }}
     
     steps:
       - name: Checkout code
@@ -107,15 +107,33 @@ jobs:
           dotnet build --configuration ${{ inputs.configuration }} --no-restore
         timeout-minutes: 15
 
+      - name: Set build status
+        id: set-status
+        if: always()
+        run: |
+          # Determine which build step ran and get its outcome
+          if [ "${{ steps.build.outcome }}" != "" ] && [ "${{ steps.build.outcome }}" != "skipped" ]; then
+            echo "status=${{ steps.build.outcome }}" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.build-all.outcome }}" != "" ] && [ "${{ steps.build-all.outcome }}" != "skipped" ]; then
+            echo "status=${{ steps.build-all.outcome }}" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.build-solution.outcome }}" != "" ] && [ "${{ steps.build-solution.outcome }}" != "skipped" ]; then
+            echo "status=${{ steps.build-solution.outcome }}" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build summary
         if: always()
         run: |
+          # Get the actual status from the step that ran
+          STATUS="${{ steps.set-status.outputs.status }}"
+          
           echo "## 🏗️ Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Configuration**: ${{ inputs.configuration }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ${{ steps.build.outcome || steps.build-all.outcome || steps.build-solution.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: $STATUS" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.build.outcome || steps.build-all.outcome || steps.build-solution.outcome }}" = "success" ]; then
+          if [ "$STATUS" = "success" ]; then
             echo "✅ Build completed successfully" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Build failed - check logs for details" >> $GITHUB_STEP_SUMMARY

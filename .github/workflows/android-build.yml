@@ -310,7 +310,7 @@ jobs:
 
     - name: Send email notification with APK download link
       if: success()
-      uses: dawidd6/action-send-mail@v3
+      uses: dawidd6/action-send-mail@2cea9617b09d79a095a8136fe5e4c1d8d481af1b  # v3.12.0
       continue-on-error: true
       timeout-minutes: 5
       with:
