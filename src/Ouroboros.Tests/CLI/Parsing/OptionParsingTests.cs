@@ -388,4 +388,503 @@ public class OptionParsingTests
             opts.Stream.Should().BeTrue();
         });
     }
+
+    // ========== ExplainOptions Tests ==========
+
+    [Fact]
+    public void ParseExplainOptions_WithBasicArgs_ParsesSuccessfully()
+    {
+        // Arrange
+        string[] args = { "explain", "-d", "SetPrompt 'test' | UseDraft" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<ExplainOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.Tag.Should().Be(ParserResultType.Parsed);
+        result.WithParsed<ExplainOptions>(opts =>
+        {
+            opts.Dsl.Should().Be("SetPrompt 'test' | UseDraft");
+        });
+    }
+
+    [Fact]
+    public void ParseExplainOptions_WithLongFlag_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args = { "explain", "--dsl", "SetPrompt | LLM" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<ExplainOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<ExplainOptions>(opts =>
+        {
+            opts.Dsl.Should().Be("SetPrompt | LLM");
+        });
+    }
+
+    [Fact]
+    public void ParseExplainOptions_WithMissingRequiredArg_ReturnsNotParsed()
+    {
+        // Arrange - Missing required -d/--dsl
+        string[] args = { "explain" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<ExplainOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.Tag.Should().Be(ParserResultType.NotParsed);
+    }
+
+    [Fact]
+    public void ParseExplainOptions_WithComplexDsl_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args = { "explain", "-d", "SetPrompt 'Analyze' | UseFiles '*.cs' | LLM | UseOutput" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<ExplainOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<ExplainOptions>(opts =>
+        {
+            opts.Dsl.Should().Contain("SetPrompt");
+            opts.Dsl.Should().Contain("UseFiles");
+            opts.Dsl.Should().Contain("LLM");
+        });
+    }
+
+    // ========== TestOptions Tests ==========
+
+    [Fact]
+    public void ParseTestOptions_WithAllFlag_ParsesSuccessfully()
+    {
+        // Arrange
+        string[] args = { "test", "--all" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<TestOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.Tag.Should().Be(ParserResultType.Parsed);
+        result.WithParsed<TestOptions>(opts =>
+        {
+            opts.All.Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public void ParseTestOptions_WithIntegrationFlag_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args = { "test", "--integration" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<TestOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<TestOptions>(opts =>
+        {
+            opts.IntegrationOnly.Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public void ParseTestOptions_WithCliFlag_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args = { "test", "--cli" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<TestOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<TestOptions>(opts =>
+        {
+            opts.CliOnly.Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public void ParseTestOptions_WithMeTTaFlag_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args = { "test", "--metta" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<TestOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<TestOptions>(opts =>
+        {
+            opts.MeTTa.Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public void ParseTestOptions_WithMultipleFlags_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args = { "test", "--all", "--integration", "--cli" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<TestOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<TestOptions>(opts =>
+        {
+            opts.All.Should().BeTrue();
+            opts.IntegrationOnly.Should().BeTrue();
+            opts.CliOnly.Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public void ParseTestOptions_WithNoArgs_UsesDefaults()
+    {
+        // Arrange
+        string[] args = { "test" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<TestOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.Tag.Should().Be(ParserResultType.Parsed);
+        result.WithParsed<TestOptions>(opts =>
+        {
+            opts.All.Should().BeFalse();
+            opts.IntegrationOnly.Should().BeFalse();
+            opts.CliOnly.Should().BeFalse();
+            opts.MeTTa.Should().BeFalse();
+        });
+    }
+
+    // ========== OrchestratorOptions Tests ==========
+
+    [Fact]
+    public void ParseOrchestratorOptions_WithBasicArgs_ParsesSuccessfully()
+    {
+        // Arrange
+        string[] args = { "orchestrator", "-g", "Test goal" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<OrchestratorOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.Tag.Should().Be(ParserResultType.Parsed);
+        result.WithParsed<OrchestratorOptions>(opts =>
+        {
+            opts.Goal.Should().Be("Test goal");
+        });
+    }
+
+    [Fact]
+    public void ParseOrchestratorOptions_WithAllFlags_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args =
+        {
+            "orchestrator",
+            "-g", "Complex task",
+            "--model", "llama3",
+            "--coder-model", "codellama",
+            "--reason-model", "deepseek-r1",
+            "--temperature", "0.8",
+            "--max-tokens", "1024",
+            "--debug",
+            "--metrics"
+        };
+
+        // Act
+        var result = Parser.Default.ParseArguments<OrchestratorOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<OrchestratorOptions>(opts =>
+        {
+            opts.Goal.Should().Be("Complex task");
+            opts.Model.Should().Be("llama3");
+            opts.CoderModel.Should().Be("codellama");
+            opts.ReasonModel.Should().Be("deepseek-r1");
+            opts.Temperature.Should().Be(0.8);
+            opts.MaxTokens.Should().Be(1024);
+            opts.Debug.Should().BeTrue();
+            opts.ShowMetrics.Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public void ParseOrchestratorOptions_WithMissingRequiredArg_ReturnsNotParsed()
+    {
+        // Arrange - Missing required -g/--goal
+        string[] args = { "orchestrator", "--model", "llama3" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<OrchestratorOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.Tag.Should().Be(ParserResultType.NotParsed);
+    }
+
+    [Fact]
+    public void ParseOrchestratorOptions_WithVoiceMode_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args =
+        {
+            "orchestrator",
+            "-g", "Voice test",
+            "-v",
+            "--persona", "Sage",
+            "--voice-loop"
+        };
+
+        // Act
+        var result = Parser.Default.ParseArguments<OrchestratorOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<OrchestratorOptions>(opts =>
+        {
+            opts.Goal.Should().Be("Voice test");
+            opts.Voice.Should().BeTrue();
+            opts.Persona.Should().Be("Sage");
+            opts.VoiceLoop.Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public void ParseOrchestratorOptions_WithRemoteEndpoint_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args =
+        {
+            "orchestrator",
+            "-g", "Remote task",
+            "--endpoint", "https://api.example.com",
+            "--api-key", "sk-test123",
+            "--endpoint-type", "openai"
+        };
+
+        // Act
+        var result = Parser.Default.ParseArguments<OrchestratorOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<OrchestratorOptions>(opts =>
+        {
+            opts.Endpoint.Should().Be("https://api.example.com");
+            opts.ApiKey.Should().Be("sk-test123");
+            opts.EndpointType.Should().Be("openai");
+        });
+    }
+
+    [Fact]
+    public void ParseOrchestratorOptions_WithDefaultValues_UsesDefaults()
+    {
+        // Arrange
+        string[] args = { "orchestrator", "-g", "Test" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<OrchestratorOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<OrchestratorOptions>(opts =>
+        {
+            opts.Model.Should().Be("ministral-3:latest");
+            opts.Embed.Should().Be("nomic-embed-text");
+            opts.Temperature.Should().Be(0.7);
+            opts.MaxTokens.Should().Be(512);
+            opts.TimeoutSeconds.Should().Be(60);
+            opts.ShowMetrics.Should().BeTrue();
+            opts.Debug.Should().BeFalse();
+        });
+    }
+
+    // ========== MeTTaOptions Tests ==========
+
+    [Fact]
+    public void ParseMeTTaOptions_WithBasicArgs_ParsesSuccessfully()
+    {
+        // Arrange
+        string[] args = { "metta", "-g", "Test goal" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<MeTTaOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.Tag.Should().Be(ParserResultType.Parsed);
+        result.WithParsed<MeTTaOptions>(opts =>
+        {
+            opts.Goal.Should().Be("Test goal");
+        });
+    }
+
+    [Fact]
+    public void ParseMeTTaOptions_WithAllFlags_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args =
+        {
+            "metta",
+            "-g", "Complex task",
+            "--model", "llama3",
+            "--embed", "nomic-embed-text",
+            "--temperature", "0.8",
+            "--max-tokens", "1024",
+            "--plan-only",
+            "--debug",
+            "--metrics"
+        };
+
+        // Act
+        var result = Parser.Default.ParseArguments<MeTTaOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<MeTTaOptions>(opts =>
+        {
+            opts.Goal.Should().Be("Complex task");
+            opts.Model.Should().Be("llama3");
+            opts.Embed.Should().Be("nomic-embed-text");
+            opts.Temperature.Should().Be(0.8);
+            opts.MaxTokens.Should().Be(1024);
+            opts.PlanOnly.Should().BeTrue();
+            opts.Debug.Should().BeTrue();
+            opts.ShowMetrics.Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public void ParseMeTTaOptions_WithMissingRequiredArg_ReturnsNotParsed()
+    {
+        // Arrange - Missing required -g/--goal
+        string[] args = { "metta", "--model", "llama3" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<MeTTaOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.Tag.Should().Be(ParserResultType.NotParsed);
+    }
+
+    [Fact]
+    public void ParseMeTTaOptions_WithPlanOnlyFlag_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args = { "metta", "-g", "Test", "--plan-only" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<MeTTaOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<MeTTaOptions>(opts =>
+        {
+            opts.PlanOnly.Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public void ParseMeTTaOptions_WithInteractiveFlag_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args = { "metta", "-g", "interactive", "-i" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<MeTTaOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<MeTTaOptions>(opts =>
+        {
+            opts.Interactive.Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public void ParseMeTTaOptions_WithVoiceMode_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args =
+        {
+            "metta",
+            "-g", "Voice test",
+            "-v",
+            "--persona", "Oracle",
+            "--voice-loop"
+        };
+
+        // Act
+        var result = Parser.Default.ParseArguments<MeTTaOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<MeTTaOptions>(opts =>
+        {
+            opts.Goal.Should().Be("Voice test");
+            opts.Voice.Should().BeTrue();
+            opts.Persona.Should().Be("Oracle");
+            opts.VoiceLoop.Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public void ParseMeTTaOptions_WithCulture_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args = { "metta", "-g", "Test", "-c", "en-US" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<MeTTaOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<MeTTaOptions>(opts =>
+        {
+            opts.Culture.Should().Be("en-US");
+        });
+    }
+
+    [Fact]
+    public void ParseMeTTaOptions_WithDefaultValues_UsesDefaults()
+    {
+        // Arrange
+        string[] args = { "metta", "-g", "Test" };
+
+        // Act
+        var result = Parser.Default.ParseArguments<MeTTaOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<MeTTaOptions>(opts =>
+        {
+            opts.Model.Should().Be("ministral-3:latest");
+            opts.Embed.Should().Be("nomic-embed-text");
+            opts.Temperature.Should().Be(0.7);
+            opts.MaxTokens.Should().Be(512);
+            opts.TimeoutSeconds.Should().Be(60);
+            opts.PlanOnly.Should().BeFalse();
+            opts.ShowMetrics.Should().BeTrue();
+            opts.Debug.Should().BeFalse();
+            opts.Interactive.Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public void ParseMeTTaOptions_WithRemoteEndpoint_ParsesCorrectly()
+    {
+        // Arrange
+        string[] args =
+        {
+            "metta",
+            "-g", "Remote task",
+            "--endpoint", "https://api.example.com",
+            "--api-key", "sk-test123",
+            "--endpoint-type", "openai"
+        };
+
+        // Act
+        var result = Parser.Default.ParseArguments<MeTTaOptions, AskOptions, PipelineOptions>(args);
+
+        // Assert
+        result.WithParsed<MeTTaOptions>(opts =>
+        {
+            opts.Endpoint.Should().Be("https://api.example.com");
+            opts.ApiKey.Should().Be("sk-test123");
+            opts.EndpointType.Should().Be("openai");
+        });
+    }
 }
