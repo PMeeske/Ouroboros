@@ -166,7 +166,7 @@ public class TestCommandTests
         var result = await harness.ExecuteTestAsync(options);
 
         // Assert
-        result.ExecutionTimeMs.Should().BeGreaterThanOrEqualTo(0, "execution time should be recorded");
+        result.ExecutionTimeMs.Should().BeGreaterThanOrEqualTo(0, "execution time should be recorded (may be 0 for very fast operations)");
     }
 
     [Fact]
