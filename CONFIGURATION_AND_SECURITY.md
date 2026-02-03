@@ -105,7 +105,16 @@ For development, use .NET user secrets:
 dotnet user-secrets init
 dotnet user-secrets set "Pipeline:LlmProvider:OpenAiApiKey" "sk-..."
 dotnet user-secrets set "Pipeline:VectorStore:ConnectionString" "..."
+
+# Anthropic API key
+dotnet user-secrets set "ANTHROPIC_API_KEY" "sk-ant-api03-..."
 ```
+
+**Supported API Key Environment Variables:**
+- `ANTHROPIC_API_KEY` - Anthropic Claude API key
+- `OPENAI_API_KEY` - OpenAI API key
+- `GITHUB_TOKEN` - GitHub Models token
+- `CHAT_API_KEY` - Generic fallback for any provider
 
 For production, use environment variables or Azure Key Vault:
 

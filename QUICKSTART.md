@@ -6,6 +6,7 @@ Get up and running with Ouroboros in 5 minutes!
 
 1. **.NET 10.0 SDK** - [Download here](https://dotnet.microsoft.com/download/dotnet/10.0)
 2. **Ollama** (optional, for local LLM) - [Download here](https://ollama.ai/)
+3. **Anthropic API Key** (optional, for Claude) - [Get one here](https://console.anthropic.com/)
 
 ## Quick Setup
 
@@ -26,7 +27,24 @@ Get up and running with Ouroboros in 5 minutes!
    dotnet run -- ask -q "What is functional programming?"
    ```
 
-### Option 2: Without Ollama (Mock/Test Mode)
+### Option 2: With Anthropic Claude (Cloud)
+
+1. **Store your API key securely:**
+   ```bash
+   cd src/Ouroboros.CLI
+   dotnet user-secrets init
+   dotnet user-secrets set "ANTHROPIC_API_KEY" "sk-ant-api03-your-key-here"
+   ```
+
+2. **Run with Claude:**
+   ```bash
+   dotnet run -- ask -q "What is functional programming?" \
+     --endpoint-type anthropic \
+     --model claude-sonnet-4-20250514 \
+     --show-costs
+   ```
+
+### Option 3: Without Ollama (Mock/Test Mode)
 
 The tests include mock implementations, so you can explore the codebase without Ollama:
 
@@ -51,9 +69,20 @@ dotnet run -- pipeline -d "SetTopic('AI') | UseDraft | UseCritique"
 # List available operations
 dotnet run -- list
 
+# Ask with cost tracking
+dotnet run -- ask -q "Explain monads" --show-costs --cost-summary
+
 # Run examples
 cd ../Ouroboros.Examples
 dotnet run
+```
+
+### Cost Tracking Options
+
+```bash
+--show-costs      # Display cost after each response
+--cost-aware      # Inject cost-awareness into prompts
+--cost-summary    # Show session summary on exit
 ```
 
 ### Web API

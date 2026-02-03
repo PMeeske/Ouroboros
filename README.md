@@ -60,6 +60,8 @@ A **sophisticated functional programming-based AI pipeline system** (YET EXPERIM
 - **📄 RecursiveChunkProcessor**: Process large contexts (100+ pages) with adaptive chunking and map-reduce
 - **🎯 Type Safety**: Leverages C# type system for compile-time guarantees
 - **☁️ IONOS Cloud Ready**: Optimized deployment for IONOS Cloud Kubernetes infrastructure
+- **🤖 Multi-Provider Support**: Native support for Anthropic Claude, OpenAI, Ollama, GitHub Models, and more
+- **💰 Cost Tracking**: Built-in LLM usage cost tracking with session summaries
 
 ## 🏗️ Architecture
 
@@ -460,7 +462,7 @@ var result = await processor.ProcessLargeContextAsync<string, string>(
 See [RecursiveChunking Documentation](docs/RECURSIVE_CHUNKING.md) for detailed guide and examples.
 
 
-#### Using Remote Endpoints (Ollama Cloud, OpenAI, GitHub Models, LiteLLM)
+#### Using Remote Endpoints (Ollama Cloud, OpenAI, Anthropic, GitHub Models, LiteLLM)
 
 Configure remote AI endpoints via environment variables or CLI flags. All CLI commands (ask, pipeline, orchestrator, metta) support remote endpoints with authentication:
 
@@ -471,7 +473,12 @@ cd src/Ouroboros.CLI
 # Set environment variables (recommended)
 export CHAT_ENDPOINT="https://api.ollama.com"
 export CHAT_API_KEY="your-api-key"
-export CHAT_ENDPOINT_TYPE="ollama-cloud"  # or "auto", "openai", "github-models", "litellm"
+export CHAT_ENDPOINT_TYPE="ollama-cloud"  # or "auto", "openai", "anthropic", "github-models", "litellm"
+
+# Anthropic Claude example
+export ANTHROPIC_API_KEY="sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+export CHAT_ENDPOINT="https://api.anthropic.com"
+export CHAT_ENDPOINT_TYPE="anthropic"
 
 # GitHub Models example
 export GITHUB_TOKEN="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -488,6 +495,13 @@ dotnet run -- ask -q "Hello" \
   --endpoint "https://api.ollama.com" \
   --api-key "your-key" \
   --endpoint-type "ollama-cloud"
+
+# Anthropic Claude with cost tracking
+dotnet run -- ask -q "Explain monads" \
+  --endpoint "https://api.anthropic.com" \
+  --endpoint-type anthropic \
+  --model claude-sonnet-4-20250514 \
+  --show-costs
   
 # GitHub Models with specific model
 dotnet run -- ask -q "Explain functional programming" \
@@ -495,8 +509,36 @@ dotnet run -- ask -q "Explain functional programming" \
   --model gpt-4o
 ```
 
+#### Cost Tracking
+
+Ouroboros includes built-in LLM cost tracking across all providers. Enable cost visibility with CLI flags:
+
+```bash
+# Show cost after each response
+dotnet run -- ask -q "What is a monad?" --show-costs
+
+# Enable cost-aware prompts (model considers token efficiency)
+dotnet run -- ask -q "Explain functional programming" --cost-aware
+
+# Display session cost summary on exit
+dotnet run -- ask -q "Deep analysis" --cost-summary
+
+# Combine all cost options
+dotnet run -- orchestrator --goal "Complex task" \
+  --show-costs --cost-aware --cost-summary
+```
+
+**Supported Providers for Cost Tracking:**
+- **Anthropic**: Claude 3/4/5 family (Opus, Sonnet, Haiku)
+- **OpenAI**: GPT-4, GPT-4o, GPT-3.5 family
+- **DeepSeek**: DeepSeek-Coder, DeepSeek-V2
+- **Google**: Gemini Pro, Gemini Flash
+- **Mistral**: Mistral Large, Medium, Small
+- **Local**: Ollama/local models (tracked as free)
+
 📚 **Provider Documentation:**
 
+- **[Anthropic Claude Integration Guide](docs/ANTHROPIC_INTEGRATION.md)** - Setting up Anthropic Claude API with secure key management
 - **[Ollama Cloud Integration Guide](docs/OLLAMA_CLOUD_INTEGRATION.md)** - Detailed guide for connecting to cloud-hosted Ollama instances
 - **[GitHub Models Guide](docs/GITHUB_MODELS_INTEGRATION.md)** - Using GitHub Models (GPT-4o, Llama 3) with Ouroboros
 
