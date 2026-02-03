@@ -75,6 +75,10 @@ public sealed class DistinctionConsolidationService : BackgroundService
         // 1. Get current state
         Result<List<DistinctionWeightMetadata>, string> listResult = null!;
         const int maxRetries = 3;
+        // Use a retry delay proportional to the consolidation interval for testing,
+        // but at most 1 second for production scenarios
+        var retryDelay = TimeSpan.FromMilliseconds(Math.Min(_consolidationInterval.TotalMilliseconds / 2, 1000));
+
         for (int attempt = 0; attempt < maxRetries; attempt++)
         {
             try
@@ -89,8 +93,8 @@ public sealed class DistinctionConsolidationService : BackgroundService
                     _logger.LogError(ex, "Failed to list weights after {MaxRetries} attempts", maxRetries);
                     return;
                 }
-                _logger.LogWarning(ex, "Failed to list weights, attempt {Attempt}, retrying in 1s", attempt + 1);
-                await Task.Delay(TimeSpan.FromSeconds(1), ct);
+                _logger.LogWarning(ex, "Failed to list weights, attempt {Attempt}, retrying in {RetryDelay}ms", attempt + 1, retryDelay.TotalMilliseconds);
+                await Task.Delay(retryDelay, ct);
             }
         }
 
