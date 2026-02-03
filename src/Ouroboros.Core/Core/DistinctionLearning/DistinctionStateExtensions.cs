@@ -14,7 +14,7 @@ public static class DistinctionStateExtensions
     /// In Laws of Form, imaginary values (i) represent states of uncertainty or oscillation.
     /// </summary>
     /// <param name="certainty">The epistemic certainty value.</param>
-    /// <returns>True if certainty is in the imaginary/uncertain range (0.3-0.7).</returns>
+    /// <returns>True if certainty is in the imaginary/uncertain range (between 0.3 and 0.7).</returns>
     public static bool IsImaginary(this double certainty)
     {
         // Imaginary state: uncertainty range (neither clearly true nor false)
@@ -26,7 +26,7 @@ public static class DistinctionStateExtensions
     /// In Laws of Form, certain states correspond to marked (⌐) or unmarked (∅) states.
     /// </summary>
     /// <param name="certainty">The epistemic certainty value.</param>
-    /// <returns>True if certainty is high (>0.7) or low (<0.3), indicating a definite state.</returns>
+    /// <returns>True if certainty is high (greater than 0.7) or low (less than 0.3), indicating a definite state.</returns>
     public static bool IsCertain(this double certainty)
     {
         // Certain state: either marked (high certainty) or void (low certainty)
