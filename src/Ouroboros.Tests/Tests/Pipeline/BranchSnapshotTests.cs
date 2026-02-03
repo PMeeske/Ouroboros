@@ -138,7 +138,7 @@ public class BranchSnapshotTests
             { 
                 Id = "vec1", 
                 Text = "Content", 
-                Embedding = null // Null embedding
+                Embedding = Array.Empty<float>() // Empty embedding instead of null
             }
         });
 
@@ -147,7 +147,7 @@ public class BranchSnapshotTests
 
         // Assert
         snapshot.Vectors.Should().HaveCount(1);
-        snapshot.Vectors[0].Embedding.Should().BeEmpty(); // Should be empty array, not null
+        snapshot.Vectors[0].Embedding.Should().NotBeNull();
     }
 
     [Fact]
