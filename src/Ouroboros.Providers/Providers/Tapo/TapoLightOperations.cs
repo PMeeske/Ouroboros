@@ -62,7 +62,7 @@ public sealed class TapoLightBulbOperations
         if (level > 100)
             return Result<Unit>.Failure("Brightness level must be between 0 and 100");
 
-        return await ExecuteActionWithParamsAsync("l510/set-brightness", deviceName, new Dictionary<string, string> { ["level"] = level.ToString() }, ct);
+        return await ExecuteActionAsync($"l510/set-brightness&level={level}", deviceName, ct);
     }
 
     /// <summary>
