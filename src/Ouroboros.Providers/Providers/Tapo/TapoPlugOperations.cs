@@ -228,7 +228,7 @@ public sealed class TapoEnergyPlugOperations
 
         var endDateParam = endDate.HasValue ? $"&end_date={endDate.Value:yyyy-MM-dd}" : string.Empty;
         return await GetJsonResponseAsync(
-            $"p110/get-hourly-energy-data?start_date={startDate:yyyy-MM-dd}{endDateParam}",
+            $"p110/get-hourly-energy-data&start_date={startDate:yyyy-MM-dd}{endDateParam}",
             deviceName,
             ct);
     }
@@ -245,7 +245,7 @@ public sealed class TapoEnergyPlugOperations
             return Result<JsonDocument>.Failure("Device name is required");
 
         return await GetJsonResponseAsync(
-            $"p110/get-daily-energy-data?start_date={startDate:yyyy-MM-dd}",
+            $"p110/get-daily-energy-data&start_date={startDate:yyyy-MM-dd}",
             deviceName,
             ct);
     }
@@ -262,7 +262,7 @@ public sealed class TapoEnergyPlugOperations
             return Result<JsonDocument>.Failure("Device name is required");
 
         return await GetJsonResponseAsync(
-            $"p110/get-monthly-energy-data?start_date={startDate:yyyy-MM-dd}",
+            $"p110/get-monthly-energy-data&start_date={startDate:yyyy-MM-dd}",
             deviceName,
             ct);
     }

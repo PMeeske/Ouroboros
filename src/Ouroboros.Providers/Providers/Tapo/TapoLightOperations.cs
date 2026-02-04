@@ -206,7 +206,7 @@ public sealed class TapoColorLightBulbOperations
         if (level > 100)
             return Result<Unit>.Failure("Brightness level must be between 0 and 100");
 
-        return await ExecuteActionAsync($"l530/set-brightness?level={level}", deviceName, ct);
+        return await ExecuteActionAsync($"l530/set-brightness&level={level}", deviceName, ct);
     }
 
     /// <summary>
@@ -237,7 +237,7 @@ public sealed class TapoColorLightBulbOperations
         if (saturation > 100)
             return Result<Unit>.Failure("Saturation must be between 0 and 100");
 
-        return await ExecuteActionAsync($"l530/set-hue-saturation?hue={hue}&saturation={saturation}", deviceName, ct);
+        return await ExecuteActionAsync($"l530/set-hue-saturation&hue={hue}&saturation={saturation}", deviceName, ct);
     }
 
     /// <summary>
@@ -248,7 +248,7 @@ public sealed class TapoColorLightBulbOperations
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<Unit>.Failure("Device name is required");
 
-        return await ExecuteActionAsync($"l530/set-color-temperature?color_temperature={temperature}", deviceName, ct);
+        return await ExecuteActionAsync($"l530/set-color-temperature&color_temperature={temperature}", deviceName, ct);
     }
 
     /// <summary>

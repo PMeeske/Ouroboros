@@ -55,7 +55,7 @@ public sealed class TapoLightStripOperations
         if (level > 100)
             return Result<Unit>.Failure("Brightness level must be between 0 and 100");
 
-        return await ExecuteActionAsync($"l900/set-brightness?level={level}", deviceName, ct);
+        return await ExecuteActionAsync($"l900/set-brightness&level={level}", deviceName, ct);
     }
 
     /// <summary>
@@ -86,7 +86,7 @@ public sealed class TapoLightStripOperations
         if (saturation > 100)
             return Result<Unit>.Failure("Saturation must be between 0 and 100");
 
-        return await ExecuteActionAsync($"l900/set-hue-saturation?hue={hue}&saturation={saturation}", deviceName, ct);
+        return await ExecuteActionAsync($"l900/set-hue-saturation&hue={hue}&saturation={saturation}", deviceName, ct);
     }
 
     /// <summary>
@@ -97,7 +97,7 @@ public sealed class TapoLightStripOperations
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<Unit>.Failure("Device name is required");
 
-        return await ExecuteActionAsync($"l900/set-color-temperature?color_temperature={temperature}", deviceName, ct);
+        return await ExecuteActionAsync($"l900/set-color-temperature&color_temperature={temperature}", deviceName, ct);
     }
 
     /// <summary>
@@ -237,7 +237,7 @@ public sealed class TapoRgbicLightStripOperations
         if (level > 100)
             return Result<Unit>.Failure("Brightness level must be between 0 and 100");
 
-        return await ExecuteActionAsync($"l920/set-brightness?level={level}", deviceName, ct);
+        return await ExecuteActionAsync($"l920/set-brightness&level={level}", deviceName, ct);
     }
 
     /// <summary>
@@ -268,7 +268,7 @@ public sealed class TapoRgbicLightStripOperations
         if (saturation > 100)
             return Result<Unit>.Failure("Saturation must be between 0 and 100");
 
-        return await ExecuteActionAsync($"l920/set-hue-saturation?hue={hue}&saturation={saturation}", deviceName, ct);
+        return await ExecuteActionAsync($"l920/set-hue-saturation&hue={hue}&saturation={saturation}", deviceName, ct);
     }
 
     /// <summary>
@@ -279,7 +279,7 @@ public sealed class TapoRgbicLightStripOperations
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<Unit>.Failure("Device name is required");
 
-        return await ExecuteActionAsync($"l920/set-color-temperature?color_temperature={temperature}", deviceName, ct);
+        return await ExecuteActionAsync($"l920/set-color-temperature&color_temperature={temperature}", deviceName, ct);
     }
 
     /// <summary>
@@ -290,7 +290,7 @@ public sealed class TapoRgbicLightStripOperations
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<Unit>.Failure("Device name is required");
 
-        return await ExecuteActionAsync($"l920/set-lighting-effect?lighting_effect={effect}", deviceName, ct);
+        return await ExecuteActionAsync($"l920/set-lighting-effect&lighting_effect={effect}", deviceName, ct);
     }
 
     /// <summary>
