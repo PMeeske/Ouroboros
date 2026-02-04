@@ -111,6 +111,158 @@ public class CliTestHarness : IDisposable
     }
 
     /// <summary>
+    /// Executes an Explain command with the given options.
+    /// </summary>
+    public Task<CliResult> ExecuteExplainAsync(ExplainOptions options)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        _console.Redirect();
+
+        try
+        {
+            Console.WriteLine(Ouroboros.Application.PipelineDsl.Explain(options.Dsl));
+            stopwatch.Stop();
+
+            return Task.FromResult(new CliResult
+            {
+                Output = _console.Output,
+                Error = _console.Error,
+                ExitCode = 0,
+                ExecutionTimeMs = stopwatch.ElapsedMilliseconds
+            });
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            return Task.FromResult(new CliResult
+            {
+                Output = _console.Output,
+                Error = _console.Error + ex.Message,
+                ExitCode = 1,
+                ExecutionTimeMs = stopwatch.ElapsedMilliseconds
+            });
+        }
+        finally
+        {
+            _console.Restore();
+        }
+    }
+
+    /// <summary>
+    /// Executes a Test command with the given options.
+    /// </summary>
+    public async Task<CliResult> ExecuteTestAsync(TestOptions options)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        _console.Redirect();
+
+        try
+        {
+            await TestCommands.RunTestsAsync(options);
+            stopwatch.Stop();
+
+            return new CliResult
+            {
+                Output = _console.Output,
+                Error = _console.Error,
+                ExitCode = 0,
+                ExecutionTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            return new CliResult
+            {
+                Output = _console.Output,
+                Error = _console.Error + ex.Message,
+                ExitCode = 1,
+                ExecutionTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+        finally
+        {
+            _console.Restore();
+        }
+    }
+
+    /// <summary>
+    /// Executes an Orchestrator command with the given options.
+    /// </summary>
+    public async Task<CliResult> ExecuteOrchestratorAsync(OrchestratorOptions options)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        _console.Redirect();
+
+        try
+        {
+            await OrchestratorCommands.RunOrchestratorAsync(options);
+            stopwatch.Stop();
+
+            return new CliResult
+            {
+                Output = _console.Output,
+                Error = _console.Error,
+                ExitCode = 0,
+                ExecutionTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            return new CliResult
+            {
+                Output = _console.Output,
+                Error = _console.Error + ex.Message,
+                ExitCode = 1,
+                ExecutionTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+        finally
+        {
+            _console.Restore();
+        }
+    }
+
+    /// <summary>
+    /// Executes a MeTTa command with the given options.
+    /// </summary>
+    public async Task<CliResult> ExecuteMeTTaAsync(MeTTaOptions options)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        _console.Redirect();
+
+        try
+        {
+            await MeTTaCommands.RunMeTTaAsync(options);
+            stopwatch.Stop();
+
+            return new CliResult
+            {
+                Output = _console.Output,
+                Error = _console.Error,
+                ExitCode = 0,
+                ExecutionTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            return new CliResult
+            {
+                Output = _console.Output,
+                Error = _console.Error + ex.Message,
+                ExitCode = 1,
+                ExecutionTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+        finally
+        {
+            _console.Restore();
+        }
+    }
+
+    /// <summary>
     /// Clears all captured output.
     /// </summary>
     public void Clear()

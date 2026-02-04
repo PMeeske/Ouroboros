@@ -234,7 +234,7 @@ ESTIMATED_PERFORMANCE: [0-1]";
             // Use defaults if no history
             if (!relevantEpisodes.Any())
             {
-                return Result<HyperparameterConfig, string>.Success(CreateDefaultHyperparameters(taskType));
+                return Result<HyperparameterConfig, string>.Success(CreateDefaultHyperparameters(taskType, context));
             }
 
             // Compute optimal parameters from successful episodes
@@ -575,15 +575,17 @@ APPLICABLE_TO: [task types, comma-separated]";
             LearnedPatterns: patterns.Any() ? patterns : new List<string> { "General task pattern" });
     }
 
-    private HyperparameterConfig CreateDefaultHyperparameters(string taskType)
+    private HyperparameterConfig CreateDefaultHyperparameters(string taskType, Dictionary<string, object>? context = null)
     {
+        var customParams = context ?? new Dictionary<string, object>();
+
         // Task-specific defaults
         return taskType.ToLowerInvariant() switch
         {
-            "classification" => new HyperparameterConfig(0.01, 32, 100, 0.85, 0.05, new()),
-            "generation" => new HyperparameterConfig(0.001, 16, 200, 0.75, 0.15, new()),
-            "reasoning" => new HyperparameterConfig(0.005, 8, 150, 0.8, 0.1, new()),
-            _ => new HyperparameterConfig(0.01, 16, 100, 0.8, 0.1, new()),
+            "classification" => new HyperparameterConfig(0.01, 32, 100, 0.85, 0.05, customParams),
+            "generation" => new HyperparameterConfig(0.001, 16, 200, 0.75, 0.15, customParams),
+            "reasoning" => new HyperparameterConfig(0.005, 8, 150, 0.8, 0.1, customParams),
+            _ => new HyperparameterConfig(0.01, 16, 100, 0.8, 0.1, customParams),
         };
     }
 

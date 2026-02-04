@@ -35,34 +35,59 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DOTNET_VERSION: '10.0.x'
+
 jobs:
   mutation-test:
-    name: Run Mutation Tests
+    name: Mutation Tests (${{ matrix.category }})
     runs-on: ubuntu-latest
-    timeout-minutes: 120  # Mutation testing can take a while
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - category: Core
+            project: src/Ouroboros.Core/Ouroboros.Core.csproj
+          - category: Domain
+            project: src/Ouroboros.Domain/Ouroboros.Domain.csproj
+          - category: Pipeline
+            project: src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
+          - category: Tools
+            project: src/Ouroboros.Tools/Ouroboros.Tools.csproj
+          - category: Application
+            project: src/Ouroboros.Application/Ouroboros.Application.csproj
+          - category: Providers
+            project: src/Ouroboros.Providers/Ouroboros.Providers.csproj
+          - category: Agent
+            project: src/Ouroboros.Agent/Ouroboros.Agent.csproj
+          - category: CLI
+            project: src/Ouroboros.CLI/Ouroboros.CLI.csproj
+          - category: WebApi
+            project: src/Ouroboros.WebApi/Ouroboros.WebApi.csproj
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
         fetch-depth: 0
-      # Remove timeout-minutes from checkout
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3  # v4.0.0
       with:
-        dotnet-version: '10.0.x'
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Cache NuGet packages
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        key: ${{ runner.os }}-nuget-mutation-${{ matrix.category }}-${{ hashFiles('**/*.csproj') }}
         restore-keys: |
+          ${{ runner.os }}-nuget-mutation-${{ matrix.category }}-
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 10
         max_attempts: 3
@@ -70,7 +95,7 @@ jobs:
         command: dotnet restore
 
     - name: Restore dotnet tools
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@7152eba30c6575329ac0576536151aca5a72780e  # v3.0.0
       with:
         timeout_minutes: 5
         max_attempts: 3
@@ -81,32 +106,22 @@ jobs:
       run: dotnet build --configuration Release --no-restore
       timeout-minutes: 15
 
-    - name: Run mutation tests
+    - name: Run mutation tests (${{ matrix.category }})
       id: mutation-test
-      continue-on-error: true
-      timeout-minutes: 90
+      timeout-minutes: 75
       run: |
         # Set mutation level from input or use default
         ML="${{ github.event.inputs.mutation_level || 'Standard' }}"
-        VERBOSITY="${{ github.event.inputs.verbosity || 'info' }}"
 
-        echo "Running mutation tests with level: ${ML}, verbosity: ${VERBOSITY}"
+        echo "Running mutation tests for ${{ matrix.category }} with level: ${ML}"
+        echo "Target project: ${{ matrix.project }}"
 
-        # Check if stryker config exists
-        if [ ! -f "stryker-config.json" ]; then
-          echo "⚠️ Warning: stryker-config.json not found, using default configuration"
-          # Run with basic default configuration
-          dotnet stryker \
-            --mutation-level "${ML}" \
-            --verbosity "${VERBOSITY}" \
-            --reporters "html" "progress" "json" "cleartext"
+        # Run Stryker with configuration file and target specific project
+        # Override mutation level only if provided as workflow input
+        if [ -n "${{ github.event.inputs.mutation_level }}" ]; then
+          dotnet stryker --config-file stryker-config.json --project "${{ matrix.project }}" --mutation-level "${ML}"
         else
-          # Run Stryker with configuration
-          dotnet stryker \
-            --config-file stryker-config.json \
-            --mutation-level "${ML}" \
-            --verbosity "${VERBOSITY}" \
-            --reporter "html" "progress" "json" "cleartext"
+          dotnet stryker --config-file stryker-config.json --project "${{ matrix.project }}"
         fi
 
     - name: Extract mutation score
@@ -140,7 +155,7 @@ jobs:
     - name: Display mutation test summary
       if: always()
       run: |
-        echo "## 🧬 Mutation Testing Summary" >> $GITHUB_STEP_SUMMARY
+        echo "## 🧬 Mutation Testing Summary (${{ matrix.category }})" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
 
         FOUND="${{ steps.mutation-score.outputs.report_found }}"
@@ -150,6 +165,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Configuration:**" >> $GITHUB_STEP_SUMMARY
           ML="${{ github.event.inputs.mutation_level || 'Standard' }}"
+          echo "- Category: ${{ matrix.category }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Project: ${{ matrix.project }}" >> $GITHUB_STEP_SUMMARY
           echo "- Mutation Level: ${ML}" >> $GITHUB_STEP_SUMMARY
           echo "- Target Framework: net10.0" >> $GITHUB_STEP_SUMMARY
           echo "- Test Project: Ouroboros.Tests" >> $GITHUB_STEP_SUMMARY
@@ -181,11 +198,11 @@ jobs:
         echo "a robust test suite." >> $GITHUB_STEP_SUMMARY
 
     - name: Upload mutation report HTML
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       if: always()
       continue-on-error: true
       with:
-        name: mutation-report-html
+        name: mutation-report-html-${{ matrix.category }}
         path: |
           StrykerOutput/**/reports/mutation-report.html
           **/mutation-report.html
@@ -193,11 +210,11 @@ jobs:
         if-no-files-found: warn
 
     - name: Upload mutation report JSON
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       if: always()
       continue-on-error: true
       with:
-        name: mutation-report-json
+        name: mutation-report-json-${{ matrix.category }}
         path: |
           StrykerOutput/**/mutation-report.json
           **/mutation-report.json
@@ -205,11 +222,11 @@ jobs:
         if-no-files-found: warn
 
     - name: Upload Stryker logs
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       if: always()
       continue-on-error: true
       with:
-        name: stryker-logs
+        name: stryker-logs-${{ matrix.category }}
         path: |
           StrykerOutput/**/logs/
           **/stryker-log*.txt
@@ -219,18 +236,159 @@ jobs:
     - name: Check mutation threshold
       if: steps.mutation-test.outcome == 'failure'
       run: |
-        echo "::warning::Mutation testing failed or threshold not met"
+        echo "::error::Mutation testing failed or threshold not met for ${{ matrix.category }}"
         echo "Review the artifacts to identify areas needing better"
         echo "test coverage."
-        exit 0  # Don't fail the workflow, just warn
+        exit 1  # Fail the workflow when mutation tests fail
 
     - name: Job summary
       if: always()
       run: |
         OUTCOME="${{ steps.mutation-test.outcome }}"
         if [ "$OUTCOME" = "success" ]; then
-          echo "✅ Mutation testing completed successfully"
+          echo "✅ Mutation testing completed successfully for ${{ matrix.category }}"
         else
-          echo "⚠️ Mutation testing completed with issues"
+          echo "⚠️ Mutation testing completed with issues for ${{ matrix.category }}"
           echo "Check the reports for details"
         fi
+
+  # Aggregation job to combine results from all matrix jobs
+  mutation-test-summary:
+    name: Mutation Test Summary
+    runs-on: ubuntu-latest
+    needs: [mutation-test]
+    if: always()
+    timeout-minutes: 15
+
+    steps:
+    - name: Download all mutation report JSONs
+      uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85  # v4.1.8
+      continue-on-error: true
+      with:
+        pattern: mutation-report-json-*
+        path: MutationReports
+        merge-multiple: false
+
+    - name: Install jq
+      run: |
+        if ! command -v jq &> /dev/null; then
+          echo "Installing jq..."
+          sudo apt-get update && sudo apt-get install -y jq
+        fi
+
+    - name: Aggregate mutation results
+      id: aggregate
+      run: |
+        echo "Aggregating mutation test results from all categories..."
+        
+        TOTAL_SCORE=0
+        CATEGORY_COUNT=0
+        CATEGORIES_FOUND=""
+        CATEGORIES_MISSING=""
+        
+        # Expected categories
+        CATEGORIES=(Core Domain Pipeline Tools Application Providers Agent CLI WebApi)
+        
+        for CATEGORY in "${CATEGORIES[@]}"; do
+          REPORT_DIR="MutationReports/mutation-report-json-${CATEGORY}"
+          REPORT=$(find "$REPORT_DIR" -name "mutation-report.json" -type f 2>/dev/null | head -n 1)
+          
+          if [ -f "$REPORT" ]; then
+            echo "Found report for ${CATEGORY}: $REPORT"
+            SCORE=$(jq -r '.thresholds.high // .mutationScore // 0' "$REPORT" 2>/dev/null || echo "0")
+            echo "  Score: ${SCORE}"
+            
+            TOTAL_SCORE=$(echo "$TOTAL_SCORE + $SCORE" | bc)
+            CATEGORY_COUNT=$((CATEGORY_COUNT + 1))
+            CATEGORIES_FOUND="${CATEGORIES_FOUND}${CATEGORY} "
+          else
+            echo "No report found for ${CATEGORY}"
+            CATEGORIES_MISSING="${CATEGORIES_MISSING}${CATEGORY} "
+          fi
+        done
+        
+        if [ $CATEGORY_COUNT -gt 0 ]; then
+          AVG_SCORE=$(echo "scale=2; $TOTAL_SCORE / $CATEGORY_COUNT" | bc)
+        else
+          AVG_SCORE="0"
+        fi
+        
+        echo "average_score=${AVG_SCORE}" >> $GITHUB_OUTPUT
+        echo "categories_completed=${CATEGORY_COUNT}" >> $GITHUB_OUTPUT
+        echo "categories_found=${CATEGORIES_FOUND}" >> $GITHUB_OUTPUT
+        echo "categories_missing=${CATEGORIES_MISSING}" >> $GITHUB_OUTPUT
+        
+        echo "Summary: ${CATEGORY_COUNT} categories completed with average score ${AVG_SCORE}"
+
+    - name: Generate combined summary
+      if: always()
+      run: |
+        echo "## 🧬 Mutation Testing - Combined Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### Overview" >> $GITHUB_STEP_SUMMARY
+        echo "Mutation testing completed across **9 project categories** in parallel." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        COMPLETED="${{ steps.aggregate.outputs.categories_completed }}"
+        AVG_SCORE="${{ steps.aggregate.outputs.average_score }}"
+        FOUND="${{ steps.aggregate.outputs.categories_found }}"
+        MISSING="${{ steps.aggregate.outputs.categories_missing }}"
+        
+        echo "**Results:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Categories completed: ${COMPLETED}/9" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -n "$AVG_SCORE" ] && [ "$AVG_SCORE" != "0" ]; then
+          echo "- Average mutation score: ${AVG_SCORE}%" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Categories Tested" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Category | Project |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|---------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Core | Ouroboros.Core |" >> $GITHUB_STEP_SUMMARY
+        echo "| Domain | Ouroboros.Domain |" >> $GITHUB_STEP_SUMMARY
+        echo "| Pipeline | Ouroboros.Pipeline |" >> $GITHUB_STEP_SUMMARY
+        echo "| Tools | Ouroboros.Tools |" >> $GITHUB_STEP_SUMMARY
+        echo "| Application | Ouroboros.Application |" >> $GITHUB_STEP_SUMMARY
+        echo "| Providers | Ouroboros.Providers |" >> $GITHUB_STEP_SUMMARY
+        echo "| Agent | Ouroboros.Agent |" >> $GITHUB_STEP_SUMMARY
+        echo "| CLI | Ouroboros.CLI |" >> $GITHUB_STEP_SUMMARY
+        echo "| WebApi | Ouroboros.WebApi |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -n "$FOUND" ]; then
+          echo "**Completed categories:** ${FOUND}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ -n "$MISSING" ]; then
+          echo "**Missing reports:** ${MISSING}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+        ML="${{ github.event.inputs.mutation_level || 'Standard' }}"
+        echo "- Mutation Level: ${ML}" >> $GITHUB_STEP_SUMMARY
+        echo "- Target Framework: net10.0" >> $GITHUB_STEP_SUMMARY
+        echo "- Test Project: Ouroboros.Tests" >> $GITHUB_STEP_SUMMARY
+        echo "- Parallel Jobs: 9" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### Thresholds" >> $GITHUB_STEP_SUMMARY
+        echo "- 🟢 High: ≥80%" >> $GITHUB_STEP_SUMMARY
+        echo "- 🟡 Low: ≥60%" >> $GITHUB_STEP_SUMMARY
+        echo "- 🔴 Break: <50%" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "Individual mutation reports (HTML and JSON) for each category are available as artifacts." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**About Mutation Testing:**" >> $GITHUB_STEP_SUMMARY
+        echo "Mutation testing validates test quality by introducing small changes (mutations)" >> $GITHUB_STEP_SUMMARY
+        echo "to the code and verifying that tests detect these changes. A high mutation score" >> $GITHUB_STEP_SUMMARY
+        echo "indicates a robust test suite." >> $GITHUB_STEP_SUMMARY

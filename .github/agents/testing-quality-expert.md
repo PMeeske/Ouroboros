@@ -193,7 +193,7 @@ Ensure tests catch bugs:
   "stryker-config": {
     "project": "src/Ouroboros.csproj",
     "test-projects": ["tests/Ouroboros.Tests.csproj"],
-    "reporters": ["html", "progress", "dashboard"],
+    "reporters": ["Html", "Progress", "Dashboard"],
     "dashboard": {
       "project": "github.com/PMeeske/Ouroboros"
     },

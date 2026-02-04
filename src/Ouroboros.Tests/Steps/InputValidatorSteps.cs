@@ -101,6 +101,8 @@ public class InputValidatorSteps
     {
         _validator.Should().NotBeNull();
         _context.Should().NotBeNull();
+        // Unescape common escape sequences like \0, \r, \n
+        input = System.Text.RegularExpressions.Regex.Unescape(input);
         _result = _validator!.ValidateAndSanitize(input, _context!);
     }
 

@@ -4,6 +4,10 @@
 **/obj/
 /example/Entwicklung
 /.vscode
+/.vs
+**/.vs/
+*.suo
+*.user
 /.monadic_ingest_cache.json
 logs/
 *.log
@@ -61,3 +65,22 @@ metta-motto/
 
 # Reqnroll auto-generated files
 *.feature.cs
+
+# Test/debug files in root
+/test_*.wav
+/speech_*.wav
+/test_*.py
+/test_*.metta
+/test_*.csx
+/test_*.ps1
+/*_test.wav
+/repro_*.cs
+/ollama_agent.*
+
+# Generated OpenAPI specs
+/openapi.json
+
+# One-time migration scripts
+/rebrand-*.ps1
+/update_namespaces.ps1
+/inspect.ps1

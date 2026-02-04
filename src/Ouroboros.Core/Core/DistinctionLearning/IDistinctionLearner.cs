@@ -49,4 +49,16 @@ public interface IDistinctionLearner
         DistinctionState currentState,
         DissolutionStrategy strategy,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Evaluates the fitness of a specific distinction against a set of observations.
+    /// </summary>
+    /// <param name="distinction">The distinction to evaluate.</param>
+    /// <param name="observations">Observations to evaluate the distinction against.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Fitness score for the distinction.</returns>
+    Task<Result<double, string>> EvaluateDistinctionFitnessAsync(
+        string distinction,
+        IEnumerable<Observation> observations,
+        CancellationToken ct = default);
 }

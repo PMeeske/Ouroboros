@@ -49,9 +49,16 @@ public static class DistinctionArrow
     {
         return input =>
         {
+            // Null input is treated as void (short-circuit behavior for gated pipelines)
+            if (input is null)
+            {
+                var result = onVoid(input);
+                return Task.FromResult(result);
+            }
+
             var distinction = predicate(input);
-            var result = distinction.IsMarked() ? onMarked(input) : onVoid(input);
-            return Task.FromResult(result);
+            var resultValue = distinction.IsMarked() ? onMarked(input) : onVoid(input);
+            return Task.FromResult(resultValue);
         };
     }
 

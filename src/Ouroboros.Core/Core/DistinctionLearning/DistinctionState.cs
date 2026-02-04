@@ -24,6 +24,23 @@ public sealed record DistinctionState(
         LastUpdated: DateTime.UtcNow);
 
     /// <summary>
+    /// Creates an initial empty distinction state (alias for Initial()).
+    /// </summary>
+    public static DistinctionState Void() => Initial();
+
+    /// <summary>
+    /// Gets active distinction names as a read-only list.
+    /// </summary>
+    public IReadOnlyList<string> ActiveDistinctionNames =>
+        ActiveDistinctions.Select(d => d.Content).ToList();
+
+    /// <summary>
+    /// Gets fitness scores for all active distinctions.
+    /// </summary>
+    public IReadOnlyDictionary<string, double> FitnessScores =>
+        ActiveDistinctions.ToDictionary(d => d.Content, d => d.Fitness);
+
+    /// <summary>
     /// Creates a new state with an additional distinction.
     /// </summary>
     public DistinctionState WithDistinction(ActiveDistinction distinction)
@@ -34,6 +51,24 @@ public sealed record DistinctionState(
             ActiveDistinctions = newDistinctions,
             LastUpdated = DateTime.UtcNow
         };
+    }
+
+    /// <summary>
+    /// Adds a distinction with a specific fitness score.
+    /// </summary>
+    /// <param name="distinction">The distinction content.</param>
+    /// <param name="fitness">The fitness score for the distinction.</param>
+    /// <returns>A new state with the added distinction.</returns>
+    public DistinctionState AddDistinction(string distinction, double fitness)
+    {
+        var newDistinction = new ActiveDistinction(
+            Id: Guid.NewGuid().ToString(),
+            Content: distinction,
+            Fitness: fitness,
+            LearnedAt: DateTime.UtcNow,
+            LearnedAtStage: "Manual");
+
+        return WithDistinction(newDistinction);
     }
 
     /// <summary>
