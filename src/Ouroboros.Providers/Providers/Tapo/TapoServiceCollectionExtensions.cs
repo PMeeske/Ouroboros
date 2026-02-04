@@ -30,13 +30,7 @@ public static class TapoServiceCollectionExtensions
             client.Timeout = TimeSpan.FromSeconds(30);
         });
 
-        services.AddSingleton<TapoRestClient>(sp =>
-        {
-            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-            var httpClient = httpClientFactory.CreateClient(nameof(TapoRestClient));
-            var logger = sp.GetService<ILogger<TapoRestClient>>();
-            return new TapoRestClient(httpClient, logger);
-        });
+        services.AddTransient<TapoRestClient>();
 
         return services;
     }
@@ -58,14 +52,7 @@ public static class TapoServiceCollectionExtensions
             throw new ArgumentNullException(nameof(configure));
 
         services.AddHttpClient<TapoRestClient>(configure);
-
-        services.AddSingleton<TapoRestClient>(sp =>
-        {
-            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-            var httpClient = httpClientFactory.CreateClient(nameof(TapoRestClient));
-            var logger = sp.GetService<ILogger<TapoRestClient>>();
-            return new TapoRestClient(httpClient, logger);
-        });
+        services.AddTransient<TapoRestClient>();
 
         return services;
     }

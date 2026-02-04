@@ -275,10 +275,11 @@ public sealed class TapoRestClient : IDisposable
     }
 
     /// <summary>
-    /// Disposes the HTTP client.
+    /// Disposes resources.
     /// </summary>
     public void Dispose()
     {
-        _httpClient?.Dispose();
+        // HttpClient is injected and should not be disposed here
+        // It's managed by the DI container/HttpClientFactory
     }
 }
