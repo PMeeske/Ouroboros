@@ -103,20 +103,111 @@ public sealed class LlmCostTracker
     /// </summary>
     public static string GetProvider(string model)
     {
+        if (string.IsNullOrWhiteSpace(model))
+            return "Unknown";
+
+        // Try exact match first
         if (KnownPricing.TryGetValue(model, out var pricing))
             return pricing.Provider;
 
-        // Infer from model name
-        if (model.StartsWith("claude", StringComparison.OrdinalIgnoreCase))
+        // Normalize model name for pattern matching
+        string normalized = model.ToLowerInvariant();
+
+        // === ANTHROPIC ===
+        if (normalized.StartsWith("claude") || normalized.Contains("anthropic"))
             return "Anthropic";
-        if (model.StartsWith("gpt", StringComparison.OrdinalIgnoreCase) || model.StartsWith("o1", StringComparison.OrdinalIgnoreCase))
+
+        // === OPENAI ===
+        if (normalized.StartsWith("gpt") ||
+            normalized.StartsWith("o1") ||
+            normalized.StartsWith("o3") ||
+            normalized.StartsWith("text-davinci") ||
+            normalized.StartsWith("text-embedding") ||
+            normalized.StartsWith("dall-e") ||
+            normalized.StartsWith("whisper") ||
+            normalized.Contains("openai"))
             return "OpenAI";
-        if (model.StartsWith("deepseek", StringComparison.OrdinalIgnoreCase))
+
+        // === DEEPSEEK ===
+        if (normalized.StartsWith("deepseek") || normalized.Contains("deepseek"))
             return "DeepSeek";
-        if (model.StartsWith("gemini", StringComparison.OrdinalIgnoreCase))
+
+        // === GOOGLE ===
+        if (normalized.StartsWith("gemini") ||
+            normalized.StartsWith("palm") ||
+            normalized.StartsWith("bard") ||
+            normalized.Contains("google"))
             return "Google";
-        if (model.StartsWith("mistral", StringComparison.OrdinalIgnoreCase) || model.StartsWith("codestral", StringComparison.OrdinalIgnoreCase))
+
+        // === MISTRAL ===
+        if (normalized.StartsWith("mistral") ||
+            normalized.StartsWith("codestral") ||
+            normalized.StartsWith("mixtral") ||
+            normalized.StartsWith("pixtral") ||
+            normalized.Contains("mistral"))
             return "Mistral";
+
+        // === META (Llama) ===
+        if (normalized.StartsWith("llama") ||
+            normalized.StartsWith("meta-llama") ||
+            normalized.Contains("llama"))
+            return "Meta";
+
+        // === MICROSOFT (Phi) ===
+        if (normalized.StartsWith("phi") ||
+            normalized.Contains("phi-") ||
+            normalized.Contains("microsoft"))
+            return "Microsoft";
+
+        // === COHERE ===
+        if (normalized.StartsWith("command") ||
+            normalized.StartsWith("cohere") ||
+            normalized.Contains("cohere"))
+            return "Cohere";
+
+        // === ALIBABA (Qwen) ===
+        if (normalized.StartsWith("qwen") ||
+            normalized.Contains("qwen") ||
+            normalized.Contains("alibaba"))
+            return "Alibaba";
+
+        // === XAI (Grok) ===
+        if (normalized.StartsWith("grok") || normalized.Contains("xai"))
+            return "xAI";
+
+        // === STABILITY AI ===
+        if (normalized.StartsWith("stable") ||
+            normalized.Contains("stability") ||
+            normalized.Contains("sdxl"))
+            return "Stability AI";
+
+        // === HUGGINGFACE ===
+        if (normalized.Contains("huggingface") || normalized.Contains("hf/"))
+            return "HuggingFace";
+
+        // === LOCAL INFERENCE ENGINES ===
+        if (normalized.Contains("ollama") ||
+            normalized.Contains("llamacpp") ||
+            normalized.Contains("llama.cpp") ||
+            normalized.Contains("gguf") ||
+            normalized.Contains("ggml"))
+            return "Local";
+
+        // === COMMON LOCAL MODELS (free) ===
+        if (normalized.StartsWith("gemma") ||
+            normalized.StartsWith("falcon") ||
+            normalized.StartsWith("yi-") ||
+            normalized.StartsWith("solar") ||
+            normalized.StartsWith("neural") ||
+            normalized.StartsWith("wizardlm") ||
+            normalized.StartsWith("vicuna") ||
+            normalized.StartsWith("orca") ||
+            normalized.StartsWith("nous") ||
+            normalized.StartsWith("dolphin") ||
+            normalized.StartsWith("openchat") ||
+            normalized.StartsWith("starling") ||
+            normalized.StartsWith("zephyr"))
+            return "Local";
 
         return "Unknown";
     }

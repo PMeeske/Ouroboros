@@ -95,6 +95,25 @@ public sealed class AskOptions : IVoiceOptions
     [Option("endpoint-type", Required = false, HelpText = "Endpoint type: auto|openai|ollama-cloud|litellm|github-models (overrides CHAT_ENDPOINT_TYPE env var)")]
     public string? EndpointType { get; set; }
 
+    // CollectiveMind decomposition options
+    [Option("decompose", Required = false, HelpText = "Enable goal decomposition mode: off|auto|local-first|quality-first", Default = "off")]
+    public string Decompose { get; set; } = "off";
+
+    [Option("collective", Required = false, HelpText = "Enable CollectiveMind multi-provider mode: off|balanced|fast|premium|budget|decomposed", Default = "off")]
+    public string Collective { get; set; } = "off";
+
+    [Option("master-model", Required = false, HelpText = "Designate master model for orchestration (pathway name).")]
+    public string? MasterModel { get; set; }
+
+    [Option("election-strategy", Required = false, HelpText = "Election strategy: majority|weighted|borda|condorcet|runoff|approval|master", Default = "weighted")]
+    public string ElectionStrategy { get; set; } = "weighted";
+
+    [Option("show-subgoals", Required = false, HelpText = "Display sub-goal decomposition trace", Default = false)]
+    public bool ShowSubgoals { get; set; }
+
+    [Option("parallel-subgoals", Required = false, HelpText = "Execute independent sub-goals in parallel", Default = true)]
+    public bool ParallelSubgoals { get; set; } = true;
+
     // Additional voice mode options
     [Option("voice-only", Required = false, HelpText = "Voice-only mode (no text output)", Default = false)]
     public bool VoiceOnly { get; set; }

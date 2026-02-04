@@ -472,7 +472,19 @@ public sealed record OuroborosConfig(
     // Cost tracking & efficiency
     bool ShowCosts = false,
     bool CostAware = false,
-    bool CostSummary = true);
+    bool CostSummary = true,
+    // Collective Mind (Multi-Provider)
+    bool CollectiveMode = false,
+    string? CollectivePreset = null,  // balanced|fast|premium|budget|local|single
+    string CollectiveThinkingMode = "adaptive",  // racing|sequential|ensemble|adaptive
+    string? CollectiveProviders = null,  // comma-separated providers
+    bool Failover = true,
+    // Election & Orchestration
+    string ElectionStrategy = "weighted-majority",  // majority|weighted|borda|condorcet|instant-runoff|approval|master
+    string? MasterModel = null,  // Provider name to use as master for orchestration
+    string EvaluationCriteria = "default",  // default|quality|speed|cost
+    bool ShowElection = false,
+    bool ShowOptimization = false);
 
 /// <summary>
 /// Unified Ouroboros agent that integrates all capabilities:
@@ -1837,14 +1849,23 @@ $synth.Dispose()
             // Initialize cost tracker for this model
             _costTracker = new LlmCostTracker(_config.Model);
 
+            // Check for Collective Mind mode
+            if (_config.CollectiveMode)
+            {
+                var collectiveMind = CreateCollectiveMind(settings);
+                _chatModel = collectiveMind;
+                _costTracker = collectiveMind.CostTracker ?? _costTracker;
+                Console.WriteLine($"  ✓ Collective Mind: {collectiveMind.HealthyPathwayCount} providers ({_config.CollectiveThinkingMode} mode)");
+                Console.WriteLine(collectiveMind.GetConsciousnessStatus());
+                return;
+            }
+
             // Create model based on resolved endpoint type
             switch (resolvedEndpointType)
             {
                 case ChatEndpointType.Anthropic:
                     if (string.IsNullOrWhiteSpace(apiKey))
-                    {
                         throw new InvalidOperationException("Anthropic API key is required. Set ANTHROPIC_API_KEY or use --api-key.");
-                    }
                     _chatModel = new AnthropicChatModel(apiKey, _config.Model, settings, costTracker: _costTracker);
                     Console.WriteLine($"  ✓ LLM: {_config.Model} @ Anthropic");
                     break;
@@ -1854,18 +1875,84 @@ $synth.Dispose()
                     Console.WriteLine($"  ✓ LLM: {_config.Model} @ Ollama Cloud");
                     break;
 
+                case ChatEndpointType.OllamaLocal:
+                    _chatModel = new OllamaCloudChatModel(endpoint, "ollama", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ Ollama (local)");
+                    break;
+
                 case ChatEndpointType.GitHubModels:
-                    _chatModel = new GitHubModelsChatModel(apiKey ?? "", _config.Model, endpoint, settings);
+                    _chatModel = new GitHubModelsChatModel(apiKey ?? "", _config.Model, endpoint, settings, costTracker: _costTracker);
                     Console.WriteLine($"  ✓ LLM: {_config.Model} @ GitHub Models");
                     break;
 
                 case ChatEndpointType.LiteLLM:
-                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings);
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
                     Console.WriteLine($"  ✓ LLM: {_config.Model} @ LiteLLM");
                     break;
 
+                // === OpenAI-compatible providers (use standard chat completions API) ===
+                case ChatEndpointType.OpenAI:
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ OpenAI");
+                    break;
+
+                case ChatEndpointType.AzureOpenAI:
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ Azure OpenAI");
+                    break;
+
+                case ChatEndpointType.Groq:
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ Groq");
+                    break;
+
+                case ChatEndpointType.Together:
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ Together AI");
+                    break;
+
+                case ChatEndpointType.Fireworks:
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ Fireworks AI");
+                    break;
+
+                case ChatEndpointType.Perplexity:
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ Perplexity");
+                    break;
+
+                case ChatEndpointType.DeepSeek:
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ DeepSeek");
+                    break;
+
+                case ChatEndpointType.Mistral:
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ Mistral AI");
+                    break;
+
+                case ChatEndpointType.Cohere:
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ Cohere");
+                    break;
+
+                case ChatEndpointType.Google:
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ Google AI");
+                    break;
+
+                case ChatEndpointType.HuggingFace:
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ HuggingFace");
+                    break;
+
+                case ChatEndpointType.Replicate:
+                    _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
+                    Console.WriteLine($"  ✓ LLM: {_config.Model} @ Replicate");
+                    break;
+
                 case ChatEndpointType.OpenAiCompatible:
-                    _chatModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey ?? "", _config.Model, settings);
+                    _chatModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
                     Console.WriteLine($"  ✓ LLM: {_config.Model} @ {endpoint}");
                     break;
 
@@ -1876,12 +1963,12 @@ $synth.Dispose()
                                         || endpoint.Contains("127.0.0.1");
                     if (autoDetectLocal)
                     {
-                        _chatModel = new OllamaCloudChatModel(endpoint, "ollama", _config.Model, settings);
+                        _chatModel = new OllamaCloudChatModel(endpoint, "ollama", _config.Model, settings, costTracker: _costTracker);
                         Console.WriteLine($"  ✓ LLM: {_config.Model} @ {endpoint} (local)");
                     }
                     else
                     {
-                        _chatModel = new HttpOpenAiCompatibleChatModel(endpoint, apiKey ?? "", _config.Model, settings);
+                        _chatModel = new LiteLLMChatModel(endpoint, apiKey ?? "", _config.Model, settings, costTracker: _costTracker);
                         Console.WriteLine($"  ✓ LLM: {_config.Model} @ {endpoint}");
                     }
                     break;
@@ -1904,6 +1991,124 @@ $synth.Dispose()
         {
             Console.WriteLine($"  ⚠ LLM unavailable: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Creates a CollectiveMind based on configuration.
+    /// </summary>
+    private CollectiveMind CreateCollectiveMind(ChatRuntimeSettings settings)
+    {
+        CollectiveMind mind;
+
+        // Check for preset
+        if (!string.IsNullOrWhiteSpace(_config.CollectivePreset))
+        {
+            mind = _config.CollectivePreset.ToLowerInvariant() switch
+            {
+                "fast" => CollectiveMindFactory.CreateFast(settings),
+                "premium" => CollectiveMindFactory.CreatePremium(settings),
+                "budget" => CollectiveMindFactory.CreateBudget(settings),
+                "local" => CollectiveMindFactory.CreateLocal(_config.Model, _config.Endpoint, settings),
+                "single" or "default" => CollectiveMindFactory.CreateFromConfig(
+                    _config.Model, _config.Endpoint, _config.ApiKey, _config.EndpointType, settings),
+                _ => CollectiveMindFactory.CreateBalanced(settings)
+            };
+        }
+        else if (!string.IsNullOrWhiteSpace(_config.CollectiveProviders))
+        {
+            // Build from explicit provider list
+            mind = new CollectiveMind();
+            var providers = _config.CollectiveProviders.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            foreach (var provider in providers)
+            {
+                var (endpoint, apiKey, endpointType) = ChatConfig.ResolveWithOverrides(null, null, provider);
+                if (endpointType != ChatEndpointType.Auto)
+                {
+                    try
+                    {
+                        mind.AddPathway(provider, endpointType, _config.Model, endpoint, apiKey, settings);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"  ⚠ Could not add provider '{provider}': {ex.Message}");
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Default: use configured endpoint/model as single-provider collective
+            // This gives resilience features (circuit breaker, health tracking) even with one provider
+            mind = CollectiveMindFactory.CreateFromConfig(
+                _config.Model, _config.Endpoint, _config.ApiKey, _config.EndpointType, settings);
+        }
+
+        // Set thinking mode
+        mind.ThinkingMode = _config.CollectiveThinkingMode.ToLowerInvariant() switch
+        {
+            "racing" => CollectiveThinkingMode.Racing,
+            "sequential" => CollectiveThinkingMode.Sequential,
+            "ensemble" => CollectiveThinkingMode.Ensemble,
+            _ => CollectiveThinkingMode.Adaptive
+        };
+
+        // Set election strategy
+        mind.ElectionStrategy = _config.ElectionStrategy.ToLowerInvariant() switch
+        {
+            "majority" => ElectionStrategy.Majority,
+            "weighted" => ElectionStrategy.WeightedMajority,
+            "borda" => ElectionStrategy.BordaCount,
+            "condorcet" => ElectionStrategy.Condorcet,
+            "runoff" or "irv" => ElectionStrategy.InstantRunoff,
+            "approval" => ElectionStrategy.ApprovalVoting,
+            "master" => ElectionStrategy.MasterDecision,
+            _ => ElectionStrategy.WeightedMajority
+        };
+
+        // Set master model for orchestration
+        if (!string.IsNullOrWhiteSpace(_config.MasterModel))
+        {
+            mind.SetMaster(_config.MasterModel);
+            Console.WriteLine($"  ✓ Master model: {_config.MasterModel}");
+        }
+        else if (mind.Pathways.Count > 0)
+        {
+            // Default: set first pathway as master for ensemble mode
+            mind.SetFirstAsMaster();
+        }
+
+        // Subscribe to thought stream for debugging
+        if (_config.Debug)
+        {
+            mind.ThoughtStream.Subscribe(thought =>
+            {
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.WriteLine($"  [collective] {thought}");
+                Console.ResetColor();
+            });
+        }
+
+        // Subscribe to election events if show-election is enabled
+        if (_config.ShowElection && mind.ElectionEvents != null)
+        {
+            mind.ElectionEvents.Subscribe(evt =>
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"  [election] {evt.Type}: {evt.Message}");
+                if (evt.Votes != null)
+                {
+                    foreach (var (source, votes) in evt.Votes.OrderByDescending(kv => kv.Value))
+                    {
+                        string marker = source == evt.Winner ? "→" : " ";
+                        Console.WriteLine($"    {marker} {source}: {votes:F3}");
+                    }
+                }
+                Console.ResetColor();
+            });
+        }
+
+        return mind;
     }
 
     /// <summary>

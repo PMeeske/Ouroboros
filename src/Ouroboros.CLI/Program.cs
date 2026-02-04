@@ -169,17 +169,35 @@ static Task RunListTokensAsync()
 }
 
 // Helper method to create the appropriate remote chat model based on endpoint type
-static IChatCompletionModel CreateRemoteChatModel(string endpoint, string apiKey, string modelName, ChatRuntimeSettings? settings, ChatEndpointType endpointType)
+static IChatCompletionModel CreateRemoteChatModel(string endpoint, string apiKey, string modelName, ChatRuntimeSettings? settings, ChatEndpointType endpointType, LlmCostTracker? costTracker = null)
 {
     return endpointType switch
     {
-        ChatEndpointType.OllamaCloud => new OllamaCloudChatModel(endpoint, apiKey, modelName, settings),
-        ChatEndpointType.LiteLLM => new LiteLLMChatModel(endpoint, apiKey, modelName, settings),
-        ChatEndpointType.GitHubModels => new GitHubModelsChatModel(apiKey, modelName, endpoint, settings),
-        ChatEndpointType.Anthropic => new AnthropicChatModel(apiKey, modelName, settings),
-        ChatEndpointType.OpenAiCompatible => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings),
-        ChatEndpointType.Auto => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings), // Default to OpenAI-compatible for auto
-        _ => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings)
+        // Native API adapters
+        ChatEndpointType.Anthropic => new AnthropicChatModel(apiKey, modelName, settings, costTracker: costTracker),
+        ChatEndpointType.OllamaCloud => new OllamaCloudChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.OllamaLocal => new OllamaCloudChatModel(endpoint, "ollama", modelName, settings, costTracker),
+        ChatEndpointType.GitHubModels => new GitHubModelsChatModel(apiKey, modelName, endpoint, settings, costTracker),
+
+        // OpenAI-compatible providers (use LiteLLMChatModel for standard chat completions)
+        ChatEndpointType.OpenAI => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.AzureOpenAI => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.LiteLLM => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.Groq => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.Together => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.Fireworks => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.Perplexity => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.DeepSeek => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.Mistral => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.Cohere => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.Google => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.HuggingFace => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.Replicate => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+
+        // Generic OpenAI-compatible
+        ChatEndpointType.OpenAiCompatible => new HttpOpenAiCompatibleChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        ChatEndpointType.Auto => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker),
+        _ => new LiteLLMChatModel(endpoint, apiKey, modelName, settings, costTracker)
     };
 }
 

@@ -18,15 +18,17 @@ public sealed class GitHubModelsChatModel : OpenAiCompatibleChatModelBase
     /// <param name="model">Model name (e.g., gpt-4o, o1-preview, claude-3-5-sonnet, llama-3.1-70b-instruct, mistral-large).</param>
     /// <param name="endpoint">Optional endpoint URL (defaults to https://models.inference.ai.azure.com).</param>
     /// <param name="settings">Optional runtime settings for temperature, max tokens, etc.</param>
-    public GitHubModelsChatModel(string githubToken, string model, string? endpoint = null, ChatRuntimeSettings? settings = null)
+    /// <param name="costTracker">Optional cost tracker for monitoring usage and costs.</param>
+    public GitHubModelsChatModel(string githubToken, string model, string? endpoint = null, ChatRuntimeSettings? settings = null, LlmCostTracker? costTracker = null)
         : base(
-            endpoint: !string.IsNullOrWhiteSpace(endpoint) 
-                ? endpoint 
+            endpoint: !string.IsNullOrWhiteSpace(endpoint)
+                ? endpoint
                 : Environment.GetEnvironmentVariable("GITHUB_MODELS_ENDPOINT") ?? DefaultEndpoint,
             apiKey: githubToken ?? throw new ArgumentException("GitHub token is required", nameof(githubToken)),
             model: model ?? throw new ArgumentException("Model name is required", nameof(model)),
             providerName: "GitHubModelsChatModel",
-            settings: settings)
+            settings: settings,
+            costTracker: costTracker)
     {
     }
 

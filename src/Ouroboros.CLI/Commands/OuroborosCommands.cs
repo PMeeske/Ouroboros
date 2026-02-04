@@ -120,7 +120,19 @@ public static class OuroborosCommands
                 // Cost tracking & efficiency
                 ShowCosts: opts.ShowCosts,
                 CostAware: opts.CostAware,
-                CostSummary: opts.CostSummary
+                CostSummary: opts.CostSummary,
+                // Collective Mind (Multi-Provider)
+                CollectiveMode: opts.CollectiveMode,
+                CollectivePreset: opts.CollectivePreset,
+                CollectiveThinkingMode: opts.CollectiveThinkingMode,
+                CollectiveProviders: opts.CollectiveProviders,
+                Failover: opts.Failover,
+                // Election & Orchestration
+                ElectionStrategy: opts.ElectionStrategy,
+                MasterModel: opts.MasterModel,
+                EvaluationCriteria: opts.EvaluationCriteria,
+                ShowElection: opts.ShowElection,
+                ShowOptimization: opts.ShowOptimization
             );
 
             // Create the unified Ouroboros agent

@@ -334,14 +334,18 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel
 /// keep it permissive – if the call fails we simply echo the prompt with context.
 /// Uses Polly for exponential backoff retry policy to handle rate limiting.
 /// </summary>
-public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
+public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel, ICostAwareChatModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
     private readonly ChatRuntimeSettings _settings;
     private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
+    private readonly LlmCostTracker? _costTracker;
 
-    public HttpOpenAiCompatibleChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null)
+    /// <summary>Gets the cost tracker for this model instance.</summary>
+    public LlmCostTracker? CostTracker => _costTracker;
+
+    public HttpOpenAiCompatibleChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null, LlmCostTracker? costTracker = null)
     {
         if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
         if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
@@ -353,6 +357,7 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;
         _settings = settings ?? new ChatRuntimeSettings();
+        _costTracker = costTracker ?? new LlmCostTracker(model);
 
         // Create Polly retry policy with exponential backoff for rate limiting (429) and server errors (5xx)
         _retryPolicy = Policy
@@ -371,6 +376,7 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
+        _costTracker?.StartRequest();
         try
         {
             using JsonContent payload = JsonContent.Create(new
@@ -390,6 +396,16 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
             Dictionary<string, object?>? json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
             if (json is not null && json.TryGetValue("output_text", out object? text) && text is string s)
             {
+                // Try to extract token counts if available
+                int inputTokens = 0, outputTokens = 0;
+                if (json.TryGetValue("usage", out var usage) && usage is System.Text.Json.JsonElement usageEl)
+                {
+                    if (usageEl.TryGetProperty("prompt_tokens", out var pt))
+                        inputTokens = pt.GetInt32();
+                    if (usageEl.TryGetProperty("completion_tokens", out var ct2))
+                        outputTokens = ct2.GetInt32();
+                }
+                _costTracker?.EndRequest(inputTokens, outputTokens);
                 return s;
             }
         }
@@ -397,6 +413,7 @@ public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel
         {
             // Remote backend not reachable → fall back to indicating failure.
         }
+        _costTracker?.EndRequest(0, 0);
         return $"[remote-fallback:{_model}] {prompt}";
     }
 
@@ -754,13 +771,14 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
 /// Provides shared implementation for request/response handling and streaming.
 /// Supports thinking mode via reasoning_content field (DeepSeek, o1, etc.) and thinking tags.
 /// </summary>
-public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatModel
+public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatModel, ICostAwareChatModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
     private readonly ChatRuntimeSettings _settings;
     private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
     private readonly string _providerName;
+    private readonly LlmCostTracker? _costTracker;
 
     /// <summary>Gets the model name.</summary>
     protected string ModelName => _model;
@@ -768,7 +786,10 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
     /// <summary>Gets the settings.</summary>
     protected ChatRuntimeSettings Settings => _settings;
 
-    protected OpenAiCompatibleChatModelBase(string endpoint, string apiKey, string model, string providerName, ChatRuntimeSettings? settings = null)
+    /// <summary>Gets the cost tracker for this model instance.</summary>
+    public LlmCostTracker? CostTracker => _costTracker;
+
+    protected OpenAiCompatibleChatModelBase(string endpoint, string apiKey, string model, string providerName, ChatRuntimeSettings? settings = null, LlmCostTracker? costTracker = null)
     {
         if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
         if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
@@ -781,6 +802,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
         _model = model;
         _settings = settings ?? new ChatRuntimeSettings();
         _providerName = providerName;
+        _costTracker = costTracker ?? new LlmCostTracker(model);
 
         // Create Polly retry policy with exponential backoff for rate limiting (429) and server errors (5xx)
         _retryPolicy = Policy
@@ -807,6 +829,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
     /// <inheritdoc/>
     public async Task<ThinkingResponse> GenerateWithThinkingAsync(string prompt, CancellationToken ct = default)
     {
+        _costTracker?.StartRequest();
         try
         {
             // Use OpenAI-compatible chat completions format
@@ -835,6 +858,8 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
             string? content = null;
             int? reasoningTokens = null;
             int? contentTokens = null;
+            int promptTokens = 0;
+            int completionTokens = 0;
 
             // Try to extract usage info
             if (doc.RootElement.TryGetProperty("usage", out var usageElement))
@@ -842,8 +867,16 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
                 if (usageElement.TryGetProperty("reasoning_tokens", out var rtElement))
                     reasoningTokens = rtElement.GetInt32();
                 if (usageElement.TryGetProperty("completion_tokens", out var ctElement))
+                {
                     contentTokens = ctElement.GetInt32();
+                    completionTokens = contentTokens.Value;
+                }
+                if (usageElement.TryGetProperty("prompt_tokens", out var ptElement))
+                    promptTokens = ptElement.GetInt32();
             }
+
+            // Record cost tracking
+            _costTracker?.EndRequest(promptTokens, completionTokens);
 
             // Extract content from OpenAI response format: choices[0].message
             if (doc.RootElement.TryGetProperty("choices", out System.Text.Json.JsonElement choicesElement) &&
@@ -1049,8 +1082,8 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
 /// </summary>
 public sealed class LiteLLMChatModel : OpenAiCompatibleChatModelBase
 {
-    public LiteLLMChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null)
-        : base(endpoint, apiKey, model, "LiteLLMChatModel", settings)
+    public LiteLLMChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null, LlmCostTracker? costTracker = null)
+        : base(endpoint, apiKey, model, "LiteLLMChatModel", settings, costTracker)
     {
     }
 }

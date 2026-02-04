@@ -77,7 +77,7 @@ public sealed class OuroborosOptions : IVoiceOptions
     [Option("api-key", Required = false, HelpText = "API key for remote endpoint")]
     public string? ApiKey { get; set; }
 
-    [Option("endpoint-type", Required = false, HelpText = "Endpoint type: auto|openai|ollama-cloud|litellm|github-models|anthropic")]
+    [Option("endpoint-type", Required = false, HelpText = "Provider/endpoint type: auto|anthropic|openai|azure|google|mistral|deepseek|groq|together|fireworks|perplexity|cohere|ollama|github-models|litellm|huggingface|replicate")]
     public string? EndpointType { get; set; }
 
     [Option("temperature", Required = false, HelpText = "Sampling temperature", Default = 0.7)]
@@ -245,4 +245,42 @@ public sealed class OuroborosOptions : IVoiceOptions
 
     [Option("cost-summary", Required = false, HelpText = "Show session cost summary on exit", Default = true)]
     public bool CostSummary { get; set; } = true;
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // COLLECTIVE MIND (Multi-Provider)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    [Option("collective", Required = false, HelpText = "Enable collective mind mode (uses multiple LLM providers)", Default = false)]
+    public bool CollectiveMode { get; set; }
+
+    [Option("collective-preset", Required = false, HelpText = "Collective mind preset: single|local|balanced|fast|premium|budget (single=use configured endpoint)")]
+    public string? CollectivePreset { get; set; }
+
+    [Option("collective-mode", Required = false, HelpText = "Collective thinking mode: racing|sequential|ensemble|adaptive", Default = "adaptive")]
+    public string CollectiveThinkingMode { get; set; } = "adaptive";
+
+    [Option("collective-providers", Required = false, HelpText = "Comma-separated list of providers to use (e.g., anthropic,openai,deepseek,groq,ollama)")]
+    public string? CollectiveProviders { get; set; }
+
+    [Option("failover", Required = false, HelpText = "Enable automatic failover to other providers on error", Default = true)]
+    public bool Failover { get; set; } = true;
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ELECTION & ORCHESTRATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    [Option("election", Required = false, HelpText = "Election strategy: majority|weighted|borda|condorcet|runoff|approval|master", Default = "weighted")]
+    public string ElectionStrategy { get; set; } = "weighted";
+
+    [Option("master", Required = false, HelpText = "Designate master model for orchestration (e.g., anthropic, openai, or pathway name)")]
+    public string? MasterModel { get; set; }
+
+    [Option("eval-criteria", Required = false, HelpText = "Evaluation criteria preset: default|quality|speed|cost", Default = "default")]
+    public string EvaluationCriteria { get; set; } = "default";
+
+    [Option("show-election", Required = false, HelpText = "Show election results and voting details", Default = false)]
+    public bool ShowElection { get; set; }
+
+    [Option("show-optimization", Required = false, HelpText = "Show model optimization suggestions after session", Default = false)]
+    public bool ShowOptimization { get; set; }
 }
