@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Core;
@@ -9,17 +8,15 @@ namespace Ouroboros.Providers.Tapo;
 /// <summary>
 /// Provides operations for Tapo smart plug devices (P100, P105).
 /// </summary>
-public sealed class TapoPlugOperations
+public sealed class TapoPlugOperations : TapoDeviceOperationsBase
 {
-    private readonly HttpClient _httpClient;
-    private readonly ILogger? _logger;
-    private readonly JsonSerializerOptions _jsonOptions;
-
-    internal TapoPlugOperations(HttpClient httpClient, ILogger? logger, JsonSerializerOptions jsonOptions)
+    internal TapoPlugOperations(
+        HttpClient httpClient,
+        ILogger? logger,
+        JsonSerializerOptions jsonOptions,
+        Func<string?> getSessionId)
+        : base(httpClient, logger, jsonOptions, getSessionId)
     {
-        _httpClient = httpClient;
-        _logger = logger;
-        _jsonOptions = jsonOptions;
     }
 
     /// <summary>
@@ -66,86 +63,21 @@ public sealed class TapoPlugOperations
         return await GetJsonResponseAsync("p100/get-device-usage", deviceName, ct);
     }
 
-    private async Task<Result<Unit>> ExecuteActionAsync(string action, string deviceName, CancellationToken ct)
-    {
-        try
-        {
-            var response = await _httpClient.GetAsync($"/actions/{action}?device={Uri.EscapeDataString(deviceName)}", ct);
 
-            if (!response.IsSuccessStatusCode)
-            {
-                var error = await response.Content.ReadAsStringAsync(ct);
-                _logger?.LogError("Action {Action} failed for device {Device}: {Error}", action, deviceName, error);
-                return Result<Unit>.Failure($"Action failed: {response.StatusCode}");
-            }
-
-            return Result<Unit>.Success(Unit.Value);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger?.LogError(ex, "HTTP error executing action {Action} for device {Device}", action, deviceName);
-            return Result<Unit>.Failure($"HTTP error: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error executing action {Action} for device {Device}", action, deviceName);
-            return Result<Unit>.Failure($"Action failed: {ex.Message}");
-        }
-    }
-
-    private async Task<Result<JsonDocument>> GetJsonResponseAsync(string action, string deviceName, CancellationToken ct)
-    {
-        try
-        {
-            var response = await _httpClient.GetAsync($"/actions/{action}?device={Uri.EscapeDataString(deviceName)}", ct);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var error = await response.Content.ReadAsStringAsync(ct);
-                _logger?.LogError("Action {Action} failed for device {Device}: {Error}", action, deviceName, error);
-                return Result<JsonDocument>.Failure($"Action failed: {response.StatusCode}");
-            }
-
-            var json = await response.Content.ReadFromJsonAsync<JsonDocument>(_jsonOptions, ct);
-            return json != null
-                ? Result<JsonDocument>.Success(json)
-                : Result<JsonDocument>.Failure("Empty response");
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger?.LogError(ex, "HTTP error executing action {Action} for device {Device}", action, deviceName);
-            return Result<JsonDocument>.Failure($"HTTP error: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error executing action {Action} for device {Device}", action, deviceName);
-            return Result<JsonDocument>.Failure($"Action failed: {ex.Message}");
-        }
-    }
 }
 
 /// <summary>
 /// Provides operations for Tapo energy monitoring plug devices (P110, P110M, P115).
 /// </summary>
-public sealed class TapoEnergyPlugOperations
+public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
 {
-    private readonly HttpClient _httpClient;
-    private readonly ILogger? _logger;
-    private readonly JsonSerializerOptions _jsonOptions;
-
-    internal TapoEnergyPlugOperations(HttpClient httpClient, ILogger? logger, JsonSerializerOptions jsonOptions)
+    internal TapoEnergyPlugOperations(
+        HttpClient httpClient,
+        ILogger? logger,
+        JsonSerializerOptions jsonOptions,
+        Func<string?> getSessionId)
+        : base(httpClient, logger, jsonOptions, getSessionId)
     {
-        _httpClient = httpClient;
-        _logger = logger;
-        _jsonOptions = jsonOptions;
     }
 
     /// <summary>
@@ -267,86 +199,21 @@ public sealed class TapoEnergyPlugOperations
             ct);
     }
 
-    private async Task<Result<Unit>> ExecuteActionAsync(string action, string deviceName, CancellationToken ct)
-    {
-        try
-        {
-            var response = await _httpClient.GetAsync($"/actions/{action}?device={Uri.EscapeDataString(deviceName)}", ct);
 
-            if (!response.IsSuccessStatusCode)
-            {
-                var error = await response.Content.ReadAsStringAsync(ct);
-                _logger?.LogError("Action {Action} failed for device {Device}: {Error}", action, deviceName, error);
-                return Result<Unit>.Failure($"Action failed: {response.StatusCode}");
-            }
-
-            return Result<Unit>.Success(Unit.Value);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger?.LogError(ex, "HTTP error executing action {Action} for device {Device}", action, deviceName);
-            return Result<Unit>.Failure($"HTTP error: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error executing action {Action} for device {Device}", action, deviceName);
-            return Result<Unit>.Failure($"Action failed: {ex.Message}");
-        }
-    }
-
-    private async Task<Result<JsonDocument>> GetJsonResponseAsync(string action, string deviceName, CancellationToken ct)
-    {
-        try
-        {
-            var response = await _httpClient.GetAsync($"/actions/{action}?device={Uri.EscapeDataString(deviceName)}", ct);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var error = await response.Content.ReadAsStringAsync(ct);
-                _logger?.LogError("Action {Action} failed for device {Device}: {Error}", action, deviceName, error);
-                return Result<JsonDocument>.Failure($"Action failed: {response.StatusCode}");
-            }
-
-            var json = await response.Content.ReadFromJsonAsync<JsonDocument>(_jsonOptions, ct);
-            return json != null
-                ? Result<JsonDocument>.Success(json)
-                : Result<JsonDocument>.Failure("Empty response");
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger?.LogError(ex, "HTTP error executing action {Action} for device {Device}", action, deviceName);
-            return Result<JsonDocument>.Failure($"HTTP error: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error executing action {Action} for device {Device}", action, deviceName);
-            return Result<JsonDocument>.Failure($"Action failed: {ex.Message}");
-        }
-    }
 }
 
 /// <summary>
 /// Provides operations for Tapo power strip devices (P300, P304, P304M, P316).
 /// </summary>
-public sealed class TapoPowerStripOperations
+public sealed class TapoPowerStripOperations : TapoDeviceOperationsBase
 {
-    private readonly HttpClient _httpClient;
-    private readonly ILogger? _logger;
-    private readonly JsonSerializerOptions _jsonOptions;
-
-    internal TapoPowerStripOperations(HttpClient httpClient, ILogger? logger, JsonSerializerOptions jsonOptions)
+    internal TapoPowerStripOperations(
+        HttpClient httpClient,
+        ILogger? logger,
+        JsonSerializerOptions jsonOptions,
+        Func<string?> getSessionId)
+        : base(httpClient, logger, jsonOptions, getSessionId)
     {
-        _httpClient = httpClient;
-        _logger = logger;
-        _jsonOptions = jsonOptions;
     }
 
     /// <summary>
@@ -371,37 +238,4 @@ public sealed class TapoPowerStripOperations
         return await GetJsonResponseAsync("p300/get-child-device-list", deviceName, ct);
     }
 
-    private async Task<Result<JsonDocument>> GetJsonResponseAsync(string action, string deviceName, CancellationToken ct)
-    {
-        try
-        {
-            var response = await _httpClient.GetAsync($"/actions/{action}?device={Uri.EscapeDataString(deviceName)}", ct);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var error = await response.Content.ReadAsStringAsync(ct);
-                _logger?.LogError("Action {Action} failed for device {Device}: {Error}", action, deviceName, error);
-                return Result<JsonDocument>.Failure($"Action failed: {response.StatusCode}");
-            }
-
-            var json = await response.Content.ReadFromJsonAsync<JsonDocument>(_jsonOptions, ct);
-            return json != null
-                ? Result<JsonDocument>.Success(json)
-                : Result<JsonDocument>.Failure("Empty response");
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger?.LogError(ex, "HTTP error executing action {Action} for device {Device}", action, deviceName);
-            return Result<JsonDocument>.Failure($"HTTP error: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error executing action {Action} for device {Device}", action, deviceName);
-            return Result<JsonDocument>.Failure($"Action failed: {ex.Message}");
-        }
-    }
 }
