@@ -780,7 +780,7 @@ public class TapoEmbodimentProviderTests
     }
 
     [Fact]
-    public void Dispose_DisposesResources()
+    public async Task Dispose_DisposesResources()
     {
         // Arrange
         using var httpClient = new HttpClient();
@@ -791,7 +791,7 @@ public class TapoEmbodimentProviderTests
         provider.Dispose();
 
         // Assert - disposed provider should return failures
-        var result = provider.GetStateAsync().Result;
+        var result = await provider.GetStateAsync();
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Contain("disposed");
     }

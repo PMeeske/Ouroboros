@@ -8,7 +8,11 @@ using Microsoft.Extensions.Logging;
 using Ouroboros.Core.EmbodiedInteraction;
 using Ouroboros.Core.Monads;
 
-using Unit = Ouroboros.Core.EmbodiedInteraction.Unit;
+// Unit types:
+// - Ouroboros.Core.EmbodiedInteraction.Unit (EmbodimentUnit.Default) - used by IEmbodimentProvider interface
+// - Ouroboros.Core.Learning.Unit (Unit.Value) - used by Tapo device operations
+using EmbodimentUnit = Ouroboros.Core.EmbodiedInteraction.Unit;
+using TapoUnit = Ouroboros.Core.Learning.Unit;
 
 namespace Ouroboros.Providers.Tapo;
 
@@ -116,9 +120,9 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
     }
 
     /// <inheritdoc/>
-    public async Task<Result<Unit>> DisconnectAsync(CancellationToken ct = default)
+    public async Task<Result<EmbodimentUnit>> DisconnectAsync(CancellationToken ct = default)
     {
-        if (!_isConnected) return Result<Unit>.Success(Unit.Default);
+        if (!_isConnected) return Result<EmbodimentUnit>.Success(EmbodimentUnit.Default);
 
         try
         {
@@ -131,12 +135,12 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
             RaiseEvent(EmbodimentProviderEventType.Disconnected);
 
             await Task.CompletedTask;
-            return Result<Unit>.Success(Unit.Default);
+            return Result<EmbodimentUnit>.Success(EmbodimentUnit.Default);
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error disconnecting from Tapo provider");
-            return Result<Unit>.Failure($"Disconnect failed: {ex.Message}");
+            return Result<EmbodimentUnit>.Failure($"Disconnect failed: {ex.Message}");
         }
     }
 
@@ -174,14 +178,14 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
     }
 
     /// <inheritdoc/>
-    public Task<Result<Unit>> ActivateSensorAsync(string sensorId, CancellationToken ct = default)
+    public Task<Result<EmbodimentUnit>> ActivateSensorAsync(string sensorId, CancellationToken ct = default)
     {
-        if (_disposed) return Task.FromResult(Result<Unit>.Failure("Provider is disposed"));
-        if (!_isConnected) return Task.FromResult(Result<Unit>.Failure("Not connected"));
+        if (_disposed) return Task.FromResult(Result<EmbodimentUnit>.Failure("Provider is disposed"));
+        if (!_isConnected) return Task.FromResult(Result<EmbodimentUnit>.Failure("Not connected"));
 
         if (!_sensors.ContainsKey(sensorId))
         {
-            return Task.FromResult(Result<Unit>.Failure($"Sensor '{sensorId}' not found"));
+            return Task.FromResult(Result<EmbodimentUnit>.Failure($"Sensor '{sensorId}' not found"));
         }
 
         _activeSensors[sensorId] = true;
@@ -194,13 +198,13 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
             new Dictionary<string, object> { ["sensorId"] = sensorId });
 
         _logger?.LogInformation("Activated sensor: {SensorId}", sensorId);
-        return Task.FromResult(Result<Unit>.Success(Unit.Default));
+        return Task.FromResult(Result<EmbodimentUnit>.Success(EmbodimentUnit.Default));
     }
 
     /// <inheritdoc/>
-    public Task<Result<Unit>> DeactivateSensorAsync(string sensorId, CancellationToken ct = default)
+    public Task<Result<EmbodimentUnit>> DeactivateSensorAsync(string sensorId, CancellationToken ct = default)
     {
-        if (_disposed) return Task.FromResult(Result<Unit>.Failure("Provider is disposed"));
+        if (_disposed) return Task.FromResult(Result<EmbodimentUnit>.Failure("Provider is disposed"));
 
         if (_activeSensors.ContainsKey(sensorId))
         {
@@ -215,41 +219,29 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
                 new Dictionary<string, object> { ["sensorId"] = sensorId });
         }
 
-        return Task.FromResult(Result<Unit>.Success(Unit.Default));
+        return Task.FromResult(Result<EmbodimentUnit>.Success(EmbodimentUnit.Default));
     }
 
     /// <inheritdoc/>
-    public async Task<Result<PerceptionData>> ReadSensorAsync(string sensorId, CancellationToken ct = default)
+    public Task<Result<PerceptionData>> ReadSensorAsync(string sensorId, CancellationToken ct = default)
     {
-        if (_disposed) return Result<PerceptionData>.Failure("Provider is disposed");
-        if (!_isConnected) return Result<PerceptionData>.Failure("Not connected");
+        if (_disposed) return Task.FromResult(Result<PerceptionData>.Failure("Provider is disposed"));
+        if (!_isConnected) return Task.FromResult(Result<PerceptionData>.Failure("Not connected"));
 
         if (!_sensors.TryGetValue(sensorId, out var sensor))
         {
-            return Result<PerceptionData>.Failure($"Sensor '{sensorId}' not found");
+            return Task.FromResult(Result<PerceptionData>.Failure($"Sensor '{sensorId}' not found"));
         }
 
         if (!_activeSensors.GetValueOrDefault(sensorId, false))
         {
-            return Result<PerceptionData>.Failure($"Sensor '{sensorId}' is not active");
+            return Task.FromResult(Result<PerceptionData>.Failure($"Sensor '{sensorId}' is not active"));
         }
 
-        // Create perception based on sensor modality
-        var perception = new PerceptionData(
-            sensorId,
-            sensor.Modality,
-            DateTime.UtcNow,
-            new byte[0], // Placeholder - actual data would come from camera stream
-            new Dictionary<string, object>
-            {
-                ["source"] = "tapo",
-                ["deviceName"] = sensorId
-            });
-
-        _perceptions.OnNext(perception);
-
-        await Task.CompletedTask;
-        return Result<PerceptionData>.Success(perception);
+        // Sensor data retrieval for Tapo devices is not implemented yet.
+        // To avoid emitting misleading empty sensor payloads, report this as a failure.
+        return Task.FromResult(Result<PerceptionData>.Failure(
+            $"Sensor data retrieval is not implemented for sensor '{sensorId}' in TapoEmbodimentProvider"));
     }
 
     /// <inheritdoc/>
@@ -270,7 +262,7 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
 
         try
         {
-            Result<Core.Learning.Unit>? result = null;
+            Result<TapoUnit>? result = null;
 
             // Route action to appropriate Tapo operation
             switch (action.ActionType.ToLowerInvariant())
@@ -560,7 +552,7 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
         return caps;
     }
 
-    private async Task<Result<Core.Learning.Unit>> ExecuteTurnOnAsync(string deviceId, CancellationToken ct)
+    private async Task<Result<TapoUnit>> ExecuteTurnOnAsync(string deviceId, CancellationToken ct)
     {
         // Try color bulb first, then regular bulb, then plug
         var colorResult = await _tapoClient.ColorLightBulbs.TurnOnAsync(deviceId, ct);
@@ -572,7 +564,7 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
         return await _tapoClient.Plugs.TurnOnAsync(deviceId, ct);
     }
 
-    private async Task<Result<Core.Learning.Unit>> ExecuteTurnOffAsync(string deviceId, CancellationToken ct)
+    private async Task<Result<TapoUnit>> ExecuteTurnOffAsync(string deviceId, CancellationToken ct)
     {
         var colorResult = await _tapoClient.ColorLightBulbs.TurnOffAsync(deviceId, ct);
         if (colorResult.IsSuccess) return colorResult;
@@ -583,7 +575,7 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
         return await _tapoClient.Plugs.TurnOffAsync(deviceId, ct);
     }
 
-    private Task<Result<Core.Learning.Unit>> ExecuteSetColorAsync(
+    private Task<Result<TapoUnit>> ExecuteSetColorAsync(
         string deviceId, byte r, byte g, byte b, CancellationToken ct)
     {
         return _tapoClient.ColorLightBulbs.SetColorAsync(

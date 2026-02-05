@@ -91,8 +91,8 @@ public static class TapoServiceCollectionExtensions
         }
         services.AddSingleton(visionConfig);
 
-        // Register the provider as IEmbodimentProvider
-        services.AddTransient<IEmbodimentProvider, TapoEmbodimentProvider>(sp =>
+        // Register the provider as singleton to maintain connection state across application lifecycle
+        services.AddSingleton<TapoEmbodimentProvider>(sp =>
         {
             var tapoClient = sp.GetRequiredService<TapoRestClient>();
             var visionModel = sp.GetService<IVisionModel>();
@@ -103,17 +103,8 @@ public static class TapoServiceCollectionExtensions
             return new TapoEmbodimentProvider(tapoClient, providerId, visionModel, ttsModel, config, logger);
         });
 
-        // Also register concrete type for direct access
-        services.AddTransient<TapoEmbodimentProvider>(sp =>
-        {
-            var tapoClient = sp.GetRequiredService<TapoRestClient>();
-            var visionModel = sp.GetService<IVisionModel>();
-            var ttsModel = sp.GetService<ITtsModel>();
-            var config = sp.GetService<TapoVisionModelConfig>() ?? TapoVisionModelConfig.CreateDefault();
-            var logger = sp.GetService<ILogger<TapoEmbodimentProvider>>();
-
-            return new TapoEmbodimentProvider(tapoClient, providerId, visionModel, ttsModel, config, logger);
-        });
+        // Register interface to resolve to same singleton instance
+        services.AddSingleton<IEmbodimentProvider>(sp => sp.GetRequiredService<TapoEmbodimentProvider>());
 
         return services;
     }
@@ -138,14 +129,19 @@ public static class TapoServiceCollectionExtensions
         // Add the provider
         services.AddTapoEmbodimentProvider(baseAddress, "tapo", configureVision);
 
-        // Register the aggregate
+        // Register the aggregate as singleton
         services.AddSingleton<EmbodimentAggregate>(sp =>
         {
             var aggregate = new EmbodimentAggregate(aggregateId, aggregateName);
             
-            // Register the Tapo provider with the aggregate
+            // Register the Tapo provider singleton with the aggregate
             var provider = sp.GetRequiredService<TapoEmbodimentProvider>();
-            aggregate.RegisterProvider(provider);
+            
+            // Only register if not already registered (avoid duplicates)
+            if (!aggregate.Providers.ContainsKey(provider.ProviderId))
+            {
+                aggregate.RegisterProvider(provider);
+            }
 
             return aggregate;
         });
@@ -184,11 +180,11 @@ public static class TapoServiceCollectionExtensions
         }
         services.AddSingleton(visionConfig);
 
-        // Register the embodiment as a factory to allow proper dependency resolution
+        // Register the embodiment as a factory - VirtualSelf must be registered
         services.AddTransient<TapoEmbodiment>(sp =>
         {
             var tapoClient = sp.GetRequiredService<TapoRestClient>();
-            var virtualSelf = sp.GetService<VirtualSelf>() ?? new VirtualSelf("TapoEmbodiment");
+            var virtualSelf = sp.GetRequiredService<VirtualSelf>();
             var visionModel = sp.GetService<IVisionModel>();
             var ttsModel = sp.GetService<ITtsModel>();
             var logger = sp.GetService<ILogger<TapoEmbodiment>>();

@@ -144,6 +144,7 @@ public sealed class EmbodimentAggregate : IDisposable
     /// Unregisters an embodiment provider.
     /// </summary>
     /// <param name="providerId">The provider identifier.</param>
+    /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating success or failure.</returns>
     public async Task<Result<EmbodimentAggregate>> UnregisterProviderAsync(
         string providerId,
@@ -160,15 +161,21 @@ public sealed class EmbodimentAggregate : IDisposable
         await provider.DisconnectAsync(ct);
         provider.Dispose();
 
-        // Remove associated sensors and actuators
-        foreach (var key in _activeSensors.Keys.Where(k => k.StartsWith($"{providerId}:")).ToList())
+        // Remove associated sensors and actuators efficiently
+        foreach (var key in _activeSensors.Keys)
         {
-            _activeSensors.TryRemove(key, out _);
+            if (key.StartsWith($"{providerId}:", StringComparison.Ordinal))
+            {
+                _activeSensors.TryRemove(key, out _);
+            }
         }
 
-        foreach (var key in _activeActuators.Keys.Where(k => k.StartsWith($"{providerId}:")).ToList())
+        foreach (var key in _activeActuators.Keys)
         {
-            _activeActuators.TryRemove(key, out _);
+            if (key.StartsWith($"{providerId}:", StringComparison.Ordinal))
+            {
+                _activeActuators.TryRemove(key, out _);
+            }
         }
 
         UpdateAggregateCapabilities();

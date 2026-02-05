@@ -18,6 +18,7 @@ namespace Ouroboros.Providers.Tapo;
 /// through Tapo smart cameras and devices with speaker capabilities.
 /// Integrates with the VirtualSelf and EmbodimentController systems.
 /// </summary>
+[Obsolete("Use TapoEmbodimentProvider for the new repository-pattern architecture")]
 public sealed class TapoEmbodiment : IDisposable
 {
     private readonly TapoRestClient _tapoClient;
