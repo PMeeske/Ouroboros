@@ -9,8 +9,11 @@ using Ouroboros.Core.Learning;
 namespace Ouroboros.Providers.Tapo;
 
 /// <summary>
-/// Client for interacting with the Tapo REST API.
+/// Client for interacting with the Tapo REST API server.
 /// Provides type-safe access to Tapo smart devices (bulbs, plugs, strips).
+/// Note: This client connects to a Tapo REST API server (https://github.com/ClementNerma/tapo-rest),
+/// not directly to Tapo devices. The server handles device authentication using Tapo account credentials
+/// configured on the server side. This client only needs the server_password to authenticate with the API.
 /// </summary>
 public sealed class TapoRestClient : IDisposable
 {
@@ -80,11 +83,13 @@ public sealed class TapoRestClient : IDisposable
     public TapoPowerStripOperations PowerStrips { get; }
 
     /// <summary>
-    /// Authenticates with the Tapo REST API server.
+    /// Authenticates with the Tapo REST API server using the server password.
+    /// Note: This is NOT the Tapo account email/password. Those credentials are configured
+    /// on the server side. This password is the 'server_password' from the server's config file.
     /// </summary>
-    /// <param name="password">Server password for authentication.</param>
+    /// <param name="password">Server password for authentication (server_password from config).</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Result containing success or error message.</returns>
+    /// <returns>Result containing the session ID on success or error message on failure.</returns>
     public async Task<Result<string>> LoginAsync(string password, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(password))
