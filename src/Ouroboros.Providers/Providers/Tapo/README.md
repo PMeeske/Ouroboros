@@ -293,9 +293,7 @@ services.AddTapoEmbodimentProvider("http://localhost:8000");
 
 // Configure custom vision model
 services.AddTapoEmbodimentProvider("http://localhost:8000", configureVision: config =>
-{
-    config = TapoVisionModelConfig.CreateHighQuality(); // llava:34b
-});
+    TapoVisionModelConfig.CreateHighQuality()); // llava:34b
 ```
 
 Available presets:

@@ -66,13 +66,13 @@ public static class TapoServiceCollectionExtensions
     /// <param name="services">The service collection.</param>
     /// <param name="baseAddress">The base address of the Tapo REST API server.</param>
     /// <param name="providerId">Optional provider identifier.</param>
-    /// <param name="configureVision">Optional configuration for the vision model.</param>
+    /// <param name="configureVision">Optional function to configure the vision model (returns modified config).</param>
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddTapoEmbodimentProvider(
         this IServiceCollection services,
         string baseAddress,
         string providerId = "tapo",
-        Action<TapoVisionModelConfig>? configureVision = null)
+        Func<TapoVisionModelConfig, TapoVisionModelConfig>? configureVision = null)
     {
         if (services == null)
             throw new ArgumentNullException(nameof(services));
@@ -85,7 +85,10 @@ public static class TapoServiceCollectionExtensions
 
         // Configure the vision model with strong defaults (llava:13b)
         var visionConfig = TapoVisionModelConfig.CreateDefault();
-        configureVision?.Invoke(visionConfig);
+        if (configureVision != null)
+        {
+            visionConfig = configureVision(visionConfig);
+        }
         services.AddSingleton(visionConfig);
 
         // Register the provider as IEmbodimentProvider
@@ -123,14 +126,14 @@ public static class TapoServiceCollectionExtensions
     /// <param name="baseAddress">The base address of the Tapo REST API server.</param>
     /// <param name="aggregateId">Unique identifier for the aggregate.</param>
     /// <param name="aggregateName">Human-readable name for the aggregate.</param>
-    /// <param name="configureVision">Optional configuration for the vision model.</param>
+    /// <param name="configureVision">Optional function to configure the vision model (returns modified config).</param>
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddTapoEmbodimentAggregate(
         this IServiceCollection services,
         string baseAddress,
         string aggregateId = "tapo-embodiment",
         string aggregateName = "Tapo Embodiment",
-        Action<TapoVisionModelConfig>? configureVision = null)
+        Func<TapoVisionModelConfig, TapoVisionModelConfig>? configureVision = null)
     {
         // Add the provider
         services.AddTapoEmbodimentProvider(baseAddress, "tapo", configureVision);
@@ -156,13 +159,13 @@ public static class TapoServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="baseAddress">The base address of the Tapo REST API server.</param>
-    /// <param name="configureVision">Optional configuration for the vision model.</param>
+    /// <param name="configureVision">Optional function to configure the vision model (returns modified config).</param>
     /// <returns>The service collection for chaining.</returns>
     [Obsolete("Use AddTapoEmbodimentProvider for the new repository-pattern architecture")]
     public static IServiceCollection AddTapoEmbodiment(
         this IServiceCollection services,
         string baseAddress,
-        Action<TapoVisionModelConfig>? configureVision = null)
+        Func<TapoVisionModelConfig, TapoVisionModelConfig>? configureVision = null)
     {
         if (services == null)
             throw new ArgumentNullException(nameof(services));
@@ -175,7 +178,10 @@ public static class TapoServiceCollectionExtensions
 
         // Configure the vision model with defaults
         var visionConfig = TapoVisionModelConfig.CreateDefault();
-        configureVision?.Invoke(visionConfig);
+        if (configureVision != null)
+        {
+            visionConfig = configureVision(visionConfig);
+        }
         services.AddSingleton(visionConfig);
 
         // Register the embodiment as a factory to allow proper dependency resolution
@@ -199,14 +205,14 @@ public static class TapoServiceCollectionExtensions
     /// <param name="services">The service collection.</param>
     /// <param name="baseAddress">The base address of the Tapo REST API server.</param>
     /// <param name="cameraName">The name of the camera device to use.</param>
-    /// <param name="configureCamera">Optional configuration for the camera.</param>
+    /// <param name="configureCamera">Optional function to configure the camera (returns modified config).</param>
     /// <returns>The service collection for chaining.</returns>
     [Obsolete("Use AddTapoEmbodimentProvider for the new repository-pattern architecture")]
     public static IServiceCollection AddTapoEmbodimentWithCamera(
         this IServiceCollection services,
         string baseAddress,
         string cameraName,
-        Action<TapoCameraConfig>? configureCamera = null)
+        Func<TapoCameraConfig, TapoCameraConfig>? configureCamera = null)
     {
         if (string.IsNullOrWhiteSpace(cameraName))
             throw new ArgumentException("Camera name is required", nameof(cameraName));
@@ -222,7 +228,10 @@ public static class TapoServiceCollectionExtensions
             VisionModel: TapoVisionModelConfig.DefaultVisionModel);
 
         // Allow customization
-        configureCamera?.Invoke(cameraConfig);
+        if (configureCamera != null)
+        {
+            cameraConfig = configureCamera(cameraConfig);
+        }
         services.AddSingleton(cameraConfig);
 
         return services;
