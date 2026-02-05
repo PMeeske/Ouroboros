@@ -132,7 +132,7 @@ public enum LightingEffectPreset
     /// <summary>Flicker effect.</summary>
     Flicker,
     
-    /// <summary>Grandmas Christmas lights effect.</summary>
+    /// <summary>Grandma's Christmas lights effect.</summary>
     GrandmasChristmasLights,
     
     /// <summary>Hanukkah effect.</summary>

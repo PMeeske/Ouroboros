@@ -38,13 +38,13 @@ public sealed class TapoRestClient : IDisposable
         };
 
         // Initialize device operation helpers
-        LightBulbs = new TapoLightBulbOperations(_httpClient, _logger, _jsonOptions);
-        ColorLightBulbs = new TapoColorLightBulbOperations(_httpClient, _logger, _jsonOptions);
-        LightStrips = new TapoLightStripOperations(_httpClient, _logger, _jsonOptions);
-        RgbicLightStrips = new TapoRgbicLightStripOperations(_httpClient, _logger, _jsonOptions);
-        Plugs = new TapoPlugOperations(_httpClient, _logger, _jsonOptions);
-        EnergyPlugs = new TapoEnergyPlugOperations(_httpClient, _logger, _jsonOptions);
-        PowerStrips = new TapoPowerStripOperations(_httpClient, _logger, _jsonOptions);
+        LightBulbs = new TapoLightBulbOperations(_httpClient, _logger, _jsonOptions, () => _sessionId);
+        ColorLightBulbs = new TapoColorLightBulbOperations(_httpClient, _logger, _jsonOptions, () => _sessionId);
+        LightStrips = new TapoLightStripOperations(_httpClient, _logger, _jsonOptions, () => _sessionId);
+        RgbicLightStrips = new TapoRgbicLightStripOperations(_httpClient, _logger, _jsonOptions, () => _sessionId);
+        Plugs = new TapoPlugOperations(_httpClient, _logger, _jsonOptions, () => _sessionId);
+        EnergyPlugs = new TapoEnergyPlugOperations(_httpClient, _logger, _jsonOptions, () => _sessionId);
+        PowerStrips = new TapoPowerStripOperations(_httpClient, _logger, _jsonOptions, () => _sessionId);
     }
 
     /// <summary>
@@ -108,8 +108,7 @@ public sealed class TapoRestClient : IDisposable
             }
 
             _sessionId = await response.Content.ReadAsStringAsync(ct);
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
-
+            
             _logger?.LogInformation("Successfully authenticated with Tapo REST API");
             return Result<string>.Success(_sessionId);
         }
@@ -141,7 +140,18 @@ public sealed class TapoRestClient : IDisposable
 
         try
         {
-            var devices = await _httpClient.GetFromJsonAsync<List<TapoDevice>>("/devices", _jsonOptions, ct);
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/devices");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
+            
+            var response = await _httpClient.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync(ct);
+                _logger?.LogError("Get devices failed: {Error}", error);
+                return Result<List<TapoDevice>>.Failure($"Get devices failed: {response.StatusCode}");
+            }
+
+            var devices = await response.Content.ReadFromJsonAsync<List<TapoDevice>>(_jsonOptions, ct);
             return devices != null
                 ? Result<List<TapoDevice>>.Success(devices)
                 : Result<List<TapoDevice>>.Failure("No devices returned");
@@ -174,7 +184,18 @@ public sealed class TapoRestClient : IDisposable
 
         try
         {
-            var actions = await _httpClient.GetFromJsonAsync<List<string>>("/actions", _jsonOptions, ct);
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/actions");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
+            
+            var response = await _httpClient.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync(ct);
+                _logger?.LogError("Get actions failed: {Error}", error);
+                return Result<List<string>>.Failure($"Get actions failed: {response.StatusCode}");
+            }
+
+            var actions = await response.Content.ReadFromJsonAsync<List<string>>(_jsonOptions, ct);
             return actions != null
                 ? Result<List<string>>.Success(actions)
                 : Result<List<string>>.Failure("No actions returned");
@@ -211,7 +232,10 @@ public sealed class TapoRestClient : IDisposable
 
         try
         {
-            var response = await _httpClient.GetAsync($"/refresh-session?device={Uri.EscapeDataString(deviceName)}", ct);
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"/refresh-session?device={Uri.EscapeDataString(deviceName)}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
+            
+            var response = await _httpClient.SendAsync(request, ct);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -251,7 +275,10 @@ public sealed class TapoRestClient : IDisposable
 
         try
         {
-            var response = await _httpClient.PostAsync("/reload-config", null, ct);
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/reload-config");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
+            
+            var response = await _httpClient.SendAsync(request, ct);
 
             if (!response.IsSuccessStatusCode)
             {
