@@ -42,38 +42,29 @@ jobs:
   mutation-test:
     name: Mutation Tests (${{ matrix.category }})
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
           - category: Core
             project: src/Ouroboros.Core/Ouroboros.Core.csproj
-            config: stryker-config-core.json
           - category: Domain
             project: src/Ouroboros.Domain/Ouroboros.Domain.csproj
-            config: stryker-config-domain.json
           - category: Pipeline
             project: src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
-            config: stryker-config-pipeline.json
           - category: Tools
             project: src/Ouroboros.Tools/Ouroboros.Tools.csproj
-            config: stryker-config-tools.json
           - category: Application
             project: src/Ouroboros.Application/Ouroboros.Application.csproj
-            config: stryker-config-application.json
           - category: Providers
             project: src/Ouroboros.Providers/Ouroboros.Providers.csproj
-            config: stryker-config-providers.json
           - category: Agent
             project: src/Ouroboros.Agent/Ouroboros.Agent.csproj
-            config: stryker-config-agent.json
           - category: CLI
             project: src/Ouroboros.CLI/Ouroboros.CLI.csproj
-            config: stryker-config-cli.json
           - category: WebApi
             project: src/Ouroboros.WebApi/Ouroboros.WebApi.csproj
-            config: stryker-config-webapi.json
 
     steps:
     - name: Checkout code
@@ -117,30 +108,20 @@ jobs:
 
     - name: Run mutation tests (${{ matrix.category }})
       id: mutation-test
-      timeout-minutes: 100
+      timeout-minutes: 75
       run: |
         # Set mutation level from input or use default
         ML="${{ github.event.inputs.mutation_level || 'Standard' }}"
 
         echo "Running mutation tests for ${{ matrix.category }} with level: ${ML}"
         echo "Target project: ${{ matrix.project }}"
-        echo "Config file: ${{ matrix.config }}"
 
-        # Run Stryker with category-specific configuration file
+        # Run Stryker with configuration file and target specific project
         # Override mutation level only if provided as workflow input
         if [ -n "${{ github.event.inputs.mutation_level }}" ]; then
-          dotnet stryker \
-            --config-file "${{ matrix.config }}" \
-            --project "${{ matrix.project }}" \
-            --mutation-level "${ML}" \
-            --max-concurrent-test-runners 4 \
-            --since:main
+          dotnet stryker --config-file stryker-config.json --project "${{ matrix.project }}" --mutation-level "${ML}"
         else
-          dotnet stryker \
-            --config-file "${{ matrix.config }}" \
-            --project "${{ matrix.project }}" \
-            --max-concurrent-test-runners 4 \
-            --since:main
+          dotnet stryker --config-file stryker-config.json --project "${{ matrix.project }}"
         fi
 
     - name: Extract mutation score
