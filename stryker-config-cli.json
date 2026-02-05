@@ -1,44 +1,28 @@
 {
   "stryker-config": {
     "solution": "Ouroboros.sln",
-    "test-projects": [
-      "src/Ouroboros.Tests/Ouroboros.Tests.csproj"
-    ],
+    "test-projects": ["src/Ouroboros.Tests/Ouroboros.Tests.csproj"],
     "target-framework": "net10.0",
     "coverage-analysis": "perTestInIsolation",
     "mutation-level": "Standard",
-    "reporters": [
-      "Html",
-      "Json",
-      "ClearTextSummary"
-    ],
+    "reporters": ["Html", "Json", "ClearTextSummary"],
     "thresholds": {
       "high": 80,
       "low": 60,
       "break": 50
     },
     "mutate": [
-      "src/**/*.cs",
+      "src/Ouroboros.CLI/**/*.cs",
       "!**/bin/**",
       "!**/obj/**",
       "!**/*.g.cs",
       "!**/*.Designer.cs",
       "!**/GlobalUsings.cs",
-      "!**/Program.cs",
-      "!**/Startup.cs",
-      "!src/Ouroboros.Tests/**"
+      "!**/Program.cs"
     ],
-    "ignore-methods": [
-      "ToString",
-      "GetHashCode",
-      "Equals",
-      "Dispose",
-      "GetEnumerator"
-    ],
-    "ignore-mutations": [
-      "string",
-      "StringEmpty"
-    ],
+    "test-filter": "FullyQualifiedName~CLI",
+    "ignore-methods": ["ToString", "GetHashCode", "Equals", "Dispose", "GetEnumerator"],
+    "ignore-mutations": ["string", "StringEmpty"],
     "verbosity": "info",
     "additional-timeout": 10000,
     "max-concurrent-test-runners": 4,
