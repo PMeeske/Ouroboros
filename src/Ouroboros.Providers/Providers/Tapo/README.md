@@ -214,6 +214,117 @@ await client.ColorLightBulbs.SetColorAsync(bulb,
 - Call `RefreshSessionAsync(deviceName)` to refresh the device session
 - The server maintains sessions with physical devices that can expire
 
+## Embodiment Integration
+
+The Tapo client can be used as an embodiment provider for AI agents, providing video, audio, and voice capabilities through Tapo smart cameras and devices.
+
+### Architecture
+
+The integration follows a repository-like pattern with a Domain Aggregate layer:
+
+```
+┌─────────────────────────────────┐
+│     EmbodimentAggregate         │  Domain Aggregate
+│  (Business Logic / State)       │
+└─────────────┬───────────────────┘
+              │
+┌─────────────▼───────────────────┐
+│   IEmbodimentProvider           │  Repository Interface
+│   (Abstract State Source)       │
+└─────────────┬───────────────────┘
+              │
+┌─────────────▼───────────────────┐
+│   TapoEmbodimentProvider        │  Implementation
+│   (Uses Tapo REST as State)     │
+└─────────────┬───────────────────┘
+              │
+┌─────────────▼───────────────────┐
+│   TapoRestClient                │  State Source
+│   (Tapo REST API)               │
+└─────────────────────────────────┘
+```
+
+### Quick Start
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Ouroboros.Providers.Tapo;
+
+var services = new ServiceCollection();
+
+// Option 1: Register provider only
+services.AddTapoEmbodimentProvider("http://localhost:8000");
+
+// Option 2: Register complete aggregate (recommended)
+services.AddTapoEmbodimentAggregate("http://localhost:8000");
+
+var provider = services.BuildServiceProvider();
+var aggregate = provider.GetRequiredService<EmbodimentAggregate>();
+
+// Activate the embodiment
+await aggregate.ActivateAsync();
+
+// Subscribe to perceptions from cameras
+aggregate.UnifiedPerceptions.Subscribe(perception =>
+{
+    Console.WriteLine($"Perception from {perception.SensorId}: {perception.Modality}");
+});
+
+// Execute actions (speak, control lights, etc.)
+var action = ActuatorAction.Speak("Hello from my Tapo camera!");
+await aggregate.ExecuteActionAsync("tapo:camera-speaker", action);
+```
+
+### Supported Capabilities
+
+| Device Type | Capabilities |
+|-------------|--------------|
+| C100-C520 Cameras | VideoCapture, VisionAnalysis, AudioCapture, TwoWayAudio |
+| L510-L930 Lights | LightingControl, ColorControl (L530+) |
+| P100-P316 Plugs | PowerControl, EnergyMonitoring (P110+) |
+
+### Vision Model Configuration
+
+By default, the provider uses **llava:13b** as the vision model for camera analysis:
+
+```csharp
+// Use default (llava:13b - balanced speed/accuracy)
+services.AddTapoEmbodimentProvider("http://localhost:8000");
+
+// Configure custom vision model
+services.AddTapoEmbodimentProvider("http://localhost:8000", configureVision: config =>
+{
+    config = TapoVisionModelConfig.CreateHighQuality(); // llava:34b
+});
+```
+
+Available presets:
+- `CreateDefault()` - llava:13b (balanced)
+- `CreateLightweight()` - llava:7b (faster, less accurate)
+- `CreateHighQuality()` - llava:34b (slower, more accurate)
+
+### Domain Events
+
+The aggregate emits domain events for all significant actions:
+
+```csharp
+aggregate.DomainEvents.Subscribe(evt =>
+{
+    switch (evt.EventType)
+    {
+        case EmbodimentDomainEventType.PerceptionReceived:
+            Console.WriteLine("New perception received");
+            break;
+        case EmbodimentDomainEventType.MotionDetected:
+            Console.WriteLine("Motion detected!");
+            break;
+        case EmbodimentDomainEventType.PersonDetected:
+            Console.WriteLine("Person detected!");
+            break;
+    }
+});
+```
+
 ## References
 
 - [Tapo REST API Server](https://github.com/ClementNerma/tapo-rest)

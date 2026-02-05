@@ -84,7 +84,36 @@ public enum TapoDeviceType
     P304M,
     
     /// <summary>Power strip.</summary>
-    P316
+    P316,
+
+    // Camera device types for video/audio embodiment
+
+    /// <summary>Pan/Tilt Home Security Wi-Fi Camera.</summary>
+    C100,
+
+    /// <summary>Pan/Tilt Home Security Wi-Fi Camera with 1080p.</summary>
+    C200,
+
+    /// <summary>Pan/Tilt Home Security Wi-Fi Camera with 2K.</summary>
+    C210,
+
+    /// <summary>Pan/Tilt AI Home Security Wi-Fi Camera with 2K QHD.</summary>
+    C220,
+
+    /// <summary>Outdoor Security Wi-Fi Camera.</summary>
+    C310,
+
+    /// <summary>Outdoor Security Wi-Fi Camera with 2K QHD.</summary>
+    C320,
+
+    /// <summary>Smart Wire-Free Indoor/Outdoor Camera.</summary>
+    C420,
+
+    /// <summary>Outdoor Pan/Tilt Security Wi-Fi Camera.</summary>
+    C500,
+
+    /// <summary>Outdoor Pan/Tilt Security Wi-Fi Camera with 2K QHD.</summary>
+    C520
 }
 
 /// <summary>
@@ -248,3 +277,89 @@ public sealed record TapoCredentials
     [JsonPropertyName("password")]
     public required string Password { get; init; }
 }
+
+/// <summary>
+/// Camera stream quality settings.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum CameraStreamQuality
+{
+    /// <summary>Low quality stream for reduced bandwidth.</summary>
+    Low,
+
+    /// <summary>Standard definition stream.</summary>
+    Standard,
+
+    /// <summary>High definition 720p stream.</summary>
+    HD,
+
+    /// <summary>Full HD 1080p stream.</summary>
+    FullHD,
+
+    /// <summary>2K QHD stream.</summary>
+    QHD
+}
+
+/// <summary>
+/// Represents a captured video frame from a Tapo camera.
+/// </summary>
+/// <param name="Data">Raw frame data (JPEG).</param>
+/// <param name="Width">Frame width in pixels.</param>
+/// <param name="Height">Frame height in pixels.</param>
+/// <param name="FrameNumber">Sequential frame number.</param>
+/// <param name="Timestamp">Capture timestamp.</param>
+/// <param name="CameraName">Name of the source camera.</param>
+public sealed record TapoCameraFrame(
+    byte[] Data,
+    int Width,
+    int Height,
+    long FrameNumber,
+    DateTime Timestamp,
+    string CameraName);
+
+/// <summary>
+/// Represents captured audio data from a Tapo camera.
+/// </summary>
+/// <param name="Data">Raw audio data (PCM).</param>
+/// <param name="SampleRate">Audio sample rate in Hz.</param>
+/// <param name="Channels">Number of audio channels.</param>
+/// <param name="Duration">Duration of the audio segment.</param>
+/// <param name="Timestamp">Capture timestamp.</param>
+/// <param name="CameraName">Name of the source camera.</param>
+public sealed record TapoCameraAudio(
+    byte[] Data,
+    int SampleRate,
+    int Channels,
+    TimeSpan Duration,
+    DateTime Timestamp,
+    string CameraName);
+
+/// <summary>
+/// Configuration for Tapo camera embodiment.
+/// </summary>
+/// <param name="CameraName">Name of the camera device.</param>
+/// <param name="StreamQuality">Video stream quality.</param>
+/// <param name="EnableAudio">Whether to enable audio capture.</param>
+/// <param name="EnableMotionDetection">Whether to enable motion detection.</param>
+/// <param name="EnablePersonDetection">Whether to enable AI person detection.</param>
+/// <param name="FrameRate">Target frame rate for video capture.</param>
+/// <param name="VisionModel">Vision model to use for analysis (e.g., llava:13b).</param>
+public sealed record TapoCameraConfig(
+    string CameraName,
+    CameraStreamQuality StreamQuality = CameraStreamQuality.HD,
+    bool EnableAudio = true,
+    bool EnableMotionDetection = true,
+    bool EnablePersonDetection = true,
+    int FrameRate = 15,
+    string VisionModel = "llava:13b");
+
+/// <summary>
+/// Configuration for Tapo voice output through compatible devices.
+/// </summary>
+/// <param name="DeviceName">Name of the device with speaker capabilities.</param>
+/// <param name="Volume">Volume level (0-100).</param>
+/// <param name="SampleRate">Audio sample rate for TTS output.</param>
+public sealed record TapoVoiceOutputConfig(
+    string DeviceName,
+    int Volume = 75,
+    int SampleRate = 16000);
