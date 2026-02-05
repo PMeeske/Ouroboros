@@ -134,14 +134,10 @@ public static class TapoServiceCollectionExtensions
         {
             var aggregate = new EmbodimentAggregate(aggregateId, aggregateName);
             
-            // Register the Tapo provider singleton with the aggregate
+            // Register the Tapo provider singleton with the aggregate.
+            // RegisterProvider uses TryAdd internally, so duplicate registrations are safely ignored.
             var provider = sp.GetRequiredService<TapoEmbodimentProvider>();
-            
-            // Only register if not already registered (avoid duplicates)
-            if (!aggregate.Providers.ContainsKey(provider.ProviderId))
-            {
-                aggregate.RegisterProvider(provider);
-            }
+            aggregate.RegisterProvider(provider);
 
             return aggregate;
         });

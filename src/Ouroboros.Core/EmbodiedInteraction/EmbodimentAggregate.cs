@@ -161,21 +161,22 @@ public sealed class EmbodimentAggregate : IDisposable
         await provider.DisconnectAsync(ct);
         provider.Dispose();
 
-        // Remove associated sensors and actuators efficiently
-        foreach (var key in _activeSensors.Keys)
+        // Remove associated sensors and actuators - collect keys first to avoid
+        // modifying collection during iteration
+        var sensorKeysToRemove = _activeSensors.Keys
+            .Where(k => k.StartsWith($"{providerId}:", StringComparison.Ordinal))
+            .ToArray();
+        foreach (var key in sensorKeysToRemove)
         {
-            if (key.StartsWith($"{providerId}:", StringComparison.Ordinal))
-            {
-                _activeSensors.TryRemove(key, out _);
-            }
+            _activeSensors.TryRemove(key, out _);
         }
 
-        foreach (var key in _activeActuators.Keys)
+        var actuatorKeysToRemove = _activeActuators.Keys
+            .Where(k => k.StartsWith($"{providerId}:", StringComparison.Ordinal))
+            .ToArray();
+        foreach (var key in actuatorKeysToRemove)
         {
-            if (key.StartsWith($"{providerId}:", StringComparison.Ordinal))
-            {
-                _activeActuators.TryRemove(key, out _);
-            }
+            _activeActuators.TryRemove(key, out _);
         }
 
         UpdateAggregateCapabilities();
