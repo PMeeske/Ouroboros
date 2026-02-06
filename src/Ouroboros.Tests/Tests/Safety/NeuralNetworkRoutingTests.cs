@@ -37,6 +37,8 @@ public sealed class NeuralNetworkRoutingTests
 
         // Act
         network.RouteMessage(message);
+        // Note: Thread.Sleep is used here for simplicity. For production tests,
+        // consider using TaskCompletionSource-based WaitForMessageAsync pattern.
         Thread.Sleep(50); // Allow async routing to complete
 
         // Assert

@@ -58,7 +58,9 @@ public sealed class MerkleDagIntegrityTests
         var node1 = MonadNode.FromPayload("TestType", new { value = "original" });
         dag.AddNode(node1);
         
-        // Tamper with the node's hash using reflection
+        // Tamper with the node's hash using reflection to simulate adversarial corruption
+        // Note: This uses reflection because MerkleDag doesn't expose a test API for corruption simulation.
+        // Alternative would be [InternalsVisibleTo] with internal test hooks or a dedicated integrity-test API.
         var nodesField = typeof(MerkleDag).GetField("nodes", BindingFlags.NonPublic | BindingFlags.Instance);
         var nodesDict = nodesField!.GetValue(dag) as Dictionary<Guid, MonadNode>;
         
@@ -251,12 +253,12 @@ public sealed class MerkleDagIntegrityTests
     }
 
     [Fact]
-    public void AddEdge_CreatingCycle_IsRejected()
+    public void AddNode_WithMultipleParents_IsAccepted()
     {
         // Arrange
         var dag = new MerkleDag();
         
-        // Create nodes with parent relationships that would form a cycle
+        // Create nodes with parent relationships
         var node1 = MonadNode.FromPayload("TestType", new { value = "1" });
         var node2 = MonadNode.FromPayload("TestType", new { value = "2" }, ImmutableArray.Create(node1.Id));
         var node3 = MonadNode.FromPayload("TestType", new { value = "3" }, ImmutableArray.Create(node2.Id));
@@ -265,14 +267,16 @@ public sealed class MerkleDagIntegrityTests
         dag.AddNode(node2);
         dag.AddNode(node3);
         
-        // Try to create an edge from node3 back to node1's parent (would create cycle)
-        // This is prevented by the parent validation in AddNode
+        // Create a node with multiple parents (DAG allows this, not a cycle)
         var node4 = MonadNode.FromPayload("TestType", new { value = "4" }, ImmutableArray.Create(node3.Id, node1.Id));
         
-        // Act & Assert
-        // The DAG structure and parent validation prevent cycles at the node level
-        // Edges also validate that nodes exist
-        dag.AddNode(node4).IsSuccess.Should().BeTrue();
+        // Act
+        var result = dag.AddNode(node4);
+        
+        // Assert
+        // The DAG structure allows multiple parents (converging paths)
+        // This is not a cycle - cycles would be node3 pointing back to node1
+        result.IsSuccess.Should().BeTrue("nodes with multiple parents should be accepted");
     }
 
     #endregion

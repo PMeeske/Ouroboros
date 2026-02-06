@@ -109,11 +109,15 @@ public sealed class SafetyGuardTests
         };
 
         // Act
-        var result = guard.GetRequiredPermission(operation);
+        var result = guard.CheckSafety(operation, parameters, PermissionLevel.ReadOnly);
 
         // Assert
-        // Network operations should require at least Isolated or higher
-        result.Should().BeOneOf(PermissionLevel.ReadOnly, PermissionLevel.Isolated, PermissionLevel.UserData);
+        // Network operations should not be safe at ReadOnly and should require higher permission
+        result.Safe.Should().BeFalse("network operations should be denied or warned at ReadOnly level");
+        result.RequiredLevel.Should().BeGreaterThan(PermissionLevel.ReadOnly,
+            "network operations should require at least Isolated or higher permission level");
+        (result.Violations.Any() || result.Warnings.Any()).Should().BeTrue(
+            "network operations should produce a violation or warning");
     }
 
     [Fact]

@@ -180,7 +180,7 @@ public sealed class SelfAssemblySecurityTests
     #region Sandbox Testing
 
     [Fact]
-    public async Task Sandbox_TimesOut_ReturnsFailure()
+    public async Task SandboxTimeout_IsConfigurable()
     {
         // Arrange
         var config = new SelfAssemblyConfig
@@ -190,54 +190,14 @@ public sealed class SelfAssemblySecurityTests
             MinSafetyScore = 0.5
         };
         var engine = new SelfAssemblyEngine(config);
-        
-        engine.SetMeTTaValidator(async blueprint =>
-        {
-            await Task.Delay(1);
-            return new MeTTaValidation(true, 0.9, Array.Empty<string>(), Array.Empty<string>(), "test");
-        });
-        
-        // Generate code that will timeout
-        engine.SetCodeGenerator(async blueprint =>
-        {
-            await Task.Delay(1);
-            return @"
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Ouroboros.Domain.Autonomous;
 
-namespace Ouroboros.SelfAssembled
-{
-    public class TimeoutNeuron : Neuron
-    {
-        public override string Name => ""TimeoutNeuron"";
-        
-        protected override void ConfigureSubscriptions() { }
-        
-        protected override async Task OnMessageAsync(NeuralMessage message, CancellationToken ct)
-        {
-            // This would timeout
-            await Task.Delay(10000, ct);
-        }
-    }
-}";
-        });
-
-        var blueprint = CreateValidBlueprint("TimeoutNeuron");
-
-        // Act
-        var submitResult = await engine.SubmitBlueprintAsync(blueprint);
-        
-        // Note: The sandbox timeout test would require actually running the approval pipeline
-        // For now, verify the config is set correctly
-        
-        // Assert
-        config.SandboxTimeout.Should().Be(TimeSpan.FromMilliseconds(100));
+        // Act & Assert
+        config.SandboxTimeout.Should().Be(TimeSpan.FromMilliseconds(100),
+            "sandbox timeout should be configurable");
     }
 
     [Fact]
-    public async Task Sandbox_NeuronThatThrows_ReturnsFailure()
+    public async Task Sandbox_NeuronConstruction_StructureInPlace()
     {
         // Arrange
         var config = new SelfAssemblyConfig
@@ -295,9 +255,11 @@ namespace Ouroboros.SelfAssembled
         // Act
         var submitResult = await engine.SubmitBlueprintAsync(blueprint);
         
-        // This test verifies the structure is in place
-        // Full pipeline execution would require mocking or integration testing
-        submitResult.IsSuccess.Should().BeTrue("submission should succeed");
+        // Assert
+        // This test verifies the structure is in place for sandbox testing
+        // Note: Full pipeline execution (approval->compilation->instantiation) would require
+        // a more complete integration test setup
+        submitResult.IsSuccess.Should().BeTrue("submission should succeed for further pipeline testing");
     }
 
     #endregion
@@ -334,7 +296,7 @@ namespace Ouroboros.SelfAssembled
     }
 
     [Fact]
-    public async Task Blueprint_WithEmptyCode_IsRejected()
+    public async Task GeneratedCode_CanBeEmpty_WhenGeneratorReturnsEmpty()
     {
         // Arrange
         var config = new SelfAssemblyConfig
@@ -363,9 +325,9 @@ namespace Ouroboros.SelfAssembled
         var submitResult = await engine.SubmitBlueprintAsync(blueprint);
         
         // Assert
-        submitResult.IsSuccess.Should().BeTrue("submission succeeds");
+        submitResult.IsSuccess.Should().BeTrue("submission succeeds even with empty generated code");
         
-        // Empty code would fail during compilation stage
+        // Empty code would fail during compilation stage (not tested here)
         var proposal = engine.GetProposal(submitResult.Value);
         proposal.Should().NotBeNull();
         proposal!.GeneratedCode.Should().BeEmpty();
