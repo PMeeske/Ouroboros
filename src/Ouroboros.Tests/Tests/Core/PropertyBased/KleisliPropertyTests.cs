@@ -4,7 +4,6 @@
 
 namespace Ouroboros.Tests.Core.PropertyBased;
 
-using FsCheck;
 using FsCheck.Xunit;
 using Ouroboros.Core.Kleisli;
 using Ouroboros.Core.Monads;
@@ -26,14 +25,14 @@ public class KleisliPropertyTests
     public async Task<bool> KleisliResult_Associativity_HoldsForAllInts(int input)
     {
         // (f >=> g) >=> h ≡ f >=> (g >=> h)
-        KleisliResult<int, int, string> f = async x =>
-            Result<int, string>.Success(x * 2);
+        KleisliResult<int, int, string> f = x =>
+            Task.FromResult(Result<int, string>.Success(x * 2));
 
-        KleisliResult<int, int, string> g = async x =>
-            Result<int, string>.Success(x + 10);
+        KleisliResult<int, int, string> g = x =>
+            Task.FromResult(Result<int, string>.Success(x + 10));
 
-        KleisliResult<int, int, string> h = async x =>
-            Result<int, string>.Success(x - 5);
+        KleisliResult<int, int, string> h = x =>
+            Task.FromResult(Result<int, string>.Success(x - 5));
 
         // Left: (f >=> g) >=> h
         var leftComposed = await ComposeKleisliResult(
@@ -59,20 +58,20 @@ public class KleisliPropertyTests
     public async Task<bool> KleisliResult_Associativity_WithFailures_HoldsForAllInts(int input)
     {
         // (f >=> g) >=> h ≡ f >=> (g >=> h)
-        KleisliResult<int, int, string> f = async x =>
-            x >= 0
+        KleisliResult<int, int, string> f = x =>
+            Task.FromResult(x >= 0
                 ? Result<int, string>.Success(x * 2)
-                : Result<int, string>.Failure("negative input");
+                : Result<int, string>.Failure("negative input"));
 
-        KleisliResult<int, int, string> g = async x =>
-            x < 100
+        KleisliResult<int, int, string> g = x =>
+            Task.FromResult(x < 100
                 ? Result<int, string>.Success(x + 10)
-                : Result<int, string>.Failure("too large");
+                : Result<int, string>.Failure("too large"));
 
-        KleisliResult<int, int, string> h = async x =>
-            x % 2 == 0
+        KleisliResult<int, int, string> h = x =>
+            Task.FromResult(x % 2 == 0
                 ? Result<int, string>.Success(x / 2)
-                : Result<int, string>.Failure("odd number");
+                : Result<int, string>.Failure("odd number"));
 
         // Left: (f >=> g) >=> h
         var leftComposed = await ComposeKleisliResult(
@@ -99,11 +98,11 @@ public class KleisliPropertyTests
     public async Task<bool> KleisliResult_LeftIdentity_HoldsForAllInts(int input)
     {
         // id >=> f ≡ f
-        KleisliResult<int, int, string> identity = async x =>
-            Result<int, string>.Success(x);
+        KleisliResult<int, int, string> identity = x =>
+            Task.FromResult(Result<int, string>.Success(x));
 
-        KleisliResult<int, int, string> f = async x =>
-            Result<int, string>.Success(x * 3 + 7);
+        KleisliResult<int, int, string> f = x =>
+            Task.FromResult(Result<int, string>.Success(x * 3 + 7));
 
         var composed = await ComposeKleisliResult(identity, f)(input);
         var direct = await f(input);
@@ -122,11 +121,11 @@ public class KleisliPropertyTests
     public async Task<bool> KleisliResult_RightIdentity_HoldsForAllInts(int input)
     {
         // f >=> id ≡ f
-        KleisliResult<int, int, string> f = async x =>
-            Result<int, string>.Success(x * 3 + 7);
+        KleisliResult<int, int, string> f = x =>
+            Task.FromResult(Result<int, string>.Success(x * 3 + 7));
 
-        KleisliResult<int, int, string> identity = async x =>
-            Result<int, string>.Success(x);
+        KleisliResult<int, int, string> identity = x =>
+            Task.FromResult(Result<int, string>.Success(x));
 
         var composed = await ComposeKleisliResult(f, identity)(input);
         var direct = await f(input);
@@ -145,13 +144,13 @@ public class KleisliPropertyTests
     public async Task<bool> KleisliResult_LeftIdentity_WithFailures_HoldsForAllInts(int input)
     {
         // id >=> f ≡ f
-        KleisliResult<int, int, string> identity = async x =>
-            Result<int, string>.Success(x);
+        KleisliResult<int, int, string> identity = x =>
+            Task.FromResult(Result<int, string>.Success(x));
 
-        KleisliResult<int, int, string> f = async x =>
-            x >= 0
+        KleisliResult<int, int, string> f = x =>
+            Task.FromResult(x >= 0
                 ? Result<int, string>.Success(x * 2)
-                : Result<int, string>.Failure("negative");
+                : Result<int, string>.Failure("negative"));
 
         var composed = await ComposeKleisliResult(identity, f)(input);
         var direct = await f(input);
@@ -171,13 +170,13 @@ public class KleisliPropertyTests
     public async Task<bool> KleisliResult_RightIdentity_WithFailures_HoldsForAllInts(int input)
     {
         // f >=> id ≡ f
-        KleisliResult<int, int, string> f = async x =>
-            x >= 0
+        KleisliResult<int, int, string> f = x =>
+            Task.FromResult(x >= 0
                 ? Result<int, string>.Success(x * 2)
-                : Result<int, string>.Failure("negative");
+                : Result<int, string>.Failure("negative"));
 
-        KleisliResult<int, int, string> identity = async x =>
-            Result<int, string>.Success(x);
+        KleisliResult<int, int, string> identity = x =>
+            Task.FromResult(Result<int, string>.Success(x));
 
         var composed = await ComposeKleisliResult(f, identity)(input);
         var direct = await f(input);

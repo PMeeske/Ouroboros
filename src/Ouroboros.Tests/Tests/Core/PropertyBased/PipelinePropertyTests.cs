@@ -4,7 +4,6 @@
 
 namespace Ouroboros.Tests.Core.PropertyBased;
 
-using FsCheck;
 using FsCheck.Xunit;
 using Ouroboros.Core.Steps;
 
@@ -67,8 +66,8 @@ public class PipelinePropertyTests
         // Test associativity through Then composition which is the Kleisli composition
         var pipeline = Pipeline.Lift<int, int>(x => x * 2);
 
-        Step<int, int> f = async x => x + 10;
-        Step<int, int> g = async x => x * 3;
+        Step<int, int> f = x => Task.FromResult(x + 10);
+        Step<int, int> g = x => Task.FromResult(x * 3);
 
         // Left associative: (pipeline.Then(f)).Then(g)
         var leftAssoc = await pipeline.Then(f).Then(g).RunAsync(input);
@@ -131,9 +130,9 @@ public class PipelinePropertyTests
     {
         // (f >=> g) >=> h ≡ f >=> (g >=> h)
         var pipeline = Pipeline.Lift<int, int>(x => x + 1);
-        Step<int, int> f = async x => x * 2;
-        Step<int, int> g = async x => x + 10;
-        Step<int, int> h = async x => x - 5;
+        Step<int, int> f = x => Task.FromResult(x * 2);
+        Step<int, int> g = x => Task.FromResult(x + 10);
+        Step<int, int> h = x => Task.FromResult(x - 5);
 
         var leftAssoc = await pipeline.Then(f).Then(g).Then(h).RunAsync(input);
 
@@ -195,7 +194,7 @@ public class PipelinePropertyTests
         Func<int, int> f = x => x + 10;
 
         var mappedResult = await pipeline.Map(f).RunAsync(input);
-        Step<int, int> stepF = async x => f(x);
+        Step<int, int> stepF = x => Task.FromResult(f(x));
         var thenResult = await pipeline.Then(stepF).RunAsync(input);
 
         return (mappedResult == thenResult);

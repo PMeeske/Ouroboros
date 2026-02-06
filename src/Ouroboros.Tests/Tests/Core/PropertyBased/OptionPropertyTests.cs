@@ -4,9 +4,10 @@
 
 namespace Ouroboros.Tests.Core.PropertyBased;
 
-using FsCheck;
+using FluentAssertions;
 using FsCheck.Xunit;
 using Ouroboros.Core.Monads;
+using Xunit;
 
 /// <summary>
 /// Property-based tests for Option monad laws using FsCheck.
@@ -119,9 +120,8 @@ public class OptionPropertyTests
     /// Verifies Associativity when starting with None.
     /// Tests that None short-circuits correctly in both associativity forms.
     /// </summary>
-    /// <returns>True if associativity holds for None.</returns>
-    [Property(MaxTest = 1000)]
-    public bool Option_Associativity_WithNone_HoldsForAllInts()
+    [Fact]
+    public void Option_Associativity_WithNone_Holds()
     {
         // (m >>= f) >>= g ≡ m >>= (\x -> f x >>= g)
         var m = Option<int>.None();
@@ -131,7 +131,7 @@ public class OptionPropertyTests
         var left = m.Bind(f).Bind(g);
         var right = m.Bind(x => f(x).Bind(g));
 
-        return (left.HasValue == right.HasValue);
+        left.HasValue.Should().Be(right.HasValue);
     }
 
     /// <summary>

@@ -4,7 +4,6 @@
 
 namespace Ouroboros.Tests.Core.PropertyBased;
 
-using FsCheck;
 using FsCheck.Xunit;
 using Ouroboros.Core.Monads;
 

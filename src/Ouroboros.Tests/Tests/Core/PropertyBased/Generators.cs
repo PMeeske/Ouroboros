@@ -14,9 +14,15 @@ using Ouroboros.Core.Monads;
 /// </summary>
 public static class Generators
 {
-    // Custom generators are commented out for now as they require F# tuple syntax
-    // The tests work fine with FsCheck's built-in generators for int, bool, string
+    // Custom generators are currently omitted because the tests work fine with FsCheck's
+    // built-in generators for primitive types (int, bool, string, etc.).
     //
-    // To implement custom generators in the future, use F# tuples or the WeightAndValue type:
-    // Example: Gen.Frequency(WeightAndValue.Create(7, someGen), WeightAndValue.Create(3, otherGen))
+    // If you want to add custom generators in C#, you can use C#-friendly APIs such as:
+    //   Gen.Frequency(
+    //       Tuple.Create(7, someGen),
+    //       Tuple.Create(3, otherGen));
+    // or the WeightAndValue type:
+    //   Gen.Frequency(
+    //       WeightAndValue.Create(7, someGen),
+    //       WeightAndValue.Create(3, otherGen));
 }
