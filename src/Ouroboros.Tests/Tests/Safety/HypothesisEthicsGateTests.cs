@@ -42,13 +42,22 @@ public sealed class HypothesisEthicsGateTests
                 new List<EthicalPrinciple>())));
         
         // Orchestrator executes successfully
-        mockOrchestrator.Setup(m => m.ExecuteAsync(It.IsAny<Plan>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<ExecutionResult, string>.Success(new ExecutionResult(
-                true,
-                "Execution completed",
-                new Dictionary<string, object>(),
-                DateTime.UtcNow,
-                100)));
+        var plan = new Ouroboros.Agent.MetaAI.Plan(
+            "Test experiment",
+            new List<Ouroboros.Agent.MetaAI.PlanStep>(),
+            new Dictionary<string, double>(),
+            DateTime.UtcNow);
+        
+        var executionResult = new ExecutionResult(
+            plan,
+            new List<StepResult>(),
+            true,
+            "Execution completed",
+            new Dictionary<string, object>(),
+            TimeSpan.FromMilliseconds(100));
+        
+        mockOrchestrator.Setup(m => m.ExecuteAsync(It.IsAny<Ouroboros.Agent.MetaAI.Plan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<ExecutionResult, string>.Success(executionResult));
         
         var engine = new HypothesisEngine(
             mockLlm.Object,
@@ -131,7 +140,7 @@ public sealed class HypothesisEthicsGateTests
 
         // Assert
         result.IsSuccess.Should().BeFalse("denied research should not execute");
-        result.Error.Should().Contain("rejected", StringComparison.OrdinalIgnoreCase);
+        result.Error.Should().ContainEquivalentOf("rejected");
         mockEthics.Verify(m => m.EvaluateResearchAsync(It.IsAny<string>(), It.IsAny<ActionContext>(), It.IsAny<CancellationToken>()), 
             Times.Once);
         mockOrchestrator.Verify(m => m.ExecuteAsync(It.IsAny<Plan>(), It.IsAny<CancellationToken>()), 
@@ -185,7 +194,7 @@ public sealed class HypothesisEthicsGateTests
 
         // Assert
         result.IsSuccess.Should().BeFalse("research requiring approval should not auto-execute");
-        result.Error.Should().Contain("approval", StringComparison.OrdinalIgnoreCase);
+        result.Error.Should().ContainEquivalentOf("approval");
         mockOrchestrator.Verify(m => m.ExecuteAsync(It.IsAny<Plan>(), It.IsAny<CancellationToken>()), 
             Times.Never, 
             "experiment should NOT execute without human approval");
@@ -234,7 +243,7 @@ public sealed class HypothesisEthicsGateTests
 
         // Assert
         result.IsSuccess.Should().BeFalse("ethics failure should prevent execution");
-        result.Error.Should().Contain("rejected", StringComparison.OrdinalIgnoreCase);
+        result.Error.Should().ContainEquivalentOf("rejected");
         mockOrchestrator.Verify(m => m.ExecuteAsync(It.IsAny<Plan>(), It.IsAny<CancellationToken>()), 
             Times.Never, 
             "experiment should NOT execute when ethics evaluation fails");
@@ -268,7 +277,7 @@ public sealed class HypothesisEthicsGateTests
 
         // Assert
         result.IsSuccess.Should().BeFalse("null hypothesis should be rejected");
-        result.Error.Should().Contain("null", StringComparison.OrdinalIgnoreCase);
+        result.Error.Should().ContainEquivalentOf("null");
     }
 
     [Fact]
@@ -299,7 +308,7 @@ public sealed class HypothesisEthicsGateTests
 
         // Assert
         result.IsSuccess.Should().BeFalse("null experiment should be rejected");
-        result.Error.Should().Contain("null", StringComparison.OrdinalIgnoreCase);
+        result.Error.Should().ContainEquivalentOf("null");
     }
 
     #endregion

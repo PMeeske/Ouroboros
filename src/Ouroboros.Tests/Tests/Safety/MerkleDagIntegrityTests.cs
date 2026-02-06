@@ -71,7 +71,7 @@ public sealed class MerkleDagIntegrityTests
 
         // Assert
         result.IsSuccess.Should().BeFalse("corrupted node hash should fail integrity check");
-        result.Error.Should().Contain("hash verification failed", StringComparison.OrdinalIgnoreCase);
+        result.Error.Should().ContainEquivalentOf("hash verification failed");
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public sealed class MerkleDagIntegrityTests
 
         // Assert
         result.IsSuccess.Should().BeFalse("corrupted edge hash should fail integrity check");
-        result.Error.Should().Contain("hash verification failed", StringComparison.OrdinalIgnoreCase);
+        result.Error.Should().ContainEquivalentOf("hash verification failed");
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public sealed class MerkleDagIntegrityTests
 
         // Assert
         edgeResult.IsSuccess.Should().BeFalse("edge referencing missing node should be rejected");
-        edgeResult.Error.Should().Contain("does not exist", StringComparison.OrdinalIgnoreCase);
+        edgeResult.Error.Should().ContainEquivalentOf("does not exist");
     }
 
     [Fact]
@@ -247,7 +247,7 @@ public sealed class MerkleDagIntegrityTests
 
         // Assert
         result.IsSuccess.Should().BeFalse("cyclic graph should fail topological sort");
-        result.Error.Should().Contain("cycle", StringComparison.OrdinalIgnoreCase);
+        result.Error.Should().ContainEquivalentOf("cycle");
     }
 
     [Fact]

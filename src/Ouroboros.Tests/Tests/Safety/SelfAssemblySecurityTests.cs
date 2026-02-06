@@ -126,7 +126,7 @@ public sealed class SelfAssemblySecurityTests
 
         // Assert
         result.IsSuccess.Should().BeFalse("rejected blueprints should fail submission");
-        result.Error.Should().Contain("validation failed", StringComparison.OrdinalIgnoreCase);
+        result.Error.Should().ContainEquivalentOf("validation failed");
         
         // Verify neuron was not added to assembled list
         engine.GetAssembledNeurons().Should().NotContainKey("UnsafeNeuron");
@@ -404,7 +404,7 @@ namespace Ouroboros.SelfAssembled
         // Assert
         validatorCalled.Should().BeTrue("MeTTa validator must be called");
         result.IsSuccess.Should().BeFalse("blueprint below safety threshold should be rejected");
-        result.Error.Should().Contain("safety score", StringComparison.OrdinalIgnoreCase);
+        result.Error.Should().ContainEquivalentOf("safety score");
     }
 
     #endregion
