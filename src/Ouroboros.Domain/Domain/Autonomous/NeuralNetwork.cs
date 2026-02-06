@@ -301,6 +301,7 @@ public sealed class OuroborosNeuralNetwork : IDisposable
     private readonly IntentionBus _intentionBus;
     private readonly int _maxHistorySize;
 
+    private IReadOnlyList<IMessageFilter>? _filters;
     private bool _isActive;
 
     /// <summary>
@@ -348,6 +349,16 @@ public sealed class OuroborosNeuralNetwork : IDisposable
     /// Delegate for searching similar messages.
     /// </summary>
     public Func<float[], int, CancellationToken, Task<IReadOnlyList<NeuronMessage>>>? SearchSimilarFunction { get; set; }
+
+    /// <summary>
+    /// Sets the message filters for this network.
+    /// Filters will be evaluated before routing messages to neurons.
+    /// </summary>
+    /// <param name="filters">The filters to apply, or null to remove all filters.</param>
+    public void SetMessageFilters(IReadOnlyList<IMessageFilter>? filters)
+    {
+        _filters = filters;
+    }
 
     /// <summary>
     /// Registers a neuron with the network.
@@ -451,6 +462,46 @@ public sealed class OuroborosNeuralNetwork : IDisposable
             });
         }
 
+        // Apply message filters (if configured)
+        if (_filters != null && _filters.Count > 0)
+        {
+            // Fire-and-forget async filtering - message will be delivered only after approval
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Check all filters
+                    foreach (var filter in _filters)
+                    {
+                        if (!await filter.ShouldRouteAsync(message, CancellationToken.None))
+                        {
+                            // Message blocked by filter
+                            System.Diagnostics.Debug.WriteLine(
+                                $"Message {message.Id} with topic '{message.Topic}' blocked by filter");
+                            return;
+                        }
+                    }
+
+                    // All filters approved - deliver the message
+                    DeliverMessage(message);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"Error during message filtering: {ex.Message}");
+                    // Fail-safe: don't deliver messages that fail filtering
+                }
+            });
+        }
+        else
+        {
+            // No filters configured - deliver immediately (backward compatibility)
+            DeliverMessage(message);
+        }
+    }
+
+    private void DeliverMessage(NeuronMessage message)
+    {
         // Route to specific target
         if (!string.IsNullOrEmpty(message.TargetNeuron))
         {
