@@ -23,6 +23,7 @@ public sealed class ResilientReasoner : IReasoner
     private readonly CircuitBreaker _circuitBreaker;
     private readonly CircuitBreakerConfig _config;
     private readonly ILogger<ResilientReasoner>? _logger;
+    private readonly object _statsLock = new();
     
     private int _consecutiveLlmFailures;
     private DateTimeOffset? _lastLlmSuccess;
@@ -148,11 +149,14 @@ public sealed class ResilientReasoner : IReasoner
     /// <inheritdoc/>
     public ReasonerHealth GetHealth()
     {
-        return new ReasonerHealth(
-            _circuitBreaker.State,
-            SymbolicAvailable: true, // Symbolic reasoning is always available
-            _consecutiveLlmFailures,
-            _lastLlmSuccess);
+        lock (_statsLock)
+        {
+            return new ReasonerHealth(
+                _circuitBreaker.State,
+                SymbolicAvailable: true, // Symbolic reasoning is always available
+                _consecutiveLlmFailures,
+                _lastLlmSuccess);
+        }
     }
 
     private Core.Resilience.ReasoningMode DetermineEffectiveMode(Core.Resilience.ReasoningMode preferredMode)
@@ -184,7 +188,9 @@ public sealed class ResilientReasoner : IReasoner
         Core.Resilience.ReasoningMode mode,
         CancellationToken ct)
     {
-        // Convert Core.Resilience.ReasoningMode to NeuralSymbolic.ReasoningMode
+        // SAFETY: This cast relies on Core.Resilience.ReasoningMode and NeuralSymbolic.ReasoningMode
+        // having identical integer values. See documentation in IReasoner.cs for sync requirements.
+        // A unit test in ResilientReasonerTests verifies enum alignment.
         var bridgeMode = (NeuralSymbolic.ReasoningMode)(int)mode;
         
         // Add timeout for half-open state
@@ -201,8 +207,12 @@ public sealed class ResilientReasoner : IReasoner
     private void RecordNeuralSuccess()
     {
         _circuitBreaker.RecordSuccess();
-        _consecutiveLlmFailures = 0;
-        _lastLlmSuccess = DateTimeOffset.UtcNow;
+        
+        lock (_statsLock)
+        {
+            _consecutiveLlmFailures = 0;
+            _lastLlmSuccess = DateTimeOffset.UtcNow;
+        }
         
         _logger?.LogInformation(
             "Neural reasoning succeeded. Circuit state: {State}",
@@ -212,11 +222,17 @@ public sealed class ResilientReasoner : IReasoner
     private void RecordNeuralFailure()
     {
         _circuitBreaker.RecordFailure();
-        _consecutiveLlmFailures++;
+        
+        int failures;
+        lock (_statsLock)
+        {
+            _consecutiveLlmFailures++;
+            failures = _consecutiveLlmFailures;
+        }
         
         _logger?.LogWarning(
             "Neural reasoning failed. Consecutive failures: {Failures}, Circuit state: {State}",
-            _consecutiveLlmFailures,
+            failures,
             _circuitBreaker.State);
     }
 
@@ -227,7 +243,7 @@ public sealed class ResilientReasoner : IReasoner
             Core.Resilience.ReasoningMode.NeuralOnly => true,
             Core.Resilience.ReasoningMode.NeuralFirst => true,
             Core.Resilience.ReasoningMode.Parallel => true,
-            Core.Resilience.ReasoningMode.SymbolicFirst => true, // Can fall back to neural
+            Core.Resilience.ReasoningMode.SymbolicFirst => false, // Symbolic first - only record neural if it's actually used
             Core.Resilience.ReasoningMode.SymbolicOnly => false,
             _ => false
         };

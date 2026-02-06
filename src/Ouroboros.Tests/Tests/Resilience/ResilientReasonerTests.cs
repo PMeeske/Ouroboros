@@ -247,6 +247,26 @@ public class ResilientReasonerTests
         healthAfter.LastLlmSuccess.Value.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(1));
     }
 
+    [Fact]
+    public void ReasoningModeEnums_AreAligned()
+    {
+        // This test verifies that Core.Resilience.ReasoningMode and NeuralSymbolic.ReasoningMode
+        // have identical integer values, which is required for the enum cast in ResilientReasoner
+        // to work correctly. If this test fails, the enums have diverged and must be synchronized.
+
+        // Assert - verify each enum value matches
+        ((int)CoreReasoningMode.SymbolicFirst).Should().Be((int)NsReasoningMode.SymbolicFirst);
+        ((int)CoreReasoningMode.NeuralFirst).Should().Be((int)NsReasoningMode.NeuralFirst);
+        ((int)CoreReasoningMode.Parallel).Should().Be((int)NsReasoningMode.Parallel);
+        ((int)CoreReasoningMode.SymbolicOnly).Should().Be((int)NsReasoningMode.SymbolicOnly);
+        ((int)CoreReasoningMode.NeuralOnly).Should().Be((int)NsReasoningMode.NeuralOnly);
+        
+        // Verify they have the same number of values
+        Enum.GetValues(typeof(CoreReasoningMode)).Length
+            .Should().Be(Enum.GetValues(typeof(NsReasoningMode)).Length,
+                "both enums should have the same number of values");
+    }
+
     /// <summary>
     /// Mock implementation of INeuralSymbolicBridge for testing.
     /// </summary>

@@ -8,7 +8,13 @@ using Ouroboros.Core.Monads;
 
 /// <summary>
 /// Reasoning modes for hybrid neural-symbolic systems.
-/// Duplicated here to avoid circular dependencies between Core and Agent layers.
+/// IMPORTANT: This enum is duplicated here to avoid circular dependencies between Core and Agent layers.
+/// It must be kept in sync with Ouroboros.Agent.NeuralSymbolic.ReasoningMode.
+/// The integer values MUST match exactly for casting to work correctly in ResilientReasoner.
+/// Changes to one enum must be reflected in the other.
+/// 
+/// Source of Truth: Ouroboros.Agent.NeuralSymbolic.ReasoningMode (defined in ReasoningResult.cs)
+/// This enum: Duplicate for Core layer use only
 /// </summary>
 public enum ReasoningMode
 {
