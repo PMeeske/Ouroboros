@@ -220,8 +220,8 @@ public sealed class CodeSecurityValidator
         private bool StartsWithForbiddenNamespace(string name)
         {
             return _forbiddenNamespaces.Any(forbidden =>
-                name.StartsWith(forbidden + ".", StringComparison.OrdinalIgnoreCase) ||
-                name.StartsWith(forbidden, StringComparison.OrdinalIgnoreCase));
+                name.Equals(forbidden, StringComparison.OrdinalIgnoreCase) ||
+                name.StartsWith(forbidden + ".", StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>
