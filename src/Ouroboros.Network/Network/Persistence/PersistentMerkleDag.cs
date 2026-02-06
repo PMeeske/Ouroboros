@@ -142,6 +142,12 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
     /// <param name="node">The node to add.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A Result indicating success or failure.</returns>
+    /// <remarks>
+    /// WARNING: If persistence fails after the node is added to the in-memory DAG,
+    /// the system may be in an inconsistent state. The node will exist in memory but not in the WAL.
+    /// In production systems, consider implementing a rollback mechanism or ensuring persistence
+    /// completes before confirming the operation to callers.
+    /// </remarks>
     public async Task<Result<MonadNode>> AddNodeAsync(MonadNode node, CancellationToken ct = default)
     {
         this.ThrowIfDisposed();
@@ -154,6 +160,8 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
         }
 
         // Persist to WAL
+        // WARNING: If this fails, the node is already in memory, creating potential inconsistency.
+        // Future enhancement: Implement rollback or two-phase commit.
         try
         {
             await this.persistence.AppendNodeAsync(node, ct).ConfigureAwait(false);
@@ -173,6 +181,12 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
     /// <param name="edge">The edge to add.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A Result indicating success or failure.</returns>
+    /// <remarks>
+    /// WARNING: If persistence fails after the edge is added to the in-memory DAG,
+    /// the system may be in an inconsistent state. The edge will exist in memory but not in the WAL.
+    /// In production systems, consider implementing a rollback mechanism or ensuring persistence
+    /// completes before confirming the operation to callers.
+    /// </remarks>
     public async Task<Result<TransitionEdge>> AddEdgeAsync(TransitionEdge edge, CancellationToken ct = default)
     {
         this.ThrowIfDisposed();
@@ -185,6 +199,8 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
         }
 
         // Persist to WAL
+        // WARNING: If this fails, the edge is already in memory, creating potential inconsistency.
+        // Future enhancement: Implement rollback or two-phase commit.
         try
         {
             await this.persistence.AppendEdgeAsync(edge, ct).ConfigureAwait(false);

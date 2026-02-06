@@ -131,7 +131,7 @@ public sealed class FileWalPersistence : IGraphPersistence
         {
             ct.ThrowIfCancellationRequested();
 
-            var line = await reader.ReadLineAsync().ConfigureAwait(false);
+            var line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(line))
             {
                 continue; // Skip empty lines
@@ -198,7 +198,7 @@ public sealed class FileWalPersistence : IGraphPersistence
         {
             if (this.writer != null)
             {
-                await this.writer.WriteLineAsync(entryJson).ConfigureAwait(false);
+                await this.writer.WriteLineAsync(entryJson.AsMemory(), ct).ConfigureAwait(false);
             }
         }
         finally

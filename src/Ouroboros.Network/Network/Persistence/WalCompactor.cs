@@ -76,6 +76,9 @@ public static class WalCompactor
                 await restoredDag.DisposeAsync().ConfigureAwait(false);
 
                 // Step 6: Replace the original WAL with the compacted version
+                // WARNING: These file operations are not atomic. If the process crashes between
+                // File.Move calls, the original WAL may be lost. In production, consider using
+                // platform-specific atomic rename operations or a transactional file system.
                 var backupPath = walPath + ".backup";
                 if (File.Exists(backupPath))
                 {
