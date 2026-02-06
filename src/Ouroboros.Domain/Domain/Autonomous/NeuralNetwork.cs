@@ -300,6 +300,7 @@ public sealed class OuroborosNeuralNetwork : IDisposable
     private readonly ConcurrentQueue<NeuronMessage> _messageHistory = new();
     private readonly IntentionBus _intentionBus;
     private readonly int _maxHistorySize;
+    private ConnectionTopology? _topology;
 
     private bool _isActive;
 
@@ -308,10 +309,12 @@ public sealed class OuroborosNeuralNetwork : IDisposable
     /// </summary>
     /// <param name="intentionBus">The intention bus for proposals.</param>
     /// <param name="maxHistorySize">Maximum messages to retain in history.</param>
-    public OuroborosNeuralNetwork(IntentionBus intentionBus, int maxHistorySize = 1000)
+    /// <param name="topology">Optional connection topology for weighted routing.</param>
+    public OuroborosNeuralNetwork(IntentionBus intentionBus, int maxHistorySize = 1000, ConnectionTopology? topology = null)
     {
         _intentionBus = intentionBus;
         _maxHistorySize = maxHistorySize;
+        _topology = topology;
     }
 
     /// <summary>
@@ -323,6 +326,16 @@ public sealed class OuroborosNeuralNetwork : IDisposable
     /// The intention bus for this network.
     /// </summary>
     public IntentionBus IntentionBus => _intentionBus;
+
+    /// <summary>
+    /// Gets or sets the connection topology for weighted routing.
+    /// If null, all connections are treated as equal (default behavior).
+    /// </summary>
+    public ConnectionTopology? Topology
+    {
+        get => _topology;
+        set => _topology = value;
+    }
 
     /// <summary>
     /// Whether the network is active.
@@ -367,6 +380,29 @@ public sealed class OuroborosNeuralNetwork : IDisposable
                 _topicSubscribers[topic] = subscribers;
             }
             subscribers.Add(neuron.Id);
+        }
+
+        // Create default connections based on topic overlap
+        if (_topology != null)
+        {
+            foreach (var existingNeuron in _neurons.Values)
+            {
+                if (existingNeuron.Id == neuron.Id)
+                {
+                    continue;
+                }
+
+                var sharedTopics = neuron.SubscribedTopics
+                    .Intersect(existingNeuron.SubscribedTopics).Count();
+
+                if (sharedTopics > 0)
+                {
+                    // Neurons with shared interests get default excitatory connection
+                    var weight = Math.Min(0.5 + (sharedTopics * 0.1), 0.9);
+                    _topology.SetConnection(existingNeuron.Id, neuron.Id, weight);
+                    _topology.SetConnection(neuron.Id, existingNeuron.Id, weight);
+                }
+            }
         }
     }
 
@@ -461,14 +497,42 @@ public sealed class OuroborosNeuralNetwork : IDisposable
             return;
         }
 
-        // Route by topic subscription
+        // Route by topic subscription WITH weight modulation
         if (_topicSubscribers.TryGetValue(message.Topic, out var subscribers))
         {
             foreach (var subscriberId in subscribers)
             {
                 if (subscriberId != message.SourceNeuron && _neurons.TryGetValue(subscriberId, out var subscriber))
                 {
-                    subscriber.ReceiveMessage(message);
+                    var weight = _topology?.GetWeight(message.SourceNeuron, subscriberId) ?? 1.0;
+
+                    if (weight <= -0.8)
+                    {
+                        // Strong inhibition — suppress message entirely
+                        continue;
+                    }
+                    else if (weight < 0)
+                    {
+                        // Weak inhibition — deliver with reduced priority
+                        var inhibitedMessage = message with { Priority = IntentionPriority.Low };
+                        subscriber.ReceiveMessage(inhibitedMessage);
+                    }
+                    else
+                    {
+                        // Excitatory — deliver normally (optionally boost priority for high weights)
+                        if (weight > 0.8)
+                        {
+                            var boostedMessage = message with { Priority = IntentionPriority.High };
+                            subscriber.ReceiveMessage(boostedMessage);
+                        }
+                        else
+                        {
+                            subscriber.ReceiveMessage(message);
+                        }
+                    }
+
+                    // Record activation for Hebbian learning
+                    _topology?.GetConnection(message.SourceNeuron, subscriberId)?.RecordActivation();
                 }
             }
         }
@@ -481,7 +545,35 @@ public sealed class OuroborosNeuralNetwork : IDisposable
             {
                 if (subscriberId != message.SourceNeuron && _neurons.TryGetValue(subscriberId, out var subscriber))
                 {
-                    subscriber.ReceiveMessage(message);
+                    var weight = _topology?.GetWeight(message.SourceNeuron, subscriberId) ?? 1.0;
+
+                    if (weight <= -0.8)
+                    {
+                        // Strong inhibition — suppress message entirely
+                        continue;
+                    }
+                    else if (weight < 0)
+                    {
+                        // Weak inhibition — deliver with reduced priority
+                        var inhibitedMessage = message with { Priority = IntentionPriority.Low };
+                        subscriber.ReceiveMessage(inhibitedMessage);
+                    }
+                    else
+                    {
+                        // Excitatory — deliver normally (optionally boost priority for high weights)
+                        if (weight > 0.8)
+                        {
+                            var boostedMessage = message with { Priority = IntentionPriority.High };
+                            subscriber.ReceiveMessage(boostedMessage);
+                        }
+                        else
+                        {
+                            subscriber.ReceiveMessage(message);
+                        }
+                    }
+
+                    // Record activation for Hebbian learning
+                    _topology?.GetConnection(message.SourceNeuron, subscriberId)?.RecordActivation();
                 }
             }
         }
@@ -528,6 +620,18 @@ public sealed class OuroborosNeuralNetwork : IDisposable
         sb.AppendLine($"**Status:** {(_isActive ? "Active 🟢" : "Inactive 🔴")}");
         sb.AppendLine($"**Neurons:** {_neurons.Count}");
         sb.AppendLine($"**Messages in History:** {_messageHistory.Count}");
+
+        // Include topology information if available
+        if (_topology != null)
+        {
+            var weights = _topology.GetWeightSnapshot();
+            sb.AppendLine($"**Weighted Connections:** {weights.Count}");
+
+            var excitatoryCount = weights.Count(w => w.Value > 0);
+            var inhibitoryCount = weights.Count(w => w.Value < 0);
+            sb.AppendLine($"  Excitatory: {excitatoryCount}, Inhibitory: {inhibitoryCount}");
+        }
+
         sb.AppendLine();
 
         foreach (var neuron in _neurons.Values.OrderBy(n => n.Type))
