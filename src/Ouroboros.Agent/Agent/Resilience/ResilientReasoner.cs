@@ -81,17 +81,20 @@ public sealed class ResilientReasoner : IReasoner
             
             if (result.IsSuccess)
             {
-                if (UsesNeuralReasoning(effectiveMode))
+                // Check if neural reasoning was actually used based on the result
+                if (result.Value.NeuralSucceeded)
                 {
-                    // Successful neural reasoning - record success
                     RecordNeuralSuccess();
                 }
                 return Result<string, string>.Success(result.Value.Answer);
             }
             else
             {
-                // Result failed - handle based on mode
-                if (UsesNeuralReasoning(effectiveMode))
+                // Result failed - handle based on what actually happened
+                // For modes that attempted neural reasoning, record failure
+                if (effectiveMode == Core.Resilience.ReasoningMode.NeuralOnly || 
+                    effectiveMode == Core.Resilience.ReasoningMode.NeuralFirst ||
+                    effectiveMode == Core.Resilience.ReasoningMode.Parallel)
                 {
                     RecordNeuralFailure();
                 }
@@ -118,7 +121,10 @@ public sealed class ResilientReasoner : IReasoner
         }
         catch (Exception ex)
         {
-            if (UsesNeuralReasoning(effectiveMode))
+            // Exception thrown - record failure for neural modes
+            if (effectiveMode == Core.Resilience.ReasoningMode.NeuralOnly || 
+                effectiveMode == Core.Resilience.ReasoningMode.NeuralFirst ||
+                effectiveMode == Core.Resilience.ReasoningMode.Parallel)
             {
                 RecordNeuralFailure();
             }
@@ -236,6 +242,11 @@ public sealed class ResilientReasoner : IReasoner
             _circuitBreaker.State);
     }
 
+    /// <summary>
+    /// Determines if a reasoning mode may involve neural (LLM) reasoning.
+    /// Used to decide whether to apply half-open state timeout.
+    /// Note: For success/failure tracking, check ReasoningResult.NeuralSucceeded instead.
+    /// </summary>
     private static bool UsesNeuralReasoning(Core.Resilience.ReasoningMode mode)
     {
         return mode switch
@@ -243,7 +254,7 @@ public sealed class ResilientReasoner : IReasoner
             Core.Resilience.ReasoningMode.NeuralOnly => true,
             Core.Resilience.ReasoningMode.NeuralFirst => true,
             Core.Resilience.ReasoningMode.Parallel => true,
-            Core.Resilience.ReasoningMode.SymbolicFirst => false, // Symbolic first - only record neural if it's actually used
+            Core.Resilience.ReasoningMode.SymbolicFirst => true, // May use neural as fallback
             Core.Resilience.ReasoningMode.SymbolicOnly => false,
             _ => false
         };
