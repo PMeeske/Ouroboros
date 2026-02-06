@@ -398,9 +398,16 @@ public sealed class OuroborosNeuralNetwork : IDisposable
                 if (sharedTopics > 0)
                 {
                     // Neurons with shared interests get default excitatory connection
+                    // Only create if connection doesn't already exist
                     var weight = Math.Min(0.5 + (sharedTopics * 0.1), 0.9);
-                    _topology.SetConnection(existingNeuron.Id, neuron.Id, weight);
-                    _topology.SetConnection(neuron.Id, existingNeuron.Id, weight);
+                    if (_topology.GetConnection(existingNeuron.Id, neuron.Id) == null)
+                    {
+                        _topology.SetConnection(existingNeuron.Id, neuron.Id, weight);
+                    }
+                    if (_topology.GetConnection(neuron.Id, existingNeuron.Id) == null)
+                    {
+                        _topology.SetConnection(neuron.Id, existingNeuron.Id, weight);
+                    }
                 }
             }
         }
@@ -504,35 +511,44 @@ public sealed class OuroborosNeuralNetwork : IDisposable
             {
                 if (subscriberId != message.SourceNeuron && _neurons.TryGetValue(subscriberId, out var subscriber))
                 {
-                    var weight = _topology?.GetWeight(message.SourceNeuron, subscriberId) ?? 1.0;
+                    // Only apply weight-based routing if topology exists
+                    if (_topology != null)
+                    {
+                        var weight = _topology.GetWeight(message.SourceNeuron, subscriberId);
 
-                    if (weight <= -0.8)
-                    {
-                        // Strong inhibition — suppress message entirely
-                        continue;
-                    }
-                    else if (weight < 0)
-                    {
-                        // Weak inhibition — deliver with reduced priority
-                        var inhibitedMessage = message with { Priority = IntentionPriority.Low };
-                        subscriber.ReceiveMessage(inhibitedMessage);
-                    }
-                    else
-                    {
-                        // Excitatory — deliver normally (optionally boost priority for high weights)
-                        if (weight > 0.8)
+                        if (weight <= -0.8)
                         {
-                            var boostedMessage = message with { Priority = IntentionPriority.High };
-                            subscriber.ReceiveMessage(boostedMessage);
+                            // Strong inhibition — suppress message entirely
+                            continue;
+                        }
+                        else if (weight < 0)
+                        {
+                            // Weak inhibition — deliver with reduced priority
+                            var inhibitedMessage = message with { Priority = IntentionPriority.Low };
+                            subscriber.ReceiveMessage(inhibitedMessage);
                         }
                         else
                         {
-                            subscriber.ReceiveMessage(message);
+                            // Excitatory — deliver normally (optionally boost priority for high weights)
+                            if (weight > 0.8)
+                            {
+                                var boostedMessage = message with { Priority = IntentionPriority.High };
+                                subscriber.ReceiveMessage(boostedMessage);
+                            }
+                            else
+                            {
+                                subscriber.ReceiveMessage(message);
+                            }
                         }
-                    }
 
-                    // Record activation for Hebbian learning
-                    _topology?.GetConnection(message.SourceNeuron, subscriberId)?.RecordActivation();
+                        // Record activation for Hebbian learning
+                        _topology.GetConnection(message.SourceNeuron, subscriberId)?.RecordActivation();
+                    }
+                    else
+                    {
+                        // No topology - use default behavior
+                        subscriber.ReceiveMessage(message);
+                    }
                 }
             }
         }
@@ -545,35 +561,44 @@ public sealed class OuroborosNeuralNetwork : IDisposable
             {
                 if (subscriberId != message.SourceNeuron && _neurons.TryGetValue(subscriberId, out var subscriber))
                 {
-                    var weight = _topology?.GetWeight(message.SourceNeuron, subscriberId) ?? 1.0;
+                    // Only apply weight-based routing if topology exists
+                    if (_topology != null)
+                    {
+                        var weight = _topology.GetWeight(message.SourceNeuron, subscriberId);
 
-                    if (weight <= -0.8)
-                    {
-                        // Strong inhibition — suppress message entirely
-                        continue;
-                    }
-                    else if (weight < 0)
-                    {
-                        // Weak inhibition — deliver with reduced priority
-                        var inhibitedMessage = message with { Priority = IntentionPriority.Low };
-                        subscriber.ReceiveMessage(inhibitedMessage);
-                    }
-                    else
-                    {
-                        // Excitatory — deliver normally (optionally boost priority for high weights)
-                        if (weight > 0.8)
+                        if (weight <= -0.8)
                         {
-                            var boostedMessage = message with { Priority = IntentionPriority.High };
-                            subscriber.ReceiveMessage(boostedMessage);
+                            // Strong inhibition — suppress message entirely
+                            continue;
+                        }
+                        else if (weight < 0)
+                        {
+                            // Weak inhibition — deliver with reduced priority
+                            var inhibitedMessage = message with { Priority = IntentionPriority.Low };
+                            subscriber.ReceiveMessage(inhibitedMessage);
                         }
                         else
                         {
-                            subscriber.ReceiveMessage(message);
+                            // Excitatory — deliver normally (optionally boost priority for high weights)
+                            if (weight > 0.8)
+                            {
+                                var boostedMessage = message with { Priority = IntentionPriority.High };
+                                subscriber.ReceiveMessage(boostedMessage);
+                            }
+                            else
+                            {
+                                subscriber.ReceiveMessage(message);
+                            }
                         }
-                    }
 
-                    // Record activation for Hebbian learning
-                    _topology?.GetConnection(message.SourceNeuron, subscriberId)?.RecordActivation();
+                        // Record activation for Hebbian learning
+                        _topology.GetConnection(message.SourceNeuron, subscriberId)?.RecordActivation();
+                    }
+                    else
+                    {
+                        // No topology - use default behavior
+                        subscriber.ReceiveMessage(message);
+                    }
                 }
             }
         }
