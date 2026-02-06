@@ -262,28 +262,24 @@ public sealed class NeuralNetworkRoutingTests
     {
         private readonly List<NeuronMessage> _receivedMessages;
         private readonly string _name;
+        private readonly string _id;
 
         public TestNeuron(string name, List<NeuronMessage> receivedMessages)
         {
             _name = name;
+            _id = name;
             _receivedMessages = receivedMessages;
         }
 
+        public override string Id => _id;
         public override string Name => _name;
+        public override NeuronType Type => NeuronType.Custom;
+        public override IReadOnlySet<string> SubscribedTopics => new HashSet<string>();
 
-        protected override void ConfigureSubscriptions()
-        {
-            // Subscriptions configured externally
-        }
-
-        protected override async Task OnMessageAsync(NeuralMessage message, CancellationToken ct)
-        {
-            await Task.CompletedTask;
-        }
-
-        public new void ReceiveMessage(NeuronMessage message)
+        protected override async Task ProcessMessageAsync(NeuronMessage message, CancellationToken ct)
         {
             _receivedMessages.Add(message);
+            await Task.CompletedTask;
         }
     }
 
@@ -291,27 +287,24 @@ public sealed class NeuralNetworkRoutingTests
     {
         private readonly System.Collections.Concurrent.ConcurrentBag<NeuronMessage> _receivedMessages;
         private readonly string _name;
+        private readonly string _id;
 
         public ConcurrentTestNeuron(string name, System.Collections.Concurrent.ConcurrentBag<NeuronMessage> receivedMessages)
         {
             _name = name;
+            _id = name;
             _receivedMessages = receivedMessages;
         }
 
+        public override string Id => _id;
         public override string Name => _name;
+        public override NeuronType Type => NeuronType.Custom;
+        public override IReadOnlySet<string> SubscribedTopics => new HashSet<string>();
 
-        protected override void ConfigureSubscriptions()
-        {
-        }
-
-        protected override async Task OnMessageAsync(NeuralMessage message, CancellationToken ct)
-        {
-            await Task.CompletedTask;
-        }
-
-        public new void ReceiveMessage(NeuronMessage message)
+        protected override async Task ProcessMessageAsync(NeuronMessage message, CancellationToken ct)
         {
             _receivedMessages.Add(message);
+            await Task.CompletedTask;
         }
     }
 
