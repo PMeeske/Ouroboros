@@ -467,6 +467,54 @@ public sealed class OuroborosNeuralNetwork : IDisposable
     }
 
     /// <summary>
+    /// Delivers a message to a subscriber, applying weight-based routing if topology exists.
+    /// </summary>
+    /// <param name="message">The message to deliver.</param>
+    /// <param name="subscriber">The subscriber neuron.</param>
+    /// <param name="subscriberId">The subscriber's ID.</param>
+    private void DeliverWeightedMessage(NeuronMessage message, Neuron subscriber, string subscriberId)
+    {
+        // Only apply weight-based routing if topology exists
+        if (_topology != null)
+        {
+            var weight = _topology.GetWeight(message.SourceNeuron, subscriberId);
+
+            if (weight <= -0.8)
+            {
+                // Strong inhibition — suppress message entirely
+                return;
+            }
+            else if (weight < 0)
+            {
+                // Weak inhibition — deliver with reduced priority
+                var inhibitedMessage = message with { Priority = IntentionPriority.Low };
+                subscriber.ReceiveMessage(inhibitedMessage);
+            }
+            else
+            {
+                // Excitatory — deliver normally (optionally boost priority for high weights)
+                if (weight > 0.8)
+                {
+                    var boostedMessage = message with { Priority = IntentionPriority.High };
+                    subscriber.ReceiveMessage(boostedMessage);
+                }
+                else
+                {
+                    subscriber.ReceiveMessage(message);
+                }
+            }
+
+            // Record activation for Hebbian learning
+            _topology.GetConnection(message.SourceNeuron, subscriberId)?.RecordActivation();
+        }
+        else
+        {
+            // No topology - use default behavior
+            subscriber.ReceiveMessage(message);
+        }
+    }
+
+    /// <summary>
     /// Routes a message to appropriate neurons.
     /// </summary>
     public void RouteMessage(NeuronMessage message)
@@ -511,44 +559,7 @@ public sealed class OuroborosNeuralNetwork : IDisposable
             {
                 if (subscriberId != message.SourceNeuron && _neurons.TryGetValue(subscriberId, out var subscriber))
                 {
-                    // Only apply weight-based routing if topology exists
-                    if (_topology != null)
-                    {
-                        var weight = _topology.GetWeight(message.SourceNeuron, subscriberId);
-
-                        if (weight <= -0.8)
-                        {
-                            // Strong inhibition — suppress message entirely
-                            continue;
-                        }
-                        else if (weight < 0)
-                        {
-                            // Weak inhibition — deliver with reduced priority
-                            var inhibitedMessage = message with { Priority = IntentionPriority.Low };
-                            subscriber.ReceiveMessage(inhibitedMessage);
-                        }
-                        else
-                        {
-                            // Excitatory — deliver normally (optionally boost priority for high weights)
-                            if (weight > 0.8)
-                            {
-                                var boostedMessage = message with { Priority = IntentionPriority.High };
-                                subscriber.ReceiveMessage(boostedMessage);
-                            }
-                            else
-                            {
-                                subscriber.ReceiveMessage(message);
-                            }
-                        }
-
-                        // Record activation for Hebbian learning
-                        _topology.GetConnection(message.SourceNeuron, subscriberId)?.RecordActivation();
-                    }
-                    else
-                    {
-                        // No topology - use default behavior
-                        subscriber.ReceiveMessage(message);
-                    }
+                    DeliverWeightedMessage(message, subscriber, subscriberId);
                 }
             }
         }
@@ -561,44 +572,7 @@ public sealed class OuroborosNeuralNetwork : IDisposable
             {
                 if (subscriberId != message.SourceNeuron && _neurons.TryGetValue(subscriberId, out var subscriber))
                 {
-                    // Only apply weight-based routing if topology exists
-                    if (_topology != null)
-                    {
-                        var weight = _topology.GetWeight(message.SourceNeuron, subscriberId);
-
-                        if (weight <= -0.8)
-                        {
-                            // Strong inhibition — suppress message entirely
-                            continue;
-                        }
-                        else if (weight < 0)
-                        {
-                            // Weak inhibition — deliver with reduced priority
-                            var inhibitedMessage = message with { Priority = IntentionPriority.Low };
-                            subscriber.ReceiveMessage(inhibitedMessage);
-                        }
-                        else
-                        {
-                            // Excitatory — deliver normally (optionally boost priority for high weights)
-                            if (weight > 0.8)
-                            {
-                                var boostedMessage = message with { Priority = IntentionPriority.High };
-                                subscriber.ReceiveMessage(boostedMessage);
-                            }
-                            else
-                            {
-                                subscriber.ReceiveMessage(message);
-                            }
-                        }
-
-                        // Record activation for Hebbian learning
-                        _topology.GetConnection(message.SourceNeuron, subscriberId)?.RecordActivation();
-                    }
-                    else
-                    {
-                        // No topology - use default behavior
-                        subscriber.ReceiveMessage(message);
-                    }
+                    DeliverWeightedMessage(message, subscriber, subscriberId);
                 }
             }
         }
