@@ -193,7 +193,7 @@ public sealed class RescorlaWagnerTests
         for (int i = 0; i < 10; i++)
         {
             double totalV = cs1Strength;
-            double delta = RescorlaWagner.Reinforce(csSalience, usSalience, totalV, lambda: 1.0);
+            double delta = RescorlaWagner.Reinforce(csSalience, usSalience, totalV, 1.0);
             cs1Strength += delta;
             cs1Strength = Math.Clamp(cs1Strength, 0.0, 1.0);
         }
@@ -205,8 +205,8 @@ public sealed class RescorlaWagnerTests
         for (int i = 0; i < 5; i++)
         {
             double totalV = cs1Strength + cs2Strength;
-            double delta1 = RescorlaWagner.Reinforce(csSalience, usSalience, totalV, lambda: 1.0);
-            double delta2 = RescorlaWagner.Reinforce(csSalience, usSalience, totalV, lambda: 1.0);
+            double delta1 = RescorlaWagner.Reinforce(csSalience, usSalience, totalV, 1.0);
+            double delta2 = RescorlaWagner.Reinforce(csSalience, usSalience, totalV, 1.0);
 
             cs1Strength = Math.Clamp(cs1Strength + delta1, 0.0, 1.0);
             cs2Strength = Math.Clamp(cs2Strength + delta2, 0.0, 1.0);
@@ -217,7 +217,7 @@ public sealed class RescorlaWagnerTests
         for (int i = 0; i < 5; i++)
         {
             double totalV = cs3Strength;
-            double delta = RescorlaWagner.Reinforce(csSalience, usSalience, totalV, lambda: 1.0);
+            double delta = RescorlaWagner.Reinforce(csSalience, usSalience, totalV, 1.0);
             cs3Strength += delta;
             cs3Strength = Math.Clamp(cs3Strength, 0.0, 1.0);
         }
@@ -247,8 +247,8 @@ public sealed class RescorlaWagnerTests
         for (int i = 0; i < 10; i++)
         {
             double totalV = cs1Strength + cs2Strength;
-            double delta1 = RescorlaWagner.Reinforce(highSalience, usSalience, totalV, lambda: 1.0);
-            double delta2 = RescorlaWagner.Reinforce(lowSalience, usSalience, totalV, lambda: 1.0);
+            double delta1 = RescorlaWagner.Reinforce(highSalience, usSalience, totalV, 1.0);
+            double delta2 = RescorlaWagner.Reinforce(lowSalience, usSalience, totalV, 1.0);
 
             cs1Strength = Math.Clamp(cs1Strength + delta1, 0.0, 1.0);
             cs2Strength = Math.Clamp(cs2Strength + delta2, 0.0, 1.0);
@@ -315,7 +315,7 @@ public sealed class RescorlaWagnerTests
         for (int i = 0; i < 15; i++)
         {
             double totalV = strength;
-            double delta = RescorlaWagner.Reinforce(csSalience, usSalience, totalV, lambda: 1.0);
+            double delta = RescorlaWagner.Reinforce(csSalience, usSalience, totalV, 1.0);
             deltas.Add(delta);
             strength = Math.Clamp(strength + delta, 0.0, 1.0);
         }
@@ -347,7 +347,7 @@ public sealed class RescorlaWagnerTests
         double highUsStrength = 0.0;
         for (int i = 0; i < 5; i++)
         {
-            double delta = RescorlaWagner.Reinforce(csSalience, highUsSalience, highUsStrength, lambda: 1.0);
+            double delta = RescorlaWagner.Reinforce(csSalience, highUsSalience, highUsStrength, 1.0);
             highUsStrength = Math.Clamp(highUsStrength + delta, 0.0, 1.0);
         }
 
@@ -355,7 +355,7 @@ public sealed class RescorlaWagnerTests
         double lowUsStrength = 0.0;
         for (int i = 0; i < 5; i++)
         {
-            double delta = RescorlaWagner.Reinforce(csSalience, lowUsSalience, lowUsStrength, lambda: 1.0);
+            double delta = RescorlaWagner.Reinforce(csSalience, lowUsSalience, lowUsStrength, 1.0);
             lowUsStrength = Math.Clamp(lowUsStrength + delta, 0.0, 1.0);
         }
 

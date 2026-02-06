@@ -155,9 +155,9 @@ public sealed record ConditionedAssociation(
     public string StimulusId => Stimulus.Id;
 
     /// <summary>
-    /// Updates association strength using Rescorla-Wagner equation:
-    /// ΔV = α * (λ - V)
-    /// Where: α = learning rate, λ = max strength, V = current strength.
+    /// Updates association strength using a simplified learning equation.
+    /// NOTE: For Rescorla-Wagner model behavior, use PavlovianConsciousnessEngine methods instead.
+    /// This method is maintained for backward compatibility.
     /// </summary>
     public ConditionedAssociation Reinforce(double reinforcementStrength = 1.0)
     {
