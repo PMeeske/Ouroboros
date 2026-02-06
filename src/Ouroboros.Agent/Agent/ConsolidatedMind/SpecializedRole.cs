@@ -69,7 +69,14 @@ public enum SpecializedRole
     /// Meta-cognition and self-reflection.
     /// Orchestrates other models and makes routing decisions.
     /// </summary>
-    MetaCognitive
+    MetaCognitive,
+
+    /// <summary>
+    /// Symbolic reasoning using MeTTa/Hyperon engine.
+    /// Provides deterministic logic-based reasoning without LLM dependency.
+    /// Acts as ultimate fallback when all neural models are unavailable.
+    /// </summary>
+    SymbolicReasoner
 }
 
 /// <summary>

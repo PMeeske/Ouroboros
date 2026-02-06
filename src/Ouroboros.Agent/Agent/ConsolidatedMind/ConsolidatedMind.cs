@@ -5,9 +5,11 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using Ouroboros.Agent.NeuralSymbolic;
 using Ouroboros.Core.Kleisli;
 using Ouroboros.Core.Steps;
 using Ouroboros.Providers.DeepSeek;
+using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Agent.ConsolidatedMind;
 
@@ -199,6 +201,39 @@ public sealed class ConsolidatedMind : IChatCompletionModel, IDisposable
         RegisterFromConfigs(OllamaCloudDefaults.GetMinimalConfigs(), endpoint, apiKey);
     }
 
+    /// <summary>
+    /// Registers a symbolic reasoning engine as the ultimate fallback specialist.
+    /// This ensures the mind can still function when all LLM models are unavailable.
+    /// </summary>
+    /// <param name="bridge">The neural-symbolic bridge to use for symbolic reasoning.</param>
+    /// <returns>The ConsolidatedMind instance for fluent chaining.</returns>
+    public ConsolidatedMind WithSymbolicFallback(INeuralSymbolicBridge bridge)
+    {
+        var adapter = new SymbolicReasonerAdapter(bridge);
+        RegisterSpecialist(new SpecializedModel(
+            SpecializedRole.SymbolicReasoner,
+            adapter,
+            "MeTTa/Hyperon Symbolic Reasoner",
+            new[] { "symbolic", "logic", "deterministic" }));
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a symbolic reasoning engine as the ultimate fallback specialist.
+    /// </summary>
+    /// <param name="engine">The MeTTa engine to use for symbolic reasoning.</param>
+    /// <returns>The ConsolidatedMind instance for fluent chaining.</returns>
+    public ConsolidatedMind WithSymbolicFallback(IMeTTaEngine engine)
+    {
+        var adapter = new SymbolicReasonerAdapter(engine);
+        RegisterSpecialist(new SpecializedModel(
+            SpecializedRole.SymbolicReasoner,
+            adapter,
+            "MeTTa Symbolic Reasoner",
+            new[] { "symbolic", "logic", "deterministic" }));
+        return this;
+    }
+
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
@@ -277,19 +312,48 @@ public sealed class ConsolidatedMind : IChatCompletionModel, IDisposable
             // Try fallback to another specialist
             UpdateMetrics(primarySpecialist.ModelName, stopwatch.ElapsedMilliseconds, false);
 
-            var fallback = GetFallbackSpecialist(analysis.PrimaryRole);
+            var fallback = GetFallbackSpecialist(primarySpecialist.Role);
             if (fallback != null)
             {
-                response = await fallback.Model.GenerateTextAsync(prompt, ct);
-                usedRoles.Add(fallback.Role);
+                try
+                {
+                    response = await fallback.Model.GenerateTextAsync(prompt, ct);
+                    usedRoles.Add(fallback.Role);
 
-                return new MindResponse(
-                    response,
-                    null,
-                    usedRoles.ToArray(),
-                    stopwatch.ElapsedMilliseconds,
-                    WasVerified: false,
-                    Confidence: analysis.Confidence * 0.7); // Reduced confidence for fallback
+                    return new MindResponse(
+                        response,
+                        null,
+                        usedRoles.ToArray(),
+                        stopwatch.ElapsedMilliseconds,
+                        WasVerified: false,
+                        Confidence: analysis.Confidence * 0.7); // Reduced confidence for fallback
+                }
+                catch (Exception)
+                {
+                    // First fallback also failed — try next in chain
+                    var secondaryFallback = GetFallbackSpecialist(fallback.Role);
+                    if (secondaryFallback != null)
+                    {
+                        try
+                        {
+                            response = await secondaryFallback.Model.GenerateTextAsync(prompt, ct);
+                            usedRoles.Add(fallback.Role);
+                            usedRoles.Add(secondaryFallback.Role);
+
+                            return new MindResponse(
+                                response,
+                                null,
+                                usedRoles.ToArray(),
+                                stopwatch.ElapsedMilliseconds,
+                                WasVerified: false,
+                                Confidence: 0.3); // Lower confidence for deep fallback
+                        }
+                        catch
+                        {
+                            // Final fallback also failed - fall through to throw
+                        }
+                    }
+                }
             }
 
             throw new InvalidOperationException($"Primary specialist failed and no fallback available: {ex.Message}", ex);
@@ -512,15 +576,21 @@ Improved response:";
 
     private SpecializedModel? GetFallbackSpecialist(SpecializedRole failedRole)
     {
-        // Define fallback chains
+        // Define fallback chains - SymbolicReasoner is the terminal fallback for all roles
         var fallbackChain = failedRole switch
         {
-            SpecializedRole.DeepReasoning => new[] { SpecializedRole.Analyst, SpecializedRole.QuickResponse },
-            SpecializedRole.CodeExpert => new[] { SpecializedRole.DeepReasoning, SpecializedRole.QuickResponse },
-            SpecializedRole.Mathematical => new[] { SpecializedRole.DeepReasoning, SpecializedRole.CodeExpert },
-            SpecializedRole.Creative => new[] { SpecializedRole.QuickResponse, SpecializedRole.DeepReasoning },
-            SpecializedRole.Planner => new[] { SpecializedRole.DeepReasoning, SpecializedRole.Analyst },
-            _ => new[] { SpecializedRole.QuickResponse, SpecializedRole.DeepReasoning }
+            SpecializedRole.QuickResponse => new[] { SpecializedRole.DeepReasoning, SpecializedRole.Analyst, SpecializedRole.SymbolicReasoner },
+            SpecializedRole.DeepReasoning => new[] { SpecializedRole.Analyst, SpecializedRole.QuickResponse, SpecializedRole.SymbolicReasoner },
+            SpecializedRole.CodeExpert => new[] { SpecializedRole.DeepReasoning, SpecializedRole.QuickResponse, SpecializedRole.SymbolicReasoner },
+            SpecializedRole.Mathematical => new[] { SpecializedRole.DeepReasoning, SpecializedRole.CodeExpert, SpecializedRole.SymbolicReasoner },
+            SpecializedRole.Creative => new[] { SpecializedRole.QuickResponse, SpecializedRole.DeepReasoning, SpecializedRole.SymbolicReasoner },
+            SpecializedRole.Planner => new[] { SpecializedRole.DeepReasoning, SpecializedRole.Analyst, SpecializedRole.SymbolicReasoner },
+            SpecializedRole.Analyst => new[] { SpecializedRole.DeepReasoning, SpecializedRole.QuickResponse, SpecializedRole.SymbolicReasoner },
+            SpecializedRole.Synthesizer => new[] { SpecializedRole.DeepReasoning, SpecializedRole.QuickResponse, SpecializedRole.SymbolicReasoner },
+            SpecializedRole.Verifier => new[] { SpecializedRole.DeepReasoning, SpecializedRole.Analyst, SpecializedRole.SymbolicReasoner },
+            SpecializedRole.MetaCognitive => new[] { SpecializedRole.DeepReasoning, SpecializedRole.Analyst, SpecializedRole.SymbolicReasoner },
+            SpecializedRole.SymbolicReasoner => Array.Empty<SpecializedRole>(), // No further fallback
+            _ => new[] { SpecializedRole.SymbolicReasoner } // Unknown roles fallback directly to symbolic
         };
 
         foreach (var role in fallbackChain)
