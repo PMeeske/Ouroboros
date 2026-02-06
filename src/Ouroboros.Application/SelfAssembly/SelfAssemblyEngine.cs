@@ -538,7 +538,7 @@ public sealed class SelfAssemblyEngine : IAsyncDisposable
             RecordState(proposalId, AssemblyProposalStatus.Compiling, "Validating code security");
             
             var validator = new CodeSecurityValidator(_config.AdditionalForbiddenNamespaces);
-            var securityResult = validator.ValidateAsync(proposal.GeneratedCode);
+            var securityResult = validator.Validate(proposal.GeneratedCode);
             if (!securityResult.IsSuccess)
             {
                 _proposals[proposalId] = proposal with { Status = AssemblyProposalStatus.Failed };

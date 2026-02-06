@@ -24,7 +24,7 @@ public class CodeSecurityValidatorTests
     #region HttpClient Tests
 
     [Fact]
-    public void ValidateAsync_WithHttpClientUsing_ShouldReject()
+    public void Validate_WithHttpClientUsing_ShouldReject()
     {
         // Arrange
         var code = """
@@ -49,7 +49,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -58,7 +58,7 @@ public class CodeSecurityValidatorTests
     }
 
     [Fact]
-    public void ValidateAsync_WithFullyQualifiedHttpClient_ShouldReject()
+    public void Validate_WithFullyQualifiedHttpClient_ShouldReject()
     {
         // Arrange
         var code = """
@@ -81,7 +81,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -93,7 +93,7 @@ public class CodeSecurityValidatorTests
     #region File System Tests
 
     [Fact]
-    public void ValidateAsync_WithFileReadAllText_ShouldReject()
+    public void Validate_WithFileReadAllText_ShouldReject()
     {
         // Arrange
         var code = """
@@ -117,7 +117,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -126,7 +126,7 @@ public class CodeSecurityValidatorTests
     }
 
     [Fact]
-    public void ValidateAsync_WithFullyQualifiedFileAccess_ShouldReject()
+    public void Validate_WithFullyQualifiedFileAccess_ShouldReject()
     {
         // Arrange
         var code = """
@@ -149,7 +149,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -161,7 +161,7 @@ public class CodeSecurityValidatorTests
     #region Process Tests
 
     [Fact]
-    public void ValidateAsync_WithProcessStart_ShouldReject()
+    public void Validate_WithProcessStart_ShouldReject()
     {
         // Arrange
         var code = """
@@ -185,7 +185,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -193,7 +193,7 @@ public class CodeSecurityValidatorTests
     }
 
     [Fact]
-    public void ValidateAsync_WithFullyQualifiedProcessStart_ShouldReject()
+    public void Validate_WithFullyQualifiedProcessStart_ShouldReject()
     {
         // Arrange
         var code = """
@@ -216,7 +216,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -228,7 +228,7 @@ public class CodeSecurityValidatorTests
     #region Reflection.Emit Tests
 
     [Fact]
-    public void ValidateAsync_WithReflectionEmit_ShouldReject()
+    public void Validate_WithReflectionEmit_ShouldReject()
     {
         // Arrange
         var code = """
@@ -252,7 +252,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -264,7 +264,7 @@ public class CodeSecurityValidatorTests
     #region Dynamic Assembly Loading Tests
 
     [Fact]
-    public void ValidateAsync_WithAssemblyLoad_ShouldReject()
+    public void Validate_WithAssemblyLoad_ShouldReject()
     {
         // Arrange
         var code = """
@@ -288,7 +288,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -297,7 +297,7 @@ public class CodeSecurityValidatorTests
     }
 
     [Fact]
-    public void ValidateAsync_WithAssemblyLoadFrom_ShouldReject()
+    public void Validate_WithAssemblyLoadFrom_ShouldReject()
     {
         // Arrange
         var code = """
@@ -321,7 +321,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -330,7 +330,7 @@ public class CodeSecurityValidatorTests
     }
 
     [Fact]
-    public void ValidateAsync_WithTypeInvokeMember_ShouldReject()
+    public void Validate_WithTypeInvokeMember_ShouldReject()
     {
         // Arrange
         var code = """
@@ -354,7 +354,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -367,7 +367,7 @@ public class CodeSecurityValidatorTests
     #region Clean Code Tests
 
     [Fact]
-    public void ValidateAsync_WithCleanNeuronCode_ShouldAccept()
+    public void Validate_WithCleanNeuronCode_ShouldAccept()
     {
         // Arrange
         var code = """
@@ -398,14 +398,14 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
-    public void ValidateAsync_WithSystemSecurityCryptography_ShouldAccept()
+    public void Validate_WithSystemSecurityCryptography_ShouldAccept()
     {
         // Arrange - System.Security.Cryptography should be allowed (used for Merkle hashing)
         var code = """
@@ -430,7 +430,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -441,7 +441,7 @@ public class CodeSecurityValidatorTests
     #region Multiple Violations Tests
 
     [Fact]
-    public void ValidateAsync_WithMultipleViolations_ShouldReportAll()
+    public void Validate_WithMultipleViolations_ShouldReportAll()
     {
         // Arrange
         var code = """
@@ -470,7 +470,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -486,7 +486,7 @@ public class CodeSecurityValidatorTests
     #region Additional Forbidden Namespaces Tests
 
     [Fact]
-    public void ValidateAsync_WithAdditionalForbiddenNamespace_ShouldReject()
+    public void Validate_WithAdditionalForbiddenNamespace_ShouldReject()
     {
         // Arrange
         var customValidator = new CodeSecurityValidator(new[] { "CustomNamespace.Dangerous" });
@@ -510,7 +510,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = customValidator.ValidateAsync(code);
+        var result = customValidator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -522,10 +522,10 @@ public class CodeSecurityValidatorTests
     #region Edge Cases
 
     [Fact]
-    public void ValidateAsync_WithEmptyCode_ShouldReject()
+    public void Validate_WithEmptyCode_ShouldReject()
     {
         // Act
-        var result = _validator.ValidateAsync("");
+        var result = _validator.Validate("");
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -533,10 +533,10 @@ public class CodeSecurityValidatorTests
     }
 
     [Fact]
-    public void ValidateAsync_WithNullCode_ShouldReject()
+    public void Validate_WithNullCode_ShouldReject()
     {
         // Act
-        var result = _validator.ValidateAsync(null!);
+        var result = _validator.Validate(null!);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -544,7 +544,7 @@ public class CodeSecurityValidatorTests
     }
 
     [Fact]
-    public void ValidateAsync_WithSystemNetSubnamespace_ShouldReject()
+    public void Validate_WithSystemNetSubnamespace_ShouldReject()
     {
         // Arrange - System.Net.Sockets should also be forbidden
         var code = """
@@ -568,7 +568,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -576,7 +576,7 @@ public class CodeSecurityValidatorTests
     }
 
     [Fact]
-    public void ValidateAsync_WithRuntimeInteropServices_ShouldReject()
+    public void Validate_WithRuntimeInteropServices_ShouldReject()
     {
         // Arrange
         var code = """
@@ -603,7 +603,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -611,7 +611,7 @@ public class CodeSecurityValidatorTests
     }
 
     [Fact]
-    public void ValidateAsync_WithRegistryAccess_ShouldReject()
+    public void Validate_WithRegistryAccess_ShouldReject()
     {
         // Arrange
         var code = """
@@ -635,7 +635,7 @@ public class CodeSecurityValidatorTests
             """;
 
         // Act
-        var result = _validator.ValidateAsync(code);
+        var result = _validator.Validate(code);
 
         // Assert
         result.IsSuccess.Should().BeFalse();

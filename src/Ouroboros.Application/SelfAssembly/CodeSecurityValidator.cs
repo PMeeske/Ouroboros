@@ -70,7 +70,7 @@ public sealed class CodeSecurityValidator
     /// </summary>
     /// <param name="sourceCode">The C# source code to validate.</param>
     /// <returns>Success if no violations found, or Failure with detailed violation messages.</returns>
-    public Result<Unit> ValidateAsync(string sourceCode)
+    public Result<Unit> Validate(string sourceCode)
     {
         if (string.IsNullOrWhiteSpace(sourceCode))
         {
