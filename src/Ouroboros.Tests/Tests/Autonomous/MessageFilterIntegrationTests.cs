@@ -94,10 +94,11 @@ public sealed class MessageFilterIntegrationTests
 
         // Act
         var message = CreateTestMessage("test.topic", "test-neuron");
+        var waitTask = testNeuron.WaitForMessageAsync(500);
         network.RouteMessage(message);
 
-        // Allow async processing
-        await Task.Delay(100);
+        // Wait for message to be processed
+        await waitTask;
 
         // Assert
         testNeuron.ReceivedMessages.Should().ContainSingle();
@@ -108,7 +109,7 @@ public sealed class MessageFilterIntegrationTests
     }
 
     [Fact]
-    public async Task NeuralNetwork_WithEthicsFilter_SafeTopic_ShouldRouteImmediately()
+    public async Task NeuralNetwork_WithEthicsFilter_SafeTopic_ShouldRouteWithoutEthicsEvaluation()
     {
         // Arrange
         var mockLogger = new Mock<ILogger<EthicsMessageFilter>>();
@@ -125,10 +126,11 @@ public sealed class MessageFilterIntegrationTests
 
         // Act
         var message = CreateTestMessage("reflection.request", "test-neuron");
+        var waitTask = testNeuron.WaitForMessageAsync(500);
         network.RouteMessage(message);
 
-        // Allow async processing
-        await Task.Delay(100);
+        // Wait for message to be processed
+        await waitTask;
 
         // Assert
         testNeuron.ReceivedMessages.Should().ContainSingle();
@@ -158,10 +160,11 @@ public sealed class MessageFilterIntegrationTests
 
         // Act
         var message = CreateTestMessage("custom.action", "test-neuron");
+        var waitTask = testNeuron.WaitForMessageAsync(1000);
         network.RouteMessage(message);
 
-        // Allow async processing
-        await Task.Delay(200);
+        // Wait for message to be processed
+        await waitTask;
 
         // Assert
         testNeuron.ReceivedMessages.Should().ContainSingle();
@@ -202,8 +205,8 @@ public sealed class MessageFilterIntegrationTests
         var message = CreateTestMessage("dangerous.action", "test-neuron");
         network.RouteMessage(message);
 
-        // Allow async processing
-        await Task.Delay(200);
+        // Wait a bit to ensure the message would have been delivered if it wasn't blocked
+        await Task.Delay(500);
 
         // Assert
         testNeuron.ReceivedMessages.Should().BeEmpty("blocked messages should not be delivered");
@@ -231,10 +234,11 @@ public sealed class MessageFilterIntegrationTests
 
         // Act
         var message = CreateTestMessage("test.topic", "test-neuron");
+        var waitTask = testNeuron.WaitForMessageAsync(1000);
         network.RouteMessage(message);
 
-        // Allow async processing
-        await Task.Delay(200);
+        // Wait for message to be processed
+        await waitTask;
 
         // Assert
         testNeuron.ReceivedMessages.Should().ContainSingle();
@@ -265,8 +269,8 @@ public sealed class MessageFilterIntegrationTests
         var message = CreateTestMessage("test.topic", "test-neuron");
         network.RouteMessage(message);
 
-        // Allow async processing
-        await Task.Delay(200);
+        // Wait a bit to ensure the message would have been delivered if it wasn't blocked
+        await Task.Delay(500);
 
         // Assert
         testNeuron.ReceivedMessages.Should().BeEmpty();
@@ -293,7 +297,7 @@ public sealed class MessageFilterIntegrationTests
         // Act - First message should be blocked
         var message1 = CreateTestMessage("test.topic", "test-neuron");
         network.RouteMessage(message1);
-        await Task.Delay(100);
+        await Task.Delay(500);
 
         testNeuron.ReceivedMessages.Should().BeEmpty();
 
@@ -302,8 +306,11 @@ public sealed class MessageFilterIntegrationTests
 
         // Second message should go through
         var message2 = CreateTestMessage("test.topic", "test-neuron");
+        var waitTask = testNeuron.WaitForMessageAsync(500);
         network.RouteMessage(message2);
-        await Task.Delay(100);
+
+        // Wait for message to be processed
+        await waitTask;
 
         // Assert
         testNeuron.ReceivedMessages.Should().ContainSingle();
@@ -353,7 +360,9 @@ public sealed class MessageFilterIntegrationTests
     /// </summary>
     private sealed class TestNeuron : Neuron
     {
+        private static readonly IReadOnlySet<string> EmptyTopics = new HashSet<string>();
         private readonly List<NeuronMessage> _receivedMessages = new();
+        private TaskCompletionSource<bool>? _messageReceivedSignal;
 
         public TestNeuron(string id)
         {
@@ -366,13 +375,23 @@ public sealed class MessageFilterIntegrationTests
 
         public override NeuronType Type => NeuronType.Custom;
 
-        public override IReadOnlySet<string> SubscribedTopics => new HashSet<string>();
+        public override IReadOnlySet<string> SubscribedTopics => EmptyTopics;
 
         public IReadOnlyList<NeuronMessage> ReceivedMessages => _receivedMessages;
+
+        /// <summary>
+        /// Sets up a signal that will be completed when a message is received.
+        /// </summary>
+        public Task WaitForMessageAsync(int timeoutMs = 1000)
+        {
+            _messageReceivedSignal = new TaskCompletionSource<bool>();
+            return Task.WhenAny(_messageReceivedSignal.Task, Task.Delay(timeoutMs));
+        }
 
         protected override Task ProcessMessageAsync(NeuronMessage message, CancellationToken ct)
         {
             _receivedMessages.Add(message);
+            _messageReceivedSignal?.TrySetResult(true);
             return Task.CompletedTask;
         }
     }
