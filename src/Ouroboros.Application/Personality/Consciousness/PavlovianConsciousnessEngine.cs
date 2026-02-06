@@ -6,6 +6,7 @@ namespace Ouroboros.Application.Personality;
 
 using System.Collections.Concurrent;
 using System.Text;
+using Ouroboros.Application.Personality.Consciousness;
 
 /// <summary>
 /// Implements Pavlovian/classical conditioning mechanisms for AI consciousness.
@@ -599,7 +600,7 @@ public sealed class PavlovianConsciousnessEngine
     /// </summary>
     /// <param name="stimulusType">The stimulus pattern.</param>
     /// <param name="responseType">The response name.</param>
-    /// <param name="reinforcementAmount">Amount to reinforce (added to strength).</param>
+    /// <param name="reinforcementAmount">Amount to reinforce (scales the learning delta).</param>
     public void Reinforce(string stimulusType, string responseType, double reinforcementAmount)
     {
         ConditionedAssociation? target = _associations.Values
@@ -610,12 +611,15 @@ public sealed class PavlovianConsciousnessEngine
             // Compute total association strength for all CSs currently active with this stimulus
             var totalV = GetTotalAssociationStrength(target.StimulusId);
 
-            var delta = Consciousness.RescorlaWagner.Reinforce(
+            var delta = RescorlaWagner.Reinforce(
                 csSalience: target.CsSalience,
                 usSalience: target.UsSalience,
                 totalAssociationStrength: totalV);
 
-            var newStrength = Math.Clamp(target.AssociationStrength + delta, 0.0, 1.0);
+            // Scale the Rescorla-Wagner update by the requested reinforcement amount
+            var scaledDelta = delta * reinforcementAmount;
+
+            var newStrength = Math.Clamp(target.AssociationStrength + scaledDelta, 0.0, 1.0);
 
             _associations[target.Id] = target with
             {
@@ -633,7 +637,7 @@ public sealed class PavlovianConsciousnessEngine
     /// </summary>
     /// <param name="stimulusType">The stimulus pattern.</param>
     /// <param name="responseType">The response name.</param>
-    /// <param name="extinctionAmount">Amount to weaken (subtracted from strength).</param>
+    /// <param name="extinctionAmount">Amount to weaken (scales the extinction delta).</param>
     public void Extinguish(string stimulusType, string responseType, double extinctionAmount)
     {
         ConditionedAssociation? target = _associations.Values
@@ -644,12 +648,15 @@ public sealed class PavlovianConsciousnessEngine
             // Compute total association strength for all CSs currently active with this stimulus
             var totalV = GetTotalAssociationStrength(target.StimulusId);
 
-            var delta = Consciousness.RescorlaWagner.Extinguish(
+            var delta = RescorlaWagner.Extinguish(
                 csSalience: target.CsSalience,
                 usSalience: target.UsSalience,
                 totalAssociationStrength: totalV);
 
-            var newStrength = Math.Clamp(target.AssociationStrength + delta, 0.0, 1.0);
+            // Scale the extinction delta by the caller-provided extinctionAmount
+            var scaledDelta = delta * extinctionAmount;
+
+            var newStrength = Math.Clamp(target.AssociationStrength + scaledDelta, 0.0, 1.0);
 
             ConditionedAssociation extinguished = target with
             {
@@ -732,15 +739,31 @@ public sealed class PavlovianConsciousnessEngine
     }
 
     /// <summary>
-    /// Gets the total association strength for all associations with the same stimulus.
-    /// This is ΣV in the Rescorla-Wagner equation.
+    /// Gets the total association strength ΣV for all conditioned stimuli that predict the same
+    /// response/unconditioned stimulus as the specified stimulus.
+    /// This implements ΣV in the Rescorla-Wagner equation along the response/US axis.
     /// </summary>
-    /// <param name="stimulusId">The ID of the stimulus.</param>
-    /// <returns>Sum of association strengths for all associations with this stimulus.</returns>
+    /// <param name="stimulusId">The ID of the conditioned stimulus used to identify the response/US.</param>
+    /// <returns>
+    /// Sum of association strengths for all associations that share the same response/US as this stimulus.
+    /// Returns 0.0 if the stimulus has no existing associations.
+    /// </returns>
     private double GetTotalAssociationStrength(string stimulusId)
     {
+        // Find the response/US that this stimulus is currently associated with.
+        ConditionedAssociation? referenceAssociation = _associations.Values
+            .FirstOrDefault(a => a.StimulusId == stimulusId);
+
+        if (referenceAssociation is null)
+        {
+            return 0.0;
+        }
+
+        string responseId = referenceAssociation.ResponseId;
+
+        // ΣV: sum of associative strengths for all CSs that predict the same response/US.
         return _associations.Values
-            .Where(a => a.StimulusId == stimulusId)
+            .Where(a => a.ResponseId == responseId)
             .Sum(a => a.AssociationStrength);
     }
 

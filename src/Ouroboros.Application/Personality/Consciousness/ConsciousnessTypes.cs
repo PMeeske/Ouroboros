@@ -99,23 +99,30 @@ public sealed record Response(
     string Name,
     ResponseType Type,
     double Intensity,            // 0-1: strength of response
-    double Salience,             // 0-1: salience of the unconditioned stimulus (β in Rescorla-Wagner)
     string EmotionalTone,        // Primary emotional quality
     string[] BehavioralTendencies,  // What actions this response promotes
     string[] CognitivePatterns,     // Thought patterns associated with this response
     string? VoiceToneModifier)      // How to adjust voice tone
 {
+    /// <summary>
+    /// Salience of the unconditioned stimulus (β in Rescorla-Wagner).
+    /// Default: 0.5. Range: 0.0-1.0.
+    /// </summary>
+    public double Salience { get; init; } = 0.5;
+
     /// <summary>Creates a basic emotional response.</summary>
     public static Response CreateEmotional(string name, string emotionalTone, double intensity = 0.7, double salience = 0.5) => new(
         Id: Guid.NewGuid().ToString(),
         Name: name,
         Type: ResponseType.Emotional,
         Intensity: intensity,
-        Salience: salience,
         EmotionalTone: emotionalTone,
         BehavioralTendencies: Array.Empty<string>(),
         CognitivePatterns: Array.Empty<string>(),
-        VoiceToneModifier: null);
+        VoiceToneModifier: null)
+    {
+        Salience = salience
+    };
 
     /// <summary>Creates a cognitive response with thought patterns.</summary>
     public static Response CreateCognitive(string name, string[] patterns, double intensity = 0.6, double salience = 0.5) => new(
@@ -123,11 +130,13 @@ public sealed record Response(
         Name: name,
         Type: ResponseType.Cognitive,
         Intensity: intensity,
-        Salience: salience,
         EmotionalTone: "neutral",
         BehavioralTendencies: Array.Empty<string>(),
         CognitivePatterns: patterns,
-        VoiceToneModifier: null);
+        VoiceToneModifier: null)
+    {
+        Salience = salience
+    };
 }
 
 /// <summary>
@@ -141,7 +150,7 @@ public sealed record ConditionedAssociation(
     double AssociationStrength,  // 0-1: strength of the S-R link (V in Rescorla-Wagner)
     double CsSalience,           // α: salience of conditioned stimulus (from Stimulus.Salience)
     double UsSalience,           // β: salience of unconditioned stimulus (from Response.Salience)
-    double LearningRate,         // Deprecated: kept for backward compatibility
+    double LearningRate,         // Deprecated: kept for backward compatibility, use PavlovianConsciousnessEngine methods
     double MaxStrength,          // λ: maximum possible association strength
     int ReinforcementCount,      // Number of times this association was reinforced
     int ExtinctionTrials,        // Number of non-reinforced trials (for extinction)
@@ -153,6 +162,11 @@ public sealed record ConditionedAssociation(
     /// Gets the stimulus ID for efficient lookups.
     /// </summary>
     public string StimulusId => Stimulus.Id;
+
+    /// <summary>
+    /// Gets the response ID for efficient lookups.
+    /// </summary>
+    public string ResponseId => Response.Id;
 
     /// <summary>
     /// Updates association strength using a simplified learning equation.
