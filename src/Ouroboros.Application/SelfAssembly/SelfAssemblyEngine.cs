@@ -151,6 +151,12 @@ public record SelfAssemblyConfig
     public int MaxAssembledNeurons { get; init; } = 10;
     public HashSet<NeuronCapability> ForbiddenCapabilities { get; init; } = new() { NeuronCapability.FileAccess };
     public TimeSpan SandboxTimeout { get; init; } = TimeSpan.FromSeconds(30);
+    
+    /// <summary>
+    /// Additional namespaces to forbid beyond the default set.
+    /// Default forbidden namespaces include System.Net, System.IO, System.Diagnostics.Process, etc.
+    /// </summary>
+    public IReadOnlyList<string> AdditionalForbiddenNamespaces { get; init; } = [];
 }
 
 /// <summary>
@@ -528,7 +534,20 @@ public sealed class SelfAssemblyEngine : IAsyncDisposable
                 RecordState(proposalId, AssemblyProposalStatus.Approved, "Approved");
             }
 
-            // Stage 4: Compile
+            // Stage 4: Security Validation (before compilation)
+            RecordState(proposalId, AssemblyProposalStatus.Compiling, "Validating code security");
+            
+            var validator = new CodeSecurityValidator(_config.AdditionalForbiddenNamespaces);
+            var securityResult = validator.ValidateAsync(proposal.GeneratedCode);
+            if (!securityResult.IsSuccess)
+            {
+                _proposals[proposalId] = proposal with { Status = AssemblyProposalStatus.Failed };
+                RecordState(proposalId, AssemblyProposalStatus.Failed, $"Security validation failed: {securityResult.Error}");
+                AssemblyFailed?.Invoke(this, new AssemblyFailedEvent(proposalId, proposal.Blueprint.Name, securityResult.Error!, DateTime.UtcNow));
+                return;
+            }
+
+            // Stage 5: Compile
             _proposals[proposalId] = proposal with { Status = AssemblyProposalStatus.Compiling };
             RecordState(proposalId, AssemblyProposalStatus.Compiling, "Compiling neuron");
 
@@ -541,7 +560,7 @@ public sealed class SelfAssemblyEngine : IAsyncDisposable
                 return;
             }
 
-            // Stage 5: Test in sandbox
+            // Stage 6: Test in sandbox
             _proposals[proposalId] = proposal with { Status = AssemblyProposalStatus.Testing };
             RecordState(proposalId, AssemblyProposalStatus.Testing, "Testing in sandbox");
 
@@ -554,7 +573,7 @@ public sealed class SelfAssemblyEngine : IAsyncDisposable
                 return;
             }
 
-            // Stage 6: Deploy
+            // Stage 7: Deploy
             _proposals[proposalId] = proposal with { Status = AssemblyProposalStatus.Deployed };
             _assembledNeurons[proposal.Blueprint.Name] = compileResult.Value!;
             RecordState(proposalId, AssemblyProposalStatus.Deployed, "Successfully deployed");
