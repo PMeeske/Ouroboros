@@ -148,7 +148,7 @@ public sealed class SymbolicReasonerAdapter : IChatCompletionModel
 
 I apologize, but I'm currently operating with limited reasoning capabilities.
 
-Your query: {(prompt.Length > 200 ? prompt.Substring(0, 200) + "..." : prompt)}
+Your query: {(prompt.Length > 200 ? prompt[..200] + "..." : prompt)}
 
 Status: {reason}
 

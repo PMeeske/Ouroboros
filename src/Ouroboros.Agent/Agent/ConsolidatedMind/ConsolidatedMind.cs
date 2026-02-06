@@ -337,7 +337,6 @@ public sealed class ConsolidatedMind : IChatCompletionModel, IDisposable
                         try
                         {
                             response = await secondaryFallback.Model.GenerateTextAsync(prompt, ct);
-                            usedRoles.Add(fallback.Role);
                             usedRoles.Add(secondaryFallback.Role);
 
                             return new MindResponse(

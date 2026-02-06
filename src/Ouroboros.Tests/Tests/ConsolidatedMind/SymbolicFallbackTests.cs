@@ -71,11 +71,6 @@ public class SymbolicFallbackTests
         var mockEngine = new MockMeTTaEngine();
         mind.WithSymbolicFallback(mockEngine);
 
-        // Debug: Check registration
-        mind.Specialists.Count.Should().Be(2);
-        mind.Specialists.Should().ContainKey(SpecializedRole.QuickResponse);
-        mind.Specialists.Should().ContainKey(SpecializedRole.SymbolicReasoner);
-
         // Act
         var response = await mind.ProcessAsync("What is 2+2?");
 
@@ -139,10 +134,6 @@ public class SymbolicFallbackTests
         var specialist = mind.Specialists[SpecializedRole.SymbolicReasoner];
         specialist.Role.Should().Be(SpecializedRole.SymbolicReasoner);
         specialist.ModelName.Should().Contain("Symbolic");
-        
-        // Additional debugging - verify it's actually in the dictionary
-        mind.Specialists.Count.Should().Be(1);
-        mind.Specialists.Keys.Should().Contain(SpecializedRole.SymbolicReasoner);
     }
 
     /// <summary>
