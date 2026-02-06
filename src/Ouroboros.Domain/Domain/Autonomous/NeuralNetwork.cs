@@ -301,6 +301,7 @@ public sealed class OuroborosNeuralNetwork : IDisposable
     private readonly IntentionBus _intentionBus;
     private readonly int _maxHistorySize;
 
+    private IReadOnlyList<IMessageFilter>? _filters;
     private bool _isActive;
 
     /// <summary>
@@ -348,6 +349,29 @@ public sealed class OuroborosNeuralNetwork : IDisposable
     /// Delegate for searching similar messages.
     /// </summary>
     public Func<float[], int, CancellationToken, Task<IReadOnlyList<NeuronMessage>>>? SearchSimilarFunction { get; set; }
+
+    /// <summary>
+    /// Sets the message filters for this network.
+    /// Filters will be evaluated before routing messages to neurons.
+    /// </summary>
+    /// <param name="filters">The filters to apply, or null to remove all filters.</param>
+    public void SetMessageFilters(IReadOnlyList<IMessageFilter>? filters)
+    {
+        // Store an internal snapshot to avoid concurrent modifications of the caller's list.
+        if (filters is null || filters.Count == 0)
+        {
+            _filters = null;
+            return;
+        }
+
+        var snapshot = new IMessageFilter[filters.Count];
+        for (var i = 0; i < filters.Count; i++)
+        {
+            snapshot[i] = filters[i];
+        }
+
+        _filters = snapshot;
+    }
 
     /// <summary>
     /// Registers a neuron with the network.
@@ -451,6 +475,89 @@ public sealed class OuroborosNeuralNetwork : IDisposable
             });
         }
 
+        // Apply message filters (if configured)
+        if (_filters != null && _filters.Count > 0)
+        {
+            // Capture a local snapshot to avoid concurrent modifications during async processing
+            var filters = _filters;
+
+            // First, attempt a synchronous fast-path by checking whether all filters
+            // complete synchronously. Only fall back to background execution if any
+            // filter is incomplete.
+            var filterTasks = new List<Task<bool>>(filters.Count);
+            var allCompletedSynchronously = true;
+
+            foreach (var filter in filters)
+            {
+                var task = filter.ShouldRouteAsync(message, CancellationToken.None);
+                filterTasks.Add(task);
+                if (!task.IsCompletedSuccessfully)
+                {
+                    allCompletedSynchronously = false;
+                }
+            }
+
+            if (allCompletedSynchronously)
+            {
+                // Evaluate all filter results synchronously
+                foreach (var task in filterTasks)
+                {
+                    if (!task.Result)
+                    {
+                        // Message blocked by filter (synchronous path)
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[NeuralNetwork] Message {message.Id} with topic '{message.Topic}' from {message.SourceNeuron} blocked by filter (sync)");
+                        return;
+                    }
+                }
+
+                // All filters approved - deliver the message immediately
+                DeliverMessage(message);
+            }
+            else
+            {
+                // Fire-and-forget async filtering - message will be delivered only after approval
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        // Check all filters, using already-started tasks where possible
+                        foreach (var task in filterTasks)
+                        {
+                            var allowed = task.IsCompletedSuccessfully
+                                ? task.Result
+                                : await task;
+
+                            if (!allowed)
+                            {
+                                // Message blocked by filter (async path)
+                                System.Diagnostics.Debug.WriteLine(
+                                    $"[NeuralNetwork] Message {message.Id} with topic '{message.Topic}' from {message.SourceNeuron} blocked by filter (async)");
+                                return;
+                            }
+                        }
+
+                        // All filters approved - deliver the message
+                        DeliverMessage(message);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[NeuralNetwork] Error during message filtering for message {message.Id} with topic '{message.Topic}': {ex.GetType().Name} - {ex.Message}");
+                        // Fail-safe: don't deliver messages that fail filtering
+                    }
+                });
+            }
+        }
+        else
+        {
+            // No filters configured - deliver immediately (backward compatibility)
+            DeliverMessage(message);
+        }
+    }
+
+    private void DeliverMessage(NeuronMessage message)
+    {
         // Route to specific target
         if (!string.IsNullOrEmpty(message.TargetNeuron))
         {
