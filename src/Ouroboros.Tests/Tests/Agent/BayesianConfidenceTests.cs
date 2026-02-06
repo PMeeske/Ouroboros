@@ -309,7 +309,7 @@ public sealed class BayesianConfidenceTests
     }
 
     [Fact]
-    public void CategorizeEvidence_BayesFactor3_Substantial()
+    public void CategorizeEvidence_BayesFactor3_Negligible()
     {
         // Arrange: log10(3) ≈ 0.48
         double bayesFactor = 3.0;
@@ -412,6 +412,50 @@ public sealed class BayesianConfidenceTests
         Assert.Equal(EvidenceStrength.Strong, strength);
     }
 
+    [Fact]
+    public void CategorizeEvidence_ZeroBayesFactor_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange
+        double bayesFactor = 0.0;
+
+        // Act & Assert
+        Assert.Throws<ArgumentOutOfRangeException>(() => 
+            BayesianConfidence.CategorizeEvidence(bayesFactor));
+    }
+
+    [Fact]
+    public void CategorizeEvidence_NegativeBayesFactor_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange
+        double bayesFactor = -1.0;
+
+        // Act & Assert
+        Assert.Throws<ArgumentOutOfRangeException>(() => 
+            BayesianConfidence.CategorizeEvidence(bayesFactor));
+    }
+
+    [Fact]
+    public void CategorizeEvidence_NaNBayesFactor_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange
+        double bayesFactor = double.NaN;
+
+        // Act & Assert
+        Assert.Throws<ArgumentOutOfRangeException>(() => 
+            BayesianConfidence.CategorizeEvidence(bayesFactor));
+    }
+
+    [Fact]
+    public void CategorizeEvidence_InfinityBayesFactor_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange
+        double bayesFactor = double.PositiveInfinity;
+
+        // Act & Assert
+        Assert.Throws<ArgumentOutOfRangeException>(() => 
+            BayesianConfidence.CategorizeEvidence(bayesFactor));
+    }
+
     #endregion
 
     #region Integration-Style Tests
@@ -496,7 +540,7 @@ public sealed class BayesianConfidenceTests
     }
 
     [Fact]
-    public void IntegrationTest_CompleteReasearchCycle_RealisticBehavior()
+    public void IntegrationTest_CompleteResearchCycle_RealisticBehavior()
     {
         // Arrange: Simulate a research cycle
         double confidence = 0.5; // Start with neutral hypothesis

@@ -56,6 +56,7 @@ public static class BayesianConfidence
     /// </summary>
     /// <param name="bayesFactor">The Bayes factor to categorize</param>
     /// <returns>Evidence strength category</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when bayesFactor is not positive</exception>
     /// <remarks>
     /// Jeffreys' scale uses log10 of the Bayes factor:
     /// - &lt; 0.5: Negligible
@@ -66,6 +67,14 @@ public static class BayesianConfidence
     /// </remarks>
     public static EvidenceStrength CategorizeEvidence(double bayesFactor)
     {
+        if (bayesFactor <= 0 || double.IsNaN(bayesFactor) || double.IsInfinity(bayesFactor))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(bayesFactor),
+                bayesFactor,
+                "Bayes factor must be a positive finite number");
+        }
+
         var k = Math.Abs(Math.Log10(bayesFactor));
         return k switch
         {

@@ -214,8 +214,12 @@ CRITERIA: [how to measure success]";
             double likelihoodIfFalse = supported ? 0.25 : 0.75;  // P(E|¬H)
 
             // Adjust likelihoods by execution quality (success rate)
-            var qualityFactor = execution.StepResults.Count > 0
-                ? execution.StepResults.Count(r => r.Success) / (double)execution.StepResults.Count
+            var totalSteps = execution.StepResults.Count;
+            var successfulSteps = totalSteps > 0
+                ? execution.StepResults.Count(r => r.Success)
+                : 0;
+            var qualityFactor = totalSteps > 0
+                ? successfulSteps / (double)totalSteps
                 : 0.5;
             likelihoodIfTrue = AdjustLikelihoodByQuality(likelihoodIfTrue, qualityFactor);
             likelihoodIfFalse = AdjustLikelihoodByQuality(likelihoodIfFalse, qualityFactor);
