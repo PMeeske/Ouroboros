@@ -208,14 +208,32 @@ CRITERIA: [how to measure success]";
 
             // Analyze results against expected outcomes
             bool supported = AnalyzeExperimentResults(execution, experiment.ExpectedOutcomes);
-            double confidenceAdjustment = CalculateConfidenceAdjustment(execution, supported);
+
+            // Bayesian update: estimate likelihoods based on experiment results
+            double likelihoodIfTrue = supported ? 0.85 : 0.15;   // P(E|H)
+            double likelihoodIfFalse = supported ? 0.25 : 0.75;  // P(E|¬H)
+
+            // Adjust likelihoods by execution quality (success rate)
+            var totalSteps = execution.StepResults.Count;
+            var successfulSteps = totalSteps > 0
+                ? execution.StepResults.Count(r => r.Success)
+                : 0;
+            var qualityFactor = totalSteps > 0
+                ? successfulSteps / (double)totalSteps
+                : 0.5;
+            likelihoodIfTrue = AdjustLikelihoodByQuality(likelihoodIfTrue, qualityFactor);
+            likelihoodIfFalse = AdjustLikelihoodByQuality(likelihoodIfFalse, qualityFactor);
+
+            double newConfidence = BayesianConfidence.Update(
+                hypothesis.Confidence, likelihoodIfTrue, likelihoodIfFalse);
+            double confidenceAdjustment = newConfidence - hypothesis.Confidence;
 
             string explanation = GenerateExplanation(hypothesis, execution, supported);
 
             // Update hypothesis
             Hypothesis updatedHypothesis = hypothesis with
             {
-                Confidence = Math.Clamp(hypothesis.Confidence + confidenceAdjustment, 0.0, 1.0),
+                Confidence = newConfidence,
                 Tested = true,
                 Validated = supported
             };
@@ -317,16 +335,21 @@ ALTERNATIVES: [other possibilities]";
         if (!_hypotheses.TryGetValue(hypothesisId, out Hypothesis? hypothesis))
             return;
 
+        var newConfidence = BayesianConfidence.Update(
+            hypothesis.Confidence,
+            likelihoodIfTrue: supports ? 0.75 : 0.2,
+            likelihoodIfFalse: supports ? 0.35 : 0.7);
+
         Hypothesis updatedHypothesis = supports
             ? hypothesis with
             {
                 SupportingEvidence = new List<string>(hypothesis.SupportingEvidence) { evidence },
-                Confidence = Math.Min(hypothesis.Confidence + 0.1, 1.0)
+                Confidence = newConfidence
             }
             : hypothesis with
             {
                 CounterEvidence = new List<string>(hypothesis.CounterEvidence) { evidence },
-                Confidence = Math.Max(hypothesis.Confidence - 0.15, 0.0)
+                Confidence = newConfidence
             };
 
         _hypotheses[hypothesisId] = updatedHypothesis;
@@ -506,6 +529,7 @@ EVIDENCE: [supporting points]";
         return successRate >= 0.7;
     }
 
+    [Obsolete("This method uses additive confidence adjustment. Use BayesianConfidence.Update() instead.")]
     private double CalculateConfidenceAdjustment(ExecutionResult execution, bool supported)
     {
         // Handle empty step results
@@ -524,6 +548,19 @@ EVIDENCE: [supporting points]";
             // Decrease confidence
             return -0.15 - ((1.0 - successRate) * 0.1);
         }
+    }
+
+    /// <summary>
+    /// Adjusts likelihood values based on execution quality.
+    /// Low quality execution makes likelihoods move toward 0.5 (uninformative).
+    /// </summary>
+    /// <param name="baseLikelihood">The base likelihood to adjust</param>
+    /// <param name="quality">Quality factor (0-1) based on execution success</param>
+    /// <returns>Adjusted likelihood</returns>
+    private static double AdjustLikelihoodByQuality(double baseLikelihood, double quality)
+    {
+        // Low quality execution → likelihoods move toward 0.5 (uninformative)
+        return baseLikelihood + (0.5 - baseLikelihood) * (1.0 - quality);
     }
 
     private string GenerateExplanation(Hypothesis hypothesis, ExecutionResult execution, bool supported)
