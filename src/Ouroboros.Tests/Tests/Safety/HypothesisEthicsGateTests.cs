@@ -4,6 +4,7 @@
 
 using FluentAssertions;
 using Moq;
+using Ouroboros.Agent.MetaAI;
 using Ouroboros.Core.Ethics;
 using Ouroboros.Core.Monads;
 using Xunit;
@@ -16,7 +17,6 @@ using AgentExperiment = Ouroboros.Agent.MetaAI.Experiment;
 using AgentExecutionResult = Ouroboros.Agent.MetaAI.ExecutionResult;
 using AgentHypothesisEngine = Ouroboros.Agent.MetaAI.HypothesisEngine;
 using AgentStepResult = Ouroboros.Agent.MetaAI.StepResult;
-using Ouroboros.Agent.MetaAI;
 
 namespace Ouroboros.Tests.Tests.Safety;
 
