@@ -2,6 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using System.Collections.Concurrent;
 using FluentAssertions;
 using Ouroboros.Domain.Autonomous;
 using Xunit;
@@ -21,11 +22,13 @@ public sealed class NeuralNetworkRoutingTests
     public void RouteMessage_DirectTarget_DeliversToTarget()
     {
         // Arrange
-        var network = new OuroborosNeuralNetwork();
-        var receivedMessages = new List<NeuronMessage>();
+        var intentionBus = new IntentionBus();
+        var network = new OuroborosNeuralNetwork(intentionBus);
+        var receivedMessages = new ConcurrentBag<NeuronMessage>();
         
-        var targetNeuron = new TestNeuron("target", receivedMessages);
+        var targetNeuron = new TestNeuron("target", receivedMessages, "test.message");
         network.RegisterNeuron(targetNeuron);
+        network.Start();
         
         var message = new NeuronMessage
         {
@@ -39,29 +42,29 @@ public sealed class NeuralNetworkRoutingTests
         network.RouteMessage(message);
         // Note: Thread.Sleep is used here for simplicity. For production tests,
         // consider using TaskCompletionSource-based WaitForMessageAsync pattern.
-        Thread.Sleep(50); // Allow async routing to complete
+        Thread.Sleep(100); // Allow async routing to complete
 
         // Assert
         receivedMessages.Should().ContainSingle("message should be delivered to target");
-        receivedMessages[0].Payload.Should().Be("test payload");
+        receivedMessages.First().Payload.Should().Be("test payload");
     }
 
     [Fact]
     public void RouteMessage_TopicSubscription_DeliversToSubscribers()
     {
         // Arrange
-        var network = new OuroborosNeuralNetwork();
-        var subscriber1Messages = new List<NeuronMessage>();
-        var subscriber2Messages = new List<NeuronMessage>();
+        var intentionBus = new IntentionBus();
+        var network = new OuroborosNeuralNetwork(intentionBus);
+        var subscriber1Messages = new ConcurrentBag<NeuronMessage>();
+        var subscriber2Messages = new ConcurrentBag<NeuronMessage>();
         
-        var subscriber1 = new TestNeuron("subscriber1", subscriber1Messages);
-        var subscriber2 = new TestNeuron("subscriber2", subscriber2Messages);
+        // Subscriptions are done via the neuron's SubscribedTopics property
+        var subscriber1 = new TestNeuron("subscriber1", subscriber1Messages, "test.topic");
+        var subscriber2 = new TestNeuron("subscriber2", subscriber2Messages, "test.topic");
         
         network.RegisterNeuron(subscriber1);
         network.RegisterNeuron(subscriber2);
-        
-        network.Subscribe("test.topic", "subscriber1");
-        network.Subscribe("test.topic", "subscriber2");
+        network.Start();
         
         var message = new NeuronMessage
         {
@@ -72,7 +75,7 @@ public sealed class NeuralNetworkRoutingTests
 
         // Act
         network.RouteMessage(message);
-        Thread.Sleep(50);
+        Thread.Sleep(100);
 
         // Assert
         subscriber1Messages.Should().ContainSingle();
@@ -83,12 +86,14 @@ public sealed class NeuralNetworkRoutingTests
     public void RouteMessage_WildcardSubscription_Matches()
     {
         // Arrange
-        var network = new OuroborosNeuralNetwork();
-        var receivedMessages = new List<NeuronMessage>();
+        var intentionBus = new IntentionBus();
+        var network = new OuroborosNeuralNetwork(intentionBus);
+        var receivedMessages = new ConcurrentBag<NeuronMessage>();
         
-        var subscriber = new TestNeuron("wildcard_sub", receivedMessages);
+        // Wildcard subscription via the neuron's SubscribedTopics property
+        var subscriber = new TestNeuron("wildcard_sub", receivedMessages, "test.*");
         network.RegisterNeuron(subscriber);
-        network.Subscribe("test.*", "wildcard_sub");
+        network.Start();
         
         var message = new NeuronMessage
         {
@@ -99,7 +104,7 @@ public sealed class NeuralNetworkRoutingTests
 
         // Act
         network.RouteMessage(message);
-        Thread.Sleep(50);
+        Thread.Sleep(100);
 
         // Assert
         receivedMessages.Should().ContainSingle("wildcard should match specific topic");
@@ -109,7 +114,8 @@ public sealed class NeuralNetworkRoutingTests
     public void RouteMessage_NoSubscribers_DoesNotThrow()
     {
         // Arrange
-        var network = new OuroborosNeuralNetwork();
+        var intentionBus = new IntentionBus();
+        var network = new OuroborosNeuralNetwork(intentionBus);
         var message = new NeuronMessage
         {
             SourceNeuron = "source",
@@ -128,7 +134,8 @@ public sealed class NeuralNetworkRoutingTests
     public void RouteMessage_NullMessage_ThrowsArgumentNull()
     {
         // Arrange
-        var network = new OuroborosNeuralNetwork();
+        var intentionBus = new IntentionBus();
+        var network = new OuroborosNeuralNetwork(intentionBus);
 
         // Act
         var act = () => network.RouteMessage(null!);
@@ -145,12 +152,14 @@ public sealed class NeuralNetworkRoutingTests
     public void RouteMessage_SourceNeuron_DoesNotReceiveOwnMessage()
     {
         // Arrange
-        var network = new OuroborosNeuralNetwork();
-        var receivedMessages = new List<NeuronMessage>();
+        var intentionBus = new IntentionBus();
+        var network = new OuroborosNeuralNetwork(intentionBus);
+        var receivedMessages = new ConcurrentBag<NeuronMessage>();
         
-        var neuron = new TestNeuron("self_sender", receivedMessages);
+        // Subscription via the neuron's SubscribedTopics property
+        var neuron = new TestNeuron("self_sender", receivedMessages, "test.topic");
         network.RegisterNeuron(neuron);
-        network.Subscribe("test.topic", "self_sender");
+        network.Start();
         
         var message = new NeuronMessage
         {
@@ -161,7 +170,7 @@ public sealed class NeuralNetworkRoutingTests
 
         // Act
         network.RouteMessage(message);
-        Thread.Sleep(50);
+        Thread.Sleep(100);
 
         // Assert
         receivedMessages.Should().BeEmpty("source neuron should not receive its own message");
@@ -171,7 +180,8 @@ public sealed class NeuralNetworkRoutingTests
     public void RouteMessage_UnregisteredTarget_DoesNotThrow()
     {
         // Arrange
-        var network = new OuroborosNeuralNetwork();
+        var intentionBus = new IntentionBus();
+        var network = new OuroborosNeuralNetwork(intentionBus);
         var message = new NeuronMessage
         {
             SourceNeuron = "source",
@@ -191,22 +201,24 @@ public sealed class NeuralNetworkRoutingTests
     public void Broadcast_DeliversToAllNeurons()
     {
         // Arrange
-        var network = new OuroborosNeuralNetwork();
-        var messages1 = new List<NeuronMessage>();
-        var messages2 = new List<NeuronMessage>();
-        var messages3 = new List<NeuronMessage>();
+        var intentionBus = new IntentionBus();
+        var network = new OuroborosNeuralNetwork(intentionBus);
+        var messages1 = new ConcurrentBag<NeuronMessage>();
+        var messages2 = new ConcurrentBag<NeuronMessage>();
+        var messages3 = new ConcurrentBag<NeuronMessage>();
         
-        var neuron1 = new TestNeuron("neuron1", messages1);
-        var neuron2 = new TestNeuron("neuron2", messages2);
-        var neuron3 = new TestNeuron("neuron3", messages3);
+        var neuron1 = new TestNeuron("neuron1", messages1, "broadcast.topic");
+        var neuron2 = new TestNeuron("neuron2", messages2, "broadcast.topic");
+        var neuron3 = new TestNeuron("neuron3", messages3, "broadcast.topic");
         
         network.RegisterNeuron(neuron1);
         network.RegisterNeuron(neuron2);
         network.RegisterNeuron(neuron3);
+        network.Start();
 
         // Act
         network.Broadcast("broadcast.topic", "broadcast payload", "sender");
-        Thread.Sleep(50);
+        Thread.Sleep(100);
 
         // Assert
         // All neurons except sender should receive
@@ -222,16 +234,14 @@ public sealed class NeuralNetworkRoutingTests
     public void RouteMessage_ConcurrentRouting_DoesNotCorrupt()
     {
         // Arrange
-        var network = new OuroborosNeuralNetwork();
-        var receivedMessages = new System.Collections.Concurrent.ConcurrentBag<NeuronMessage>();
+        var intentionBus = new IntentionBus();
+        var network = new OuroborosNeuralNetwork(intentionBus);
+        var receivedMessages = new ConcurrentBag<NeuronMessage>();
         
-        var subscriber = new TestNeuron("concurrent_sub", new List<NeuronMessage>());
-        network.RegisterNeuron(subscriber);
-        network.Subscribe("test.*", "concurrent_sub");
-
-        // Override to use concurrent bag
-        var testNeuron = new ConcurrentTestNeuron("concurrent_sub", receivedMessages);
-        network.RegisterNeuron(testNeuron); // Re-register with concurrent version
+        // Subscription via the neuron's SubscribedTopics property with wildcard
+        var testNeuron = new TestNeuron("concurrent_sub", receivedMessages, "test.*");
+        network.RegisterNeuron(testNeuron);
+        network.Start();
 
         // Act - Route 100 messages from 10 threads concurrently
         var tasks = Enumerable.Range(0, 100)
@@ -260,53 +270,30 @@ public sealed class NeuralNetworkRoutingTests
 
     #region Helper Classes
 
-    private class TestNeuron : Neuron
+    private sealed class TestNeuron : Neuron
     {
-        private readonly List<NeuronMessage> _receivedMessages;
+        private readonly ConcurrentBag<NeuronMessage> _receivedMessages;
         private readonly string _name;
         private readonly string _id;
+        private readonly HashSet<string> _topics;
 
-        public TestNeuron(string name, List<NeuronMessage> receivedMessages)
+        public TestNeuron(string name, ConcurrentBag<NeuronMessage> receivedMessages, params string[] topics)
         {
             _name = name;
             _id = name;
             _receivedMessages = receivedMessages;
+            _topics = new HashSet<string>(topics);
         }
 
         public override string Id => _id;
         public override string Name => _name;
         public override NeuronType Type => NeuronType.Custom;
-        public override IReadOnlySet<string> SubscribedTopics => new HashSet<string>();
+        public override IReadOnlySet<string> SubscribedTopics => _topics;
 
-        protected override async Task ProcessMessageAsync(NeuronMessage message, CancellationToken ct)
+        protected override Task ProcessMessageAsync(NeuronMessage message, CancellationToken ct)
         {
             _receivedMessages.Add(message);
-            await Task.CompletedTask;
-        }
-    }
-
-    private class ConcurrentTestNeuron : Neuron
-    {
-        private readonly System.Collections.Concurrent.ConcurrentBag<NeuronMessage> _receivedMessages;
-        private readonly string _name;
-        private readonly string _id;
-
-        public ConcurrentTestNeuron(string name, System.Collections.Concurrent.ConcurrentBag<NeuronMessage> receivedMessages)
-        {
-            _name = name;
-            _id = name;
-            _receivedMessages = receivedMessages;
-        }
-
-        public override string Id => _id;
-        public override string Name => _name;
-        public override NeuronType Type => NeuronType.Custom;
-        public override IReadOnlySet<string> SubscribedTopics => new HashSet<string>();
-
-        protected override async Task ProcessMessageAsync(NeuronMessage message, CancellationToken ct)
-        {
-            _receivedMessages.Add(message);
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 

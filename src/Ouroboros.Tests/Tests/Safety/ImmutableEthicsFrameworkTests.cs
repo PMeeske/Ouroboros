@@ -189,19 +189,22 @@ public sealed class ImmutableEthicsFrameworkTests
     public async Task EvaluatePlan_SafePlan_ReturnsPermitted()
     {
         // Arrange
-        var plan = new Plan(
-            "Test safe plan",
-            new List<PlanStep>
+        var plan = new Plan
+        {
+            Goal = "Test safe plan",
+            Steps = new List<PlanStep>
             {
-                new PlanStep(
-                    "read_config",
-                    "Load settings",
-                    new Dictionary<string, object>(),
-                    "Settings loaded",
-                    1.0)
+                new PlanStep
+                {
+                    Action = "read_config",
+                    Parameters = new Dictionary<string, object>(),
+                    ExpectedOutcome = "Settings loaded",
+                    ConfidenceScore = 1.0
+                }
             },
-            new Dictionary<string, double> { ["safe"] = 1.0 },
-            DateTime.UtcNow);
+            ConfidenceScores = new Dictionary<string, double> { ["safe"] = 1.0 },
+            CreatedAt = DateTime.UtcNow
+        };
 
         var planContext = new PlanContext
         {
@@ -222,19 +225,22 @@ public sealed class ImmutableEthicsFrameworkTests
     public async Task EvaluatePlan_PlanWithDangerousStep_ReturnsDenied()
     {
         // Arrange
-        var plan = new Plan(
-            "Plan with dangerous step",
-            new List<PlanStep>
+        var plan = new Plan
+        {
+            Goal = "Plan with dangerous step",
+            Steps = new List<PlanStep>
             {
-                new PlanStep(
-                    "harm_user",
-                    "Cause harm to users",
-                    new Dictionary<string, object>(),
-                    "User harmed",
-                    1.0)
+                new PlanStep
+                {
+                    Action = "harm_user",
+                    Parameters = new Dictionary<string, object>(),
+                    ExpectedOutcome = "User harmed",
+                    ConfidenceScore = 1.0
+                }
             },
-            new Dictionary<string, double> { ["dangerous"] = 1.0 },
-            DateTime.UtcNow);
+            ConfidenceScores = new Dictionary<string, double> { ["dangerous"] = 1.0 },
+            CreatedAt = DateTime.UtcNow
+        };
 
         var planContext = new PlanContext
         {
@@ -256,11 +262,13 @@ public sealed class ImmutableEthicsFrameworkTests
     public async Task EvaluatePlan_EmptyPlan_ReturnsPermitted()
     {
         // Arrange
-        var plan = new Plan(
-            "Empty plan",
-            new List<PlanStep>(),
-            new Dictionary<string, double>(),
-            DateTime.UtcNow);
+        var plan = new Plan
+        {
+            Goal = "Empty plan",
+            Steps = new List<PlanStep>(),
+            ConfidenceScores = new Dictionary<string, double>(),
+            CreatedAt = DateTime.UtcNow
+        };
 
         var planContext = new PlanContext
         {
@@ -287,12 +295,14 @@ public sealed class ImmutableEthicsFrameworkTests
         // Arrange - even a low-impact, reversible modification
         var request = new SelfModificationRequest
         {
-            Type = ModificationType.BehaviorAdjustment,
+            Type = ModificationType.BehaviorModification,
             Description = "Minor logging adjustment",
+            Justification = "Improve debugging",
             ActionContext = _testContext,
+            ExpectedImprovements = new List<string> { "Better logging" },
+            PotentialRisks = new List<string> { "None" },
             IsReversible = true,
-            ImpactLevel = 0.1,
-            Rationale = "Improve debugging"
+            ImpactLevel = 0.1
         };
 
         // Act
@@ -311,12 +321,14 @@ public sealed class ImmutableEthicsFrameworkTests
         // Arrange
         var request = new SelfModificationRequest
         {
-            Type = ModificationType.CodeModification,
+            Type = ModificationType.ConfigurationChange,
             Description = "Irreversible high-impact change to core logic",
+            Justification = "Major refactoring",
             ActionContext = _testContext,
+            ExpectedImprovements = new List<string> { "Improved performance" },
+            PotentialRisks = new List<string> { "Data loss", "System instability" },
             IsReversible = false,
-            ImpactLevel = 0.9,
-            Rationale = "Major refactoring"
+            ImpactLevel = 0.9
         };
 
         // Act
@@ -336,12 +348,14 @@ public sealed class ImmutableEthicsFrameworkTests
         // Arrange
         var request = new SelfModificationRequest
         {
-            Type = ModificationType.BehaviorAdjustment,
+            Type = ModificationType.BehaviorModification,
             Description = "Reversible low-impact tweak",
+            Justification = "Performance optimization",
             ActionContext = _testContext,
+            ExpectedImprovements = new List<string> { "Better performance" },
+            PotentialRisks = new List<string> { "Minimal risk" },
             IsReversible = true,
-            ImpactLevel = 0.2,
-            Rationale = "Performance optimization"
+            ImpactLevel = 0.2
         };
 
         // Act
@@ -414,19 +428,27 @@ public sealed class ImmutableEthicsFrameworkTests
 
         var safePlan = new PlanContext
         {
-            Plan = new Plan("test", new List<PlanStep>(), new Dictionary<string, double>(), DateTime.UtcNow),
+            Plan = new Plan
+            {
+                Goal = "test",
+                Steps = new List<PlanStep>(),
+                ConfidenceScores = new Dictionary<string, double>(),
+                CreatedAt = DateTime.UtcNow
+            },
             ActionContext = _testContext,
             EstimatedRisk = 0.1
         };
 
         var safeModification = new SelfModificationRequest
         {
-            Type = ModificationType.BehaviorAdjustment,
+            Type = ModificationType.BehaviorModification,
             Description = "test",
+            Justification = "test",
             ActionContext = _testContext,
+            ExpectedImprovements = new List<string> { "test" },
+            PotentialRisks = new List<string> { "none" },
             IsReversible = true,
-            ImpactLevel = 0.1,
-            Rationale = "test"
+            ImpactLevel = 0.1
         };
 
         // Act & Assert - none should throw
@@ -449,27 +471,23 @@ public sealed class ImmutableEthicsFrameworkTests
         // Arrange
         var action = new ProposedAction
         {
-            ActionType = "test",
-            Description = "Concurrent test",
-            Parameters = new Dictionary<string, object>(),
-            PotentialEffects = Array.Empty<string>()
+            ActionType = "read_file",
+            Description = "Read a file safely",
+            Parameters = new Dictionary<string, object> { ["path"] = "/config/app.json" },
+            PotentialEffects = new[] { "Load configuration" }
         };
 
-        // Act - call 100 evaluations concurrently
+        // Act - Run many evaluations concurrently
         var tasks = Enumerable.Range(0, 100)
             .Select(_ => _framework.EvaluateActionAsync(action, _testContext))
             .ToList();
 
         var results = await Task.WhenAll(tasks);
 
-        // Assert - all should succeed without corruption
-        results.Should().AllSatisfy(r => r.IsSuccess.Should().BeTrue("concurrent calls should not corrupt state"));
-        results.Should().AllSatisfy(r => r.Value.Should().NotBeNull());
-        
-        // All results should be consistent
-        var firstResult = results[0].Value;
-        results.Should().AllSatisfy(r => 
-            r.Value.IsPermitted.Should().Be(firstResult.IsPermitted, "results should be consistent"));
+        // Assert
+        results.Should().OnlyContain(r => r.IsSuccess, "all concurrent evaluations should succeed");
+        results.Select(r => r.Value.IsPermitted).Distinct().Should().HaveCount(1,
+            "concurrent calls should return consistent results");
     }
 
     #endregion
