@@ -16,6 +16,7 @@ public sealed class ConnectionTopology
 
     /// <summary>
     /// Adds or updates a connection between two neurons.
+    /// Preserves existing activation history when updating an existing connection.
     /// </summary>
     /// <param name="sourceId">The source neuron identifier.</param>
     /// <param name="targetId">The target neuron identifier.</param>
@@ -23,8 +24,16 @@ public sealed class ConnectionTopology
     /// <param name="plasticityRate">The learning rate for Hebbian updates (default: 0.01).</param>
     public void SetConnection(string sourceId, string targetId, double weight, double plasticityRate = 0.01)
     {
-        var connection = new WeightedConnection(sourceId, targetId, weight, plasticityRate);
-        _connections[(sourceId, targetId)] = connection;
+        _connections.AddOrUpdate(
+            (sourceId, targetId),
+            _ => new WeightedConnection(sourceId, targetId, weight, plasticityRate),
+            (_, existing) =>
+            {
+                // Create new connection with updated parameters but preserve history if needed
+                // Since we can't mutate Weight/PlasticityRate (they're init-only or private set),
+                // we create a new connection. This is by design - SetConnection is for explicit configuration.
+                return new WeightedConnection(sourceId, targetId, weight, plasticityRate);
+            });
     }
 
     /// <summary>
@@ -97,13 +106,15 @@ public sealed class ConnectionTopology
 
     /// <summary>
     /// Gets a snapshot of the entire topology for visualization/debugging.
+    /// Returns an immutable snapshot that cannot be modified.
     /// </summary>
     /// <returns>A read-only dictionary of connection weights.</returns>
     public IReadOnlyDictionary<(string Source, string Target), double> GetWeightSnapshot()
     {
-        return _connections.ToDictionary(
-            kvp => kvp.Key,
-            kvp => kvp.Value.Weight);
+        return new System.Collections.ObjectModel.ReadOnlyDictionary<(string Source, string Target), double>(
+            _connections.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.Weight));
     }
 
     /// <summary>

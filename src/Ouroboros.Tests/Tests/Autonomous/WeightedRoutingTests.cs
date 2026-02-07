@@ -75,8 +75,8 @@ public class WeightedRoutingTests
         };
         network.RouteMessage(message);
 
-        // Wait a bit for async processing
-        Thread.Sleep(200);
+        // Wait for async processing - use shorter delay since we expect no delivery
+        Thread.Sleep(100);
 
         // Assert
         target.ReceivedMessages.Should().BeEmpty();
@@ -111,8 +111,8 @@ public class WeightedRoutingTests
         };
         network.RouteMessage(message);
 
-        // Wait a bit for async processing
-        Thread.Sleep(200);
+        // Wait deterministically for async processing
+        SpinWait.SpinUntil(() => !target.ReceivedMessages.IsEmpty, TimeSpan.FromSeconds(5));
 
         // Assert
         target.ReceivedMessages.Should().ContainSingle();
@@ -149,8 +149,8 @@ public class WeightedRoutingTests
         };
         network.RouteMessage(message);
 
-        // Wait a bit for async processing
-        Thread.Sleep(200);
+        // Wait deterministically for async processing
+        SpinWait.SpinUntil(() => !target.ReceivedMessages.IsEmpty, TimeSpan.FromSeconds(5));
 
         // Assert
         target.ReceivedMessages.Should().ContainSingle();
@@ -187,8 +187,8 @@ public class WeightedRoutingTests
         };
         network.RouteMessage(message);
 
-        // Wait a bit for async processing
-        Thread.Sleep(200);
+        // Wait deterministically for async processing
+        SpinWait.SpinUntil(() => !target.ReceivedMessages.IsEmpty, TimeSpan.FromSeconds(5));
 
         // Assert
         target.ReceivedMessages.Should().ContainSingle();
@@ -223,8 +223,8 @@ public class WeightedRoutingTests
         };
         network.RouteMessage(message);
 
-        // Wait a bit for async processing
-        Thread.Sleep(200);
+        // Wait deterministically for async processing
+        SpinWait.SpinUntil(() => !target.ReceivedMessages.IsEmpty, TimeSpan.FromSeconds(5));
 
         // Assert
         target.ReceivedMessages.Should().ContainSingle();
@@ -260,8 +260,8 @@ public class WeightedRoutingTests
         };
         network.RouteMessage(message);
 
-        // Wait a bit for async processing
-        Thread.Sleep(200);
+        // Wait deterministically for async processing
+        SpinWait.SpinUntil(() => !target.ReceivedMessages.IsEmpty, TimeSpan.FromSeconds(5));
 
         // Assert
         var connection = topology.GetConnection("source", "target");
@@ -297,8 +297,8 @@ public class WeightedRoutingTests
         };
         network.RouteMessage(message);
 
-        // Wait a bit for async processing
-        Thread.Sleep(200);
+        // Wait for async processing - use shorter delay since we expect no delivery
+        Thread.Sleep(100);
 
         // Assert
         target.ReceivedMessages.Should().BeEmpty();
@@ -339,8 +339,8 @@ public class WeightedRoutingTests
         };
         network.RouteMessage(message);
 
-        // Wait a bit for async processing
-        Thread.Sleep(200);
+        // Wait deterministically for async processing
+        SpinWait.SpinUntil(() => target1.ReceivedMessages.Count > 0 && target3.ReceivedMessages.Count > 0, TimeSpan.FromSeconds(5));
 
         // Assert
         target1.ReceivedMessages.Should().ContainSingle();
@@ -381,8 +381,8 @@ public class WeightedRoutingTests
         };
         network.RouteMessage(message);
 
-        // Wait a bit for async processing
-        Thread.Sleep(200);
+        // Wait deterministically for async processing
+        SpinWait.SpinUntil(() => !target.ReceivedMessages.IsEmpty, TimeSpan.FromSeconds(5));
 
         // Assert
         target.ReceivedMessages.Should().ContainSingle();

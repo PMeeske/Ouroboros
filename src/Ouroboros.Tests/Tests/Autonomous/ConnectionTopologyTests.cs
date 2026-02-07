@@ -101,8 +101,8 @@ public class ConnectionTopologyTests
 
         // Assert
         outgoing.Should().HaveCount(2);
-        outgoing.Should().Contain(c => c.TargetNeuronId == "neuron2" && c.Weight == 0.5);
-        outgoing.Should().Contain(c => c.TargetNeuronId == "neuron3" && c.Weight == 0.6);
+        outgoing.Should().Contain(c => c.TargetNeuronId == "neuron2" && Math.Abs(c.Weight - 0.5) < 1e-10);
+        outgoing.Should().Contain(c => c.TargetNeuronId == "neuron3" && Math.Abs(c.Weight - 0.6) < 1e-10);
     }
 
     [Fact]
@@ -119,8 +119,8 @@ public class ConnectionTopologyTests
 
         // Assert
         incoming.Should().HaveCount(2);
-        incoming.Should().Contain(c => c.SourceNeuronId == "neuron1" && c.Weight == 0.5);
-        incoming.Should().Contain(c => c.SourceNeuronId == "neuron2" && c.Weight == 0.6);
+        incoming.Should().Contain(c => c.SourceNeuronId == "neuron1" && Math.Abs(c.Weight - 0.5) < 1e-10);
+        incoming.Should().Contain(c => c.SourceNeuronId == "neuron2" && Math.Abs(c.Weight - 0.6) < 1e-10);
     }
 
     [Fact]

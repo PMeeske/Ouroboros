@@ -8,9 +8,14 @@ namespace Ouroboros.Domain.Autonomous;
 /// Represents a weighted connection between two neurons.
 /// Positive weights are excitatory, negative weights are inhibitory.
 /// Supports Hebbian learning for adaptive connection strength.
+/// Thread-safe for concurrent access.
 /// </summary>
 public sealed class WeightedConnection
 {
+    private readonly object _lock = new();
+    private long _activationCount;
+    private DateTimeOffset _lastActivation;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="WeightedConnection"/> class.
     /// </summary>
@@ -59,48 +64,74 @@ public sealed class WeightedConnection
     /// <summary>
     /// Gets the number of times this connection has been activated.
     /// </summary>
-    public long ActivationCount { get; private set; }
+    public long ActivationCount
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _activationCount;
+            }
+        }
+    }
 
     /// <summary>
     /// Gets the last time this connection was activated.
     /// </summary>
-    public DateTimeOffset LastActivation { get; private set; }
+    public DateTimeOffset LastActivation
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _lastActivation;
+            }
+        }
+    }
 
     /// <summary>
     /// Hebbian update: strengthens connection when source and target co-activate.
     /// ΔW = η * pre * post (simplified Hebb rule).
     /// With decay toward zero for anti-Hebbian dynamics.
+    /// Thread-safe for concurrent updates.
     /// </summary>
     /// <param name="sourceActive">Whether the source neuron is active.</param>
     /// <param name="targetActive">Whether the target neuron is active.</param>
     public void HebbianUpdate(bool sourceActive, bool targetActive)
     {
-        if (IsFrozen)
+        lock (_lock)
         {
-            return;
-        }
+            if (IsFrozen)
+            {
+                return;
+            }
 
-        if (sourceActive && targetActive)
-        {
-            // Strengthen: neurons that fire together wire together
-            Weight += PlasticityRate * (1.0 - Math.Abs(Weight));
-        }
-        else if (sourceActive && !targetActive)
-        {
-            // Weaken: source fires but target doesn't respond
-            Weight -= PlasticityRate * Math.Abs(Weight) * 0.5;
-        }
+            if (sourceActive && targetActive)
+            {
+                // Strengthen: neurons that fire together wire together
+                Weight += PlasticityRate * (1.0 - Math.Abs(Weight));
+            }
+            else if (sourceActive && !targetActive)
+            {
+                // Weaken: source fires but target doesn't respond
+                Weight -= PlasticityRate * Math.Abs(Weight) * 0.5;
+            }
 
-        // If neither fires, no update (stability)
-        Weight = Math.Clamp(Weight, -1.0, 1.0);
+            // If neither fires, no update (stability)
+            Weight = Math.Clamp(Weight, -1.0, 1.0);
+        }
     }
 
     /// <summary>
     /// Records an activation event.
+    /// Thread-safe for concurrent calls.
     /// </summary>
     public void RecordActivation()
     {
-        ActivationCount++;
-        LastActivation = DateTimeOffset.UtcNow;
+        lock (_lock)
+        {
+            _activationCount++;
+            _lastActivation = DateTimeOffset.UtcNow;
+        }
     }
 }
