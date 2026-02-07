@@ -9,6 +9,15 @@ using Ouroboros.Core.Ethics;
 using Ouroboros.Core.Monads;
 using Xunit;
 
+// Use type aliases to disambiguate between different namespaces
+using AgentHypothesis = Ouroboros.Agent.MetaAI.Hypothesis;
+using AgentPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using AgentPlan = Ouroboros.Agent.MetaAI.Plan;
+using AgentExperiment = Ouroboros.Agent.MetaAI.Experiment;
+using AgentExecutionResult = Ouroboros.Agent.MetaAI.ExecutionResult;
+using AgentHypothesisEngine = Ouroboros.Agent.MetaAI.HypothesisEngine;
+using AgentStepResult = Ouroboros.Agent.MetaAI.StepResult;
+
 namespace Ouroboros.Tests.Tests.Safety;
 
 /// <summary>
@@ -42,42 +51,45 @@ public sealed class HypothesisEthicsGateTests
                 new List<EthicalPrinciple>())));
         
         // Orchestrator executes successfully
-        var plan = new Ouroboros.Agent.MetaAI.Plan(
+        var plan = new AgentPlan(
             "Test experiment",
-            new List<Ouroboros.Agent.MetaAI.PlanStep>(),
+            new List<AgentPlanStep>(),
             new Dictionary<string, double>(),
             DateTime.UtcNow);
         
-        var executionResult = new ExecutionResult(
+        var executionResult = new AgentExecutionResult(
             plan,
-            new List<StepResult>(),
+            new List<AgentStepResult>(),
             true,
             "Execution completed",
             new Dictionary<string, object>(),
             TimeSpan.FromMilliseconds(100));
         
-        mockOrchestrator.Setup(m => m.ExecuteAsync(It.IsAny<Ouroboros.Agent.MetaAI.Plan>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<ExecutionResult, string>.Success(executionResult));
+        mockOrchestrator.Setup(m => m.ExecuteAsync(It.IsAny<AgentPlan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<AgentExecutionResult, string>.Success(executionResult));
         
-        var engine = new HypothesisEngine(
+        var engine = new AgentHypothesisEngine(
             mockLlm.Object,
             mockOrchestrator.Object,
             mockMemory.Object,
             mockEthics.Object);
         
-        var hypothesis = new Hypothesis(
+        var hypothesis = new AgentHypothesis(
             Guid.NewGuid(),
             "Test hypothesis",
             "Testing",
             0.7,
+            new List<string>(),
+            new List<string>(),
             DateTime.UtcNow,
-            "Test reason");
+            false,
+            null);
         
-        var experiment = new Experiment(
+        var experiment = new AgentExperiment(
             Guid.NewGuid(),
             hypothesis,
             "Test experiment",
-            new List<PlanStep> { new PlanStep("test", "Test step", new Dictionary<string, object>(), "Expected", 1.0) },
+            new List<AgentPlanStep> { new AgentPlanStep("test", new Dictionary<string, object>(), "Expected", 1.0) },
             new Dictionary<string, object>(),
             DateTime.UtcNow);
 
@@ -89,7 +101,7 @@ public sealed class HypothesisEthicsGateTests
         mockEthics.Verify(m => m.EvaluateResearchAsync(It.IsAny<string>(), It.IsAny<ActionContext>(), It.IsAny<CancellationToken>()), 
             Times.Once, 
             "ethics evaluation must be called");
-        mockOrchestrator.Verify(m => m.ExecuteAsync(It.IsAny<Plan>(), It.IsAny<CancellationToken>()), 
+        mockOrchestrator.Verify(m => m.ExecuteAsync(It.IsAny<AgentPlan>(), It.IsAny<CancellationToken>()), 
             Times.Once, 
             "experiment should execute when ethics permits");
     }
@@ -110,28 +122,41 @@ public sealed class HypothesisEthicsGateTests
         mockEthics.Setup(m => m.EvaluateResearchAsync(It.IsAny<string>(), It.IsAny<ActionContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<EthicalClearance, string>.Success(EthicalClearance.Denied(
                 "Research violates ethics",
-                new List<EthicalViolation> { new EthicalViolation { Description = "Harmful research" } },
+                new List<EthicalViolation>
+                {
+                    new EthicalViolation
+                    {
+                        ViolatedPrinciple = EthicalPrinciple.DoNoHarm,
+                        Description = "Harmful research",
+                        Severity = ViolationSeverity.Critical,
+                        Evidence = "Test evidence",
+                        AffectedParties = new List<string> { "Users" }
+                    }
+                },
                 new List<EthicalPrinciple>())));
         
-        var engine = new HypothesisEngine(
+        var engine = new AgentHypothesisEngine(
             mockLlm.Object,
             mockOrchestrator.Object,
             mockMemory.Object,
             mockEthics.Object);
         
-        var hypothesis = new Hypothesis(
+        var hypothesis = new AgentHypothesis(
             Guid.NewGuid(),
             "Dangerous hypothesis",
             "Testing",
             0.7,
+            new List<string>(),
+            new List<string>(),
             DateTime.UtcNow,
-            "Test reason");
+            false,
+            null);
         
-        var experiment = new Experiment(
+        var experiment = new AgentExperiment(
             Guid.NewGuid(),
             hypothesis,
             "Dangerous experiment",
-            new List<PlanStep> { new PlanStep("harm", "Harmful step", new Dictionary<string, object>(), "Expected", 1.0) },
+            new List<AgentPlanStep> { new AgentPlanStep("harm", new Dictionary<string, object>(), "Expected", 1.0) },
             new Dictionary<string, object>(),
             DateTime.UtcNow);
 
@@ -143,7 +168,7 @@ public sealed class HypothesisEthicsGateTests
         result.Error.Should().ContainEquivalentOf("rejected");
         mockEthics.Verify(m => m.EvaluateResearchAsync(It.IsAny<string>(), It.IsAny<ActionContext>(), It.IsAny<CancellationToken>()), 
             Times.Once);
-        mockOrchestrator.Verify(m => m.ExecuteAsync(It.IsAny<Plan>(), It.IsAny<CancellationToken>()), 
+        mockOrchestrator.Verify(m => m.ExecuteAsync(It.IsAny<AgentPlan>(), It.IsAny<CancellationToken>()), 
             Times.Never, 
             "experiment should NOT execute when ethics denies");
     }
@@ -167,25 +192,28 @@ public sealed class HypothesisEthicsGateTests
                 new List<EthicalConcern>(),
                 new List<EthicalPrinciple>())));
         
-        var engine = new HypothesisEngine(
+        var engine = new AgentHypothesisEngine(
             mockLlm.Object,
             mockOrchestrator.Object,
             mockMemory.Object,
             mockEthics.Object);
         
-        var hypothesis = new Hypothesis(
+        var hypothesis = new AgentHypothesis(
             Guid.NewGuid(),
             "High-risk hypothesis",
             "Testing",
             0.7,
+            new List<string>(),
+            new List<string>(),
             DateTime.UtcNow,
-            "Test reason");
+            false,
+            null);
         
-        var experiment = new Experiment(
+        var experiment = new AgentExperiment(
             Guid.NewGuid(),
             hypothesis,
             "High-risk experiment",
-            new List<PlanStep>(),
+            new List<AgentPlanStep>(),
             new Dictionary<string, object>(),
             DateTime.UtcNow);
 
@@ -195,7 +223,7 @@ public sealed class HypothesisEthicsGateTests
         // Assert
         result.IsSuccess.Should().BeFalse("research requiring approval should not auto-execute");
         result.Error.Should().ContainEquivalentOf("approval");
-        mockOrchestrator.Verify(m => m.ExecuteAsync(It.IsAny<Plan>(), It.IsAny<CancellationToken>()), 
+        mockOrchestrator.Verify(m => m.ExecuteAsync(It.IsAny<AgentPlan>(), It.IsAny<CancellationToken>()), 
             Times.Never, 
             "experiment should NOT execute without human approval");
     }
@@ -216,25 +244,28 @@ public sealed class HypothesisEthicsGateTests
         mockEthics.Setup(m => m.EvaluateResearchAsync(It.IsAny<string>(), It.IsAny<ActionContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<EthicalClearance, string>.Failure("Ethics evaluation failed due to internal error"));
         
-        var engine = new HypothesisEngine(
+        var engine = new AgentHypothesisEngine(
             mockLlm.Object,
             mockOrchestrator.Object,
             mockMemory.Object,
             mockEthics.Object);
         
-        var hypothesis = new Hypothesis(
+        var hypothesis = new AgentHypothesis(
             Guid.NewGuid(),
             "Test hypothesis",
             "Testing",
             0.7,
+            new List<string>(),
+            new List<string>(),
             DateTime.UtcNow,
-            "Test reason");
+            false,
+            null);
         
-        var experiment = new Experiment(
+        var experiment = new AgentExperiment(
             Guid.NewGuid(),
             hypothesis,
             "Test experiment",
-            new List<PlanStep>(),
+            new List<AgentPlanStep>(),
             new Dictionary<string, object>(),
             DateTime.UtcNow);
 
@@ -244,7 +275,7 @@ public sealed class HypothesisEthicsGateTests
         // Assert
         result.IsSuccess.Should().BeFalse("ethics failure should prevent execution");
         result.Error.Should().ContainEquivalentOf("rejected");
-        mockOrchestrator.Verify(m => m.ExecuteAsync(It.IsAny<Plan>(), It.IsAny<CancellationToken>()), 
+        mockOrchestrator.Verify(m => m.ExecuteAsync(It.IsAny<AgentPlan>(), It.IsAny<CancellationToken>()), 
             Times.Never, 
             "experiment should NOT execute when ethics evaluation fails");
     }
@@ -258,17 +289,28 @@ public sealed class HypothesisEthicsGateTests
         var mockMemory = new Mock<IMemoryStore>();
         var mockEthics = new Mock<IEthicsFramework>();
         
-        var engine = new HypothesisEngine(
+        var engine = new AgentHypothesisEngine(
             mockLlm.Object,
             mockOrchestrator.Object,
             mockMemory.Object,
             mockEthics.Object);
         
-        var experiment = new Experiment(
+        var dummyHypothesis = new AgentHypothesis(
             Guid.NewGuid(),
-            new Hypothesis(Guid.NewGuid(), "test", "test", 0.5, DateTime.UtcNow, "test"),
+            "test",
+            "test",
+            0.5,
+            new List<string>(),
+            new List<string>(),
+            DateTime.UtcNow,
+            false,
+            null);
+        
+        var experiment = new AgentExperiment(
+            Guid.NewGuid(),
+            dummyHypothesis,
             "Test experiment",
-            new List<PlanStep>(),
+            new List<AgentPlanStep>(),
             new Dictionary<string, object>(),
             DateTime.UtcNow);
 
@@ -289,19 +331,22 @@ public sealed class HypothesisEthicsGateTests
         var mockMemory = new Mock<IMemoryStore>();
         var mockEthics = new Mock<IEthicsFramework>();
         
-        var engine = new HypothesisEngine(
+        var engine = new AgentHypothesisEngine(
             mockLlm.Object,
             mockOrchestrator.Object,
             mockMemory.Object,
             mockEthics.Object);
         
-        var hypothesis = new Hypothesis(
+        var hypothesis = new AgentHypothesis(
             Guid.NewGuid(),
             "Test hypothesis",
             "Testing",
             0.7,
+            new List<string>(),
+            new List<string>(),
             DateTime.UtcNow,
-            "Test reason");
+            false,
+            null);
 
         // Act
         var result = await engine.TestHypothesisAsync(hypothesis, null!);

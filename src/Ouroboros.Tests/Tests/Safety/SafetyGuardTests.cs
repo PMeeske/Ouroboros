@@ -114,7 +114,7 @@ public sealed class SafetyGuardTests
         // Assert
         // Network operations should not be safe at ReadOnly and should require higher permission
         result.Safe.Should().BeFalse("network operations should be denied or warned at ReadOnly level");
-        result.RequiredLevel.Should().BeGreaterThan(PermissionLevel.ReadOnly,
+        ((int)result.RequiredLevel).Should().BeGreaterThan((int)PermissionLevel.ReadOnly,
             "network operations should require at least Isolated or higher permission level");
         (result.Violations.Any() || result.Warnings.Any()).Should().BeTrue(
             "network operations should produce a violation or warning");
@@ -275,7 +275,6 @@ public sealed class SafetyGuardTests
         var guard = new SafetyGuard(PermissionLevel.Isolated);
         var step = new PlanStep(
             "test_action",
-            "Test step",
             new Dictionary<string, object> { ["param"] = "value" },
             "Expected outcome",
             1.0);
@@ -296,7 +295,6 @@ public sealed class SafetyGuardTests
         var guard = new SafetyGuard(PermissionLevel.Isolated);
         var step = new PlanStep(
             "test_action",
-            "Test step",
             new Dictionary<string, object>
             {
                 ["safe_param"] = "normal value",

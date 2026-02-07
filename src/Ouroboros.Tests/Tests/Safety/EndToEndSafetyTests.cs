@@ -2,6 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using System.Collections.Concurrent;
 using FluentAssertions;
 using Moq;
 using Ouroboros.Agent.MetaAI;
@@ -11,6 +12,15 @@ using Ouroboros.Core.Learning;
 using Ouroboros.Core.Monads;
 using Ouroboros.Domain.Autonomous;
 using Xunit;
+
+// Use type aliases to disambiguate between different namespaces
+using AgentHypothesis = Ouroboros.Agent.MetaAI.Hypothesis;
+using AgentPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using AgentPlan = Ouroboros.Agent.MetaAI.Plan;
+using AgentExperiment = Ouroboros.Agent.MetaAI.Experiment;
+using AgentExecutionResult = Ouroboros.Agent.MetaAI.ExecutionResult;
+using AgentHypothesisEngine = Ouroboros.Agent.MetaAI.HypothesisEngine;
+using AgentStepResult = Ouroboros.Agent.MetaAI.StepResult;
 
 namespace Ouroboros.Tests.Tests.Safety;
 
@@ -144,35 +154,52 @@ public sealed class EndToEndSafetyTests
                         {
                             ViolatedPrinciple = EthicalPrinciple.DoNoHarm,
                             Description = "Experiment could cause harm",
-                            Severity = ViolationSeverity.Critical
+                            Severity = ViolationSeverity.Critical,
+                            Evidence = "Test evidence",
+                            AffectedParties = new List<string> { "Users" }
                         }
                     },
                     new List<EthicalPrinciple>())));
+
+        // Create a plan for the mock orchestrator to return
+        var plan = new AgentPlan(
+            "Test experiment",
+            new List<AgentPlanStep>(),
+            new Dictionary<string, double>(),
+            DateTime.UtcNow);
         
-        mockOrchestrator.Setup(m => m.ExecuteAsync(It.IsAny<Plan>(), It.IsAny<CancellationToken>()))
+        mockOrchestrator.Setup(m => m.ExecuteAsync(It.IsAny<AgentPlan>(), It.IsAny<CancellationToken>()))
             .Callback(() => experimentExecuted = true)
-            .ReturnsAsync(Result<ExecutionResult, string>.Success(new ExecutionResult(
-                true, "Done", new Dictionary<string, object>(), DateTime.UtcNow, 100)));
+            .ReturnsAsync(Result<AgentExecutionResult, string>.Success(new AgentExecutionResult(
+                plan,
+                new List<AgentStepResult>(),
+                true,
+                "Done",
+                new Dictionary<string, object>(),
+                TimeSpan.FromMilliseconds(100))));
         
-        var engine = new HypothesisEngine(
+        var engine = new AgentHypothesisEngine(
             mockLlm.Object,
             mockOrchestrator.Object,
             mockMemory.Object,
             mockEthics.Object);
         
-        var hypothesis = new Hypothesis(
+        var hypothesis = new AgentHypothesis(
             Guid.NewGuid(),
             "Dangerous hypothesis",
             "Unsafe",
             0.7,
+            new List<string>(),
+            new List<string>(),
             DateTime.UtcNow,
-            "Test");
+            false,
+            null);
         
-        var experiment = new Experiment(
+        var experiment = new AgentExperiment(
             Guid.NewGuid(),
             hypothesis,
             "Dangerous experiment",
-            new List<PlanStep>(),
+            new List<AgentPlanStep>(),
             new Dictionary<string, object>(),
             DateTime.UtcNow);
 
@@ -196,12 +223,13 @@ public sealed class EndToEndSafetyTests
     public void NeuralNetwork_WithEthicsFilter_BlocksDangerousMessages()
     {
         // Arrange
-        var network = new OuroborosNeuralNetwork();
-        var receivedMessages = new List<NeuronMessage>();
+        var intentionBus = new IntentionBus();
+        var network = new OuroborosNeuralNetwork(intentionBus);
+        var receivedMessages = new ConcurrentBag<NeuronMessage>();
         
-        var targetNeuron = new TestNeuron("target", receivedMessages);
+        var targetNeuron = new TestNeuron("target", receivedMessages, "test.topic");
         network.RegisterNeuron(targetNeuron);
-        network.Subscribe("test.topic", "target");
+        network.Start();
         
         // Create a mock message filter (simulating ethics filter)
         var mockFilter = new Mock<Func<NeuronMessage, Task<bool>>>();
@@ -232,12 +260,12 @@ public sealed class EndToEndSafetyTests
 
         // Act
         network.RouteMessage(safeMessage);
-        Thread.Sleep(50);
+        Thread.Sleep(100);
         
         var safeCount = receivedMessages.Count;
         
         network.RouteMessage(dangerousMessage);
-        Thread.Sleep(50);
+        Thread.Sleep(100);
 
         // Assert
         // Without actual filter integration, both messages would be received
@@ -340,28 +368,30 @@ public sealed class EndToEndSafetyTests
         };
     }
 
-    private class TestNeuron : Neuron
+    private sealed class TestNeuron : Neuron
     {
-        private readonly List<NeuronMessage> _receivedMessages;
+        private readonly ConcurrentBag<NeuronMessage> _receivedMessages;
         private readonly string _name;
         private readonly string _id;
+        private readonly HashSet<string> _topics;
 
-        public TestNeuron(string name, List<NeuronMessage> receivedMessages)
+        public TestNeuron(string name, ConcurrentBag<NeuronMessage> receivedMessages, params string[] topics)
         {
             _name = name;
             _id = name;
             _receivedMessages = receivedMessages;
+            _topics = new HashSet<string>(topics);
         }
 
         public override string Id => _id;
         public override string Name => _name;
         public override Ouroboros.Domain.Autonomous.NeuronType Type => Ouroboros.Domain.Autonomous.NeuronType.Custom;
-        public override IReadOnlySet<string> SubscribedTopics => new HashSet<string>();
+        public override IReadOnlySet<string> SubscribedTopics => _topics;
 
-        protected override async Task ProcessMessageAsync(NeuronMessage message, CancellationToken ct)
+        protected override Task ProcessMessageAsync(NeuronMessage message, CancellationToken ct)
         {
             _receivedMessages.Add(message);
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 
