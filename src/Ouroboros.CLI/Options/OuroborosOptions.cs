@@ -185,6 +185,9 @@ public sealed class OuroborosOptions : IVoiceOptions
     [Option("summarize-model", Required = false, HelpText = "Model for summarization")]
     public string? SummarizeModel { get; set; }
 
+    [Option("vision-model", Required = false, HelpText = "Model for visual understanding (e.g. qwen3-vl:235b-cloud)")]
+    public string? VisionModel { get; set; }
+
     // ═══════════════════════════════════════════════════════════════════════════
     // AGENT BEHAVIOR
     // ═══════════════════════════════════════════════════════════════════════════

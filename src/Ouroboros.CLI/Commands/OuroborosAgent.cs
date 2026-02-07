@@ -462,6 +462,7 @@ public sealed record OuroborosConfig(
     string? CoderModel = null,
     string? ReasonModel = null,
     string? SummarizeModel = null,
+    string? VisionModel = null,
     // Piping & Batch mode
     bool PipeMode = false,
     string? BatchFile = null,
@@ -559,6 +560,8 @@ public sealed partial class OuroborosAgent : IAsyncDisposable, IAgentFacade
     private IChatCompletionModel? _coderModel;
     private IChatCompletionModel? _reasonModel;
     private IChatCompletionModel? _summarizeModel;
+    private IChatCompletionModel? _visionChatModel;
+    private IVisionModel? _visionModel;
 
     // Network State Tracking - reifies Step execution into MerkleDag
     private NetworkStateTracker? _networkTracker;
@@ -610,6 +613,8 @@ public sealed partial class OuroborosAgent : IAsyncDisposable, IAgentFacade
     private EmbodimentController? _embodimentController;
     private VirtualSelf? _virtualSelf;
     private BodySchema? _bodySchema;
+    private Ouroboros.Providers.Tapo.ITapoRtspClientFactory? _tapoRtspFactory;
+    private Ouroboros.Providers.Tapo.TapoRestClient? _tapoRestClient;
 
     // Voice side channel - parallel audio playback for personas
     private VoiceSideChannel? _voiceSideChannel;
@@ -888,9 +893,11 @@ Write the integrated response:";
         _tools = _tools.WithTool(tool);
 
         // Recreate ToolAwareChatModel with updated tools
-        if (_chatModel != null)
+        // Use orchestrated model (swarm) when available for automatic vision/coder/reasoner routing
+        var effectiveModel = GetEffectiveChatModel();
+        if (effectiveModel != null)
         {
-            _llm = new ToolAwareChatModel(_chatModel, _tools);
+            _llm = new ToolAwareChatModel(effectiveModel, _tools);
             System.Diagnostics.Debug.WriteLine($"[Tools] Refreshed _llm with {_tools.Count} tools after adding {tool.Name}");
         }
 
@@ -904,6 +911,364 @@ Write the integrated response:";
                 _toolCapabilityMatcher,
                 _smartToolSelector.Configuration);
         }
+    }
+
+    /// <summary>
+    /// Gets the best available chat model for tool-aware wrapping.
+    /// Prefers the orchestrated model (swarm router) when available,
+    /// so vision/coder/reasoner keywords route to specialized sub-models.
+    /// </summary>
+    private IChatCompletionModel? GetEffectiveChatModel()
+        => (IChatCompletionModel?)_orchestratedModel ?? _chatModel;
+
+    /// <summary>
+    /// Registers the capture_camera tool from Tapo config.
+    /// Reads camera devices from _staticConfiguration and creates an RTSP-backed tool.
+    /// If config is missing or incomplete, registers a stub tool that returns an honest error.
+    /// </summary>
+    private void RegisterCameraCaptureTool()
+    {
+        // Read Tapo camera config
+        var tapoDeviceSection = _staticConfiguration?.GetSection("Tapo:Devices");
+        var tapoDeviceConfigs = tapoDeviceSection?.GetChildren().ToList();
+        var tapoUsername = _staticConfiguration?["Tapo:Username"];
+        var tapoPassword = _staticConfiguration?["Tapo:Password"];
+
+        // Build camera name list from config (or default)
+        var cameraNames = new List<string>();
+        var tapoDevices = new List<Ouroboros.Providers.Tapo.TapoDevice>();
+
+        if (tapoDeviceConfigs != null && tapoDeviceConfigs.Count > 0)
+        {
+            tapoDevices = tapoDeviceConfigs
+                .Select(d => new Ouroboros.Providers.Tapo.TapoDevice
+                {
+                    Name = d["name"] ?? d["ip_addr"] ?? "unknown",
+                    IpAddress = d["ip_addr"] ?? "unknown",
+                    DeviceType = Enum.TryParse<Ouroboros.Providers.Tapo.TapoDeviceType>(
+                        d["device_type"], true, out var dt)
+                        ? dt
+                        : Ouroboros.Providers.Tapo.TapoDeviceType.C200,
+                })
+                .Where(d => IsCameraDeviceType(d.DeviceType))
+                .ToList();
+
+            cameraNames = tapoDevices.Select(d => d.Name).ToList();
+        }
+
+        // Create RTSP factory if we have both devices and credentials
+        var hasCredentials = !string.IsNullOrEmpty(tapoUsername) && !string.IsNullOrEmpty(tapoPassword);
+        if (hasCredentials && tapoDevices.Count > 0)
+        {
+            _tapoRtspFactory = new Ouroboros.Providers.Tapo.TapoRtspClientFactory(
+                tapoDevices, tapoUsername!, tapoPassword!);
+        }
+
+        // Create REST client for smart home actuators (lights, plugs) if server address is configured
+        var tapoServerAddress = _staticConfiguration?["Tapo:ServerAddress"];
+        if (!string.IsNullOrEmpty(tapoServerAddress))
+        {
+            var httpClient = new HttpClient
+            {
+                BaseAddress = new Uri(tapoServerAddress),
+                Timeout = TimeSpan.FromSeconds(30)
+            };
+            _tapoRestClient = new Ouroboros.Providers.Tapo.TapoRestClient(httpClient);
+        }
+
+        // Create vision model from config
+        var ollamaEndpoint = _staticConfiguration?["Ollama:Endpoint"]
+            ?? _config.Endpoint ?? "http://localhost:11434";
+        var visionModelName = _staticConfiguration?["Ollama:VisionModel"]
+            ?? Ouroboros.Providers.OllamaVisionModel.DefaultModel;
+        _visionModel = new Ouroboros.Providers.OllamaVisionModel(ollamaEndpoint, visionModelName);
+
+        // Capture closures for the lambda
+        var defaultCamera = cameraNames.Count > 0 ? cameraNames.First() : "Camera1";
+        var rtspFactory = _tapoRtspFactory;
+        var visionModel = _visionModel;
+        var availableCameras = cameraNames.Count > 0
+            ? string.Join(", ", cameraNames) : "none configured";
+
+        var captureTool = new Ouroboros.Tools.DelegateTool(
+            "capture_camera",
+            $"Capture a live frame from a Tapo RTSP camera and analyze it with vision AI. " +
+            $"YOU MUST use this tool when the user asks to see, look, or check the camera. " +
+            $"Input: camera name (available: {availableCameras}, default: {defaultCamera}). " +
+            $"Returns a real description of what the camera sees. NEVER make up or hallucinate camera output.",
+            async (string input, CancellationToken ct) =>
+            {
+                try
+                {
+                    if (rtspFactory == null)
+                    {
+                        return Result<string, string>.Failure(
+                            "Camera not available. Tapo RTSP credentials missing or no camera devices configured in appsettings.json. " +
+                            "Set Tapo:Username, Tapo:Password, and Tapo:Devices to enable camera access.");
+                    }
+
+                    var cameraName = string.IsNullOrWhiteSpace(input)
+                        ? defaultCamera : input.Trim();
+                    var client = rtspFactory.GetClient(cameraName);
+                    if (client == null)
+                    {
+                        return Result<string, string>.Failure(
+                            $"Camera '{cameraName}' not found. Available: {availableCameras}");
+                    }
+
+                    // Capture frame via RTSP/FFmpeg
+                    var frameResult = await client.CaptureFrameAsync(ct);
+                    if (frameResult.IsFailure)
+                    {
+                        return Result<string, string>.Failure(
+                            $"Frame capture failed: {frameResult.Error}");
+                    }
+
+                    var frame = frameResult.Value;
+
+                    // Analyze with vision model
+                    var options = new Ouroboros.Core.EmbodiedInteraction.VisionAnalysisOptions();
+                    var analysisResult = await visionModel.AnalyzeImageAsync(
+                        frame.Data, "jpeg", options, ct);
+
+                    return analysisResult.Match(
+                        analysis => Result<string, string>.Success(
+                            $"[Camera: {cameraName} | {frame.Width}x{frame.Height} | Frame #{frame.FrameNumber} | {frame.Timestamp:HH:mm:ss}]\n" +
+                            $"Description: {analysis.Description}" +
+                            (analysis.SceneType != null ? $"\nScene: {analysis.SceneType}" : "") +
+                            (analysis.Objects.Count > 0
+                                ? $"\nObjects: {string.Join(", ", analysis.Objects.Select(o => $"{o.Label} ({o.Confidence:P0})"))}"
+                                : "") +
+                            (analysis.Faces.Count > 0
+                                ? $"\nFaces: {analysis.Faces.Count} detected"
+                                : "") +
+                            $"\nConfidence: {analysis.Confidence:P0} | Processing: {analysis.ProcessingTimeMs}ms"),
+                        error => Result<string, string>.Failure(
+                            $"Vision analysis failed: {error}"));
+                }
+                catch (Exception ex)
+                {
+                    return Result<string, string>.Failure(
+                        $"Camera capture error: {ex.Message}");
+                }
+            });
+
+        _tools = _tools.WithTool(captureTool);
+
+        // Register PTZ (Pan/Tilt/Zoom) control tool for motorized cameras
+        // Uses ONVIF protocol via TapoCameraPtzClient for physical camera movement
+        Ouroboros.Providers.Tapo.TapoCameraPtzClient? ptzClient = null;
+        if (hasCredentials && tapoDevices.Count > 0)
+        {
+            var firstCamera = tapoDevices.First();
+            ptzClient = new Ouroboros.Providers.Tapo.TapoCameraPtzClient(
+                firstCamera.IpAddress, tapoUsername!, tapoPassword!);
+        }
+
+        var ptzRef = ptzClient;
+        var ptzTool = new Ouroboros.Tools.DelegateTool(
+            "camera_ptz",
+            $"Control PTZ (Pan/Tilt/Zoom) motor on a Tapo camera. " +
+            $"Use this when the user asks to pan, tilt, move, turn, rotate, or point the camera. " +
+            $"Input: a command - one of: pan_left, pan_right, tilt_up, tilt_down, go_home, patrol, stop. " +
+            $"Optionally append speed (0.1-1.0) after a space, e.g. 'pan_right 0.8'. Default speed: 0.5. " +
+            $"Available cameras: {availableCameras}. Returns movement result.",
+            async (string input, CancellationToken ct) =>
+            {
+                try
+                {
+                    if (ptzRef == null)
+                    {
+                        return Result<string, string>.Failure(
+                            "PTZ not available. Tapo credentials missing or no camera devices configured. " +
+                            "Set Tapo:Username, Tapo:Password, and Tapo:Devices in appsettings.json.");
+                    }
+
+                    // Initialize PTZ on first use
+                    var initResult = await ptzRef.InitializeAsync(ct);
+                    if (initResult.IsFailure)
+                    {
+                        return Result<string, string>.Failure($"PTZ init failed: {initResult.Error}");
+                    }
+
+                    // Parse command and optional speed
+                    var parts = (input ?? "").Trim().ToLowerInvariant().Split(' ', 2);
+                    var command = parts[0];
+                    var speed = parts.Length > 1 && float.TryParse(parts[1], System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out var s) ? s : 0.5f;
+
+                    var moveResult = command switch
+                    {
+                        "pan_left" or "left" => await ptzRef.PanLeftAsync(speed, ct: ct),
+                        "pan_right" or "right" => await ptzRef.PanRightAsync(speed, ct: ct),
+                        "tilt_up" or "up" => await ptzRef.TiltUpAsync(speed, ct: ct),
+                        "tilt_down" or "down" => await ptzRef.TiltDownAsync(speed, ct: ct),
+                        "stop" => await ptzRef.StopAsync(ct),
+                        "go_home" or "home" or "center" => await ptzRef.GoToHomeAsync(ct),
+                        "patrol" or "sweep" => await ptzRef.PatrolSweepAsync(speed, ct),
+                        _ => Result<Ouroboros.Providers.Tapo.PtzMoveResult>.Failure(
+                            $"Unknown PTZ command: '{command}'. Use: pan_left, pan_right, tilt_up, tilt_down, go_home, patrol, stop")
+                    };
+
+                    return moveResult.Match(
+                        result => Result<string, string>.Success(
+                            $"[PTZ] {result.Direction}: {result.Message} (duration: {result.Duration.TotalMilliseconds:F0}ms)"),
+                        error => Result<string, string>.Failure(error));
+                }
+                catch (Exception ex)
+                {
+                    return Result<string, string>.Failure($"PTZ error: {ex.Message}");
+                }
+            });
+
+        _tools = _tools.WithTool(ptzTool);
+        Console.WriteLine($"  ✓ Camera: capture_camera + camera_ptz registered (cameras: {availableCameras}, credentials: {(hasCredentials ? "yes" : "missing")})");
+
+        // Register smart home actuator tool for lights, plugs, and other Tapo REST API devices
+        var restClient = _tapoRestClient;
+        var smartHomeTool = new Ouroboros.Tools.DelegateTool(
+            "smart_home",
+            "Control Tapo smart home devices (lights, plugs, color bulbs). " +
+            "Use this when the user asks to turn on/off lights, plugs, switches, or set colors/brightness. " +
+            "Input format: '<action> <device_name> [params]'. " +
+            "Actions: turn_on, turn_off, set_brightness <0-100>, set_color <r> <g> <b>, list_devices, device_info. " +
+            "Example: 'turn_on LivingRoomLight', 'set_color BedroomLight 255 0 128', 'set_brightness DeskLamp 75'. " +
+            "Requires Tapo REST API server to be running.",
+            async (string input, CancellationToken ct) =>
+            {
+                try
+                {
+                    if (restClient == null)
+                    {
+                        return Result<string, string>.Failure(
+                            "Smart home control not available. Tapo REST API server address not configured in appsettings.json. " +
+                            "Set Tapo:ServerAddress (e.g., 'http://localhost:8000') and ensure the tapo-rest server is running.");
+                    }
+
+                    var parts = (input ?? "").Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length == 0)
+                    {
+                        return Result<string, string>.Failure(
+                            "No action specified. Use: turn_on <device>, turn_off <device>, set_brightness <device> <0-100>, " +
+                            "set_color <device> <r> <g> <b>, list_devices, device_info <device>");
+                    }
+
+                    var action = parts[0].ToLowerInvariant();
+
+                    if (action == "list_devices")
+                    {
+                        var devicesResult = await restClient.GetDevicesAsync(ct);
+                        return devicesResult.Match(
+                            devices => Result<string, string>.Success(
+                                devices.Count == 0
+                                    ? "No devices found. Ensure the Tapo REST API server has devices configured."
+                                    : $"Devices ({devices.Count}):\n" + string.Join("\n",
+                                        devices.Select(d => $"  - {d.Name} ({d.DeviceType}) @ {d.IpAddress}"))),
+                            error => Result<string, string>.Failure($"Failed to list devices: {error}"));
+                    }
+
+                    if (parts.Length < 2)
+                    {
+                        return Result<string, string>.Failure($"Device name required for action '{action}'");
+                    }
+
+                    var deviceName = parts[1];
+
+                    switch (action)
+                    {
+                        case "turn_on":
+                        {
+                            // Try color bulb first, then regular bulb, then plug
+                            var colorResult = await restClient.ColorLightBulbs.TurnOnAsync(deviceName, ct);
+                            if (colorResult.IsSuccess) return Result<string, string>.Success($"Turned on {deviceName} (color light)");
+
+                            var bulbResult = await restClient.LightBulbs.TurnOnAsync(deviceName, ct);
+                            if (bulbResult.IsSuccess) return Result<string, string>.Success($"Turned on {deviceName} (light)");
+
+                            var plugResult = await restClient.Plugs.TurnOnAsync(deviceName, ct);
+                            if (plugResult.IsSuccess) return Result<string, string>.Success($"Turned on {deviceName} (plug)");
+
+                            return Result<string, string>.Failure($"Could not turn on '{deviceName}'. Device may not exist or server may be unavailable.");
+                        }
+
+                        case "turn_off":
+                        {
+                            var colorResult = await restClient.ColorLightBulbs.TurnOffAsync(deviceName, ct);
+                            if (colorResult.IsSuccess) return Result<string, string>.Success($"Turned off {deviceName} (color light)");
+
+                            var bulbResult = await restClient.LightBulbs.TurnOffAsync(deviceName, ct);
+                            if (bulbResult.IsSuccess) return Result<string, string>.Success($"Turned off {deviceName} (light)");
+
+                            var plugResult = await restClient.Plugs.TurnOffAsync(deviceName, ct);
+                            if (plugResult.IsSuccess) return Result<string, string>.Success($"Turned off {deviceName} (plug)");
+
+                            return Result<string, string>.Failure($"Could not turn off '{deviceName}'. Device may not exist or server may be unavailable.");
+                        }
+
+                        case "set_brightness":
+                        {
+                            if (parts.Length < 3 || !byte.TryParse(parts[2], out var level) || level > 100)
+                            {
+                                return Result<string, string>.Failure("Brightness level required (0-100). Example: 'set_brightness DeskLamp 75'");
+                            }
+
+                            var colorResult = await restClient.ColorLightBulbs.SetBrightnessAsync(deviceName, level, ct);
+                            if (colorResult.IsSuccess) return Result<string, string>.Success($"Set {deviceName} brightness to {level}%");
+
+                            var bulbResult = await restClient.LightBulbs.SetBrightnessAsync(deviceName, level, ct);
+                            if (bulbResult.IsSuccess) return Result<string, string>.Success($"Set {deviceName} brightness to {level}%");
+
+                            return Result<string, string>.Failure($"Could not set brightness on '{deviceName}'. Device may not be a light.");
+                        }
+
+                        case "set_color":
+                        {
+                            if (parts.Length < 5 ||
+                                !byte.TryParse(parts[2], out var r) ||
+                                !byte.TryParse(parts[3], out var g) ||
+                                !byte.TryParse(parts[4], out var b))
+                            {
+                                return Result<string, string>.Failure("RGB values required. Example: 'set_color BedroomLight 255 0 128'");
+                            }
+
+                            var color = new Ouroboros.Providers.Tapo.Color { Red = r, Green = g, Blue = b };
+                            var result = await restClient.ColorLightBulbs.SetColorAsync(deviceName, color, ct);
+                            return result.Match(
+                                _ => Result<string, string>.Success($"Set {deviceName} color to RGB({r},{g},{b})"),
+                                error => Result<string, string>.Failure($"Could not set color on '{deviceName}': {error}"));
+                        }
+
+                        case "device_info":
+                        {
+                            // Try each device type for info
+                            var infoResult = await restClient.Plugs.GetDeviceInfoAsync(deviceName, ct);
+                            if (infoResult.IsSuccess)
+                                return Result<string, string>.Success($"Device info for {deviceName}:\n{infoResult.Value.RootElement}");
+
+                            var lightInfo = await restClient.LightBulbs.GetDeviceInfoAsync(deviceName, ct);
+                            if (lightInfo.IsSuccess)
+                                return Result<string, string>.Success($"Device info for {deviceName}:\n{lightInfo.Value.RootElement}");
+
+                            var colorInfo = await restClient.ColorLightBulbs.GetDeviceInfoAsync(deviceName, ct);
+                            if (colorInfo.IsSuccess)
+                                return Result<string, string>.Success($"Device info for {deviceName}:\n{colorInfo.Value.RootElement}");
+
+                            return Result<string, string>.Failure($"Could not get info for '{deviceName}'.");
+                        }
+
+                        default:
+                            return Result<string, string>.Failure(
+                                $"Unknown action '{action}'. Use: turn_on, turn_off, set_brightness, set_color, list_devices, device_info");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return Result<string, string>.Failure($"Smart home error: {ex.Message}");
+                }
+            });
+
+        _tools = _tools.WithTool(smartHomeTool);
+        Console.WriteLine($"  ✓ Smart Home: smart_home registered (REST API: {(restClient != null ? tapoServerAddress : "not configured")})");
     }
 
     /// <summary>
@@ -2125,11 +2490,12 @@ $synth.Dispose()
             // Check if any specialized models are configured
             bool hasSpecializedModels = !string.IsNullOrEmpty(_config.CoderModel)
                                      || !string.IsNullOrEmpty(_config.ReasonModel)
-                                     || !string.IsNullOrEmpty(_config.SummarizeModel);
+                                     || !string.IsNullOrEmpty(_config.SummarizeModel)
+                                     || !string.IsNullOrEmpty(_config.VisionModel);
 
             if (!hasSpecializedModels || _chatModel == null)
             {
-                Console.WriteLine("  ○ Multi-model: Using single model (specify --coder-model, --reason-model, or --summarize-model to enable)");
+                Console.WriteLine("  ○ Multi-model: Using single model (specify --coder-model, --reason-model, --summarize-model, or --vision-model to enable)");
                 return;
             }
 
@@ -2150,6 +2516,9 @@ $synth.Dispose()
 
             if (!string.IsNullOrEmpty(_config.SummarizeModel))
                 _summarizeModel = CreateModel(_config.SummarizeModel);
+
+            if (!string.IsNullOrEmpty(_config.VisionModel))
+                _visionChatModel = CreateModel(_config.VisionModel);
 
             // Build orchestrated chat model using OrchestratorBuilder
             var builder = new OrchestratorBuilder(_tools, "general")
@@ -2194,16 +2563,28 @@ $synth.Dispose()
                     avgLatencyMs: 800);
             }
 
+            if (_visionChatModel != null)
+            {
+                builder.WithModel(
+                    "vision",
+                    _visionChatModel,
+                    ModelType.Analysis,
+                    new[] { "vision", "image", "visual", "camera", "see", "look", "photo", "picture", "screenshot" },
+                    maxTokens: _config.MaxTokens,
+                    avgLatencyMs: 3000);
+            }
+
             builder.WithMetricTracking(true);
             _orchestratedModel = builder.Build();
 
-            var modelCount = 1 + (_coderModel != null ? 1 : 0) + (_reasonModel != null ? 1 : 0) + (_summarizeModel != null ? 1 : 0);
+            var modelCount = 1 + (_coderModel != null ? 1 : 0) + (_reasonModel != null ? 1 : 0) + (_summarizeModel != null ? 1 : 0) + (_visionChatModel != null ? 1 : 0);
             Console.WriteLine($"  ✓ Multi-model: Orchestration enabled ({modelCount} models)");
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine($"    General: {_config.Model}");
             if (_coderModel != null) Console.WriteLine($"    Coder: {_config.CoderModel}");
             if (_reasonModel != null) Console.WriteLine($"    Reasoner: {_config.ReasonModel}");
             if (_summarizeModel != null) Console.WriteLine($"    Summarizer: {_config.SummarizeModel}");
+            if (_visionChatModel != null) Console.WriteLine($"    Vision: {_config.VisionModel}");
             Console.ResetColor();
 
             // Initialize divide-and-conquer orchestrator for large input processing
@@ -2381,8 +2762,21 @@ $synth.Dispose()
                     Console.WriteLine("  ○ Playwright: Disabled (use --no-browser=false to enable)");
                 }
 
+                // Register capture_camera tool for Tapo RTSP cameras
+                // Registered unconditionally (with runtime checks) so the LLM never
+                // hallucates camera output -- it always gets a real result or real error.
+                try
+                {
+                    RegisterCameraCaptureTool();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Tools] capture_camera registration failed: {ex.Message}");
+                }
+
                 // NOW create the final ToolAwareChatModel with ALL tools registered
-                _llm = new ToolAwareChatModel(_chatModel, _tools);
+                // Use orchestrated model (swarm) when available for automatic sub-model routing
+                _llm = new ToolAwareChatModel(GetEffectiveChatModel() ?? _chatModel!, _tools);
 
                 // Re-initialize dynamic tool factory with final LLM
                 _toolFactory = new DynamicToolFactory(_llm);
@@ -2423,7 +2817,8 @@ $synth.Dispose()
 
                 // CRITICAL: Recreate _llm with ALL tools now that registration is complete
                 // The ToolRegistry is immutable, so _llm needs the final snapshot
-                _llm = new ToolAwareChatModel(_chatModel, _tools);
+                // Use orchestrated model (swarm) when available for automatic sub-model routing
+                _llm = new ToolAwareChatModel(GetEffectiveChatModel() ?? _chatModel!, _tools);
                 System.Diagnostics.Debug.WriteLine($"[Tools] Final _llm created with {_tools.Count} tools");
             }
             else
@@ -2658,8 +3053,44 @@ $synth.Dispose()
                 .WithCapability(Ouroboros.Core.EmbodiedInteraction.Capability.Reasoning)
                 .WithLimitation(new Limitation(
                     LimitationType.ActionRestricted,
-                    "No physical manipulation",
-                    0.8)); // Severity 0.8 = significant limitation
+                    "Limited physical actuation - can look around via PTZ cameras but cannot manipulate objects",
+                    0.5)); // Severity reduced from 0.8: we have PTZ motor control
+
+            // Register Tapo RTSP cameras and PTZ actuators from configuration
+            if (_staticConfiguration != null)
+            {
+                var tapoDeviceSection = _staticConfiguration.GetSection("Tapo:Devices");
+                var tapoDeviceConfigs = tapoDeviceSection.GetChildren().ToList();
+                if (tapoDeviceConfigs.Count > 0)
+                {
+                    foreach (var deviceSection in tapoDeviceConfigs)
+                    {
+                        var ip = deviceSection["ip_addr"] ?? "unknown";
+                        var name = deviceSection["name"] ?? ip;
+
+                        // Register each camera as a visual sensor
+                        _bodySchema = _bodySchema.WithSensor(
+                            SensorDescriptor.Visual($"tapo-cam-{ip}", $"Tapo Camera ({name})"));
+
+                        // Register PTZ motor actuator for cameras
+                        _bodySchema = _bodySchema.WithActuator(
+                            new ActuatorDescriptor(
+                                $"tapo-ptz-{ip}",
+                                ActuatorModality.Motor,
+                                $"PTZ Motor ({name}) - pan left/right, tilt up/down",
+                                true,
+                                (IReadOnlySet<Ouroboros.Core.EmbodiedInteraction.Capability>)
+                                    new HashSet<Ouroboros.Core.EmbodiedInteraction.Capability>()));
+                    }
+
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.WriteLine($"    Tapo cameras: {tapoDeviceConfigs.Count} registered (RTSP + PTZ)");
+                    Console.ResetColor();
+
+                    // Note: capture_camera tool is registered in InitializeToolsAsync
+                    // to ensure it's always available regardless of embodiment config
+                }
+            }
 
             // Create EmbodimentController
             _embodimentController = new EmbodimentController(_virtualSelf, _bodySchema);
@@ -6402,6 +6833,115 @@ No quotes around the response. Just the greeting itself.";
         var results = new List<string>();
         var inputLower = input.ToLowerInvariant();
 
+        // PTZ movement requests - auto-invoke camera_ptz tool before LLM responds.
+        // Detects directional movement commands (pan, tilt, turn, rotate).
+        // Returns early to prevent falling through to code search patterns.
+        var ptzMatch = System.Text.RegularExpressions.Regex.Match(inputLower,
+            @"\b(pan\s*(left|right)|tilt\s*(up|down)|turn.*camera.*(left|right|up|down)|rotate.*camera|move.*camera.*(left|right|up|down)|point.*camera|camera.*(left|right|up|down)|look\s*(left|right|up|down)|patrol|sweep|go\s*home|center\s*camera)\b");
+        if (ptzMatch.Success)
+        {
+            var ptzTool = _tools.All.FirstOrDefault(t => t.Name == "camera_ptz");
+            if (ptzTool != null)
+            {
+                try
+                {
+                    // Determine PTZ command from the matched text
+                    var matchText = ptzMatch.Value.ToLowerInvariant();
+                    var ptzCommand = matchText switch
+                    {
+                        var m when m.Contains("left") => "pan_left",
+                        var m when m.Contains("right") => "pan_right",
+                        var m when m.Contains("up") => "tilt_up",
+                        var m when m.Contains("down") => "tilt_down",
+                        var m when m.Contains("home") || m.Contains("center") => "go_home",
+                        var m when m.Contains("patrol") || m.Contains("sweep") => "patrol",
+                        _ => "stop"
+                    };
+
+                    Console.ForegroundColor = ConsoleColor.DarkCyan;
+                    Console.WriteLine($"[Auto-Tool] PTZ: {ptzCommand}");
+                    Console.ResetColor();
+
+                    var ptzResult = await ptzTool.InvokeAsync(ptzCommand, CancellationToken.None);
+                    var ptzOutput = ptzResult.Match(ok => ok, err => $"[PTZ error: {err}]");
+                    return $"PTZ MOVEMENT RESULT:\n{ptzOutput}\n\nReport the camera movement result to the user. If it succeeded, let them know. If it failed, explain the error honestly.";
+                }
+                catch (Exception ex)
+                {
+                    return $"PTZ MOVEMENT ATTEMPTED BUT FAILED:\n{ex.Message}\n\nReport this error honestly to the user.";
+                }
+            }
+            else
+            {
+                return "PTZ STATUS: The camera_ptz tool is not available. Camera PTZ hardware may not be configured. Report this honestly.";
+            }
+        }
+
+        // Camera/vision requests - auto-invoke capture_camera tool before LLM responds
+        // This ensures real camera data instead of hallucinated descriptions.
+        // Returns early to prevent falling through to code search patterns.
+        if (System.Text.RegularExpressions.Regex.IsMatch(inputLower,
+            @"\b(camera|cam|visual|snapshot|what do you see|look around|check.*room|see.*through)\b"))
+        {
+            var cameraTool = _tools.All.FirstOrDefault(t => t.Name == "capture_camera");
+            if (cameraTool != null)
+            {
+                try
+                {
+                    Console.ForegroundColor = ConsoleColor.DarkCyan;
+                    Console.WriteLine("[Auto-Tool] Capturing camera frame...");
+                    Console.ResetColor();
+
+                    var captureResult = await cameraTool.InvokeAsync("", CancellationToken.None);
+                    var captureOutput = captureResult.Match(ok => ok, err => $"[Camera error: {err}]");
+                    return $"LIVE CAMERA FEED:\n{captureOutput}\n\nDescribe what the camera captured above. Do NOT make up or hallucinate any visual details - only report what appears in the camera output. If it shows an error, explain the error honestly.";
+                }
+                catch (Exception ex)
+                {
+                    return $"CAMERA CAPTURE ATTEMPTED BUT FAILED:\n{ex.Message}\n\nReport this error honestly to the user. Do NOT make up or hallucinate any visual details.";
+                }
+            }
+            else
+            {
+                // Tool not registered - still return early with honest message
+                return "CAMERA STATUS: The capture_camera tool is not available. Camera hardware may not be configured. Report this honestly - do NOT hallucinate or make up what you see through a camera.";
+            }
+        }
+
+        // Smart home requests - auto-invoke smart_home tool for device control
+        // Matches: "turn on/off the light", "switch off plug", "set color", "set brightness", "list devices"
+        var smartHomeMatch = System.Text.RegularExpressions.Regex.Match(inputLower,
+            @"\b(turn\s*(on|off)|switch\s*(on|off)|light\s*(on|off)|plug\s*(on|off)|set\s*(color|brightness|colour)|list\s*devices?|device\s*info)\b");
+        if (smartHomeMatch.Success)
+        {
+            var smartHomeTool = _tools.All.FirstOrDefault(t => t.Name == "smart_home");
+            if (smartHomeTool != null)
+            {
+                try
+                {
+                    // Parse the user's natural language into a smart_home command
+                    var smartCommand = ParseSmartHomeCommand(inputLower);
+
+                    Console.ForegroundColor = ConsoleColor.DarkCyan;
+                    Console.WriteLine($"[Auto-Tool] Smart Home: {smartCommand}");
+                    Console.ResetColor();
+
+                    var smartResult = await smartHomeTool.InvokeAsync(smartCommand, CancellationToken.None);
+                    var smartOutput = smartResult.Match(ok => ok, err => $"[Smart home error: {err}]");
+                    return $"SMART HOME RESULT:\n{smartOutput}\n\nReport the smart home action result to the user.";
+                }
+                catch (Exception ex)
+                {
+                    return $"SMART HOME ATTEMPTED BUT FAILED:\n{ex.Message}\n\nReport this error honestly to the user.";
+                }
+            }
+            else
+            {
+                return "SMART HOME STATUS: The smart_home tool is not available. Tapo REST API server may not be configured. " +
+                       "Set Tapo:ServerAddress in appsettings.json and ensure tapo-rest server is running.";
+            }
+        }
+
         // Pattern matching for knowledge-seeking questions about code/architecture
         var codePatterns = new[]
         {
@@ -6965,8 +7505,13 @@ DO NOT claim tools are offline, unavailable, playing hide-and-seek, or under mai
 "
             : "";
 
+        // Build embodiment context so the agent knows about its physical body (cameras, PTZ, sensors)
+        string embodimentContext = _bodySchema != null
+            ? $"\n\nPHYSICAL EMBODIMENT:\n{_bodySchema.DescribeSelf()}"
+            : "";
+
         string personalityPrompt = _voice.BuildPersonalityPrompt(
-            $"Available skills: {_skills?.GetAllSkills().Count() ?? 0}\nAvailable tools: {_tools.Count}");
+            $"Available skills: {_skills?.GetAllSkills().Count() ?? 0}\nAvailable tools: {_tools.Count}{embodimentContext}");
 
         // Include persistent thoughts from previous sessions
         string persistentThoughtContext = BuildPersistentThoughtContext();
@@ -7112,7 +7657,10 @@ ACTION TRIGGERS - If user says ANY of these, IMMEDIATELY use the corresponding t
 - 'fetch URL' / 'get page' → [TOOL:fetch_url URL]
 - 'qdrant status' / 'memory status' → [TOOL:qdrant_admin {{""command"":""status""}}]
 - 'is there a X' / 'do we have X' / 'world model' / 'architecture' → [TOOL:search_my_code X]
-- 'what changed' / 'upgrade' / 'recent changes' → [TOOL:search_my_code recent] then read relevant files";
+- 'what changed' / 'upgrade' / 'recent changes' → [TOOL:search_my_code recent] then read relevant files
+- 'camera' / 'see' / 'look' / 'visual' / 'what do you see' / 'cam' / 'snapshot' → [TOOL:capture_camera] - ALWAYS use this tool for camera requests, NEVER make up what you see
+- 'pan left/right' / 'tilt up/down' / 'turn camera' / 'move camera' / 'rotate camera' / 'patrol' / 'sweep' → [TOOL:camera_ptz <command>] - commands: pan_left, pan_right, tilt_up, tilt_down, go_home, patrol, stop
+- 'turn on/off' / 'light' / 'plug' / 'switch' / 'set color' / 'brightness' → [TOOL:smart_home <action> <device>] - actions: turn_on, turn_off, set_brightness, set_color, list_devices, device_info";
 
             // Add smart tool selection hint if we used it
             if (!string.IsNullOrEmpty(toolSelectionReasoning) && relevantTools.Count < _tools.Count)
@@ -7404,6 +7952,77 @@ Example: `save src/Ouroboros.CLI/Commands/OuroborosAgent.cs ""old code"" ""new c
         var exitWords = new[] { "exit", "quit", "goodbye", "bye", "later", "see you", "q!", "stop" };
         return exitWords.Any(w => input.Equals(w, StringComparison.OrdinalIgnoreCase) ||
                                   input.StartsWith(w + " ", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Checks if a Tapo device type is a camera (for RTSP streaming).
+    /// </summary>
+    private static bool IsCameraDeviceType(Ouroboros.Providers.Tapo.TapoDeviceType deviceType) =>
+        deviceType is Ouroboros.Providers.Tapo.TapoDeviceType.C100
+            or Ouroboros.Providers.Tapo.TapoDeviceType.C200
+            or Ouroboros.Providers.Tapo.TapoDeviceType.C210
+            or Ouroboros.Providers.Tapo.TapoDeviceType.C220
+            or Ouroboros.Providers.Tapo.TapoDeviceType.C310
+            or Ouroboros.Providers.Tapo.TapoDeviceType.C320
+            or Ouroboros.Providers.Tapo.TapoDeviceType.C420
+            or Ouroboros.Providers.Tapo.TapoDeviceType.C500
+            or Ouroboros.Providers.Tapo.TapoDeviceType.C520;
+
+    /// <summary>
+    /// Parses a natural language smart home command into the tool input format.
+    /// E.g., "turn on the living room light" → "turn_on LivingRoomLight"
+    /// </summary>
+    private static string ParseSmartHomeCommand(string input)
+    {
+        // Handle "list devices" first
+        if (input.Contains("list") && input.Contains("device"))
+            return "list_devices";
+
+        // Determine action
+        string action;
+        if (input.Contains("set") && (input.Contains("color") || input.Contains("colour")))
+            action = "set_color";
+        else if (input.Contains("set") && input.Contains("bright"))
+            action = "set_brightness";
+        else if (input.Contains("device") && input.Contains("info"))
+            action = "device_info";
+        else if (input.Contains("turn") && input.Contains("off") || input.Contains("switch") && input.Contains("off"))
+            action = "turn_off";
+        else
+            action = "turn_on";
+
+        // Extract device name: look for quoted names or words after common patterns
+        var deviceName = ExtractDeviceName(input);
+
+        return $"{action} {deviceName}";
+    }
+
+    /// <summary>
+    /// Extracts a device name from natural language input.
+    /// Looks for quoted strings, or words following "the" or device-type keywords.
+    /// </summary>
+    private static string ExtractDeviceName(string input)
+    {
+        // Try quoted name first: "turn on 'LivingRoomLight'"
+        var quoteMatch = System.Text.RegularExpressions.Regex.Match(input, @"[""']([^""']+)[""']");
+        if (quoteMatch.Success)
+            return quoteMatch.Groups[1].Value.Trim();
+
+        // Remove common filler words and extract the device-related words
+        // Pattern: everything after "on/off" or "the" that isn't a stop word
+        var afterAction = System.Text.RegularExpressions.Regex.Match(input,
+            @"\b(?:turn\s*(?:on|off)|switch\s*(?:on|off))\s+(?:the\s+)?(.+?)(?:\s+(?:light|lamp|plug|switch|bulb|strip))?$");
+        if (afterAction.Success)
+        {
+            var raw = afterAction.Groups[1].Value.Trim();
+            // Remove trailing common device-type words if the name itself contains them
+            raw = System.Text.RegularExpressions.Regex.Replace(raw, @"\s*(please|now|for me)\s*$", "").Trim();
+            if (!string.IsNullOrEmpty(raw))
+                return raw;
+        }
+
+        // Fallback: just pass the full input and let the tool handle it
+        return input;
     }
 
     /// <inheritdoc/>

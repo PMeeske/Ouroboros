@@ -11,6 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="..\..\appsettings.json" CopyToOutputDirectory="PreserveNewest" Link="appsettings.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Ouroboros.Application\Ouroboros.Application.csproj" />
     <ProjectReference Include="..\Ouroboros.Core\Ouroboros.Core.csproj" />
     <ProjectReference Include="..\Ouroboros.Domain\Ouroboros.Domain.csproj" />

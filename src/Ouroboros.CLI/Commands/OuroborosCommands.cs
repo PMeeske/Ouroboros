@@ -110,6 +110,7 @@ public static class OuroborosCommands
                 CoderModel: opts.CoderModel,
                 ReasonModel: opts.ReasonModel,
                 SummarizeModel: opts.SummarizeModel,
+                VisionModel: opts.VisionModel,
                 // Piping & Batch mode
                 PipeMode: opts.Pipe,
                 BatchFile: opts.BatchFile,

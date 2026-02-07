@@ -1835,7 +1835,7 @@ User: goodbye
             var visionService = new VisionService(new VisionConfig
             {
                 OllamaEndpoint = options.Endpoint,
-                OllamaVisionModel = "llava:latest", // Default vision model
+                OllamaVisionModel = "qwen3-vl:235b-cloud", // Strong vision model from swarm
             });
             PerceptionTools.VisionService = visionService;
             Console.WriteLine("  [OK] Vision service initialized (AI-powered visual understanding)");

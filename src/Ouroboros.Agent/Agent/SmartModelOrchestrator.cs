@@ -204,6 +204,17 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
                 CostWeight: 0.2);
         }
 
+        // Vision/camera patterns - routes to Analysis model type (vision sub-model)
+        if (Regex.IsMatch(lowerPrompt, @"\b(vision|visual|image|camera|cam|see|look|photo|picture|screenshot|snapshot|frame|capture|pan|tilt|ptz|rotate.*camera|turn.*camera|move.*camera|patrol|sweep)\b"))
+        {
+            return new UseCase(
+                UseCaseType.Analysis,
+                EstimateComplexity(prompt),
+                new[] { "vision", "image", "visual", "camera" },
+                PerformanceWeight: 0.5,
+                CostWeight: 0.5);
+        }
+
         // Tool use patterns
         if (Regex.IsMatch(lowerPrompt, @"\[TOOL:|use.*tool|invoke|execute"))
         {

@@ -110,6 +110,59 @@ public static class TapoServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Adds a Tapo RTSP embodiment provider for direct camera access.
+    /// Uses RTSP streaming instead of the REST API for camera devices (C200, C210, etc.).
+    /// Requires FFmpeg to be installed on the system.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="cameras">List of camera devices to connect to.</param>
+    /// <param name="username">Tapo account username/email.</param>
+    /// <param name="password">Tapo account password.</param>
+    /// <param name="providerId">Optional provider identifier.</param>
+    /// <param name="configureVision">Optional function to configure the vision model.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddTapoRtspEmbodimentProvider(
+        this IServiceCollection services,
+        IEnumerable<TapoDevice> cameras,
+        string username,
+        string password,
+        string providerId = "tapo-rtsp",
+        Func<TapoVisionModelConfig, TapoVisionModelConfig>? configureVision = null)
+    {
+        if (services == null)
+            throw new ArgumentNullException(nameof(services));
+
+        // Add the RTSP camera factory
+        services.AddTapoRtspCameras(cameras, username, password);
+
+        // Configure the vision model with strong defaults
+        var visionConfig = TapoVisionModelConfig.CreateDefault();
+        if (configureVision != null)
+        {
+            visionConfig = configureVision(visionConfig);
+        }
+        services.AddSingleton(visionConfig);
+
+        // Register the RTSP-based embodiment provider
+        services.AddSingleton<TapoEmbodimentProvider>(sp =>
+        {
+            var rtspFactory = sp.GetRequiredService<ITapoRtspClientFactory>();
+            var visionModel = sp.GetService<IVisionModel>();
+            var ttsModel = sp.GetService<ITtsModel>();
+            var config = sp.GetService<TapoVisionModelConfig>() ?? TapoVisionModelConfig.CreateDefault();
+            var logger = sp.GetService<ILogger<TapoEmbodimentProvider>>();
+
+            return new TapoEmbodimentProvider(rtspFactory, providerId, visionModel, ttsModel, config, logger,
+                username: username, password: password);
+        });
+
+        // Register interface to resolve to same singleton instance
+        services.AddSingleton<IEmbodimentProvider>(sp => sp.GetRequiredService<TapoEmbodimentProvider>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds a complete Tapo embodiment aggregate with the provider as state source.
     /// Creates a domain aggregate that uses Tapo devices for embodied interaction.
     /// </summary>
@@ -133,7 +186,7 @@ public static class TapoServiceCollectionExtensions
         services.AddSingleton<EmbodimentAggregate>(sp =>
         {
             var aggregate = new EmbodimentAggregate(aggregateId, aggregateName);
-            
+
             // Register the Tapo provider singleton with the aggregate.
             // RegisterProvider uses TryAdd internally, so duplicate registrations are safely ignored.
             var provider = sp.GetRequiredService<TapoEmbodimentProvider>();
@@ -227,5 +280,131 @@ public static class TapoServiceCollectionExtensions
         services.AddSingleton(cameraConfig);
 
         return services;
+    }
+
+    /// <summary>
+    /// Adds a Tapo RTSP camera client for direct camera streaming (C200, C210, etc.).
+    /// This connects directly to the camera via RTSP, bypassing the REST API server.
+    /// Requires FFmpeg to be installed on the system.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="cameraIp">IP address of the Tapo camera.</param>
+    /// <param name="username">Tapo account username/email.</param>
+    /// <param name="password">Tapo account password.</param>
+    /// <param name="quality">Stream quality setting.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddTapoRtspCamera(
+        this IServiceCollection services,
+        string cameraIp,
+        string username,
+        string password,
+        CameraStreamQuality quality = CameraStreamQuality.HD)
+    {
+        if (services == null)
+            throw new ArgumentNullException(nameof(services));
+
+        if (string.IsNullOrWhiteSpace(cameraIp))
+            throw new ArgumentException("Camera IP is required", nameof(cameraIp));
+
+        if (string.IsNullOrWhiteSpace(username))
+            throw new ArgumentException("Username is required", nameof(username));
+
+        if (string.IsNullOrWhiteSpace(password))
+            throw new ArgumentException("Password is required", nameof(password));
+
+        services.AddSingleton(sp =>
+        {
+            var logger = sp.GetService<ILogger<TapoRtspClient>>();
+            return new TapoRtspClient(cameraIp, username, password, quality, logger);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds multiple Tapo RTSP cameras from configuration.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="cameras">List of camera configurations.</param>
+    /// <param name="username">Tapo account username/email.</param>
+    /// <param name="password">Tapo account password.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddTapoRtspCameras(
+        this IServiceCollection services,
+        IEnumerable<TapoDevice> cameras,
+        string username,
+        string password)
+    {
+        var cameraList = cameras.Where(d => IsCameraDevice(d.DeviceType)).ToList();
+
+        services.AddSingleton<ITapoRtspClientFactory>(sp =>
+        {
+            var logger = sp.GetService<ILogger<TapoRtspClient>>();
+            return new TapoRtspClientFactory(cameraList, username, password, logger);
+        });
+
+        return services;
+    }
+
+    private static bool IsCameraDevice(TapoDeviceType deviceType) =>
+        deviceType is TapoDeviceType.C100 or TapoDeviceType.C200 or TapoDeviceType.C210
+            or TapoDeviceType.C220 or TapoDeviceType.C310 or TapoDeviceType.C320
+            or TapoDeviceType.C420 or TapoDeviceType.C500 or TapoDeviceType.C520;
+}
+
+/// <summary>
+/// Factory for creating RTSP clients for multiple cameras.
+/// </summary>
+public interface ITapoRtspClientFactory
+{
+    /// <summary>
+    /// Gets an RTSP client for a specific camera by name.
+    /// </summary>
+    TapoRtspClient? GetClient(string cameraName);
+
+    /// <summary>
+    /// Gets all available camera names.
+    /// </summary>
+    IEnumerable<string> GetCameraNames();
+}
+
+/// <summary>
+/// Default implementation of ITapoRtspClientFactory.
+/// </summary>
+public sealed class TapoRtspClientFactory : ITapoRtspClientFactory, IDisposable
+{
+    private readonly Dictionary<string, TapoRtspClient> _clients = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TapoRtspClientFactory"/> class.
+    /// </summary>
+    public TapoRtspClientFactory(
+        IEnumerable<TapoDevice> cameras,
+        string username,
+        string password,
+        ILogger<TapoRtspClient>? logger = null)
+    {
+        foreach (var camera in cameras)
+        {
+            _clients[camera.Name] = new TapoRtspClient(
+                camera.IpAddress, username, password, CameraStreamQuality.HD, logger);
+        }
+    }
+
+    /// <inheritdoc/>
+    public TapoRtspClient? GetClient(string cameraName) =>
+        _clients.TryGetValue(cameraName, out var client) ? client : null;
+
+    /// <inheritdoc/>
+    public IEnumerable<string> GetCameraNames() => _clients.Keys;
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        foreach (var client in _clients.Values)
+        {
+            client.Dispose();
+        }
+        _clients.Clear();
     }
 }

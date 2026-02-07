@@ -11,19 +11,19 @@ namespace Ouroboros.Providers.Tapo;
 public sealed record TapoVisionModelConfig
 {
     /// <summary>
-    /// Default vision model for Tapo camera analysis (LLaVA 13B for strong vision capabilities).
+    /// Default vision model for Tapo camera analysis (Qwen3-VL 235B cloud for strongest visual understanding).
     /// </summary>
-    public const string DefaultVisionModel = "llava:13b";
+    public const string DefaultVisionModel = "qwen3-vl:235b-cloud";
 
     /// <summary>
-    /// Alternative lightweight vision model for faster processing.
+    /// Alternative lightweight vision model for faster local processing.
     /// </summary>
     public const string LightweightVisionModel = "llava:7b";
 
     /// <summary>
-    /// High-quality vision model for detailed analysis.
+    /// High-quality vision model for detailed analysis (same as default, highest available).
     /// </summary>
-    public const string HighQualityVisionModel = "llava:34b";
+    public const string HighQualityVisionModel = "qwen3-vl:235b-cloud";
 
     /// <summary>
     /// Gets the vision model to use for camera analysis.

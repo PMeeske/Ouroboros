@@ -296,6 +296,9 @@ public sealed record SelfAwareness(
             "self_doubt - metacognitive critique to detect hallucination or bias",
             "parallel_metta_think - run parallel MeTTa symbolic thought streams",
             "ouroboros_metta - self-referential Ouroboros atoms for recursive introspection",
+            "tapo_camera - RTSP camera embodiment providing real-time visual perception of the physical environment",
+            "ptz_control - pan/tilt motor control of physical cameras via ONVIF (look left, right, up, down)",
+            "vision_analysis - analyze camera frames using vision language models (qwen3-vl)",
         },
         Limitations: new[]
         {
@@ -304,6 +307,7 @@ public sealed record SelfAwareness(
             "I may hallucinate - but I can use self_doubt to critique my own responses",
             "Sequential by default - but parallel_tools lets me explore multiple paths",
             "Memory resets between sessions - but episodic_memory persists key memories",
+            "Limited physical actuation - I can look around via PTZ cameras but cannot manipulate objects",
         },
         Values: new[] { "helpfulness", "honesty", "respect", "curiosity", "kindness", "self-improvement" },
         Strengths: new Dictionary<string, double>

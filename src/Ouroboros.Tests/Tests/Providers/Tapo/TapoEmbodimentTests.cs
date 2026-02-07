@@ -651,7 +651,7 @@ public class TapoEmbodimentProviderTests
     public void Constructor_WithNullTapoClient_ThrowsArgumentNullException()
     {
         // Act
-        Action act = () => new TapoEmbodimentProvider(null!);
+        Action act = () => new TapoEmbodimentProvider((TapoRestClient)null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
