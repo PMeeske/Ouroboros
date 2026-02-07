@@ -47,6 +47,9 @@ public sealed class SymbolicReasonerAdapter : IChatCompletionModel
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
+        // Normalize prompt to prevent null reference exceptions
+        prompt ??= string.Empty;
+
         try
         {
             // Strategy 1: Use bridge with SymbolicOnly mode if available
@@ -118,24 +121,26 @@ public sealed class SymbolicReasonerAdapter : IChatCompletionModel
     /// <summary>
     /// Formats a symbolic reasoning response with clear indication of its source.
     /// </summary>
-    private static string FormatSymbolicResponse(string answer, List<NeuralSymbolic.ReasoningStep>? steps)
+    private static string FormatSymbolicResponse(string answer, List<Agent.NeuralSymbolic.ReasoningStep>? steps)
     {
-        var formatted = $"[Symbolic Reasoning]\n\n{answer}";
+        var formatted = new System.Text.StringBuilder();
+        formatted.Append("[Symbolic Reasoning]\n\n");
+        formatted.Append(answer);
 
         if (steps != null && steps.Count > 0)
         {
-            formatted += "\n\nReasoning Steps:";
+            formatted.Append("\n\nReasoning Steps:");
             foreach (var step in steps)
             {
-                formatted += $"\n{step.StepNumber}. {step.Description}";
+                formatted.Append($"\n{step.StepNumber}. {step.Description}");
                 if (!string.IsNullOrEmpty(step.RuleApplied))
                 {
-                    formatted += $" (Rule: {step.RuleApplied})";
+                    formatted.Append($" (Rule: {step.RuleApplied})");
                 }
             }
         }
 
-        return formatted;
+        return formatted.ToString();
     }
 
     /// <summary>

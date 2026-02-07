@@ -20,31 +20,19 @@ using Xunit;
 public class SymbolicFallbackTests
 {
     /// <summary>
-    /// Verifies that every role's fallback chain includes SymbolicReasoner as the terminal fallback.
+    /// Verifies that SymbolicReasoner is registered correctly and available for fallback.
     /// </summary>
     [Fact]
-    public void FallbackChain_IncludesSymbolicReasoner_AsTerminalFallback()
+    public void SymbolicReasoner_Registration_IsSuccessful()
     {
         // Arrange
         var mind = new ConsolidatedMind(new MindConfig(FallbackOnError: true));
         var mockEngine = new MockMeTTaEngine();
+        
+        // Act
         mind.WithSymbolicFallback(mockEngine);
 
-        // Register a specialist for each role to test fallback chains
-        var roles = new[]
-        {
-            SpecializedRole.DeepReasoning,
-            SpecializedRole.CodeExpert,
-            SpecializedRole.Mathematical,
-            SpecializedRole.Creative,
-            SpecializedRole.Planner,
-            SpecializedRole.Analyst,
-            SpecializedRole.Synthesizer,
-            SpecializedRole.Verifier
-        };
-
-        // Act & Assert
-        // The GetFallbackSpecialist method is private, but we can verify the registration
+        // Assert
         mind.Specialists.Should().ContainKey(SpecializedRole.SymbolicReasoner);
         var symbolicSpecialist = mind.Specialists[SpecializedRole.SymbolicReasoner];
         symbolicSpecialist.ModelName.Should().Contain("Symbolic");
@@ -52,6 +40,7 @@ public class SymbolicFallbackTests
 
     /// <summary>
     /// Verifies that ProcessAsync falls back to SymbolicReasoner when all LLM models fail.
+    /// Uses a deterministic setup by registering a failing Mathematical specialist that matches the likely route.
     /// </summary>
     [Fact]
     public async Task ProcessAsync_WhenPrimaryFails_FallsBackToSymbolic()
@@ -59,13 +48,25 @@ public class SymbolicFallbackTests
         // Arrange
         var mind = new ConsolidatedMind(new MindConfig(FallbackOnError: true));
         
-        // Register a failing LLM specialist
-        var failingModel = new FailingChatModel();
+        // Register failing specialists for deterministic routing
+        // TaskAnalyzer will likely route "What is 2+2?" to Mathematical role
         mind.RegisterSpecialist(new SpecializedModel(
-            SpecializedRole.QuickResponse,
-            failingModel,
-            "failing-model",
-            new[] { "general" }));
+            SpecializedRole.Mathematical,
+            new FailingChatModel(),
+            "failing-mathematical",
+            new[] { "math" }));
+
+        mind.RegisterSpecialist(new SpecializedModel(
+            SpecializedRole.DeepReasoning,
+            new FailingChatModel(),
+            "failing-deep",
+            new[] { "reasoning" }));
+
+        mind.RegisterSpecialist(new SpecializedModel(
+            SpecializedRole.CodeExpert,
+            new FailingChatModel(),
+            "failing-code",
+            new[] { "code" }));
 
         // Register symbolic fallback
         var mockEngine = new MockMeTTaEngine();

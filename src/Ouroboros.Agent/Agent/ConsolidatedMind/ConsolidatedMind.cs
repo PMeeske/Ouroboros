@@ -307,13 +307,14 @@ public sealed class ConsolidatedMind : IChatCompletionModel, IDisposable
                 wasVerified,
                 analysis.Confidence);
         }
-        catch (Exception ex) when (_config.FallbackOnError)
+        catch (Exception ex) when (_config.FallbackOnError && ex is not OperationCanceledException)
         {
             // Try fallback to another specialist
+            // Note: We let cancellation exceptions propagate rather than triggering fallback
             UpdateMetrics(primarySpecialist.ModelName, stopwatch.ElapsedMilliseconds, false);
 
             var fallback = GetFallbackSpecialist(primarySpecialist.Role);
-            if (fallback != null)
+            if (fallback != null && fallback.Role != primarySpecialist.Role)
             {
                 try
                 {
@@ -328,11 +329,13 @@ public sealed class ConsolidatedMind : IChatCompletionModel, IDisposable
                         WasVerified: false,
                         Confidence: analysis.Confidence * 0.7); // Reduced confidence for fallback
                 }
-                catch (Exception)
+                catch (Exception) when (ex is not OperationCanceledException)
                 {
                     // First fallback also failed — try next in chain
                     var secondaryFallback = GetFallbackSpecialist(fallback.Role);
-                    if (secondaryFallback != null)
+                    if (secondaryFallback != null 
+                        && secondaryFallback.Role != primarySpecialist.Role 
+                        && secondaryFallback.Role != fallback.Role)
                     {
                         try
                         {
@@ -347,7 +350,7 @@ public sealed class ConsolidatedMind : IChatCompletionModel, IDisposable
                                 WasVerified: false,
                                 Confidence: 0.3); // Lower confidence for deep fallback
                         }
-                        catch
+                        catch (Exception) when (ex is not OperationCanceledException)
                         {
                             // Final fallback also failed - fall through to throw
                         }
@@ -600,7 +603,8 @@ Improved response:";
             }
         }
 
-        return _specialists.Values.FirstOrDefault();
+        // If SymbolicReasoner has no fallback, return null rather than potentially re-selecting a failed specialist
+        return failedRole == SpecializedRole.SymbolicReasoner ? null : _specialists.Values.FirstOrDefault();
     }
 
     private void UpdateMetrics(string modelName, double latencyMs, bool success)
