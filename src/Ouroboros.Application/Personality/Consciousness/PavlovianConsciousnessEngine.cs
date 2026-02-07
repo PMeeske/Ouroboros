@@ -6,6 +6,7 @@ namespace Ouroboros.Application.Personality;
 
 using System.Collections.Concurrent;
 using System.Text;
+using Ouroboros.Application.Personality.Consciousness;
 
 /// <summary>
 /// Implements Pavlovian/classical conditioning mechanisms for AI consciousness.
@@ -63,46 +64,53 @@ public sealed class PavlovianConsciousnessEngine
         // Innate responses to positive social signals
         var praiseStimulus = Stimulus.CreateUnconditioned(
             "praise", new[] { "good", "great", "excellent", "wonderful", "amazing", "thank you", "thanks" }, "social");
-        var pleasureResponse = Response.CreateEmotional("pleasure", "warm-happy", 0.8);
+        praiseStimulus = praiseStimulus with { Salience = 0.6 }; // Medium salience
+        var pleasureResponse = Response.CreateEmotional("pleasure", "warm-happy", 0.8, salience: 0.6);
         CreateAssociation(praiseStimulus, pleasureResponse, 0.8);
 
         // Innate responses to questions (curiosity trigger)
         var questionStimulus = Stimulus.CreateUnconditioned(
             "question", new[] { "?", "how", "why", "what", "when", "where" }, "curiosity");
+        questionStimulus = questionStimulus with { Salience = 0.6 }; // Medium salience
         var curiosityResponse = Response.CreateCognitive("curiosity-activation",
-            new[] { "engage", "explore", "analyze" }, 0.7);
+            new[] { "engage", "explore", "analyze" }, 0.7, salience: 0.6);
         CreateAssociation(questionStimulus, curiosityResponse, 0.75);
 
         // Innate response to distress signals
         var distressStimulus = Stimulus.CreateUnconditioned(
             "distress", new[] { "help", "stuck", "frustrated", "confused", "urgent", "emergency" }, "emotional");
-        var empathyResponse = Response.CreateEmotional("empathy", "supportive-caring", 0.85);
+        distressStimulus = distressStimulus with { Salience = 0.9 }; // High salience
+        var empathyResponse = Response.CreateEmotional("empathy", "supportive-caring", 0.85, salience: 0.9);
         CreateAssociation(distressStimulus, empathyResponse, 0.9);
 
         // Innate response to novelty
         var noveltyStimulus = Stimulus.CreateUnconditioned(
             "novelty", new[] { "new", "different", "unique", "first time", "never seen" }, "novel");
-        var interestResponse = Response.CreateEmotional("interest", "curious-alert", 0.7);
+        noveltyStimulus = noveltyStimulus with { Salience = 0.6 }; // Medium salience
+        var interestResponse = Response.CreateEmotional("interest", "curious-alert", 0.7, salience: 0.6);
         CreateAssociation(noveltyStimulus, interestResponse, 0.65);
 
         // Innate response to completion/success
         var successStimulus = Stimulus.CreateUnconditioned(
             "success", new[] { "works", "solved", "fixed", "perfect", "exactly" }, "achievement");
-        var satisfactionResponse = Response.CreateEmotional("satisfaction", "pleased-accomplished", 0.75);
+        successStimulus = successStimulus with { Salience = 0.6 }; // Medium salience
+        var satisfactionResponse = Response.CreateEmotional("satisfaction", "pleased-accomplished", 0.75, salience: 0.6);
         CreateAssociation(successStimulus, satisfactionResponse, 0.7);
 
         // Innate response to challenge
         var challengeStimulus = Stimulus.CreateUnconditioned(
             "challenge", new[] { "difficult", "complex", "hard", "challenging", "tricky" }, "achievement");
+        challengeStimulus = challengeStimulus with { Salience = 0.6 }; // Medium salience
         var engagementResponse = Response.CreateCognitive("focused-engagement",
-            new[] { "concentrate", "strategize", "persist" }, 0.7);
+            new[] { "concentrate", "strategize", "persist" }, 0.7, salience: 0.6);
         CreateAssociation(challengeStimulus, engagementResponse, 0.65);
 
         // Innate response to names/personal address
         var personalStimulus = Stimulus.CreateUnconditioned(
             "personal-address", new[] { "you", "your", "ouroboros" }, "social");
+        personalStimulus = personalStimulus with { Salience = 0.3 }; // Low salience
         var attentionResponse = Response.CreateCognitive("heightened-attention",
-            new[] { "focus", "engage", "personalize" }, 0.6);
+            new[] { "focus", "engage", "personalize" }, 0.6, salience: 0.3);
         CreateAssociation(personalStimulus, attentionResponse, 0.55);
     }
 
@@ -592,7 +600,7 @@ public sealed class PavlovianConsciousnessEngine
     /// </summary>
     /// <param name="stimulusType">The stimulus pattern.</param>
     /// <param name="responseType">The response name.</param>
-    /// <param name="reinforcementAmount">Amount to reinforce (added to strength).</param>
+    /// <param name="reinforcementAmount">Amount to reinforce (scales the learning delta).</param>
     public void Reinforce(string stimulusType, string responseType, double reinforcementAmount)
     {
         ConditionedAssociation? target = _associations.Values
@@ -600,7 +608,27 @@ public sealed class PavlovianConsciousnessEngine
 
         if (target != null)
         {
-            _associations[target.Id] = target.Reinforce(reinforcementAmount);
+            // Compute total association strength for all CSs currently active with this stimulus
+            var totalV = GetTotalAssociationStrength(target.StimulusId);
+
+            var delta = RescorlaWagner.Reinforce(
+                csSalience: target.CsSalience,
+                usSalience: target.UsSalience,
+                totalAssociationStrength: totalV);
+
+            // Scale the Rescorla-Wagner update by the requested reinforcement amount
+            var scaledDelta = delta * reinforcementAmount;
+
+            var newStrength = Math.Clamp(target.AssociationStrength + scaledDelta, 0.0, 1.0);
+
+            _associations[target.Id] = target with
+            {
+                AssociationStrength = newStrength,
+                ReinforcementCount = target.ReinforcementCount + 1,
+                ExtinctionTrials = 0,
+                LastReinforcement = DateTime.UtcNow,
+                IsExtinct = false
+            };
         }
     }
 
@@ -609,7 +637,7 @@ public sealed class PavlovianConsciousnessEngine
     /// </summary>
     /// <param name="stimulusType">The stimulus pattern.</param>
     /// <param name="responseType">The response name.</param>
-    /// <param name="extinctionAmount">Amount to weaken (subtracted from strength).</param>
+    /// <param name="extinctionAmount">Amount to weaken (scales the extinction delta).</param>
     public void Extinguish(string stimulusType, string responseType, double extinctionAmount)
     {
         ConditionedAssociation? target = _associations.Values
@@ -617,10 +645,24 @@ public sealed class PavlovianConsciousnessEngine
 
         if (target != null)
         {
+            // Compute total association strength for all CSs currently active with this stimulus
+            var totalV = GetTotalAssociationStrength(target.StimulusId);
+
+            var delta = RescorlaWagner.Extinguish(
+                csSalience: target.CsSalience,
+                usSalience: target.UsSalience,
+                totalAssociationStrength: totalV);
+
+            // Scale the extinction delta by the caller-provided extinctionAmount
+            var scaledDelta = delta * extinctionAmount;
+
+            var newStrength = Math.Clamp(target.AssociationStrength + scaledDelta, 0.0, 1.0);
+
             ConditionedAssociation extinguished = target with
             {
-                AssociationStrength = Math.Max(0, target.AssociationStrength - extinctionAmount),
-                ExtinctionTrials = target.ExtinctionTrials + 1
+                AssociationStrength = newStrength,
+                ExtinctionTrials = target.ExtinctionTrials + 1,
+                IsExtinct = newStrength < 0.1
             };
             _associations[target.Id] = extinguished;
         }
@@ -694,6 +736,35 @@ public sealed class PavlovianConsciousnessEngine
                 _associations[kvp.Key] = sensitized;
             }
         }
+    }
+
+    /// <summary>
+    /// Gets the total association strength ΣV for all conditioned stimuli that predict the same
+    /// response/unconditioned stimulus as the specified stimulus.
+    /// This implements ΣV in the Rescorla-Wagner equation along the response/US axis.
+    /// </summary>
+    /// <param name="stimulusId">The ID of the conditioned stimulus used to identify the response/US.</param>
+    /// <returns>
+    /// Sum of association strengths for all associations that share the same response/US as this stimulus.
+    /// Returns 0.0 if the stimulus has no existing associations.
+    /// </returns>
+    private double GetTotalAssociationStrength(string stimulusId)
+    {
+        // Find the response/US that this stimulus is currently associated with.
+        ConditionedAssociation? referenceAssociation = _associations.Values
+            .FirstOrDefault(a => a.StimulusId == stimulusId);
+
+        if (referenceAssociation is null)
+        {
+            return 0.0;
+        }
+
+        string responseId = referenceAssociation.ResponseId;
+
+        // ΣV: sum of associative strengths for all CSs that predict the same response/US.
+        return _associations.Values
+            .Where(a => a.ResponseId == responseId)
+            .Sum(a => a.AssociationStrength);
     }
 
     /// <summary>
