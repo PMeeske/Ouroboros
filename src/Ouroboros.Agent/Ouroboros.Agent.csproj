@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <PackageReference Include="LangChain" Version="0.17.0" />
+    <PackageReference Include="Polly" Version="8.5.0" />
     <PackageReference Include="Qdrant.Client" Version="*" />
   </ItemGroup>
 

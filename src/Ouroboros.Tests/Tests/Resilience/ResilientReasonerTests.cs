@@ -94,7 +94,7 @@ public class ResilientReasonerTests
         await reasoner.ReasonAsync("Query 2", CoreReasoningMode.NeuralFirst);
         
         var healthBeforeRecovery = reasoner.GetHealth();
-        healthBeforeRecovery.LlmState.Should().Be(CircuitState.Open);
+        healthBeforeRecovery.CircuitState.Should().Be("Open");
 
         // Wait for circuit to transition to half-open
         await Task.Delay(150);
@@ -108,7 +108,7 @@ public class ResilientReasonerTests
         // Assert
         recoveryResult.IsSuccess.Should().BeTrue();
         var healthAfterRecovery = reasoner.GetHealth();
-        healthAfterRecovery.LlmState.Should().Be(CircuitState.Closed);
+        healthAfterRecovery.CircuitState.Should().Be("Closed");
         healthAfterRecovery.ConsecutiveLlmFailures.Should().Be(0);
         healthAfterRecovery.LastLlmSuccess.Should().NotBeNull();
     }
@@ -138,7 +138,7 @@ public class ResilientReasonerTests
         // Assert - Should fall back to symbolic and circuit should be open again
         result.IsSuccess.Should().BeTrue("Should fall back to symbolic");
         var health = reasoner.GetHealth();
-        health.LlmState.Should().Be(CircuitState.Open, "Circuit should reopen after half-open failure");
+        health.CircuitState.Should().Be("Open", "Circuit should reopen after half-open failure");
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public class ResilientReasonerTests
 
         // Assert
         health.Should().NotBeNull();
-        health.LlmState.Should().Be(CircuitState.Closed);
+        health.CircuitState.Should().Be("Closed");
         health.SymbolicAvailable.Should().BeTrue();
         health.ConsecutiveLlmFailures.Should().Be(0);
         health.LastLlmSuccess.Should().BeNull();
@@ -176,7 +176,7 @@ public class ResilientReasonerTests
 
         // Assert
         health.ConsecutiveLlmFailures.Should().Be(3);
-        health.LlmState.Should().Be(CircuitState.Closed, "Should still be closed with threshold of 5");
+        health.CircuitState.Should().Be("Closed", "Should still be closed with threshold of 5");
     }
 
     [Fact]

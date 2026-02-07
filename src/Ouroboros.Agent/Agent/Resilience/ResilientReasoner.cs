@@ -11,16 +11,18 @@ using Ouroboros.Agent.NeuralSymbolic;
 using Ouroboros.Core.Monads;
 using Ouroboros.Core.Resilience;
 using Ouroboros.Providers;
+using Polly;
+using Polly.CircuitBreaker;
 
 /// <summary>
-/// Resilient reasoner that wraps neural-symbolic reasoning with circuit breaker pattern.
+/// Resilient reasoner that wraps neural-symbolic reasoning with Polly circuit breaker pattern.
 /// Automatically falls back to symbolic-only mode when LLM is unavailable.
 /// </summary>
 public sealed class ResilientReasoner : IReasoner
 {
     private readonly INeuralSymbolicBridge _bridge;
     private readonly IChatCompletionModel? _llm;
-    private readonly CircuitBreaker _circuitBreaker;
+    private readonly AsyncCircuitBreakerPolicy<Result<ReasoningResult, string>> _circuitBreakerPolicy;
     private readonly CircuitBreakerConfig _config;
     private readonly ILogger<ResilientReasoner>? _logger;
     private readonly object _statsLock = new();
@@ -46,9 +48,37 @@ public sealed class ResilientReasoner : IReasoner
         _config = config ?? new CircuitBreakerConfig();
         _logger = logger;
         
-        _circuitBreaker = new CircuitBreaker(
-            _config.FailureThreshold,
-            _config.OpenDuration);
+        // Create Polly circuit breaker policy
+        _circuitBreakerPolicy = Policy
+            .HandleResult<Result<ReasoningResult, string>>(r => r.IsFailure)
+            .Or<Exception>()
+            .CircuitBreakerAsync(
+                handledEventsAllowedBeforeBreaking: _config.FailureThreshold,
+                durationOfBreak: _config.OpenDuration,
+                onBreak: (outcome, breakDelay) =>
+                {
+                    lock (_statsLock)
+                    {
+                        _consecutiveLlmFailures++;
+                    }
+                    _logger?.LogWarning(
+                        "Circuit breaker OPENED after {Failures} failures. Will retry after {Delay}s. Switching to symbolic-only mode.",
+                        _config.FailureThreshold,
+                        breakDelay.TotalSeconds);
+                },
+                onReset: () =>
+                {
+                    lock (_statsLock)
+                    {
+                        _consecutiveLlmFailures = 0;
+                        _lastLlmSuccess = DateTimeOffset.UtcNow;
+                    }
+                    _logger?.LogInformation("Circuit breaker CLOSED - neural reasoning restored");
+                },
+                onHalfOpen: () =>
+                {
+                    _logger?.LogInformation("Circuit breaker HALF-OPEN - testing neural reasoning recovery");
+                });
     }
 
     /// <inheritdoc/>
@@ -69,7 +99,7 @@ public sealed class ResilientReasoner : IReasoner
         {
             _logger?.LogWarning(
                 "Circuit breaker is {State}, forcing {EffectiveMode} instead of {PreferredMode}",
-                _circuitBreaker.State,
+                GetCircuitState(),
                 effectiveMode,
                 preferredMode);
         }
@@ -77,7 +107,7 @@ public sealed class ResilientReasoner : IReasoner
         // Perform reasoning with the effective mode
         try
         {
-            var result = await ReasonWithMode(query, effectiveMode, ct);
+            var result = await ExecuteWithCircuitBreaker(query, effectiveMode, ct);
             
             if (result.IsSuccess)
             {
@@ -119,6 +149,23 @@ public sealed class ResilientReasoner : IReasoner
                 return Result<string, string>.Failure(result.Error);
             }
         }
+        catch (BrokenCircuitException)
+        {
+            // Circuit is open - fall back to symbolic only
+            _logger?.LogWarning("Circuit is open, using symbolic-only mode");
+            
+            try
+            {
+                var fallbackResult = await ReasonWithMode(query, Core.Resilience.ReasoningMode.SymbolicOnly, ct);
+                return fallbackResult.IsSuccess
+                    ? Result<string, string>.Success(fallbackResult.Value.Answer)
+                    : Result<string, string>.Failure($"Neural reasoning unavailable (circuit open), symbolic fallback failed: {fallbackResult.Error}");
+            }
+            catch (Exception fallbackEx)
+            {
+                return Result<string, string>.Failure($"Neural reasoning unavailable (circuit open), symbolic fallback exception: {fallbackEx.Message}");
+            }
+        }
         catch (Exception ex)
         {
             // Exception thrown - record failure for neural modes
@@ -158,7 +205,7 @@ public sealed class ResilientReasoner : IReasoner
         lock (_statsLock)
         {
             return new ReasonerHealth(
-                _circuitBreaker.State,
+                GetCircuitState(),
                 SymbolicAvailable: true, // Symbolic reasoning is always available
                 _consecutiveLlmFailures,
                 _lastLlmSuccess);
@@ -168,7 +215,8 @@ public sealed class ResilientReasoner : IReasoner
     private Core.Resilience.ReasoningMode DetermineEffectiveMode(Core.Resilience.ReasoningMode preferredMode)
     {
         // Check if circuit breaker allows neural reasoning
-        if (!_circuitBreaker.ShouldAttempt())
+        var circuitState = GetCircuitState();
+        if (circuitState == "Open")
         {
             // Circuit is open - force symbolic-only mode
             return Core.Resilience.ReasoningMode.SymbolicOnly;
@@ -176,7 +224,7 @@ public sealed class ResilientReasoner : IReasoner
 
         // Circuit is closed or half-open - use preferred mode
         // But if circuit is half-open, we should prefer modes with fallback
-        if (_circuitBreaker.State == CircuitState.HalfOpen)
+        if (circuitState == "HalfOpen")
         {
             // In half-open state, prefer modes with fallback
             return preferredMode switch
@@ -189,6 +237,34 @@ public sealed class ResilientReasoner : IReasoner
         return preferredMode;
     }
 
+    private async Task<Result<ReasoningResult, string>> ExecuteWithCircuitBreaker(
+        string query,
+        Core.Resilience.ReasoningMode mode,
+        CancellationToken ct)
+    {
+        // Only use circuit breaker for modes that involve neural reasoning
+        if (mode == Core.Resilience.ReasoningMode.SymbolicOnly)
+        {
+            return await ReasonWithMode(query, mode, ct);
+        }
+
+        // Execute with circuit breaker for neural modes
+        return await _circuitBreakerPolicy.ExecuteAsync(async () =>
+        {
+            var result = await ReasonWithMode(query, mode, ct);
+            
+            // Add timeout for half-open state
+            if (GetCircuitState() == "HalfOpen" && UsesNeuralReasoning(mode))
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(_config.HalfOpenTimeout);
+                return await ReasonWithMode(query, mode, cts.Token);
+            }
+            
+            return result;
+        });
+    }
+
     private async Task<Result<ReasoningResult, string>> ReasonWithMode(
         string query,
         Core.Resilience.ReasoningMode mode,
@@ -199,21 +275,31 @@ public sealed class ResilientReasoner : IReasoner
         // A unit test in ResilientReasonerTests verifies enum alignment.
         var bridgeMode = (NeuralSymbolic.ReasoningMode)(int)mode;
         
-        // Add timeout for half-open state
-        if (_circuitBreaker.State == CircuitState.HalfOpen && UsesNeuralReasoning(mode))
-        {
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(_config.HalfOpenTimeout);
-            return await _bridge.HybridReasonAsync(query, bridgeMode, cts.Token);
-        }
-
         return await _bridge.HybridReasonAsync(query, bridgeMode, ct);
+    }
+
+    private string GetCircuitState()
+    {
+        try
+        {
+            var state = _circuitBreakerPolicy.CircuitState;
+            return state switch
+            {
+                Polly.CircuitBreaker.CircuitState.Closed => "Closed",
+                Polly.CircuitBreaker.CircuitState.Open => "Open",
+                Polly.CircuitBreaker.CircuitState.HalfOpen => "HalfOpen",
+                Polly.CircuitBreaker.CircuitState.Isolated => "Isolated",
+                _ => "Unknown"
+            };
+        }
+        catch
+        {
+            return "Unknown";
+        }
     }
 
     private void RecordNeuralSuccess()
     {
-        _circuitBreaker.RecordSuccess();
-        
         lock (_statsLock)
         {
             _consecutiveLlmFailures = 0;
@@ -222,13 +308,11 @@ public sealed class ResilientReasoner : IReasoner
         
         _logger?.LogInformation(
             "Neural reasoning succeeded. Circuit state: {State}",
-            _circuitBreaker.State);
+            GetCircuitState());
     }
 
     private void RecordNeuralFailure()
     {
-        _circuitBreaker.RecordFailure();
-        
         int failures;
         lock (_statsLock)
         {
@@ -239,7 +323,7 @@ public sealed class ResilientReasoner : IReasoner
         _logger?.LogWarning(
             "Neural reasoning failed. Consecutive failures: {Failures}, Circuit state: {State}",
             failures,
-            _circuitBreaker.State);
+            GetCircuitState());
     }
 
     /// <summary>
